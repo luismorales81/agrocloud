@@ -1,0 +1,65 @@
+# Dockerfile para AgroCloud Backend con Debug
+FROM openjdk:17-slim
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Instalar Maven y herramientas de debug
+RUN apt-get update && apt-get install -y maven curl wget procps && rm -rf /var/lib/apt/lists/*
+
+# Mostrar información del sistema
+RUN echo "=== INFO DEL SISTEMA ===" && \
+    java -version && \
+    mvn -version && \
+    echo "=== MEMORIA DISPONIBLE ===" && \
+    free -h && \
+    echo "=== ESPACIO DISCO ===" && \
+    df -h
+
+# Copiar archivos de configuración de Maven
+COPY agrogestion-backend/pom.xml .
+COPY agrogestion-backend/mvnw .
+COPY agrogestion-backend/mvnw.cmd .
+COPY agrogestion-backend/.mvn .mvn
+
+# Mostrar estructura de archivos
+RUN echo "=== ESTRUCTURA DE ARCHIVOS ===" && \
+    ls -la && \
+    echo "=== CONTENIDO POM.XML ===" && \
+    head -20 pom.xml
+
+# Copiar código fuente
+COPY agrogestion-backend/src src
+
+# Mostrar estructura del código
+RUN echo "=== ESTRUCTURA DEL CÓDIGO ===" && \
+    find src -name "*.java" | head -10
+
+# Compilar la aplicación con debug
+RUN echo "=== INICIANDO COMPILACIÓN ===" && \
+    mvn clean package -DskipTests -X && \
+    echo "=== COMPILACIÓN COMPLETADA ===" && \
+    ls -la target/
+
+# Exponer puerto
+EXPOSE 8080
+
+# Healthcheck con debug
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || (echo "Healthcheck failed" && exit 1)
+
+# Script de inicio con debug
+COPY <<EOF /app/start.sh
+#!/bin/bash
+echo "=== INICIANDO APLICACIÓN ==="
+echo "Directorio actual: \$(pwd)"
+echo "Archivos en target:"
+ls -la target/
+echo "Ejecutando JAR..."
+java -jar target/agrocloud-backend-1.0.0.jar
+EOF
+
+RUN chmod +x /app/start.sh
+
+# Ejecutar la aplicación
+ENTRYPOINT ["/app/start.sh"]

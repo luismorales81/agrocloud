@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: agrocloud-backend
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerCommand: java -jar target/agrocloud-backend-1.0.0.jar
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
