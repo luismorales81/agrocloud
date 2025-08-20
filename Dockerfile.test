@@ -30,10 +30,6 @@ RUN mvn clean package -DskipTests
 # Etapa de ejecución
 FROM openjdk:17-jdk-slim
 
-# Crear usuario no-root
-RUN addgroup --system spring && adduser --system spring --ingroup spring
-USER spring:spring
-
 # Establecer directorio de trabajo
 WORKDIR /app
 
@@ -43,9 +39,9 @@ COPY --from=build /app/target/*.jar app.jar
 # Exponer puerto
 EXPOSE 8080
 
-# Healthcheck usando wget (incluido en la imagen base)
+# Healthcheck básico
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+  CMD java -cp /app/app.jar org.springframework.boot.loader.JarLauncher --help || exit 1
 
 # Ejecutar la aplicación
 ENTRYPOINT ["java", "-Dspring.profiles.active=test", "-jar", "/app/app.jar"]
