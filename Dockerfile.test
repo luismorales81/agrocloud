@@ -1,8 +1,11 @@
-# Dockerfile para Test Application
-FROM maven:3.9.5-eclipse-temurin-17 as build
+# Dockerfile para Test Application - Single Stage
+FROM openjdk:17-slim
 
 # Establecer directorio de trabajo
 WORKDIR /app
+
+# Instalar Maven
+RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
 # Copiar archivos de configuración de Maven
 COPY agrogestion-backend/pom-test.xml pom.xml
@@ -21,21 +24,12 @@ COPY agrogestion-backend/src/main/resources/application-test.properties src/main
 # Compilar la aplicación
 RUN mvn clean package -DskipTests
 
-# Etapa de ejecución
-FROM eclipse-temurin:17-jre-alpine
-
-# Establecer directorio de trabajo
-WORKDIR /app
-
-# Copiar el JAR desde la etapa de build
-COPY --from=build /app/target/*.jar app.jar
-
 # Exponer puerto
 EXPOSE 8080
 
 # Healthcheck básico
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD java -cp /app/app.jar org.springframework.boot.loader.JarLauncher --help || exit 1
+  CMD java -cp target/*.jar org.springframework.boot.loader.JarLauncher --help || exit 1
 
 # Ejecutar la aplicación
-ENTRYPOINT ["java", "-Dspring.profiles.active=test", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-Dspring.profiles.active=test", "-jar", "target/*.jar"]
