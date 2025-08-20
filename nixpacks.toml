@@ -4,14 +4,16 @@ nixPkgs = ["openjdk17", "maven"]
 [phases.install]
 cmds = [
   "mkdir -p src/main/java/com/agrocloud",
-  "mkdir -p src/main/resources",
-  "cp agrogestion-backend/pom-simple.xml pom.xml",
-  "cp agrogestion-backend/src/main/java/com/agrocloud/SimpleApplication.java src/main/java/com/agrocloud/",
-  "cp agrogestion-backend/src/main/resources/application-test.properties src/main/resources/"
+  "cp agrogestion-backend/pom-http.xml pom.xml",
+  "cp agrogestion-backend/src/main/java/com/agrocloud/HttpServer.java src/main/java/com/agrocloud/"
 ]
 
 [phases.build]
-cmds = ["mvn clean package -DskipTests"]
+cmds = [
+  "mvn --version",
+  "ls -la",
+  "mvn clean package -DskipTests -X"
+]
 
 [start]
-cmd = "java -Dspring.profiles.active=test -jar target/*.jar"
+cmd = "java -jar target/agrocloud-http-1.0.0.jar"
