@@ -1,8 +1,5 @@
 # Dockerfile para Test Application
-FROM openjdk:17-jdk-slim as build
-
-# Instalar Maven
-RUN apt-get update && apt-get install -y maven
+FROM maven:3.9.5-openjdk-17 as build
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -12,9 +9,6 @@ COPY agrogestion-backend/pom-test.xml pom.xml
 COPY agrogestion-backend/mvnw .
 COPY agrogestion-backend/mvnw.cmd .
 COPY agrogestion-backend/.mvn .mvn
-
-# Descargar dependencias
-RUN mvn dependency:go-offline -B
 
 # Crear estructura de directorios
 RUN mkdir -p src/main/java/com/agrocloud
