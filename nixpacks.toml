@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ["openjdk17", "maven"]
+
+[phases.install]
+cmds = [
+  "mkdir -p src/main/java/com/agrocloud",
+  "mkdir -p src/main/resources",
+  "cp agrogestion-backend/pom-test.xml pom.xml",
+  "cp agrogestion-backend/src/main/java/com/agrocloud/TestApplication.java src/main/java/com/agrocloud/",
+  "cp agrogestion-backend/src/main/resources/application-test.properties src/main/resources/"
+]
+
+[phases.build]
+cmds = ["mvn clean package -DskipTests"]
+
+[start]
+cmd = "java -Dspring.profiles.active=test -jar target/*.jar"

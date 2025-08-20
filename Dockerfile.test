@@ -1,5 +1,5 @@
 # Dockerfile para Test Application - Single Stage
-FROM openjdk:17-slim
+FROM amazoncorretto:17-alpine
 
 # Establecer directorio de trabajo
 WORKDIR /app
