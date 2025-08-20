@@ -23,5 +23,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Ejecutar la aplicación
-ENTRYPOINT ["java", "-jar", "target/agrocloud-backend-1.0.0.jar"]
+# Ejecutar la aplicación con perfil Railway
+ENTRYPOINT ["java", "-Dspring.profiles.active=railway", "-jar", "target/agrocloud-backend-1.0.0.jar"]
