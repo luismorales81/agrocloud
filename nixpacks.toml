@@ -1,19 +1,18 @@
 [phases.setup]
-nixPkgs = ["openjdk17", "maven"]
+nixPkgs = ["openjdk17"]
 
 [phases.install]
 cmds = [
-  "mkdir -p src/main/java/com/agrocloud",
-  "cp agrogestion-backend/pom-http.xml pom.xml",
-  "cp agrogestion-backend/src/main/java/com/agrocloud/HttpServer.java src/main/java/com/agrocloud/"
+  "mkdir -p target/classes",
+  "mkdir -p META-INF"
 ]
 
 [phases.build]
 cmds = [
-  "mvn --version",
-  "ls -la",
-  "mvn clean package -DskipTests -X"
+  "java -version",
+  "javac -d target/classes agrogestion-backend/src/main/java/com/agrocloud/HttpServer.java",
+  "cd target/classes && jar cfm ../agrocloud-http.jar ../../META-INF/MANIFEST.MF com/agrocloud/*.class && cd ../.."
 ]
 
 [start]
-cmd = "java -jar target/agrocloud-http-1.0.0.jar"
+cmd = "java -jar target/agrocloud-http.jar"
