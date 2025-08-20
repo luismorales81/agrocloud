@@ -1,0 +1,27 @@
+# Dockerfile para AgroCloud Simple App
+FROM eclipse-temurin:17-jdk-alpine
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Instalar Maven y wget
+RUN apk add --no-cache maven wget
+
+# Copiar POM simple
+COPY simple-app/pom.xml pom.xml
+
+# Copiar solo la aplicación simple
+COPY simple-app/src/main/java/com/agrocloud/SimpleApp.java src/main/java/com/agrocloud/
+
+# Compilar la aplicación simple
+RUN mvn clean package -DskipTests
+
+# Exponer puerto
+EXPOSE 8080
+
+# Healthcheck simple
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+
+# Ejecutar la aplicación simple
+ENTRYPOINT ["java", "-jar", "target/agrocloud-simple-1.0.0.jar"]
