@@ -1,49 +1,30 @@
 # Dockerfile para AgroCloud Backend
-FROM openjdk:17-jdk-slim as build
-
-# Instalar Maven
-RUN apt-get update && apt-get install -y maven
+FROM openjdk:17-slim
 
 # Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de configuración de Maven desde agrogestion-backend
+# Instalar Maven
+RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
+
+# Copiar archivos de configuración de Maven
 COPY agrogestion-backend/pom.xml .
 COPY agrogestion-backend/mvnw .
 COPY agrogestion-backend/mvnw.cmd .
 COPY agrogestion-backend/.mvn .mvn
 
-# Descargar dependencias (cacheado si pom.xml no cambia)
-RUN mvn dependency:go-offline -B
-
-# Copiar código fuente desde agrogestion-backend
+# Copiar código fuente
 COPY agrogestion-backend/src src
 
 # Compilar la aplicación
 RUN mvn clean package -DskipTests
 
-# Etapa de ejecución
-FROM openjdk:17-jdk-slim
-
-# Instalar curl para healthcheck
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-# Crear usuario no-root
-RUN addgroup --system spring && adduser --system spring --ingroup spring
-USER spring:spring
-
-# Establecer directorio de trabajo
-WORKDIR /app
-
-# Copiar el JAR desde la etapa de build
-COPY --from=build /app/target/*.jar app.jar
-
 # Exponer puerto
 EXPOSE 8080
 
-# Healthcheck
+# Healthcheck simple
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
 # Ejecutar la aplicación
-ENTRYPOINT ["java", "-Dspring.profiles.active=simple", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "target/agrocloud-backend-1.0.0.jar"]
