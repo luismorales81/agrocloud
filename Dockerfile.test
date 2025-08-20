@@ -1,5 +1,5 @@
 # Dockerfile para Test Application
-FROM maven:3.9.5-openjdk-17 as build
+FROM maven:3.9.5-eclipse-temurin-17 as build
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -22,7 +22,7 @@ COPY agrogestion-backend/src/main/resources/application-test.properties src/main
 RUN mvn clean package -DskipTests
 
 # Etapa de ejecución
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jre-alpine
 
 # Establecer directorio de trabajo
 WORKDIR /app
