@@ -1,0 +1,56 @@
+{
+  "name": "AgroCloud - Sistema de Gestión Agrícola",
+  "short_name": "AgroCloud",
+  "description": "Sistema completo de gestión agrícola para productores",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/agrocloud-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Inicio",
+      "short_name": "Inicio",
+      "description": "Ver el dashboard principal",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/agrocloud-logo.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Lotes",
+      "short_name": "Lotes",
+      "description": "Gestionar lotes",
+      "url": "/dashboard?section=plots",
+      "icons": [{ "src": "/icons/agrocloud-logo.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Insumos",
+      "short_name": "Insumos",
+      "description": "Gestionar stock de insumos",
+      "url": "/dashboard?section=inputs",
+      "icons": [{ "src": "/icons/agrocloud-logo.svg", "sizes": "96x96" }]
+    }
+  ]
+}
