@@ -4,13 +4,12 @@ FROM openjdk:17-slim
 # Establecer directorio de trabajo
 WORKDIR /app
 
-# Instalar Maven y herramientas de debug
-RUN apt-get update && apt-get install -y maven curl wget procps && rm -rf /var/lib/apt/lists/*
+# Instalar herramientas de debug
+RUN apt-get update && apt-get install -y curl wget procps && rm -rf /var/lib/apt/lists/*
 
 # Mostrar información del sistema
 RUN echo "=== INFO DEL SISTEMA ===" && \
     java -version && \
-    mvn -version && \
     echo "=== MEMORIA DISPONIBLE ===" && \
     free -h && \
     echo "=== ESPACIO DISCO ===" && \
@@ -37,7 +36,8 @@ RUN echo "=== ESTRUCTURA DEL CÓDIGO ===" && \
 
 # Compilar la aplicación con debug
 RUN echo "=== INICIANDO COMPILACIÓN ===" && \
-    mvn clean package -DskipTests -X && \
+    chmod +x mvnw && \
+    ./mvnw clean package -DskipTests -X && \
     echo "=== COMPILACIÓN COMPLETADA ===" && \
     ls -la target/
 

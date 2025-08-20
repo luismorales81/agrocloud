@@ -4,9 +4,6 @@ FROM openjdk:17-slim
 # Establecer directorio de trabajo
 WORKDIR /app
 
-# Instalar Maven
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
-
 # Copiar archivos de configuración de Maven
 COPY agrogestion-backend/pom.xml .
 COPY agrogestion-backend/mvnw .
@@ -16,8 +13,8 @@ COPY agrogestion-backend/.mvn .mvn
 # Copiar código fuente
 COPY agrogestion-backend/src src
 
-# Compilar la aplicación
-RUN mvn clean package -DskipTests
+# Compilar la aplicación con Maven Wrapper
+RUN chmod +x mvnw && ./mvnw clean package -DskipTests
 
 # Exponer puerto
 EXPOSE 8080

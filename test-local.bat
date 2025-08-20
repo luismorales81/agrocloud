@@ -4,15 +4,15 @@ echo === PROBANDO BUILD LOCAL ===
 echo Verificando Java...
 java -version
 
-echo Verificando Maven...
-mvn -version
+echo Verificando Maven Wrapper...
+cd agrogestion-backend
+.\mvnw.cmd -version
 
 echo Limpiando build anterior...
 if exist target rmdir /s /q target
 
 echo Compilando aplicación...
-cd agrogestion-backend
-mvn clean package -DskipTests
+.\mvnw.cmd clean package -DskipTests
 
 echo Verificando JAR...
 dir target\*.jar
