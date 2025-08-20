@@ -16,6 +16,10 @@ COPY agrogestion-backend/.mvn .mvn
 # Descargar dependencias
 RUN mvn dependency:go-offline -B
 
+# Crear estructura de directorios
+RUN mkdir -p src/main/java/com/agrocloud
+RUN mkdir -p src/main/resources
+
 # Copiar solo la aplicación de prueba
 COPY agrogestion-backend/src/main/java/com/agrocloud/TestApplication.java src/main/java/com/agrocloud/
 COPY agrogestion-backend/src/main/resources/application-test.properties src/main/resources/
