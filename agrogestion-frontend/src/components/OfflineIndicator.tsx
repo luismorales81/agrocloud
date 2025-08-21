@@ -48,7 +48,7 @@ const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({ showDetails = false
         </span>
       )}
       
-      <style jsx>{`
+      <style>{`
         @keyframes pulse {
           0% { opacity: 1; }
           50% { opacity: 0.5; }

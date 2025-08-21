@@ -1,7 +1,8 @@
-import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
 // Configuración base de Axios
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://tu-backend-railway.up.railway.app/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://agrocloud-production.up.railway.app/api';
 
 // Crear instancia de Axios
 const api: AxiosInstance = axios.create({
@@ -40,7 +41,7 @@ api.interceptors.response.use(
     }
     
     // Mostrar notificación de error
-    const errorMessage = error.response?.data?.message || error.message || 'Error de conexión';
+    const errorMessage = (error.response?.data as any)?.message || error.message || 'Error de conexión';
     showNotification(errorMessage, 'error');
     
     return Promise.reject(error);

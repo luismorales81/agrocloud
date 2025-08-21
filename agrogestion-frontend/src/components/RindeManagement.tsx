@@ -47,7 +47,7 @@ const RindeManagement: React.FC = () => {
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [selectedLote, setSelectedLote] = useState<Lote | null>(null);
+  // const [selectedLote, setSelectedLote] = useState<Lote | null>(null); // Variable no utilizada
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<RindeLote>({
@@ -436,7 +436,7 @@ const RindeManagement: React.FC = () => {
                     lote_id: loteId,
                     superficie_ha: lote?.superficie || 0
                   }));
-                  setSelectedLote(lote || null);
+                  // setSelectedLote(lote || null); // Variable no utilizada
                 }}
                 style={{
                   width: '100%',

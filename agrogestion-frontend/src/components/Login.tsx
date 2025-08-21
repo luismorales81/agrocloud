@@ -38,7 +38,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         localStorage.setItem('user', JSON.stringify(data.user));
         onLoginSuccess(data.token, data.user);
       } else {
-        const errorData = await response.text();
+        await response.text(); // Ignorar el error data por ahora
         setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
       }
     } catch (error) {

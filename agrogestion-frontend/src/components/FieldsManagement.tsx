@@ -2,6 +2,17 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from '../contexts/LocationContext';
 import { getMapCenter } from '../config/googleMaps';
 
+// Declaración de tipos para NodeJS
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      NODE_ENV: 'development' | 'production' | 'test';
+      REACT_APP_API_URL?: string;
+    }
+    type Timeout = ReturnType<typeof setTimeout>;
+  }
+}
+
 interface Field {
   id?: number;
   nombre: string;
@@ -269,7 +280,7 @@ const FieldsManagement: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [googleMapsReady, setGoogleMapsReady] = useState(false);
-  const [mapReady, setMapReady] = useState(false);
+  // const [mapReady, setMapReady] = useState(false); // Variable no utilizada
   const [currentPolygon, setCurrentPolygon] = useState<any>(null);
 
   // Cargar campos desde la API
@@ -366,7 +377,7 @@ const FieldsManagement: React.FC = () => {
 
   // Manejar cuando el mapa está listo
   const handleMapReady = useCallback(() => {
-    setMapReady(true);
+    // setMapReady(true); // Variable no utilizada
   }, []);
 
   // Guardar campo
@@ -384,7 +395,7 @@ const FieldsManagement: React.FC = () => {
       setFormData({ nombre: '', superficie: 0, poligono: '' });
       setShowForm(false);
       setCurrentPolygon(null);
-      setMapReady(false);
+      // setMapReady(false); // Variable no utilizada
       
       // Limpiar polígono del mapa
       if (currentPolygon) {
@@ -402,7 +413,7 @@ const FieldsManagement: React.FC = () => {
     setFormData({ nombre: '', superficie: 0, poligono: '' });
     setShowForm(false);
     setCurrentPolygon(null);
-    setMapReady(false);
+    // setMapReady(false); // Variable no utilizada
     
     // Limpiar polígono del mapa
     if (currentPolygon) {

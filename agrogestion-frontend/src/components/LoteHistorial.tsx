@@ -326,7 +326,7 @@ const LoteHistorial: React.FC<LoteHistorialProps> = ({ loteId, loteNombre, onClo
                 background: '#e5e7eb'
               }} />
               
-              {filteredHistorial.map((entry, index) => {
+              {filteredHistorial.map((entry) => {
                 const actionInfo = getActionInfo(entry.tipo_accion);
                 return (
                   <div key={entry.id} style={{

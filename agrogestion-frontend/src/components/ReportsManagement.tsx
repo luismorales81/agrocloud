@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useCurrency } from '../hooks/useCurrency';
 
-interface ReportData {
-  id: number;
-  tipo: string;
-  titulo: string;
-  descripcion: string;
-  fechaGeneracion: string;
-  datos: any;
-}
+// interface ReportData {
+//   id: number;
+//   tipo: string;
+//   titulo: string;
+//   descripcion: string;
+//   fechaGeneracion: string;
+//   datos: any;
+// }
 
 interface RindeData {
   lote: string;

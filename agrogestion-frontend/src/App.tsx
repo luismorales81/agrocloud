@@ -473,7 +473,8 @@ const Dashboard: React.FC = () => {
   const [user, setUser] = useState<any>({});
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const deviceCapabilities = useDeviceCapabilities();
-  const { isMobile, isTablet, isOnline, isStandalone } = deviceCapabilities;
+  const { isMobile, isOnline } = deviceCapabilities;
+  // const { isMobile, isOnline, isStandalone } = deviceCapabilities; // isStandalone no se utiliza
   const [dashboardData, setDashboardData] = useState({
     campos: 0,
     lotes: 0,

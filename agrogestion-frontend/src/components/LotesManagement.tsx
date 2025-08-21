@@ -189,7 +189,7 @@ const LotesManagement: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [googleMapsReady, setGoogleMapsReady] = useState(false);
-  const [mapReady, setMapReady] = useState(false);
+  // const [mapReady, setMapReady] = useState(false); // Variable no utilizada
   const [currentPolygon, setCurrentPolygon] = useState<any>(null);
   const [showHistorial, setShowHistorial] = useState(false);
   const [selectedLoteForHistorial, setSelectedLoteForHistorial] = useState<Lote | null>(null);
@@ -306,7 +306,7 @@ const LotesManagement: React.FC = () => {
 
   // Manejar cuando el mapa está listo
   const handleMapReady = () => {
-    setMapReady(true);
+    // setMapReady(true); // Variable no utilizada
   };
 
   // Guardar lote

@@ -368,7 +368,8 @@ const LaboresManagement: React.FC = () => {
         // Crear nueva labor
         const newLabor: Labor = {
           ...formData,
-          id: labores.length + 1
+          id: labores.length + 1,
+          maquinaria_asignada: formData.maquinaria_asignada // Asegurarse de que maquinaria_asignada esté presente
         };
         setLabores(prev => [...prev, newLabor]);
         alert('Labor creada exitosamente');
@@ -439,6 +440,7 @@ const LaboresManagement: React.FC = () => {
       lote_nombre: '',
       estado: 'planificada',
       insumos_usados: [],
+      maquinaria_asignada: [],
       responsable: '',
       progreso: 0
     });
@@ -809,7 +811,7 @@ const LaboresManagement: React.FC = () => {
                             {insumos.map(insumo => (
                               <option key={insumo.id} value={insumo.id}>
                                 {insumo.nombre} (Stock: {insumo.stock_actual} {insumo.unidad_medida})
-                                {insumo.stock_actual < insumo.stock_minimo ? ' ⚠️ Stock bajo' : ''}
+                                {insumo.stock_actual < ((insumo as any).stock_minimo || 0) ? ' ⚠️ Stock bajo' : ''}
                               </option>
                             ))}
                           </select>

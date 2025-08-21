@@ -332,7 +332,7 @@ class OfflineService {
   async installPWA(): Promise<void> {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       try {
-        const registration = await navigator.serviceWorker.ready;
+        await navigator.serviceWorker.ready; // Ignorar registration por ahora
         
         // Solicitar permisos de notificaciones
         const permission = await Notification.requestPermission();
