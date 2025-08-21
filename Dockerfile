@@ -30,9 +30,9 @@ COPY --from=build /app/target/agrocloud-backend-1.0.0.jar app.jar
 # Exponer puerto
 EXPOSE 8080
 
-# Healthcheck simple usando el endpoint raíz
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+# Healthcheck usando el endpoint de Actuator
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/actuator/health || exit 1
 
 # Ejecutar la aplicación con perfil Railway
 ENTRYPOINT ["java", "-Dspring.profiles.active=railway", "-jar", "app.jar"]
