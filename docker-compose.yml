@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: agrocloud-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: agroclouddb
+      MYSQL_USER: agrocloud
+      MYSQL_PASSWORD: agrocloud123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./agrogestion-backend/src/main/resources/schema-mysql.sql:/docker-entrypoint-initdb.d/schema-mysql.sql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - agrocloud-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: agrocloud-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: password
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - agrocloud-network
+
+volumes:
+  mysql_data:
+
+networks:
+  agrocloud-network:
+    driver: bridge

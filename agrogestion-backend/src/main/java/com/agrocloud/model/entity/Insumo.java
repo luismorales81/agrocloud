@@ -79,6 +79,11 @@ public class Insumo {
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
 
+    // Relación con el usuario propietario
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     // Enums
     public enum TipoInsumo {
         FERTILIZANTE, HERBICIDA, FUNGICIDA, INSECTICIDA, SEMILLA, COMBUSTIBLE, LUBRICANTE, REPUESTO, HERRAMIENTA, OTROS
@@ -198,6 +203,14 @@ public class Insumo {
 
     public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
         this.fechaActualizacion = fechaActualizacion;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     // Helper methods

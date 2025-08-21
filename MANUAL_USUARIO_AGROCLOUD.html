@@ -76,6 +76,31 @@
             font-size: 0.9rem;
         }
         
+        .tagline {
+            background: rgba(255,255,255,0.15);
+            padding: 15px 25px;
+            border-radius: 25px;
+            margin: 15px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .taglines-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .tagline-item {
+            background: rgba(255,255,255,0.1);
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            border-left: 4px solid #22c55e;
+        }
+        
         h2 {
             color: #2c3e50;
             font-size: 1.8rem;
@@ -222,6 +247,20 @@
             margin-top: 30px;
         }
         
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        
+        .highlight-box h3 {
+            color: white;
+            margin-bottom: 15px;
+        }
+        
         @media print {
             body {
                 background: white;
@@ -260,6 +299,20 @@
             </div>
             <h1>AgroCloud</h1>
             <p class="subtitle">Sistema de Gestión Agrícola</p>
+            
+            <!-- Taglines destacadas -->
+            <div class="taglines-container">
+                <div class="tagline-item">
+                    👉 "Gestión agro sencilla, clara y sin complicaciones"
+                </div>
+                <div class="tagline-item">
+                    👉 "Todo en la nube, desde cualquier dispositivo"
+                </div>
+                <div class="tagline-item">
+                    👉 "Precios accesibles para pequeños y medianos productores"
+                </div>
+            </div>
+            
             <div class="version">Versión 1.0.0 - Manual de Usuario</div>
         </div>
 
@@ -268,8 +321,41 @@
             <h2>🌾 Bienvenido a AgroCloud</h2>
             <p>AgroCloud es un sistema web completo de gestión agrícola diseñado para optimizar y digitalizar todas las operaciones de tu empresa agrícola. Este manual te guiará a través de todas las funcionalidades disponibles para que puedas aprovechar al máximo el sistema.</p>
             
+            <div class="highlight-box">
+                <h3>🎯 Nuestra Promesa</h3>
+                <p><strong>"Gestión agro sencilla, clara y sin complicaciones"</strong></p>
+                <p>Hemos diseñado AgroCloud pensando en la simplicidad y eficiencia, eliminando la complejidad innecesaria para que puedas enfocarte en lo que realmente importa: tu producción agrícola.</p>
+            </div>
+            
             <div class="success">
                 <strong>🎯 Objetivo:</strong> Este documento está diseñado para usuarios que realizarán pruebas del sistema y necesitan conocer todas las funcionalidades disponibles.
+            </div>
+        </section>
+
+        <!-- Ventajas del Sistema -->
+        <section>
+            <h2>🚀 ¿Por qué elegir AgroCloud?</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>☁️ Todo en la Nube</h4>
+                    <p><strong>"Todo en la nube, desde cualquier dispositivo"</strong> - Accede a tu información desde cualquier lugar, en cualquier momento. No más archivos perdidos o datos desactualizados.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>💰 Precios Accesibles</h4>
+                    <p><strong>"Precios accesibles para pequeños y medianos productores"</strong> - Creamos una solución que no compromete la calidad pero sí se adapta a tu presupuesto.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>📱 Multi-dispositivo</h4>
+                    <p>Funciona perfectamente en computadoras, tablets y smartphones. Tu información siempre disponible, sin importar dónde estés.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>🔒 Seguridad Garantizada</h4>
+                    <p>Datos protegidos con la más alta seguridad. Respaldo automático y acceso controlado para tu tranquilidad.</p>
+                </div>
             </div>
         </section>
 
@@ -299,13 +385,13 @@
                         </tr>
                         <tr>
                             <td><strong>tecnico</strong></td>
-                            <td>tecnico123</td>
+                            <td>admin123</td>
                             <td>Técnico Agrícola</td>
                             <td>Gestión de campos, lotes y labores</td>
                         </tr>
                         <tr>
                             <td><strong>productor</strong></td>
-                            <td>productor123</td>
+                            <td>admin123</td>
                             <td>Productor</td>
                             <td>Consulta de reportes y seguimiento</td>
                         </tr>
@@ -577,6 +663,14 @@
             <h3>🌾 AgroCloud - Sistema de Gestión Agrícola</h3>
             <p>Versión 1.0.0 | Manual de Usuario para Pruebas</p>
             <p>Desarrollado con tecnologías modernas para la agricultura del futuro</p>
+            
+            <!-- Taglines en el footer -->
+            <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <p style="margin: 5px 0;"><strong>👉 "Gestión agro sencilla, clara y sin complicaciones"</strong></p>
+                <p style="margin: 5px 0;"><strong>👉 "Todo en la nube, desde cualquier dispositivo"</strong></p>
+                <p style="margin: 5px 0;"><strong>👉 "Precios accesibles para pequeños y medianos productores"</strong></p>
+            </div>
+            
             <p style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">
                 © 2024 AgroCloud. Todos los derechos reservados.
             </p>

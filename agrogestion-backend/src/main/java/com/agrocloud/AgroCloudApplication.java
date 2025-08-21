@@ -11,4 +11,5 @@ public class AgroCloudApplication {
     public static void main(String[] args) {
         SpringApplication.run(AgroCloudApplication.class, args);
     }
+
 }

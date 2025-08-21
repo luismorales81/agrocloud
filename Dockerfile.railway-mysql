@@ -1,0 +1,52 @@
+# Dockerfile para Railway con MySQL
+FROM eclipse-temurin:17-jdk-alpine as build
+
+WORKDIR /workspace/app
+
+# Copiar archivos de configuración de Maven
+COPY agrogestion-backend/mvnw .
+COPY agrogestion-backend/.mvn .mvn
+COPY agrogestion-backend/pom.xml .
+
+# Hacer el script ejecutable
+RUN chmod +x ./mvnw
+
+# Descargar dependencias
+RUN ./mvnw dependency:go-offline -B
+
+# Copiar código fuente
+COPY agrogestion-backend/src src
+
+# Construir la aplicación
+RUN ./mvnw package -DskipTests
+
+# Imagen de producción
+FROM eclipse-temurin:17-jre-alpine
+
+# Instalar curl para health checks
+RUN apk add --no-cache curl
+
+# Crear usuario no-root
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+WORKDIR /app
+
+# Copiar el JAR construido
+COPY --from=build /workspace/app/target/*.jar app.jar
+
+# Cambiar propiedad del archivo
+RUN chown -R appuser:appgroup /app
+
+# Cambiar al usuario no-root
+USER appuser
+
+# Exponer puerto
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Comando de inicio
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

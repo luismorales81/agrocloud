@@ -55,6 +55,14 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
+    // Relación padre-hijo para jerarquía de usuarios
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_user_id")
+    private User parentUser;
+
+    @OneToMany(mappedBy = "parentUser", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<User> childUsers = new HashSet<>();
+
     // Constructors
     public User() {}
 
@@ -154,5 +162,56 @@ public class User {
 
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
+    }
+
+    public User getParentUser() {
+        return parentUser;
+    }
+
+    public void setParentUser(User parentUser) {
+        this.parentUser = parentUser;
+    }
+
+    public Set<User> getChildUsers() {
+        return childUsers;
+    }
+
+    public void setChildUsers(Set<User> childUsers) {
+        this.childUsers = childUsers;
+    }
+
+    // Métodos helper para la jerarquía
+    public void addChildUser(User childUser) {
+        childUsers.add(childUser);
+        childUser.setParentUser(this);
+    }
+
+    public void removeChildUser(User childUser) {
+        childUsers.remove(childUser);
+        childUser.setParentUser(null);
+    }
+
+    public boolean isAdmin() {
+        return roles.stream().anyMatch(role -> "ADMIN".equals(role.getName()));
+    }
+
+    public boolean canAccessUser(User targetUser) {
+        // Admin puede acceder a todos los usuarios
+        if (isAdmin()) {
+            return true;
+        }
+        
+        // Usuario puede acceder a sí mismo
+        if (this.equals(targetUser)) {
+            return true;
+        }
+        
+        // Usuario puede acceder a sus hijos directos
+        if (childUsers.contains(targetUser)) {
+            return true;
+        }
+        
+        // Usuario puede acceder a descendientes (hijos de sus hijos)
+        return childUsers.stream().anyMatch(child -> child.canAccessUser(targetUser));
     }
 }

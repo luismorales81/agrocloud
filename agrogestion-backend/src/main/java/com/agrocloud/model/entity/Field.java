@@ -70,6 +70,11 @@ public class Field {
     @OneToMany(mappedBy = "campo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Plot> lotes = new ArrayList<>();
 
+    // Relación con el usuario propietario
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     // Constructors
     public Field() {}
 
@@ -168,6 +173,14 @@ public class Field {
 
     public void setLotes(List<Plot> lotes) {
         this.lotes = lotes;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     // Helper methods

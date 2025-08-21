@@ -10,6 +10,9 @@ COPY agrogestion-backend/pom.xml .
 # Copiar código fuente
 COPY agrogestion-backend/src src
 
+# Copiar configuración de aplicación
+COPY agrogestion-backend/src/main/resources/application.properties src/main/resources/
+
 # Compilar la aplicación con Maven
 RUN mvn clean package -DskipTests
 

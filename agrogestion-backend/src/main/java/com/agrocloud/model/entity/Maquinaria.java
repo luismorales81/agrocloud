@@ -91,6 +91,11 @@ public class Maquinaria {
     @OneToMany(mappedBy = "maquinaria", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Labor> labores = new ArrayList<>();
 
+    // Relación con el usuario propietario
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     // Enums
     public enum TipoMaquinaria {
         TRACTOR, COSECHADORA, SEMBRADORA, PULVERIZADORA, ARADO, RASTRA, OTROS
@@ -245,6 +250,14 @@ public class Maquinaria {
 
     public void setLabores(List<Labor> labores) {
         this.labores = labores;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     // Helper methods
