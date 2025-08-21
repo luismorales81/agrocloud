@@ -1,4 +1,4 @@
-# 🔧 Configurar Variables de Entorno en Railway
+x|# 🔧 Configurar Variables de Entorno en Railway
 
 ## 📋 Variables Requeridas
 
