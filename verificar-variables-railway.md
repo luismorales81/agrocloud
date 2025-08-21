@@ -1,90 +1,82 @@
 # 🔧 Verificación de Variables de Entorno en Railway
 
-## Variables Mínimas Requeridas
+## Variables Requeridas
 
-Para que la aplicación funcione en Railway, necesitas configurar estas variables:
+Verifica que tengas estas variables configuradas en Railway:
 
-### Opción 1: Con MySQL (Recomendado)
+### 1. Variables de Base de Datos
 ```bash
-DATABASE_URL=jdbc:mysql://tu-host-mysql:3306/tu-base-datos?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-DB_USERNAME=tu-usuario-mysql
-DB_PASSWORD=tu-contraseña-mysql
-JWT_SECRET=tu-clave-secreta-muy-larga-y-segura
+DATABASE_URL=mysql://root:WSoobrppUQbaPINdsRcoQVkUvtYKjmSe@mysql.railway.internal:3306/railway
+DB_USERNAME=root
+DB_PASSWORD=WSoobrppUQbaPINdsRcoQVkUvtYKjmSe
 ```
 
-### Opción 2: Sin MySQL (Fallback a H2)
+### 2. Variable JWT
 ```bash
-JWT_SECRET=tu-clave-secreta-muy-larga-y-segura
+JWT_SECRET=agrogestionSecretKey2024ForJWTTokenGenerationAndValidationSecureAndLongEnough
 ```
 
-## Pasos para Configurar Variables en Railway
+## Pasos de Verificación
 
-### 1. Ir a Railway Dashboard
-- Ve a https://railway.app/dashboard
-- Selecciona tu proyecto
-- Ve a la pestaña "Variables"
+### Paso 1: Ir a Railway Dashboard
+1. Ve a https://railway.app/dashboard
+2. Selecciona tu proyecto AgroGestion
+3. Ve a la pestaña **"Variables"**
 
-### 2. Agregar Variables
-Haz clic en "New Variable" y agrega:
+### Paso 2: Verificar Variables
+Asegúrate de que tengas estas 4 variables:
 
-#### Variable: `JWT_SECRET`
-**Valor**: `agrogestionSecretKey2024ForJWTTokenGenerationAndValidationSecureAndLongEnough`
+| Variable | Valor Esperado |
+|----------|----------------|
+| `DATABASE_URL` | `mysql://root:WSoobrppUQbaPINdsRcoQVkUvtYKjmSe@mysql.railway.internal:3306/railway` |
+| `DB_USERNAME` | `root` |
+| `DB_PASSWORD` | `WSoobrppUQbaPINdsRcoQVkUvtYKjmSe` |
+| `JWT_SECRET` | `agrogestionSecretKey2024ForJWTTokenGenerationAndValidationSecureAndLongEnough` |
 
-#### Variable: `DATABASE_URL` (si tienes MySQL)
-**Valor**: `jdbc:mysql://tu-host-mysql:3306/tu-base-datos?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true`
+### Paso 3: Verificar Logs
+1. Ve a la pestaña **"Logs"**
+2. Busca errores específicos:
+   - `Connection refused`
+   - `Database connection failed`
+   - `Access denied`
+   - `JWT secret not found`
 
-#### Variable: `DB_USERNAME` (si tienes MySQL)
-**Valor**: `tu-usuario-mysql`
+## Errores Comunes y Soluciones
 
-#### Variable: `DB_PASSWORD` (si tienes MySQL)
-**Valor**: `tu-contraseña-mysql`
+### Error: "Connection refused"
+**Causa**: La aplicación no puede conectarse a MySQL
+**Solución**: Verifica que el servicio MySQL esté activo en Railway
 
-### 3. Verificar Configuración
-- Asegúrate de que todas las variables estén guardadas
-- Verifica que no haya espacios extra
-- Confirma que los valores sean correctos
+### Error: "Access denied"
+**Causa**: Credenciales incorrectas
+**Solución**: Verifica `DB_USERNAME` y `DB_PASSWORD`
 
-## Verificación de Logs
+### Error: "JWT secret not found"
+**Causa**: Variable JWT_SECRET faltante
+**Solución**: Agrega la variable JWT_SECRET
 
-### 1. Ver Logs en Railway
-- Ve a la pestaña "Logs"
-- Busca estos mensajes de éxito:
-  ```
-  Started AgroCloudApplication
-  Tomcat started on port(s): 8080
-  ```
+### Error: "Port already in use"
+**Causa**: Puerto ocupado
+**Solución**: Railway asigna automáticamente el puerto
 
-### 2. Buscar Errores Comunes
-- `Connection refused` → Problema de base de datos
-- `Port already in use` → Puerto ocupado
-- `JWT secret not found` → Variable JWT_SECRET faltante
-- `Database connection failed` → Credenciales incorrectas
+## Verificación Manual
 
-## Prueba Manual
-
-Una vez configurado, prueba estos endpoints:
+Una vez que las variables estén configuradas, prueba:
 
 ```bash
 # Healthcheck básico
 curl https://tu-app.railway.app/
 
-# Healthcheck simple
+# Health simple
 curl https://tu-app.railway.app/health
 
 # Ping
 curl https://tu-app.railway.app/ping
 ```
 
-## Solución de Problemas
+## Próximos Pasos
 
-### Si el healthcheck sigue fallando:
-1. Verifica que todas las variables estén configuradas
-2. Revisa los logs para errores específicos
-3. Asegúrate de que la base de datos esté activa (si usas MySQL)
-4. Prueba con la configuración de H2 (sin MySQL)
-
-### Si usas MySQL y no conecta:
-1. Verifica que la base de datos esté activa
-2. Confirma las credenciales
-3. Asegúrate de que la base de datos sea accesible desde Railway
-4. Verifica que el puerto 3306 esté abierto
+1. **Verifica las variables** usando esta guía
+2. **Revisa los logs** para errores específicos
+3. **Confirma que MySQL esté activo** en Railway
+4. **Prueba los endpoints** manualmente
