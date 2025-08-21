@@ -34,5 +34,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/ || exit 1
 
-# Ejecutar la aplicación con perfil Railway (fallback a H2)
-ENTRYPOINT ["java", "-Dspring.profiles.active=railway", "-jar", "app.jar"]
+# Ejecutar la aplicación con perfil Railway MySQL
+ENTRYPOINT ["java", "-Dspring.profiles.active=railway-mysql", "-jar", "app.jar"]
