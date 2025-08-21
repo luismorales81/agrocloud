@@ -1,8 +1,9 @@
 package com.agrocloud.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.ResponseEntity;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,29 +11,28 @@ import java.util.Map;
 public class HealthController {
 
     @GetMapping("/")
-    public ResponseEntity<Map<String, Object>> root() {
+    public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> response = new HashMap<>();
-        response.put("status", "OK");
-        response.put("message", "AgroCloud API está funcionando");
-        response.put("timestamp", System.currentTimeMillis());
+        response.put("status", "UP");
+        response.put("timestamp", LocalDateTime.now());
+        response.put("service", "AgroCloud Backend");
+        response.put("version", "1.0.0");
+        response.put("message", "Servicio funcionando correctamente");
+        
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> health() {
+    public ResponseEntity<Map<String, Object>> simpleHealth() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "UP");
-        response.put("application", "AgroCloud");
-        response.put("timestamp", System.currentTimeMillis());
+        response.put("timestamp", LocalDateTime.now());
+        
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/api/health")
-    public ResponseEntity<Map<String, Object>> apiHealth() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "UP");
-        response.put("application", "AgroCloud API");
-        response.put("timestamp", System.currentTimeMillis());
-        return ResponseEntity.ok(response);
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping() {
+        return ResponseEntity.ok("pong");
     }
 }
