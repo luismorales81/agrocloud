@@ -32,4 +32,4 @@ HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/ || exit 1
 
 # Ejecutar la aplicación
-CMD ["java", "-Dspring.profiles.active=railway-h2", "-jar", "app.jar"]
+CMD ["java", "-Dspring.profiles.active=railway-mysql", "-jar", "app.jar"]
