@@ -11,7 +11,7 @@ COPY agrogestion-backend/pom.xml .
 COPY agrogestion-backend/src src
 
 # Compilar la aplicación con Maven
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests && ls -la target/
 
 # Segunda etapa: Runtime
 FROM eclipse-temurin:17-jre-alpine
@@ -21,8 +21,8 @@ WORKDIR /app
 # Instalar wget para healthcheck
 RUN apk add --no-cache wget
 
-# Copiar el JAR compilado
-COPY --from=build /app/target/agrocloud-backend-1.0.0.jar app.jar
+# Copiar el JAR compilado (usar wildcard para evitar problemas de nombre)
+COPY --from=build /app/target/*.jar app.jar
 
 # Exponer puerto
 EXPOSE 8080
