@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
 // Configuración base de Axios
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://agrocloud-backend-production-xxxx.up.railway.app/api';
 
 // Crear instancia de Axios
 const api: AxiosInstance = axios.create({
