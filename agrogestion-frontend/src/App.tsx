@@ -15,206 +15,11 @@ import { useDeviceCapabilities } from './hooks/useResponsive';
 import offlineService from './services/OfflineService';
 import OfflineIndicator from './components/OfflineIndicator';
 import currencyService from './services/CurrencyService';
+import Login from './components/Login';
 
 
 
-// Componente de Login simplificado
-const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    // Simulación de login con diferentes usuarios
-    setTimeout(() => {
-      let userData;
-      
-      switch (username.toLowerCase()) {
-        case 'admin':
-          userData = {
-            id: 1,
-            username: 'admin',
-            firstName: 'Administrador',
-            lastName: 'Sistema',
-            role: 'admin',
-                         email: 'admin@agrocloud.com'
-          };
-          break;
-        case 'tecnico':
-          userData = {
-            id: 2,
-            username: 'tecnico',
-            firstName: 'Técnico',
-            lastName: 'Agrícola',
-            role: 'tecnico',
-                         email: 'tecnico@agrocloud.com'
-          };
-          break;
-        case 'productor':
-          userData = {
-            id: 3,
-            username: 'productor',
-            firstName: 'Productor',
-            lastName: 'Agrícola',
-            role: 'productor',
-                         email: 'productor@agrocloud.com'
-          };
-          break;
-        default:
-          userData = {
-            id: 4,
-            username: username,
-            firstName: 'Usuario',
-            lastName: 'Demo',
-            role: 'usuario',
-                         email: 'usuario@agrocloud.com'
-          };
-      }
-      
-      localStorage.setItem('token', 'fake-token');
-      localStorage.setItem('user', JSON.stringify(userData));
-      setLoading(false);
-      window.location.href = '/dashboard';
-    }, 1000);
-  };
-
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      backgroundColor: '#f3f4f6',
-      fontFamily: 'Arial, sans-serif'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '2rem',
-        borderRadius: '0.5rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        maxWidth: '400px'
-      }}>
-                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-           <div style={{ 
-             width: '80px', 
-             height: '80px', 
-             margin: '0 auto 1rem auto',
-             background: 'white',
-             borderRadius: '50%',
-             display: 'flex',
-             alignItems: 'center',
-             justifyContent: 'center',
-             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-             padding: '8px'
-           }}>
-             <img 
-               src="/icons/agrocloud-logo.svg" 
-               alt="AgroCloud Logo" 
-               style={{ width: '100%', height: '100%' }}
-             />
-           </div>
-           <h1 style={{ 
-             fontSize: '2rem', 
-             fontWeight: 'bold', 
-             color: '#1f2937',
-             marginBottom: '0.5rem'
-           }}>
-             AgroCloud
-           </h1>
-           <p style={{ color: '#6b7280' }}>
-             Sistema de Gestión Agrícola
-           </p>
-         </div>
-        
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem',
-              fontWeight: '500',
-              color: '#374151'
-            }}>
-              Usuario
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.375rem',
-                fontSize: '1rem'
-              }}
-              placeholder="Ingrese su usuario"
-              required
-            />
-          </div>
-          
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem',
-              fontWeight: '500',
-              color: '#374151'
-            }}>
-              Contraseña
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.375rem',
-                fontSize: '1rem'
-              }}
-              placeholder="Ingrese su contraseña"
-              required
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              backgroundColor: loading ? '#9ca3af' : '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              fontSize: '1rem',
-              fontWeight: '500',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </button>
-        </form>
-        
-        <div style={{ 
-          textAlign: 'center', 
-          marginTop: '2rem',
-          fontSize: '0.875rem',
-          color: '#6b7280'
-        }}>
-          <p style={{ marginBottom: '0.5rem' }}>Usuarios de prueba:</p>
-          <p>admin / admin123</p>
-          <p>tecnico / tecnico123</p>
-          <p>productor / productor123</p>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Componente de navegación lateral
 const Sidebar: React.FC<{ activeSection: string; onSectionChange: (section: string) => void; isMobile: boolean; onMobileMenuToggle: () => void }> = ({ 
@@ -1181,9 +986,15 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const AppRoutes: React.FC = () => {
+  const handleLoginSuccess = (token: string, user: any) => {
+    // El login ya se maneja en el componente Login
+    // Solo redirigir al dashboard
+    window.location.href = '/dashboard';
+  };
+
   return (
     <Routes>
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/login" element={<PublicRoute><Login onLoginSuccess={handleLoginSuccess} /></PublicRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
