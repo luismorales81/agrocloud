@@ -16,9 +16,7 @@ import offlineService from './services/OfflineService';
 import OfflineIndicator from './components/OfflineIndicator';
 import currencyService from './services/CurrencyService';
 
-
-
-
+// FORZAR REDEPLOY - FIX INFINITE LOADING ISSUE
 
 
 // Componente de Login simplificado - Sin llamadas al backend
