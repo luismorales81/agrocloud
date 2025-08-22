@@ -531,79 +531,72 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     
     try {
-      // Intentar cargar datos del servidor primero
-      if (isOnline) {
-        // Aquí se harían las llamadas reales a la API
-        // Por ahora usamos datos mock
-        const mockData = {
-          campos: 3,
-          lotes: 3,
-          cultivosActivos: 2,
-          insumos: 5,
-          laboresPendientes: 1,
-          laboresEnProgreso: 1,
-          laboresCompletadas: 2,
-          stockBajo: 2,
-          costoTotalInsumos: 25000000,
-          actividadReciente: [
-            {
-              id: 1,
-              tipo: 'labor',
-              descripcion: 'Siembra completada en Lote A1',
-              fecha: '2024-11-15',
-              usuario: 'Juan Pérez'
-            },
-            {
-              id: 2,
-              tipo: 'insumo',
-              descripcion: 'Nuevo insumo agregado: Semilla Soja DM 53i54',
-              fecha: '2024-11-14',
-              usuario: 'María González'
-            },
-            {
-              id: 3,
-              tipo: 'lote',
-              descripcion: 'Lote B1 creado en Campo Norte',
-              fecha: '2024-11-13',
-              usuario: 'Carlos López'
-            },
-            {
-              id: 4,
-              tipo: 'cultivo',
-              descripcion: 'Cultivo de Maíz activado',
-              fecha: '2024-11-12',
-              usuario: 'Ana Martínez'
-            }
-          ]
-        };
-        
-        setDashboardData(mockData);
-        
-        // Guardar en cache para uso offline
+      // Usar datos mock por ahora para evitar problemas de conexión
+      const mockData = {
+        campos: 3,
+        lotes: 3,
+        cultivosActivos: 2,
+        insumos: 5,
+        laboresPendientes: 1,
+        laboresEnProgreso: 1,
+        laboresCompletadas: 2,
+        stockBajo: 2,
+        costoTotalInsumos: 25000000,
+        actividadReciente: [
+          {
+            id: 1,
+            tipo: 'labor',
+            descripcion: 'Siembra completada en Lote A1',
+            fecha: '2024-11-15',
+            usuario: 'Juan Pérez'
+          },
+          {
+            id: 2,
+            tipo: 'insumo',
+            descripcion: 'Nuevo insumo agregado: Semilla Soja DM 53i54',
+            fecha: '2024-11-14',
+            usuario: 'María González'
+          },
+          {
+            id: 3,
+            tipo: 'lote',
+            descripcion: 'Lote B1 creado en Campo Norte',
+            fecha: '2024-11-13',
+            usuario: 'Carlos López'
+          },
+          {
+            id: 4,
+            tipo: 'cultivo',
+            descripcion: 'Cultivo de Maíz activado',
+            fecha: '2024-11-12',
+            usuario: 'Ana Martínez'
+          }
+        ]
+      };
+      
+      setDashboardData(mockData);
+      
+      // Guardar en cache para uso offline
+      try {
         await offlineService.saveToCache('dashboardData', mockData);
-      } else {
-        // Cargar datos del cache si no hay conexión
-        const cachedData = await offlineService.getFromCache('dashboardData');
-        if (cachedData) {
-          setDashboardData(cachedData);
-        } else {
-          // Datos de respaldo
-          setDashboardData({
-            campos: 0,
-            lotes: 0,
-            cultivosActivos: 0,
-            insumos: 0,
-            laboresPendientes: 0,
-            laboresEnProgreso: 0,
-            laboresCompletadas: 0,
-            stockBajo: 0,
-            costoTotalInsumos: 0,
-            actividadReciente: []
-          });
-        }
+      } catch (cacheError) {
+        console.warn('Error guardando en cache:', cacheError);
       }
     } catch (error) {
       console.error('Error cargando datos del dashboard:', error);
+      // Datos de respaldo en caso de error
+      setDashboardData({
+        campos: 0,
+        lotes: 0,
+        cultivosActivos: 0,
+        insumos: 0,
+        laboresPendientes: 0,
+        laboresEnProgreso: 0,
+        laboresCompletadas: 0,
+        stockBajo: 0,
+        costoTotalInsumos: 0,
+        actividadReciente: []
+      });
     } finally {
       setLoading(false);
     }
