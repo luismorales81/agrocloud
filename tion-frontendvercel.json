@@ -1,0 +1,5 @@
+[33maab54b0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix MIME type issues - Add proper Vercel configuration - Fix Service Worker and manifest.json serving - Configure correct Content-Type headers
+[33mf95f410[m FORZAR REDEPLOY - Fix infinite loading issue - Force Vercel to detect changes
+[33m1b62041[m Fix infinite loading issue - Remove external Login component import - Add simple Login component directly in App.tsx - Use mock login without backend calls - Eliminate API calls during initial load
+[33m7b54103[m Fix Login component conflict - Remove duplicate Login component from App.tsx - Import Login component from separate file - Add onLoginSuccess prop to handle login flow - Resolve component naming conflicts
+[33mb44de7a[m Fix frontend loading issue - Update Login component to use correct API URL - Simplify dashboard data loading to avoid API calls during initial load - Use mock data to prevent loading infinite loop

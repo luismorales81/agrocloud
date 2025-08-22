@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-// FORZAR REDEPLOY - FIX INFINITE LOADING ISSUE
+// FORZAR REDEPLOY - FIX MIME TYPE ISSUES
 
 // Componente de Login simplificado - Sin llamadas al backend
 const Login: React.FC = () => {

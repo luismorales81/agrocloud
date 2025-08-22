@@ -3,111 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/icons/agrocloud-logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#2563eb" />
     <meta name="description" content="Sistema completo de gestión agrícola para productores" />
-    <meta name="keywords" content="agricultura, gestión, lotes, insumos, labores, maquinaria" />
-    <meta name="author" content="AgroCloud" />
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-152x152.png" />
-    
-    <!-- Apple Meta Tags -->
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="AgroCloud" />
     
-    <!-- Microsoft Tiles -->
-    <meta name="msapplication-TileColor" content="#2563eb" />
-    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
     
-    <!-- Preconnect para mejor rendimiento -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    
-    <!-- DNS Prefetch -->
-    <link rel="dns-prefetch" href="//fonts.googleapis.com" />
-    
-    <!-- Preload critical resources -->
-    <link rel="preload" href="/manifest.json" as="fetch" crossorigin />
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
     
     <title>AgroCloud - Sistema de Gestión Agrícola</title>
-    
-    <style>
-      /* Estilos de carga inicial para evitar FOUC */
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-          sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        background-color: #f9fafb;
-      }
-      
-      #root {
-        min-height: 100vh;
-      }
-      
-      /* Loading spinner */
-      .loading-spinner {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      }
-      
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid white;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      
-      /* Safe area para dispositivos con notch */
-      @supports (padding: max(0px)) {
-        body {
-          padding-left: max(0px, env(safe-area-inset-left));
-          padding-right: max(0px, env(safe-area-inset-right));
-          padding-top: max(0px, env(safe-area-inset-top));
-          padding-bottom: max(0px, env(safe-area-inset-bottom));
-        }
-      }
-    </style>
   </head>
   <body>
-    <div id="root">
-      <!-- Loading inicial -->
-      <div class="loading-spinner">
-        <div class="spinner"></div>
-      </div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
+        window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
+            .then((registration) => {
               console.log('SW registered: ', registration);
             })
-            .catch(function(registrationError) {
+            .catch((registrationError) => {
               console.log('SW registration failed: ', registrationError);
             });
         });

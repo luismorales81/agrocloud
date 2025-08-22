@@ -1,7 +1,7 @@
 // Configuración para producción (Railway)
 export const config = {
   // URL del backend en Railway
-  API_BASE_URL: 'https://agrocloud-backend-production-xxxx.up.railway.app/api',
+  API_BASE_URL: 'https://agrocloud-production.up.railway.app/api',
   
   // Configuración de la aplicación
   APP_NAME: 'AgroCloud',
@@ -18,6 +18,6 @@ export const config = {
 };
 
 // Instrucciones de uso:
-// 1. Reemplaza 'tu-app-railway.railway.app' con la URL real de tu aplicación en Railway
+// 1. La URL del backend ya está configurada para Railway
 // 2. Actualiza la API key de Google Maps si la usas
 // 3. Importa este archivo en api.ts para usar la configuración de producción
