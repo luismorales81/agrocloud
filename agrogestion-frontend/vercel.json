@@ -11,11 +11,43 @@
   ],
   "routes": [
     {
+      "src": "/sw.js",
+      "headers": {
+        "Content-Type": "application/javascript"
+      }
+    },
+    {
+      "src": "/manifest.json",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
   ],
+  "headers": [
+    {
+      "source": "/(.*).js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).css",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/css"
+        }
+      ]
+    }
+  ],
   "env": {
-    "VITE_API_BASE_URL": "https://agrocloud-backend-production-xxxx.up.railway.app/api"
+    "VITE_API_BASE_URL": "https://agrocloud-production.up.railway.app/api"
   }
 }
