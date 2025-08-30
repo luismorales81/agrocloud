@@ -21,6 +21,16 @@ public class FieldService {
     @Autowired
     private UserRepository userRepository;
 
+    // Obtener todos los campos (público)
+    public List<Field> getAllFields() {
+        return fieldRepository.findAll();
+    }
+
+    // Obtener campo por ID (público)
+    public Field getFieldById(Long id) {
+        return fieldRepository.findById(id).orElse(null);
+    }
+
     // Obtener todos los campos accesibles por un usuario
     public List<Field> getFieldsByUser(User user) {
         if (user.isAdmin()) {
@@ -69,6 +79,8 @@ public class FieldService {
                 field.setTipoSuelo(fieldData.getTipoSuelo());
                 field.setEstado(fieldData.getEstado());
                 field.setActivo(fieldData.getActivo());
+                field.setPoligono(fieldData.getPoligono());
+                field.setCoordenadas(fieldData.getCoordenadas());
                 
                 return Optional.of(fieldRepository.save(field));
             }

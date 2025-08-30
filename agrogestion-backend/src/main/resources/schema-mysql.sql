@@ -45,10 +45,14 @@ CREATE TABLE IF NOT EXISTS campos (
     area_hectareas DECIMAL(10,2),
     tipo_suelo VARCHAR(50),
     descripcion TEXT,
-    usuario_id BIGINT,
+    poligono TEXT COMMENT 'Polígono del campo en formato GeoJSON',
+    coordenadas JSON COMMENT 'Coordenadas del campo como array de puntos lat/lng',
+    estado VARCHAR(100) DEFAULT 'ACTIVO',
+    activo BOOLEAN DEFAULT TRUE,
+    user_id BIGINT,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+    FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
 -- Crear tabla de lotes

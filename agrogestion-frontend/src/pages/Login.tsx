@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -43,9 +43,9 @@ const Login: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="card p-8">
             <Input
-              label="Usuario"
-              type="text"
-              placeholder="Ingrese su usuario"
+              label="Email"
+              type="email"
+              placeholder="Ingrese su email"
               value={username}
               onChange={setUsername}
               required
@@ -59,6 +59,12 @@ const Login: React.FC = () => {
               onChange={setPassword}
               required
             />
+            
+            <div className="text-right">
+              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             
             <Button
               type="submit"
@@ -74,9 +80,9 @@ const Login: React.FC = () => {
         
         <div className="text-center text-sm text-gray-600">
           <p>Usuarios de prueba:</p>
-          <p>admin / admin123</p>
-          <p>tecnico / tecnico123</p>
-          <p>productor / productor123</p>
+          <p>admin@agrocloud.com / admin123</p>
+          <p>tecnico@agrocloud.com / tecnico123</p>
+          <p>productor@agrocloud.com / productor123</p>
         </div>
       </div>
     </div>

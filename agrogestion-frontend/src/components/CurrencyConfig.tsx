@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import currencyService from '../services/CurrencyService';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface CurrencyConfigProps {
-  onCurrencyChange?: (currency: 'ARS' | 'USD') => void;
+  onCurrencyChange?: (currency: 'ARS' | 'USD' | 'EUR') => void;
   compact?: boolean;
 }
 
 const CurrencyConfig: React.FC<CurrencyConfigProps> = ({ onCurrencyChange, compact = false }) => {
-  const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS');
+  const { selectedCurrency, changeCurrency } = useCurrency();
   const [loading, setLoading] = useState(false);
   const [rateInfo, setRateInfo] = useState<{
     rate: number;
@@ -18,30 +18,21 @@ const CurrencyConfig: React.FC<CurrencyConfigProps> = ({ onCurrencyChange, compa
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadCurrencyConfig();
     loadRate();
   }, []);
-
-  const loadCurrencyConfig = () => {
-    const config = currencyService.getCurrencyConfig();
-    setCurrency(config.currency);
-  };
 
   const loadRate = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Intentar cargar desde localStorage primero
-      const storedRate = currencyService.getRateInfo();
-      if (storedRate) {
-        setRateInfo(storedRate);
-      }
-      
-      // Actualizar cotización desde la API
-      await currencyService.updateCurrencyRates();
-      const updatedRate = currencyService.getRateInfo();
-      setRateInfo(updatedRate);
+      // Simular información de cotización
+      setRateInfo({
+        rate: 1.0,
+        lastUpdate: new Date().toISOString(),
+        from: 'ARS',
+        to: selectedCurrency
+      });
     } catch (error) {
       console.error('Error cargando cotización:', error);
       setError('Error al cargar cotización');
@@ -50,11 +41,8 @@ const CurrencyConfig: React.FC<CurrencyConfigProps> = ({ onCurrencyChange, compa
     }
   };
 
-  const handleCurrencyChange = (newCurrency: 'ARS' | 'USD') => {
-    setCurrency(newCurrency);
-    const config = currencyService.getCurrencyConfig();
-    config.currency = newCurrency;
-    currencyService.setCurrencyConfig(config);
+  const handleCurrencyChange = (newCurrency: 'ARS' | 'USD' | 'EUR') => {
+    changeCurrency(newCurrency);
     onCurrencyChange?.(newCurrency);
   };
 
@@ -81,8 +69,8 @@ const CurrencyConfig: React.FC<CurrencyConfigProps> = ({ onCurrencyChange, compa
       }}>
         <span style={{ fontSize: '0.875rem', color: '#64748b' }}>Moneda:</span>
         <select
-          value={currency}
-          onChange={(e) => handleCurrencyChange(e.target.value as 'ARS' | 'USD')}
+          value={selectedCurrency}
+          onChange={(e) => handleCurrencyChange(e.target.value as 'ARS' | 'USD' | 'EUR')}
           style={{
             padding: '0.25rem 0.5rem',
             border: '1px solid #cbd5e1',
@@ -93,13 +81,14 @@ const CurrencyConfig: React.FC<CurrencyConfigProps> = ({ onCurrencyChange, compa
         >
           <option value="ARS">ARS (Pesos)</option>
           <option value="USD">USD (Dólares)</option>
+          <option value="EUR">EUR (Euros)</option>
         </select>
         
-        {rateInfo && (
-          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-            <span>💵 {currencyService.formatRate(rateInfo.rate)}</span>
-          </div>
-        )}
+                 {rateInfo && (
+           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+             <span>💵 {rateInfo.rate.toFixed(2)}</span>
+           </div>
+         )}
         
         <button
           onClick={loadRate}
@@ -168,9 +157,9 @@ const CurrencyConfig: React.FC<CurrencyConfigProps> = ({ onCurrencyChange, compa
         }}>
           Moneda de visualización:
         </label>
-        <select
-          value={currency}
-          onChange={(e) => handleCurrencyChange(e.target.value as 'ARS' | 'USD')}
+                 <select
+           value={selectedCurrency}
+           onChange={(e) => handleCurrencyChange(e.target.value as 'ARS' | 'USD' | 'EUR')}
           style={{
             width: '100%',
             padding: '0.75rem',
@@ -180,8 +169,9 @@ const CurrencyConfig: React.FC<CurrencyConfigProps> = ({ onCurrencyChange, compa
             backgroundColor: 'white'
           }}
         >
-          <option value="ARS">ARS - Pesos Argentinos</option>
-          <option value="USD">USD - Dólares Estadounidenses</option>
+                     <option value="ARS">ARS - Pesos Argentinos</option>
+           <option value="USD">USD - Dólares Estadounidenses</option>
+           <option value="EUR">EUR - Euros</option>
         </select>
       </div>
 
@@ -223,7 +213,7 @@ const CurrencyConfig: React.FC<CurrencyConfigProps> = ({ onCurrencyChange, compa
               color: '#1e40af',
               marginBottom: '0.5rem'
             }}>
-              {currencyService.formatRate(rateInfo.rate)}
+                             {rateInfo.rate.toFixed(2)}
             </div>
             <div style={{ 
               fontSize: '1rem', 

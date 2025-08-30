@@ -208,7 +208,7 @@ const UsersManagement: React.FC = () => {
 
   // Eliminar usuario
   const deleteUser = async (userId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) return;
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este usuario?')) return;
     
     try {
       const token = localStorage.getItem('token');

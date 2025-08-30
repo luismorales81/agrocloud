@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useCurrency } from '../hooks/useCurrency';
+import { exportService } from '../services/ExportService';
+import type { ExportOptions } from '../services/ExportService';
 
 // interface ReportData {
 //   id: number;
@@ -98,7 +100,112 @@ const ReportsManagement: React.FC = () => {
       
       setReportData(data);
       setLoading(false);
-    }, 1500);
+    }, 1000);
+  };
+
+  const exportReport = async (format: 'excel' | 'pdf' | 'csv') => {
+    if (!reportData) return;
+    
+    try {
+      const options: ExportOptions = {
+        format,
+        filename: `${reportData.titulo}_${new Date().toISOString().split('T')[0]}`,
+        dateRange: dateRange.inicio && dateRange.fin ? {
+          start: new Date(dateRange.inicio),
+          end: new Date(dateRange.fin)
+        } : undefined
+      };
+
+      let result;
+      switch (format) {
+        case 'excel':
+          result = await exportService.exportToExcel({
+            title: reportData.titulo,
+            data: reportData.datos,
+            columns: getColumnsForReport(activeReport),
+            summary: getSummaryForReport(reportData)
+          }, options);
+          break;
+        case 'pdf':
+          result = await exportService.exportToPDF({
+            title: reportData.titulo,
+            data: reportData.datos,
+            columns: getColumnsForReport(activeReport),
+            summary: getSummaryForReport(reportData)
+          }, options);
+          break;
+        case 'csv':
+          result = await exportService.exportToCSV({
+            title: reportData.titulo,
+            data: reportData.datos,
+            columns: getColumnsForReport(activeReport),
+            summary: getSummaryForReport(reportData)
+          }, options);
+          break;
+      }
+      
+      alert(`Reporte exportado exitosamente: ${result?.filename}`);
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      alert('Error al exportar el reporte');
+    }
+  };
+
+  const getColumnsForReport = (reportType: string) => {
+    switch (reportType) {
+      case 'rindes':
+        return [
+          { key: 'lote', label: 'Lote', type: 'text' as const },
+          { key: 'cultivo', label: 'Cultivo', type: 'text' as const },
+          { key: 'superficie', label: 'Superficie (ha)', type: 'number' as const },
+          { key: 'rindeReal', label: 'Rinde Real (kg/ha)', type: 'number' as const },
+          { key: 'rindeEsperado', label: 'Rinde Esperado (kg/ha)', type: 'number' as const },
+          { key: 'cumplimiento', label: 'Cumplimiento (%)', type: 'number' as const },
+          { key: 'fechaCosecha', label: 'Fecha de Cosecha', type: 'date' as const }
+        ];
+      case 'produccion':
+        return [
+          { key: 'cultivo', label: 'Cultivo', type: 'text' as const },
+          { key: 'superficieTotal', label: 'Superficie Total (ha)', type: 'number' as const },
+          { key: 'produccionTotal', label: 'Producción Total (kg)', type: 'number' as const },
+          { key: 'rindePromedio', label: 'Rinde Promedio (kg/ha)', type: 'number' as const },
+          { key: 'cantidadLotes', label: 'Cantidad de Lotes', type: 'number' as const }
+        ];
+      case 'costos':
+        return [
+          { key: 'cultivo', label: 'Cultivo', type: 'text' as const },
+          { key: 'costoHectarea', label: 'Costo por Hectárea ($)', type: 'currency' as const },
+          { key: 'precioVenta', label: 'Precio de Venta ($/kg)', type: 'currency' as const },
+          { key: 'rentabilidad', label: 'Rentabilidad (%)', type: 'number' as const }
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const getSummaryForReport = (data: any) => {
+    if (!data || !data.datos) return undefined;
+    
+    switch (activeReport) {
+      case 'rindes':
+        return {
+          total: data.datos.reduce((sum: number, item: any) => sum + (item.rindeReal * item.superficie), 0),
+          average: data.estadisticas?.promedioRinde,
+          count: data.datos.length
+        };
+      case 'produccion':
+        return {
+          total: data.estadisticas?.produccionTotal,
+          count: data.datos.length
+        };
+      case 'costos':
+        return {
+          total: data.datos.reduce((sum: number, item: any) => sum + item.costoHectarea, 0),
+          count: data.datos.length
+        };
+      default:
+        return undefined;
+    }
   };
 
   const exportToExcel = (data: any, filename: string) => {
@@ -523,6 +630,68 @@ const ReportsManagement: React.FC = () => {
             {loading ? '🔄 Generando...' : '📊 Generar Reporte'}
           </button>
         </div>
+
+        {/* Botones de exportación */}
+        {reportData && (
+          <div style={{ 
+            display: 'flex', 
+            gap: '10px', 
+            alignItems: 'center', 
+            flexWrap: 'wrap',
+            marginTop: '15px',
+            padding: '15px',
+            background: '#f8f9fa',
+            borderRadius: '8px',
+            border: '1px solid #e9ecef'
+          }}>
+            <span style={{ fontWeight: 'bold', color: '#495057' }}>📤 Exportar:</span>
+            <button
+              onClick={() => exportReport('excel')}
+              style={{
+                background: '#28a745',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 'bold'
+              }}
+            >
+              📊 Excel
+            </button>
+            <button
+              onClick={() => exportReport('pdf')}
+              style={{
+                background: '#dc3545',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 'bold'
+              }}
+            >
+              📄 PDF
+            </button>
+            <button
+              onClick={() => exportReport('csv')}
+              style={{
+                background: '#6c757d',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 'bold'
+              }}
+            >
+              📋 CSV
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Contenido del reporte */}

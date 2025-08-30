@@ -33,7 +33,7 @@ interface Labor {
   responsable: string;
   horas_trabajo?: number;
   costo_total?: number;
-  progreso?: number; // 0-100
+  progreso?: number;
 }
 
 interface MaquinariaAsignada {
@@ -54,10 +54,17 @@ interface InsumoUsado {
   costo_total: number;
 }
 
+interface Lote {
+  id: number;
+  nombre: string;
+  superficie: number;
+  cultivo: string;
+}
+
 const LaboresManagement: React.FC = () => {
   const { formatCurrency } = useCurrency();
   const [labores, setLabores] = useState<Labor[]>([]);
-  const [lotes, setLotes] = useState<any[]>([]);
+  const [lotes, setLotes] = useState<Lote[]>([]);
   const [insumos, setInsumos] = useState<Insumo[]>([]);
   const [maquinaria, setMaquinaria] = useState<Maquinaria[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -78,19 +85,23 @@ const LaboresManagement: React.FC = () => {
     progreso: 0
   });
 
+  // Estados para manejar insumos y maquinaria en el formulario
+  const [selectedInsumos, setSelectedInsumos] = useState<InsumoUsado[]>([]);
+  const [selectedMaquinaria, setSelectedMaquinaria] = useState<MaquinariaAsignada[]>([]);
+  const [showInsumosModal, setShowInsumosModal] = useState(false);
+  const [showMaquinariaModal, setShowMaquinariaModal] = useState(false);
+  
+  // Estados para los modales de selección individual
+  const [selectedInsumoId, setSelectedInsumoId] = useState<number>(0);
+  const [selectedMaquinariaId, setSelectedMaquinariaId] = useState<number>(0);
+  const [insumoCantidad, setInsumoCantidad] = useState<number>(0);
+  const [maquinariaHoras, setMaquinariaHoras] = useState<number>(0);
+  const [maquinariaKilometros, setMaquinariaKilometros] = useState<number>(0);
+
   const tiposLabor = [
-    'siembra',
-    'fertilizacion',
-    'cosecha',
-    'riego',
-    'pulverizacion',
-    'arado',
-    'rastra',
-    'desmalezado',
-    'aplicacion_herbicida',
-    'aplicacion_insecticida',
-    'monitoreo',
-    'otro'
+    'siembra', 'fertilizacion', 'cosecha', 'riego', 'pulverizacion',
+    'arado', 'rastra', 'desmalezado', 'aplicacion_herbicida',
+    'aplicacion_insecticida', 'monitoreo', 'otro'
   ];
 
   const estadosLabor = [
@@ -106,14 +117,12 @@ const LaboresManagement: React.FC = () => {
     setLoading(true);
     
     setTimeout(() => {
-      // Mock lotes
-      const mockLotes = [
+      const mockLotes: Lote[] = [
         { id: 1, nombre: 'Lote A1', superficie: 25.5, cultivo: 'Soja' },
         { id: 2, nombre: 'Lote A2', superficie: 30.25, cultivo: 'Maíz' },
         { id: 3, nombre: 'Lote B1', superficie: 40.0, cultivo: 'Trigo' }
       ];
 
-      // Mock insumos
       const mockInsumos: Insumo[] = [
         { id: 1, nombre: 'Semilla Soja DM 53i54', tipo: 'semilla', stock_actual: 2500, unidad_medida: 'kg', precio_unitario: 8500 },
         { id: 2, nombre: 'Fertilizante Urea 46%', tipo: 'fertilizante', stock_actual: 8000, unidad_medida: 'kg', precio_unitario: 450 },
@@ -121,7 +130,6 @@ const LaboresManagement: React.FC = () => {
         { id: 4, nombre: 'Aceite de Motor 15W40', tipo: 'lubricante', stock_actual: 80, unidad_medida: 'L', precio_unitario: 1200 }
       ];
 
-      // Mock maquinaria
       const mockMaquinaria: Maquinaria[] = [
         { id: 1, nombre: 'Tractor John Deere 5075E', tipo: 'tractor', estado: 'activo', kilometros_uso: 12500.50, costo_por_hora: 45.00 },
         { id: 2, nombre: 'Cosechadora New Holland CR8.90', tipo: 'cosechadora', estado: 'activo', kilometros_uso: 8500.25, costo_por_hora: 120.00 },
@@ -129,7 +137,6 @@ const LaboresManagement: React.FC = () => {
         { id: 4, nombre: 'Sembradora de Precisión', tipo: 'sembradora', estado: 'activo', kilometros_uso: 1800.00, costo_por_hora: 25.00 }
       ];
 
-      // Mock labores
       const mockLabores: Labor[] = [
         {
           id: 1,
@@ -151,45 +158,6 @@ const LaboresManagement: React.FC = () => {
           horas_trabajo: 8,
           costo_total: 4250560,
           progreso: 100
-        },
-        {
-          id: 2,
-          tipo: 'fertilizacion',
-          fecha: '2024-11-20',
-          fecha_fin: '2024-11-20',
-          observaciones: 'Aplicación de fertilizante nitrogenado',
-          lote_id: 2,
-          lote_nombre: 'Lote A2',
-          estado: 'completada',
-          insumos_usados: [
-            { insumo_id: 2, insumo_nombre: 'Fertilizante Urea 46%', cantidad_usada: 1200, cantidad_planificada: 1200, unidad_medida: 'kg', costo_unitario: 450, costo_total: 540000 }
-          ],
-          maquinaria_asignada: [
-            { maquinaria_id: 1, maquinaria_nombre: 'Tractor John Deere 5075E', horas_uso: 6, kilometros_recorridos: 32.0, costo_total: 270 }
-          ],
-          responsable: 'María González',
-          horas_trabajo: 6,
-          costo_total: 540270,
-          progreso: 100
-        },
-        {
-          id: 3,
-          tipo: 'pulverizacion',
-          fecha: '2024-11-25',
-          observaciones: 'Control de malezas con glifosato',
-          lote_id: 1,
-          lote_nombre: 'Lote A1',
-          estado: 'en_progreso',
-          insumos_usados: [
-            { insumo_id: 3, insumo_nombre: 'Glifosato 48%', cantidad_usada: 25, cantidad_planificada: 50, unidad_medida: 'L', costo_unitario: 2800, costo_total: 70000 }
-          ],
-          maquinaria_asignada: [
-            { maquinaria_id: 3, maquinaria_nombre: 'Pulverizadora Jacto 2000', horas_uso: 3, kilometros_recorridos: 18.5, costo_total: 105 }
-          ],
-          responsable: 'Carlos López',
-          horas_trabajo: 3,
-          costo_total: 70105,
-          progreso: 50
         }
       ];
 
@@ -205,282 +173,6 @@ const LaboresManagement: React.FC = () => {
     loadData();
   }, []);
 
-  // Agregar insumo a la labor
-  const addInsumoToLabor = () => {
-    const insumoSelect = document.getElementById('insumo-select') as HTMLSelectElement;
-    const cantidadInput = document.getElementById('cantidad-insumo') as HTMLInputElement;
-    
-    if (insumoSelect && cantidadInput) {
-      const insumoId = parseInt(insumoSelect.value);
-      const cantidad = parseFloat(cantidadInput.value);
-      
-      if (insumoId && cantidad > 0) {
-        const insumo = insumos.find(i => i.id === insumoId);
-        if (insumo) {
-          // Validar stock disponible
-          if (cantidad > insumo.stock_actual) {
-            alert(`❌ Error: La cantidad solicitada (${cantidad} ${insumo.unidad_medida}) excede el stock disponible (${insumo.stock_actual} ${insumo.unidad_medida}) para ${insumo.nombre}`);
-            return;
-          }
-
-          // Verificar si el insumo ya está agregado
-          const insumoYaAgregado = formData.insumos_usados.find(i => i.insumo_id === insumo.id);
-          if (insumoYaAgregado) {
-            alert(`❌ Error: El insumo "${insumo.nombre}" ya está agregado a esta labor`);
-            return;
-          }
-
-          const nuevoInsumo: InsumoUsado = {
-            insumo_id: insumo.id,
-            insumo_nombre: insumo.nombre,
-            cantidad_usada: 0,
-            cantidad_planificada: cantidad,
-            unidad_medida: insumo.unidad_medida,
-            costo_unitario: insumo.precio_unitario,
-            costo_total: cantidad * insumo.precio_unitario
-          };
-
-          setFormData(prev => ({
-            ...prev,
-            insumos_usados: [...prev.insumos_usados, nuevoInsumo]
-          }));
-
-          // Limpiar campos
-          insumoSelect.value = '';
-          cantidadInput.value = '';
-          
-          alert(`✅ Insumo "${insumo.nombre}" agregado correctamente`);
-        }
-      } else {
-        alert('❌ Error: Por favor seleccione un insumo y especifique una cantidad válida');
-      }
-    }
-  };
-
-  // Remover insumo de la labor
-  const removeInsumoFromLabor = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      insumos_usados: prev.insumos_usados.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Actualizar cantidad usada de insumo
-  const updateInsumoUsado = (index: number, cantidadUsada: number) => {
-    setFormData(prev => {
-      const nuevosInsumos = [...prev.insumos_usados];
-      const insumo = nuevosInsumos[index];
-      
-      // Validar que la cantidad usada no exceda la planificada
-      if (cantidadUsada > insumo.cantidad_planificada) {
-        alert(`❌ Error: La cantidad usada (${cantidadUsada} ${insumo.unidad_medida}) no puede exceder la cantidad planificada (${insumo.cantidad_planificada} ${insumo.unidad_medida})`);
-        return prev;
-      }
-      
-      nuevosInsumos[index] = {
-        ...insumo,
-        cantidad_usada: cantidadUsada,
-        costo_total: cantidadUsada * insumo.costo_unitario
-      };
-      return { ...prev, insumos_usados: nuevosInsumos };
-    });
-  };
-
-  // Agregar maquinaria a la labor
-  const addMaquinariaToLabor = () => {
-    const maquinariaSelect = document.getElementById('maquinaria-select') as HTMLSelectElement;
-    const horasInput = document.getElementById('horas-maquinaria') as HTMLInputElement;
-    const kilometrosInput = document.getElementById('kilometros-maquinaria') as HTMLInputElement;
-    
-    if (maquinariaSelect && horasInput && kilometrosInput) {
-      const maquinariaId = parseInt(maquinariaSelect.value);
-      const horas = parseFloat(horasInput.value);
-      const kilometros = parseFloat(kilometrosInput.value);
-      
-      if (maquinariaId && (horas > 0 || kilometros > 0)) {
-        const maq = maquinaria.find(m => m.id === maquinariaId);
-        if (maq) {
-          // Verificar si la maquinaria ya está agregada
-          const maquinariaYaAgregada = formData.maquinaria_asignada.find(m => m.maquinaria_id === maq.id);
-          if (maquinariaYaAgregada) {
-            alert(`❌ Error: La maquinaria "${maq.nombre}" ya está asignada a esta labor`);
-            return;
-          }
-
-          const nuevaMaquinaria: MaquinariaAsignada = {
-            maquinaria_id: maq.id,
-            maquinaria_nombre: maq.nombre,
-            horas_uso: horas,
-            kilometros_recorridos: kilometros,
-            costo_total: horas * maq.costo_por_hora
-          };
-
-          setFormData(prev => ({
-            ...prev,
-            maquinaria_asignada: [...prev.maquinaria_asignada, nuevaMaquinaria]
-          }));
-
-          // Limpiar campos
-          maquinariaSelect.value = '';
-          horasInput.value = '';
-          kilometrosInput.value = '';
-          
-          alert(`✅ Maquinaria "${maq.nombre}" asignada correctamente`);
-        }
-      } else {
-        alert('❌ Error: Por favor seleccione una maquinaria y especifique horas o kilómetros válidos');
-      }
-    }
-  };
-
-  // Remover maquinaria de la labor
-  const removeMaquinariaFromLabor = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      maquinaria_asignada: prev.maquinaria_asignada.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Guardar labor
-  const saveLabor = async () => {
-    try {
-      setLoading(true);
-      
-      if (!formData.tipo || !formData.fecha || !formData.lote_id) {
-        alert('Por favor complete todos los campos obligatorios');
-        return;
-      }
-
-      if (editingLabor) {
-        // Actualizar labor existente
-        const updatedLabores = labores.map(labor => 
-          labor.id === editingLabor.id ? { ...formData, id: labor.id } : labor
-        );
-        setLabores(updatedLabores);
-        
-        // Actualizar stock de insumos si la labor se completó o interrumpió
-        if (formData.estado === 'completada' || formData.estado === 'interrumpida') {
-          updateInsumosStock(formData.insumos_usados);
-        }
-        
-        alert('Labor actualizada exitosamente');
-      } else {
-        // Crear nueva labor
-        const newLabor: Labor = {
-          ...formData,
-          id: labores.length + 1,
-          maquinaria_asignada: formData.maquinaria_asignada // Asegurarse de que maquinaria_asignada esté presente
-        };
-        setLabores(prev => [...prev, newLabor]);
-        alert('Labor creada exitosamente');
-      }
-
-      resetForm();
-    } catch (error) {
-      console.error('Error guardando labor:', error);
-      alert('Error al guardar la labor');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Actualizar stock de insumos
-  const updateInsumosStock = (insumosUsados: InsumoUsado[]) => {
-    setInsumos(prev => prev.map(insumo => {
-      const insumoUsado = insumosUsados.find(iu => iu.insumo_id === insumo.id);
-      if (insumoUsado) {
-        return {
-          ...insumo,
-          stock_actual: insumo.stock_actual - insumoUsado.cantidad_usada
-        };
-      }
-      return insumo;
-    }));
-  };
-
-  // Cambiar estado de labor
-  const changeLaborEstado = (laborId: number, nuevoEstado: string) => {
-    setLabores(prev => prev.map(labor => {
-      if (labor.id === laborId) {
-        const laborActualizada = { ...labor, estado: nuevoEstado as any };
-        
-        // Si se completa o interrumpe, actualizar stock
-        if (nuevoEstado === 'completada' || nuevoEstado === 'interrumpida') {
-          updateInsumosStock(labor.insumos_usados);
-        }
-        
-        return laborActualizada;
-      }
-      return labor;
-    }));
-  };
-
-  // Editar labor
-  const editLabor = (labor: Labor) => {
-    setEditingLabor(labor);
-    setFormData(labor);
-    setShowForm(true);
-  };
-
-  // Eliminar labor
-  const deleteLabor = (id: number) => {
-    if (confirm('¿Está seguro de que desea eliminar esta labor?')) {
-      setLabores(prev => prev.filter(labor => labor.id !== id));
-      alert('Labor eliminada exitosamente');
-    }
-  };
-
-  // Resetear formulario
-  const resetForm = () => {
-    setFormData({
-      tipo: '',
-      fecha: '',
-      observaciones: '',
-      lote_id: 0,
-      lote_nombre: '',
-      estado: 'planificada',
-      insumos_usados: [],
-      maquinaria_asignada: [],
-      responsable: '',
-      progreso: 0
-    });
-    setEditingLabor(null);
-    setShowForm(false);
-  };
-
-  // Filtrar labores
-  const filteredLabores = labores.filter(labor => {
-    const matchesSearch = labor.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         labor.observaciones.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         labor.lote_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         labor.responsable.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesEstado = filterEstado === 'todos' || labor.estado === filterEstado;
-    
-    return matchesSearch && matchesEstado;
-  });
-
-  // Obtener estadísticas
-  const estadisticas = {
-    totalLabores: labores.length,
-    enProgreso: labores.filter(l => l.estado === 'en_progreso').length,
-    completadas: labores.filter(l => l.estado === 'completada').length,
-    pendientes: labores.filter(l => l.estado === 'planificada').length,
-    costoTotal: labores.reduce((sum, l) => sum + (l.costo_total || 0), 0)
-  };
-
-  // Obtener color de estado
-  const getEstadoColor = (estado: string) => {
-    const estadoObj = estadosLabor.find(e => e.value === estado);
-    return estadoObj ? estadoObj.color : '#6b7280';
-  };
-
-  // Obtener etiqueta de estado
-  const getEstadoLabel = (estado: string) => {
-    const estadoObj = estadosLabor.find(e => e.value === estado);
-    return estadoObj ? estadoObj.label : estado;
-  };
-
   // Detectar si es móvil
   const [isMobile, setIsMobile] = useState(false);
 
@@ -494,6 +186,251 @@ const LaboresManagement: React.FC = () => {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Funciones para manejar el formulario
+  const resetForm = () => {
+    setFormData({
+      tipo: '',
+      fecha: '',
+      observaciones: '',
+      lote_id: 0,
+      lote_nombre: '',
+      estado: 'planificada',
+      insumos_usados: [],
+      maquinaria_asignada: [],
+      responsable: '',
+      progreso: 0
+    });
+    setSelectedInsumos([]);
+    setSelectedMaquinaria([]);
+    setSelectedInsumoId(0);
+    setSelectedMaquinariaId(0);
+    setInsumoCantidad(0);
+    setMaquinariaHoras(0);
+    setMaquinariaKilometros(0);
+    setEditingLabor(null);
+  };
+
+  const handleOpenAddModal = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const handleOpenInsumosModal = () => {
+    setSelectedInsumoId(0);
+    setInsumoCantidad(0);
+    setShowInsumosModal(true);
+  };
+
+  const handleOpenMaquinariaModal = () => {
+    setSelectedMaquinariaId(0);
+    setMaquinariaHoras(0);
+    setMaquinariaKilometros(0);
+    setShowMaquinariaModal(true);
+  };
+
+  const handleOpenEditModal = (labor: Labor) => {
+    setFormData(labor);
+    setSelectedInsumos(labor.insumos_usados);
+    setSelectedMaquinaria(labor.maquinaria_asignada);
+    setEditingLabor(labor);
+    setShowForm(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
+  const handleInputChange = (field: keyof Labor, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleLoteChange = (loteId: number) => {
+    const lote = lotes.find(l => l.id === loteId);
+    setFormData(prev => ({
+      ...prev,
+      lote_id: loteId,
+      lote_nombre: lote?.nombre || ''
+    }));
+  };
+
+  const saveLabor = () => {
+    if (!formData.tipo || !formData.fecha || !formData.lote_id || !formData.responsable) {
+      alert('Por favor complete todos los campos obligatorios');
+      return;
+    }
+
+    // Crear labor con insumos y maquinaria
+    const laborCompleta = {
+      ...formData,
+      insumos_usados: selectedInsumos,
+      maquinaria_asignada: selectedMaquinaria,
+      costo_total: calcularCostoTotal()
+    };
+
+    if (editingLabor) {
+      // Editar labor existente
+      setLabores(prev => prev.map(l => l.id === editingLabor.id ? { ...laborCompleta, id: l.id } : l));
+      alert('Labor actualizada exitosamente');
+    } else {
+      // Crear nueva labor
+      const newId = Math.max(...labores.map(l => l.id || 0)) + 1;
+      const newLabor = { ...laborCompleta, id: newId };
+      setLabores(prev => [...prev, newLabor]);
+      
+      // Actualizar stock de insumos y uso de maquinaria
+      actualizarStockInsumos();
+      actualizarUsoMaquinaria();
+      
+      alert('Labor creada exitosamente');
+    }
+
+    handleCloseModal();
+  };
+
+  const deleteLabor = (id: number) => {
+    if (window.confirm('¿Está seguro de que desea eliminar esta labor?')) {
+      setLabores(prev => prev.filter(l => l.id !== id));
+      alert('Labor eliminada exitosamente');
+    }
+  };
+
+  // Funciones para manejar insumos
+  const addInsumo = (insumo: Insumo, cantidad: number) => {
+    // Verificar stock disponible
+    const stockDisponible = insumo.stock_actual;
+    const cantidadYaUsada = selectedInsumos
+      .filter(i => i.insumo_id === insumo.id)
+      .reduce((sum, i) => sum + i.cantidad_usada, 0);
+    
+    const stockRealDisponible = stockDisponible - cantidadYaUsada;
+    
+    if (cantidad > stockRealDisponible) {
+      alert(`No hay suficiente stock disponible. Stock disponible: ${stockRealDisponible} ${insumo.unidad_medida}`);
+      return false;
+    }
+    
+    const insumoExistente = selectedInsumos.find(i => i.insumo_id === insumo.id);
+    
+    if (insumoExistente) {
+      // Actualizar cantidad si ya existe
+      setSelectedInsumos(prev => prev.map(i => 
+        i.insumo_id === insumo.id 
+          ? { ...i, cantidad_usada: cantidad, costo_total: cantidad * i.costo_unitario }
+          : i
+      ));
+    } else {
+      // Agregar nuevo insumo
+      const nuevoInsumo: InsumoUsado = {
+        insumo_id: insumo.id,
+        insumo_nombre: insumo.nombre,
+        cantidad_usada: cantidad,
+        cantidad_planificada: cantidad,
+        unidad_medida: insumo.unidad_medida,
+        costo_unitario: insumo.precio_unitario,
+        costo_total: cantidad * insumo.precio_unitario
+      };
+      setSelectedInsumos(prev => [...prev, nuevoInsumo]);
+    }
+    return true;
+  };
+
+  const removeInsumo = (insumoId: number) => {
+    setSelectedInsumos(prev => prev.filter(i => i.insumo_id !== insumoId));
+  };
+
+  const updateInsumoCantidad = (insumoId: number, cantidad: number) => {
+    setSelectedInsumos(prev => prev.map(i => 
+      i.insumo_id === insumoId 
+        ? { ...i, cantidad_usada: cantidad, costo_total: cantidad * i.costo_unitario }
+        : i
+    ));
+  };
+
+  // Funciones para manejar maquinaria
+  const addMaquinaria = (maq: Maquinaria, horas: number, kilometros: number) => {
+    const maqExistente = selectedMaquinaria.find(m => m.maquinaria_id === maq.id);
+    
+    if (maqExistente) {
+      // Actualizar si ya existe
+      setSelectedMaquinaria(prev => prev.map(m => 
+        m.maquinaria_id === maq.id 
+          ? { ...m, horas_uso: horas, kilometros_recorridos: kilometros, costo_total: horas * maq.costo_por_hora }
+          : m
+      ));
+    } else {
+      // Agregar nueva maquinaria
+      const nuevaMaquinaria: MaquinariaAsignada = {
+        maquinaria_id: maq.id,
+        maquinaria_nombre: maq.nombre,
+        horas_uso: horas,
+        kilometros_recorridos: kilometros,
+        costo_total: horas * maq.costo_por_hora
+      };
+      setSelectedMaquinaria(prev => [...prev, nuevaMaquinaria]);
+    }
+  };
+
+  const removeMaquinaria = (maquinariaId: number) => {
+    setSelectedMaquinaria(prev => prev.filter(m => m.maquinaria_id !== maquinariaId));
+  };
+
+  const updateMaquinariaUso = (maquinariaId: number, horas: number, kilometros: number) => {
+    const maq = maquinaria.find(m => m.id === maquinariaId);
+    if (maq) {
+      setSelectedMaquinaria(prev => prev.map(m => 
+        m.maquinaria_id === maquinariaId 
+          ? { ...m, horas_uso: horas, kilometros_recorridos: kilometros, costo_total: horas * maq.costo_por_hora }
+          : m
+      ));
+    }
+  };
+
+  // Calcular costo total de la labor
+  const calcularCostoTotal = () => {
+    const costoInsumos = selectedInsumos.reduce((sum, insumo) => sum + insumo.costo_total, 0);
+    const costoMaquinaria = selectedMaquinaria.reduce((sum, maq) => sum + maq.costo_total, 0);
+    return costoInsumos + costoMaquinaria;
+  };
+
+  // Actualizar stock de insumos
+  const actualizarStockInsumos = () => {
+    selectedInsumos.forEach(insumoUsado => {
+      const insumo = insumos.find(i => i.id === insumoUsado.insumo_id);
+      if (insumo) {
+        const nuevoStock = insumo.stock_actual - insumoUsado.cantidad_usada;
+        setInsumos(prev => prev.map(i => 
+          i.id === insumo.id ? { ...i, stock_actual: Math.max(0, nuevoStock) } : i
+        ));
+      }
+    });
+  };
+
+  // Actualizar uso de maquinaria
+  const actualizarUsoMaquinaria = () => {
+    selectedMaquinaria.forEach(maqUsada => {
+      const maq = maquinaria.find(m => m.id === maqUsada.maquinaria_id);
+      if (maq) {
+        const nuevosKilometros = maq.kilometros_uso + maqUsada.kilometros_recorridos;
+        setMaquinaria(prev => prev.map(m => 
+          m.id === maq.id ? { ...m, kilometros_uso: nuevosKilometros } : m
+        ));
+      }
+    });
+  };
+
+  // Filtrar labores
+  const filteredLabores = labores.filter(labor => {
+    const matchesSearch = labor.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         labor.lote_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         labor.responsable.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesEstado = filterEstado === 'todos' || labor.estado === filterEstado;
+    return matchesSearch && matchesEstado;
+  });
 
   return (
     <div style={{ 
@@ -522,7 +459,6 @@ const LaboresManagement: React.FC = () => {
         </p>
       </div>
 
-      {/* Estadísticas */}
       <div style={{ 
         background: '#f3f4f6', 
         padding: isMobile ? '15px' : '20px', 
@@ -544,93 +480,68 @@ const LaboresManagement: React.FC = () => {
         }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
-              {estadisticas.totalLabores}
+              {labores.length}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>Total Labores</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3b82f6' }}>
-              {estadisticas.enProgreso}
+              {labores.filter((l: Labor) => l.estado === 'en_progreso').length}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>En Progreso</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-              {estadisticas.completadas}
+              {labores.filter((l: Labor) => l.estado === 'completada').length}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>Completadas</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
-              {formatCurrency(estadisticas.costoTotal)}
+              {formatCurrency(labores.reduce((sum: number, l: Labor) => sum + (l.costo_total || 0), 0))}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>Costo Total</div>
           </div>
         </div>
       </div>
 
-      {/* Botones de acción */}
+      {/* Filtros y búsqueda */}
       <div style={{ 
-        marginBottom: isMobile ? '15px' : '20px', 
-        display: 'flex', 
-        gap: isMobile ? '8px' : '10px', 
-        flexWrap: 'wrap' 
-      }}>
-        <button
-          onClick={() => setShowForm(true)}
-          style={{
-            background: '#f59e0b',
-            color: 'white',
-            border: 'none',
-            padding: isMobile ? '10px 16px' : '12px 24px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: isMobile ? '13px' : '14px',
-            fontWeight: 'bold'
-          }}
-        >
-          ➕ {isMobile ? 'Nueva' : 'Nueva Labor'}
-        </button>
-      </div>
-
-      {/* Filtros */}
-      <div style={{ 
-        marginBottom: isMobile ? '15px' : '20px', 
-        display: 'flex', 
-        gap: isMobile ? '10px' : '15px', 
-        flexWrap: 'wrap', 
-        alignItems: 'center',
-        flexDirection: isMobile ? 'column' : 'row'
+        background: 'white', 
+        padding: isMobile ? '15px' : '20px', 
+        borderRadius: '10px', 
+        marginBottom: isMobile ? '15px' : '20px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
       }}>
         <div style={{ 
-          flex: isMobile ? 'none' : '1', 
-          minWidth: isMobile ? '100%' : '250px',
-          width: isMobile ? '100%' : 'auto'
+          display: 'flex', 
+          gap: isMobile ? '10px' : '15px', 
+          flexWrap: 'wrap',
+          alignItems: 'center'
         }}>
           <input
             type="text"
-            placeholder="🔍 Buscar labores..."
+            placeholder="Buscar labores..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
-              width: '100%',
-              padding: isMobile ? '8px' : '10px',
-              border: '1px solid #ddd',
-              borderRadius: '5px',
-              fontSize: isMobile ? '13px' : '14px'
+              flex: 1,
+              minWidth: '200px',
+              padding: '10px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px'
             }}
           />
-        </div>
-        <div style={{ width: isMobile ? '100%' : 'auto' }}>
           <select
             value={filterEstado}
             onChange={(e) => setFilterEstado(e.target.value)}
             style={{
-              width: isMobile ? '100%' : 'auto',
-              padding: isMobile ? '8px' : '10px',
-              border: '1px solid #ddd',
-              borderRadius: '5px',
-              fontSize: isMobile ? '13px' : '14px'
+              padding: '10px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              minWidth: '150px'
             }}
           >
             <option value="todos">Todos los estados</option>
@@ -640,477 +551,24 @@ const LaboresManagement: React.FC = () => {
               </option>
             ))}
           </select>
+          <button
+            onClick={handleOpenAddModal}
+            style={{
+              background: '#f59e0b',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            ➕ {isMobile ? 'Nueva' : 'Nueva Labor'}
+          </button>
         </div>
       </div>
 
-      {/* Formulario */}
-      {showForm && (
-        <div style={{ 
-          background: '#f9fafb', 
-          padding: '20px', 
-          borderRadius: '10px', 
-          marginBottom: '20px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#374151' }}>
-            {editingLabor ? '✏️ Editar Labor' : '📝 Nueva Labor'}
-          </h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
-            {/* Tipo de labor */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Tipo de Labor *:</label>
-              <select
-                value={formData.tipo}
-                onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="">Seleccionar tipo</option>
-                {tiposLabor.map(tipo => (
-                  <option key={tipo} value={tipo}>
-                    {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Lote */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Lote *:</label>
-              <select
-                value={formData.lote_id}
-                onChange={(e) => {
-                  const loteId = parseInt(e.target.value);
-                  const lote = lotes.find(l => l.id === loteId);
-                  setFormData(prev => ({ 
-                    ...prev, 
-                    lote_id: loteId,
-                    lote_nombre: lote ? lote.nombre : ''
-                  }));
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="0">Seleccionar lote</option>
-                {lotes.map(lote => (
-                  <option key={lote.id} value={lote.id}>
-                    {lote.nombre} - {lote.cultivo}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Fecha */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Fecha *:</label>
-              <input
-                type="date"
-                value={formData.fecha}
-                onChange={(e) => setFormData(prev => ({ ...prev, fecha: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-
-            {/* Estado */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Estado:</label>
-              <select
-                value={formData.estado}
-                onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value as any }))}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  fontSize: '14px'
-                }}
-              >
-                {estadosLabor.map(estado => (
-                  <option key={estado.value} value={estado.value}>
-                    {estado.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Responsable */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Responsable:</label>
-              <input
-                type="text"
-                value={formData.responsable}
-                onChange={(e) => setFormData(prev => ({ ...prev, responsable: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  fontSize: '14px'
-                }}
-                placeholder="Nombre del responsable"
-              />
-            </div>
-
-            {/* Progreso */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Progreso (%):</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={formData.progreso}
-                onChange={(e) => setFormData(prev => ({ ...prev, progreso: parseInt(e.target.value) || 0 }))}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Gestión de Insumos */}
-          <div style={{ marginTop: '20px' }}>
-                                    <h4 style={{ margin: '0 0 15px 0', color: '#374151' }}>🧪 Insumos a Utilizar</h4>
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '15px' }}>
-                          Seleccione los insumos que se utilizarán en esta labor. El sistema validará el stock disponible.
-                        </p>
-            
-            {/* Agregar insumo */}
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                                        <select
-                            id="insumo-select"
-                            style={{
-                              padding: '10px',
-                              border: '1px solid #ddd',
-                              borderRadius: '5px',
-                              fontSize: '14px',
-                              minWidth: '200px'
-                            }}
-                          >
-                            <option value="">Seleccionar insumo</option>
-                            {insumos.map(insumo => (
-                              <option key={insumo.id} value={insumo.id}>
-                                {insumo.nombre} (Stock: {insumo.stock_actual} {insumo.unidad_medida})
-                                {insumo.stock_actual < ((insumo as any).stock_minimo || 0) ? ' ⚠️ Stock bajo' : ''}
-                              </option>
-                            ))}
-                          </select>
-              <input
-                id="cantidad-insumo"
-                type="number"
-                step="0.01"
-                placeholder="Cantidad"
-                style={{
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  fontSize: '14px',
-                  width: '120px'
-                }}
-              />
-              <button
-                onClick={addInsumoToLabor}
-                style={{
-                  background: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  padding: '10px 15px',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                ➕ Agregar
-              </button>
-            </div>
-
-            {/* Lista de insumos */}
-            {formData.insumos_usados.length > 0 && (
-              <div style={{ 
-                background: 'white', 
-                padding: '15px', 
-                borderRadius: '5px',
-                border: '1px solid #e5e7eb'
-              }}>
-                <h5 style={{ margin: '0 0 10px 0', color: '#374151' }}>Insumos Seleccionados:</h5>
-                {formData.insumos_usados.map((insumo, index) => (
-                  <div key={index} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '10px', 
-                    padding: '10px',
-                    border: '1px solid #f3f4f6',
-                    borderRadius: '5px',
-                    marginBottom: '10px'
-                  }}>
-                    <div style={{ flex: '1' }}>
-                      <strong>{insumo.insumo_nombre}</strong>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        Planificado: {insumo.cantidad_planificada} {insumo.unidad_medida}
-                        {insumo.cantidad_usada > 0 && (
-                          <span style={{ color: '#10b981', marginLeft: '10px' }}>
-                            • Usado: {insumo.cantidad_usada} {insumo.unidad_medida}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Usado"
-                      value={insumo.cantidad_usada}
-                      onChange={(e) => updateInsumoUsado(index, parseFloat(e.target.value) || 0)}
-                      style={{
-                        padding: '8px',
-                        border: '1px solid #ddd',
-                        borderRadius: '3px',
-                        fontSize: '14px',
-                        width: '100px'
-                      }}
-                    />
-                    <span style={{ fontSize: '12px', color: '#6b7280', minWidth: '60px' }}>
-                      {insumo.unidad_medida}
-                    </span>
-                    <span style={{ fontSize: '12px', color: '#10b981', minWidth: '80px' }}>
-                      {formatCurrency(insumo.costo_total)}
-                    </span>
-                    <button
-                      onClick={() => removeInsumoFromLabor(index)}
-                      style={{
-                        background: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        padding: '5px 10px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      ❌
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Sección de Maquinaria */}
-          <div style={{ marginTop: '15px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#374151' }}>🚜 Maquinaria Asignada</h4>
-            
-            {/* Formulario para agregar maquinaria */}
-            <div style={{ 
-              background: '#f9fafb', 
-              padding: '15px', 
-              borderRadius: '5px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold' }}>
-                    Maquinaria:
-                  </label>
-                  <select
-                    id="maquinaria-select"
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      border: '1px solid #ddd',
-                      borderRadius: '3px',
-                      fontSize: '14px'
-                    }}
-                  >
-                    <option value="">Seleccionar maquinaria...</option>
-                    {maquinaria.filter(m => m.estado === 'activo').map(maq => (
-                      <option key={maq.id} value={maq.id}>
-                        {maq.nombre} (${maq.costo_por_hora}/h)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold' }}>
-                    Horas de Uso:
-                  </label>
-                  <input
-                    id="horas-maquinaria"
-                    type="number"
-                    step="0.1"
-                    placeholder="0.0"
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      border: '1px solid #ddd',
-                      borderRadius: '3px',
-                      fontSize: '14px'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold' }}>
-                    Kilómetros:
-                  </label>
-                  <input
-                    id="kilometros-maquinaria"
-                    type="number"
-                    step="0.1"
-                    placeholder="0.0"
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      border: '1px solid #ddd',
-                      borderRadius: '3px',
-                      fontSize: '14px'
-                    }}
-                  />
-                </div>
-                
-                <button
-                  onClick={addMaquinariaToLabor}
-                  style={{
-                    background: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 15px',
-                    borderRadius: '3px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  ➕ Agregar
-                </button>
-              </div>
-            </div>
-
-            {/* Lista de maquinaria asignada */}
-            {formData.maquinaria_asignada.length > 0 && (
-              <div style={{ 
-                background: 'white', 
-                padding: '15px', 
-                borderRadius: '5px',
-                border: '1px solid #e5e7eb',
-                marginTop: '10px'
-              }}>
-                <h5 style={{ margin: '0 0 10px 0', color: '#374151' }}>Maquinaria Seleccionada:</h5>
-                {formData.maquinaria_asignada.map((maq, index) => (
-                  <div key={index} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '10px', 
-                    padding: '10px',
-                    border: '1px solid #f3f4f6',
-                    borderRadius: '5px',
-                    marginBottom: '10px'
-                  }}>
-                    <div style={{ flex: '1' }}>
-                      <strong>{maq.maquinaria_nombre}</strong>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        Horas: {maq.horas_uso}h • Kilómetros: {maq.kilometros_recorridos}km
-                      </div>
-                    </div>
-                    <span style={{ fontSize: '12px', color: '#10b981', minWidth: '80px' }}>
-                      {formatCurrency(maq.costo_total)}
-                    </span>
-                    <button
-                      onClick={() => removeMaquinariaFromLabor(index)}
-                      style={{
-                        background: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        padding: '5px 10px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      ❌
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Observaciones */}
-          <div style={{ marginTop: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Observaciones:</label>
-            <textarea
-              value={formData.observaciones}
-              onChange={(e) => setFormData(prev => ({ ...prev, observaciones: e.target.value }))}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '5px',
-                fontSize: '14px',
-                minHeight: '80px',
-                resize: 'vertical'
-              }}
-              placeholder="Detalles de la labor..."
-            />
-          </div>
-
-          {/* Botones */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-            <button
-              onClick={saveLabor}
-              disabled={loading}
-              style={{
-                background: '#f59e0b',
-                color: 'white',
-                border: 'none',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                opacity: loading ? 0.6 : 1
-              }}
-            >
-              {loading ? '💾 Guardando...' : (editingLabor ? '💾 Actualizar' : '💾 Guardar')}
-            </button>
-            <button
-              onClick={resetForm}
-              style={{
-                background: '#6b7280',
-                color: 'white',
-                border: 'none',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              ❌ Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Tabla de labores */}
       <div style={{ 
         background: 'white', 
         borderRadius: '10px', 
@@ -1132,7 +590,7 @@ const LaboresManagement: React.FC = () => {
           </div>
         ) : filteredLabores.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-            {searchTerm || filterEstado !== 'todos' ? 'No se encontraron labores que coincidan con los filtros' : 'No hay labores registradas'}
+            {searchTerm || filterEstado !== 'todos' ? 'No se encontraron labores con los filtros aplicados' : 'No hay labores registradas'}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -1148,14 +606,12 @@ const LaboresManagement: React.FC = () => {
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Estado</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Responsable</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Insumos</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Maquinaria</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Costo</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredLabores.map(labor => (
+                {filteredLabores.map((labor: Labor) => (
                   <tr key={labor.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
                     <td style={{ padding: '12px' }}>
                       <div>
@@ -1177,49 +633,14 @@ const LaboresManagement: React.FC = () => {
                         borderRadius: '12px',
                         fontSize: '12px',
                         fontWeight: 'bold',
-                        background: getEstadoColor(labor.estado) + '20',
-                        color: getEstadoColor(labor.estado)
+                        background: '#10b98120',
+                        color: '#10b981'
                       }}>
-                        {getEstadoLabel(labor.estado)}
+                        {labor.estado.charAt(0).toUpperCase() + labor.estado.slice(1)}
                       </span>
-                      {labor.progreso !== undefined && labor.progreso > 0 && (
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                          {labor.progreso}% completado
-                        </div>
-                      )}
                     </td>
                     <td style={{ padding: '12px' }}>
                       {labor.responsable}
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ fontSize: '12px' }}>
-                        {labor.insumos_usados.length} insumo(s)
-                      </div>
-                      {labor.insumos_usados.slice(0, 2).map((insumo, index) => (
-                        <div key={index} style={{ fontSize: '11px', color: '#6b7280' }}>
-                          {insumo.insumo_nombre}: {insumo.cantidad_usada}/{insumo.cantidad_planificada} {insumo.unidad_medida}
-                        </div>
-                      ))}
-                      {labor.insumos_usados.length > 2 && (
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>
-                          +{labor.insumos_usados.length - 2} más
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ fontSize: '12px' }}>
-                        {labor.maquinaria_asignada.length} máquina(s)
-                      </div>
-                      {labor.maquinaria_asignada.slice(0, 2).map((maq, index) => (
-                        <div key={index} style={{ fontSize: '11px', color: '#6b7280' }}>
-                          {maq.maquinaria_nombre}: {maq.horas_uso}h
-                        </div>
-                      ))}
-                      {labor.maquinaria_asignada.length > 2 && (
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>
-                          +{labor.maquinaria_asignada.length - 2} más
-                        </div>
-                      )}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ fontWeight: 'bold', color: '#10b981' }}>
@@ -1227,45 +648,28 @@ const LaboresManagement: React.FC = () => {
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '5px' }}>
                         <button
-                          onClick={() => editLabor(labor)}
+                          onClick={() => handleOpenEditModal(labor)}
                           style={{
+                            padding: '4px 8px',
                             background: '#3b82f6',
                             color: 'white',
                             border: 'none',
-                            padding: '6px 12px',
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '12px'
                           }}
                         >
-                          ✏️ Editar
+                          ✏️
                         </button>
-                        <select
-                          value={labor.estado}
-                          onChange={(e) => changeLaborEstado(labor.id!, e.target.value)}
-                          style={{
-                            padding: '4px 8px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            background: 'white'
-                          }}
-                        >
-                          {estadosLabor.map(estado => (
-                            <option key={estado.value} value={estado.value}>
-                              {estado.label}
-                            </option>
-                          ))}
-                        </select>
                         <button
                           onClick={() => deleteLabor(labor.id!)}
                           style={{
+                            padding: '4px 8px',
                             background: '#ef4444',
                             color: 'white',
                             border: 'none',
-                            padding: '6px 12px',
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '12px'
@@ -1282,6 +686,811 @@ const LaboresManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal para crear/editar labor */}
+      {showForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '10px',
+            padding: '20px',
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '15px'
+            }}>
+              <h2 style={{ margin: 0, color: '#374151' }}>
+                {editingLabor ? '✏️ Editar Labor' : '➕ Nueva Labor'}
+              </h2>
+              <button
+                onClick={handleCloseModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); saveLabor(); }}>
+              <div style={{ display: 'grid', gap: '15px' }}>
+                {/* Tipo de labor */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                    Tipo de Labor *
+                  </label>
+                  <select
+                    value={formData.tipo}
+                    onChange={(e) => handleInputChange('tipo', e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">Seleccionar tipo de labor</option>
+                    {tiposLabor.map(tipo => (
+                      <option key={tipo} value={tipo}>
+                        {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Lote */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                    Lote *
+                  </label>
+                  <select
+                    value={formData.lote_id}
+                    onChange={(e) => handleLoteChange(Number(e.target.value))}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value={0}>Seleccionar lote</option>
+                    {lotes.map(lote => (
+                      <option key={lote.id} value={lote.id}>
+                        {lote.nombre} - {lote.cultivo} ({lote.superficie} ha)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Fecha */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                    Fecha *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.fecha}
+                    onChange={(e) => handleInputChange('fecha', e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+
+                {/* Estado */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                    Estado
+                  </label>
+                  <select
+                    value={formData.estado}
+                    onChange={(e) => handleInputChange('estado', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    {estadosLabor.map(estado => (
+                      <option key={estado.value} value={estado.value}>
+                        {estado.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Responsable */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                    Responsable *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.responsable}
+                    onChange={(e) => handleInputChange('responsable', e.target.value)}
+                    placeholder="Nombre del responsable"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+
+                {/* Observaciones */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                    Observaciones
+                  </label>
+                  <textarea
+                    value={formData.observaciones}
+                    onChange={(e) => handleInputChange('observaciones', e.target.value)}
+                    placeholder="Descripción de la labor..."
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                {/* Progreso */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                    Progreso (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.progreso}
+                    onChange={(e) => handleInputChange('progreso', Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+
+                {/* Sección de Insumos */}
+                <div>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    <label style={{ fontWeight: 'bold', color: '#374151' }}>
+                      🧪 Insumos Utilizados
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleOpenInsumosModal}
+                      style={{
+                        padding: '5px 10px',
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      ➕ Agregar
+                    </button>
+                  </div>
+                  
+                  {selectedInsumos.length > 0 ? (
+                    <div style={{ 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      padding: '10px',
+                      maxHeight: '150px',
+                      overflowY: 'auto'
+                    }}>
+                      {selectedInsumos.map((insumo) => (
+                        <div key={insumo.insumo_id} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '5px 0',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '13px' }}>
+                              {insumo.insumo_nombre}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                              {insumo.cantidad_usada} {insumo.unidad_medida} - {formatCurrency(insumo.costo_total)}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeInsumo(insumo.insumo_id)}
+                            style={{
+                              padding: '2px 6px',
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '10px'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      padding: '20px',
+                      textAlign: 'center',
+                      color: '#6b7280',
+                      fontSize: '14px'
+                    }}>
+                      No hay insumos seleccionados
+                    </div>
+                  )}
+                </div>
+
+                {/* Sección de Maquinaria */}
+                <div>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    <label style={{ fontWeight: 'bold', color: '#374151' }}>
+                      🚜 Maquinaria Utilizada
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleOpenMaquinariaModal}
+                      style={{
+                        padding: '5px 10px',
+                        background: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      ➕ Agregar
+                    </button>
+                  </div>
+                  
+                  {selectedMaquinaria.length > 0 ? (
+                    <div style={{ 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      padding: '10px',
+                      maxHeight: '150px',
+                      overflowY: 'auto'
+                    }}>
+                      {selectedMaquinaria.map((maq) => (
+                        <div key={maq.maquinaria_id} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '5px 0',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '13px' }}>
+                              {maq.maquinaria_nombre}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                              {maq.horas_uso}h - {maq.kilometros_recorridos}km - {formatCurrency(maq.costo_total)}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeMaquinaria(maq.maquinaria_id)}
+                            style={{
+                              padding: '2px 6px',
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '10px'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      padding: '20px',
+                      textAlign: 'center',
+                      color: '#6b7280',
+                      fontSize: '14px'
+                    }}>
+                      No hay maquinaria seleccionada
+                    </div>
+                  )}
+                </div>
+
+                {/* Resumen de Costos */}
+                <div style={{
+                  background: '#f8f9fa',
+                  padding: '15px',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: '#374151' }}>💰 Resumen de Costos</h4>
+                  <div style={{ display: 'grid', gap: '5px', fontSize: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Insumos:</span>
+                      <span>{formatCurrency(selectedInsumos.reduce((sum, i) => sum + i.costo_total, 0))}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Maquinaria:</span>
+                      <span>{formatCurrency(selectedMaquinaria.reduce((sum, m) => sum + m.costo_total, 0))}</span>
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      fontWeight: 'bold',
+                      borderTop: '1px solid #d1d5db',
+                      paddingTop: '5px',
+                      marginTop: '5px'
+                    }}>
+                      <span>Total:</span>
+                      <span style={{ color: '#10b981' }}>{formatCurrency(calcularCostoTotal())}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div style={{
+                  display: 'flex',
+                  gap: '10px',
+                  justifyContent: 'flex-end',
+                  marginTop: '20px',
+                  borderTop: '1px solid #e5e7eb',
+                  paddingTop: '15px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    style={{
+                      padding: '10px 20px',
+                      background: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      padding: '10px 20px',
+                      background: '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {editingLabor ? 'Actualizar' : 'Crear'} Labor
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para seleccionar insumos */}
+      {showInsumosModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '10px',
+            padding: '20px',
+            width: '100%',
+            maxWidth: '500px',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '15px'
+            }}>
+              <h3 style={{ margin: 0, color: '#374151' }}>🧪 Seleccionar Insumos</h3>
+              <button
+                onClick={() => setShowInsumosModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '15px' }}>
+              {/* Selección de insumo */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                  Seleccionar Insumo
+                </label>
+                <select
+                  value={selectedInsumoId}
+                  onChange={(e) => {
+                    const insumoId = Number(e.target.value);
+                    setSelectedInsumoId(insumoId);
+                    setInsumoCantidad(0);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value={0}>Seleccionar un insumo</option>
+                  {insumos.map(insumo => {
+                    const cantidadYaUsada = selectedInsumos
+                      .filter(i => i.insumo_id === insumo.id)
+                      .reduce((sum, i) => sum + i.cantidad_usada, 0);
+                    const stockDisponible = insumo.stock_actual - cantidadYaUsada;
+                    
+                    return (
+                      <option key={insumo.id} value={insumo.id}>
+                        {insumo.nombre} - Stock disponible: {stockDisponible} {insumo.unidad_medida}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Información del insumo seleccionado */}
+              {selectedInsumoId > 0 && (() => {
+                const insumo = insumos.find(i => i.id === selectedInsumoId);
+                if (!insumo) return null;
+                
+                const cantidadYaUsada = selectedInsumos
+                  .filter(i => i.insumo_id === insumo.id)
+                  .reduce((sum, i) => sum + i.cantidad_usada, 0);
+                const stockDisponible = insumo.stock_actual - cantidadYaUsada;
+                const insumoYaSeleccionado = selectedInsumos.find(i => i.insumo_id === insumo.id);
+
+                return (
+                  <div style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '15px',
+                    background: '#f9fafb'
+                  }}>
+                    <div style={{ marginBottom: '15px' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>
+                        {insumo.nombre}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '5px' }}>
+                        Precio: {formatCurrency(insumo.precio_unitario)}/{insumo.unidad_medida}
+                      </div>
+                      <div style={{ fontSize: '12px', color: stockDisponible > 0 ? '#10b981' : '#ef4444' }}>
+                        Stock disponible: {stockDisponible} {insumo.unidad_medida}
+                        {cantidadYaUsada > 0 && (
+                          <span style={{ color: '#6b7280' }}> (ya usado: {cantidadYaUsada} {insumo.unidad_medida})</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="number"
+                        min="0"
+                        max={stockDisponible}
+                        value={insumoCantidad}
+                        onChange={(e) => setInsumoCantidad(Number(e.target.value))}
+                        placeholder="Cantidad"
+                        style={{
+                          width: '100px',
+                          padding: '8px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      <span style={{ fontSize: '12px', color: '#6b7280' }}>{insumo.unidad_medida}</span>
+                      <button
+                        onClick={() => {
+                          if (insumoCantidad > 0 && insumoCantidad <= stockDisponible) {
+                            const success = addInsumo(insumo, insumoCantidad);
+                            if (success) {
+                              setShowInsumosModal(false);
+                              setSelectedInsumoId(0);
+                              setInsumoCantidad(0);
+                            }
+                          } else if (insumoCantidad > stockDisponible) {
+                            alert(`No puede usar más de ${stockDisponible} ${insumo.unidad_medida}`);
+                          }
+                        }}
+                        disabled={insumoCantidad <= 0 || insumoCantidad > stockDisponible}
+                        style={{
+                          padding: '8px 16px',
+                          background: (insumoCantidad > 0 && insumoCantidad <= stockDisponible) ? '#10b981' : '#6b7280',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: (insumoCantidad > 0 && insumoCantidad <= stockDisponible) ? 'pointer' : 'not-allowed',
+                          fontSize: '12px'
+                        }}
+                      >
+                        {insumoYaSeleccionado ? 'Actualizar' : 'Agregar'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para seleccionar maquinaria */}
+      {showMaquinariaModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '10px',
+            padding: '20px',
+            width: '100%',
+            maxWidth: '500px',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '15px'
+            }}>
+              <h3 style={{ margin: 0, color: '#374151' }}>🚜 Seleccionar Maquinaria</h3>
+              <button
+                onClick={() => setShowMaquinariaModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '15px' }}>
+              {/* Selección de maquinaria */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                  Seleccionar Maquinaria
+                </label>
+                <select
+                  value={selectedMaquinariaId}
+                  onChange={(e) => {
+                    const maquinariaId = Number(e.target.value);
+                    setSelectedMaquinariaId(maquinariaId);
+                    setMaquinariaHoras(0);
+                    setMaquinariaKilometros(0);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value={0}>Seleccionar una máquina</option>
+                  {maquinaria.map(maq => (
+                    <option key={maq.id} value={maq.id}>
+                      {maq.nombre} - Estado: {maq.estado}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Información de la maquinaria seleccionada */}
+              {selectedMaquinariaId > 0 && (() => {
+                const maq = maquinaria.find(m => m.id === selectedMaquinariaId);
+                if (!maq) return null;
+                
+                const maqYaSeleccionada = selectedMaquinaria.find(m => m.maquinaria_id === maq.id);
+
+                return (
+                  <div style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '15px',
+                    background: '#f9fafb'
+                  }}>
+                    <div style={{ marginBottom: '15px' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>
+                        {maq.nombre}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '5px' }}>
+                        Estado: {maq.estado} | Costo/hora: {formatCurrency(maq.costo_por_hora)}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        Kilómetros actuales: {maq.kilometros_uso} km
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '5px' }}>
+                          Horas de uso:
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={maquinariaHoras}
+                          onChange={(e) => setMaquinariaHoras(Number(e.target.value))}
+                          placeholder="0"
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '5px' }}>
+                          Kilómetros:
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={maquinariaKilometros}
+                          onChange={(e) => setMaquinariaKilometros(Number(e.target.value))}
+                          placeholder="0"
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        Costo estimado: {formatCurrency(maquinariaHoras * maq.costo_por_hora)}
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (maquinariaHoras > 0 || maquinariaKilometros > 0) {
+                            addMaquinaria(maq, maquinariaHoras, maquinariaKilometros);
+                            setShowMaquinariaModal(false);
+                            setSelectedMaquinariaId(0);
+                            setMaquinariaHoras(0);
+                            setMaquinariaKilometros(0);
+                          }
+                        }}
+                        disabled={maquinariaHoras <= 0 && maquinariaKilometros <= 0}
+                        style={{
+                          padding: '8px 16px',
+                          background: (maquinariaHoras > 0 || maquinariaKilometros > 0) ? '#3b82f6' : '#6b7280',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: (maquinariaHoras > 0 || maquinariaKilometros > 0) ? 'pointer' : 'not-allowed',
+                          fontSize: '12px'
+                        }}
+                      >
+                        {maqYaSeleccionada ? 'Actualizar' : 'Agregar'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

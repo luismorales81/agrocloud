@@ -43,4 +43,10 @@ public interface LaborRepository extends JpaRepository<Labor, Long> {
     // Contar labores planificadas para hoy
     @Query("SELECT COUNT(l) FROM Labor l WHERE l.fechaLabor = :hoy AND l.estado = 'PLANIFICADA'")
     Long countLaboresHoy(@Param("hoy") LocalDate hoy);
+    
+    // Buscar labores por usuario y rango de fechas
+    List<Labor> findByUsuarioIdAndFechaLaborBetween(Long usuarioId, LocalDate fechaInicio, LocalDate fechaFin);
+    
+    // Buscar labores por lote y rango de fechas
+    List<Labor> findByLoteIdAndFechaLaborBetween(Long loteId, LocalDate fechaInicio, LocalDate fechaFin);
 }

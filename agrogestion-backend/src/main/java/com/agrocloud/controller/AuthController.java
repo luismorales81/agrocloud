@@ -4,6 +4,9 @@ import com.agrocloud.dto.CreateUserRequest;
 import com.agrocloud.dto.LoginRequest;
 import com.agrocloud.dto.LoginResponse;
 import com.agrocloud.dto.UserDto;
+import com.agrocloud.dto.PasswordResetRequest;
+import com.agrocloud.dto.PasswordResetConfirm;
+import com.agrocloud.dto.ChangePasswordRequest;
 import com.agrocloud.service.AuthService;
 import com.agrocloud.service.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,7 +26,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Autenticación", description = "Endpoints para autenticación y gestión de usuarios")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173"})
 public class AuthController {
     
     private AuthService authService;
@@ -32,9 +37,13 @@ public class AuthController {
     @Operation(summary = "Iniciar sesión", description = "Autenticar usuario y obtener token JWT")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
+            System.out.println("🔧 [AuthController] Intentando login para: " + loginRequest.getEmail());
             LoginResponse response = authService.login(loginRequest);
+            System.out.println("✅ [AuthController] Login exitoso para: " + loginRequest.getEmail());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            System.err.println("❌ [AuthController] Error en login para " + loginRequest.getEmail() + ": " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(null);
         }
@@ -193,10 +202,10 @@ public class AuthController {
     
     @PostMapping("/request-password-reset")
     @Operation(summary = "Solicitar reset de contraseña", description = "Solicitar token para resetear contraseña")
-    public ResponseEntity<Map<String, String>> requestPasswordReset(@RequestParam String email) {
+    public ResponseEntity<Map<String, String>> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
         try {
-            authService.requestPasswordReset(email);
-            return ResponseEntity.ok(Map.of("message", "Se ha enviado un email con las instrucciones"));
+            authService.requestPasswordReset(request.getEmail());
+            return ResponseEntity.ok(Map.of("message", "Se ha enviado un email con las instrucciones para recuperar tu contraseña"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -204,12 +213,28 @@ public class AuthController {
     
     @PostMapping("/reset-password")
     @Operation(summary = "Resetear contraseña", description = "Resetear contraseña con token")
-    public ResponseEntity<Map<String, String>> resetPassword(
-            @RequestParam String token,
-            @RequestParam String newPassword) {
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody PasswordResetConfirm request) {
         try {
-            authService.resetPassword(token, newPassword);
+            authService.resetPassword(request.getToken(), request.getNewPassword());
             return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @PostMapping("/change-password")
+    @Operation(summary = "Cambiar contraseña", description = "Cambiar contraseña desde el perfil del usuario")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            // Verificar que las contraseñas coincidan
+            if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Las contraseñas no coinciden"));
+            }
+            
+            authService.changePassword(userDetails.getUsername(), request.getCurrentPassword(), request.getNewPassword());
+            return ResponseEntity.ok(Map.of("message", "Contraseña cambiada correctamente"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

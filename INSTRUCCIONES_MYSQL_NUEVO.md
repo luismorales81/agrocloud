@@ -1,157 +1,125 @@
-# 🔧 Instrucciones para Configurar MySQL - Nueva Instalación
+# 🚀 Instrucciones para Configurar MySQL - AgroCloud
 
-## 📋 Datos de Conexión Actualizados
+## 📋 Estado Actual
+- ✅ MySQL ejecutándose en puerto 3306
+- ✅ phpMyAdmin accesible en http://localhost/phpmyadmin
+- ✅ Script SQL preparado: `setup-mysql-simple.sql`
 
-- **Host**: localhost
-- **Puerto**: 3306
-- **Base de datos**: agrocloud
-- **Usuario**: agrocloudbd
-- **Contraseña**: Jones1212
+## 🔧 Pasos para Configurar la Base de Datos
 
-## 🚀 Pasos para Configurar la Base de Datos
-
-### Paso 1: Verificar MySQL en XAMPP
-1. Abre XAMPP Control Panel
-2. Inicia MySQL
-3. Verifica que esté corriendo en el puerto 3306
-
-### Paso 2: Crear Base de Datos
-1. Abre phpMyAdmin: http://localhost/phpmyadmin
+### Paso 1: Abrir phpMyAdmin
+1. Ve a: http://localhost/phpmyadmin
 2. Inicia sesión con:
-   - Usuario: `agrocloudbd`
-   - Contraseña: `Jones1212`
-3. Haz clic en "Nueva" o "New"
-4. Nombre de la base de datos: `agrocloud`
-5. Collation: `utf8mb4_unicode_ci`
-6. Haz clic en "Crear"
+   - **Usuario**: `root`
+   - **Contraseña**: (deja vacío por defecto)
 
-### Paso 3: Ejecutar Script SQL
-1. Selecciona la base de datos `agrocloud`
-2. Ve a la pestaña "SQL"
-3. Copia y pega todo el contenido del archivo `setup-mysql-local.sql`
-4. Haz clic en "Continuar"
+### Paso 2: Ejecutar Script SQL
+1. En phpMyAdmin, haz clic en la pestaña **"SQL"**
+2. Copia TODO el contenido del archivo `setup-mysql-simple.sql`
+3. Pega el contenido en el área de texto SQL
+4. Haz clic en **"Continuar"** para ejecutar
 
-### Paso 4: Verificar Instalación
-El script creará:
-- ✅ 8 tablas del sistema
-- ✅ 3 roles (ADMIN, TECNICO, PRODUCTOR)
-- ✅ 3 usuarios de prueba
-- ✅ Datos de ejemplo para todos los módulos
-- ✅ Índices para optimizar rendimiento
+### Paso 3: Verificar Configuración
+Después de ejecutar el script, deberías ver:
+- ✅ Base de datos `agroclouddb` creada
+- ✅ Usuario `agrocloudbd` creado
+- ✅ Tablas del sistema creadas
+- ✅ Roles por defecto insertados
+- ✅ Usuario administrador creado
 
-## 👥 Usuarios de Prueba Creados
+## 📊 Contenido del Script SQL
 
-| Usuario | Contraseña | Rol | Descripción |
-|---------|------------|-----|-------------|
-| `admin` | `admin123` | ADMIN | Administrador del sistema |
-| `tecnico` | `admin123` | TECNICO | Técnico agrícola |
-| `productor` | `admin123` | PRODUCTOR | Productor agrícola |
+El script `setup-mysql-simple.sql` creará:
 
-## 📊 Datos de Ejemplo Incluidos
+### Base de Datos y Usuario
+- **Base de datos**: `agroclouddb`
+- **Usuario**: `agrocloudbd`
+- **Contraseña**: `Jones1212`
 
-### Campos
-- Campo Norte (50.5 ha)
-- Campo Sur (30.2 ha)
-- Campo Este (25.8 ha)
+### Tablas del Sistema
+1. **roles** - Roles de usuario del sistema
+2. **usuarios** - Información de usuarios
+3. **usuario_roles** - Relación usuario-rol
+4. **campos** - Gestión de campos agrícolas
+5. **lotes** - Gestión de lotes de cultivo
+6. **insumos** - Gestión de insumos agrícolas
+7. **maquinaria** - Gestión de maquinaria
+8. **labores** - Gestión de labores agrícolas
 
-### Lotes
-- 6 lotes distribuidos en los campos
-- Diferentes tipos de suelo
-- Áreas específicas para cada cultivo
+### Datos Iniciales
+- **Roles**: ADMINISTRADOR, OPERARIO, INGENIERO_AGRONOMO, INVITADO
+- **Usuario Admin**: admin@agrocloud.com / admin123
 
-### Cultivos
-- Soja (DM 53i54)
-- Maíz (DK 72-10)
-- Trigo (Baguette 19)
-- Girasol (Paraíso 33)
-- Sorgo (DK 46-15)
+## 🎯 Después de Configurar la Base de Datos
 
-### Insumos
-- Fertilizantes (Urea, Fosfato Diamónico)
-- Herbicidas (Glifosato)
-- Semillas certificadas
-- Fungicidas e insecticidas
+Una vez que hayas ejecutado el script SQL exitosamente:
 
-### Maquinaria
-- Tractor John Deere 5075E
-- Sembradora MaxEmerge 5
-- Pulverizadora Jacto 600L
-- Cosechadora New Holland CR
-- Arado de discos
-
-### Labores
-- Siembras
-- Fertilizaciones
-- Pulverizaciones
-- Cosechas
-
-## 🔍 Verificar Configuración
-
-### En phpMyAdmin
-1. Ve a la base de datos `agrocloud`
-2. Verifica que aparezcan todas las tablas
-3. Revisa que los datos estén cargados
-
-### Comandos de Verificación
-```sql
--- Verificar tablas creadas
-SHOW TABLES;
-
--- Verificar usuarios
-SELECT username, email, first_name, last_name FROM users;
-
--- Verificar roles
-SELECT name, description FROM roles;
-
--- Verificar campos
-SELECT name, location, area_hectares FROM fields;
-
--- Verificar lotes
-SELECT name, field_id, area_hectares FROM plots;
+### Ejecutar el Sistema Completo
+```powershell
+.\start-project-mysql.bat
 ```
 
-## 🚀 Ejecutar el Proyecto
-
-Una vez configurada la base de datos:
-
-### Opción 1: Script Automático
-```bash
-start-project.bat
-```
-
-### Opción 2: Manual
-```bash
-# Backend
-cd agrogestion-backend
-.\mvnw spring-boot:run -Dspring.profiles.active=mysql
-
-# Frontend (en otra terminal)
-cd agrogestion-frontend
-npm run dev
-```
-
-## 🌐 URLs de Acceso
-
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8080/api
+### Verificar Funcionamiento
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:8080
 - **Swagger UI**: http://localhost:8080/swagger-ui.html
 - **phpMyAdmin**: http://localhost/phpmyadmin
 
-## 🔧 Troubleshooting
+## 🔍 Verificación de Estado
 
-### Error de Conexión
-- Verificar que MySQL esté corriendo en XAMPP
-- Verificar credenciales en `application-mysql.properties`
-- Verificar que la base de datos `agrocloud` exista
+### Verificar Base de Datos
+1. En phpMyAdmin, verifica que existe la base de datos `agroclouddb`
+2. Verifica que existen las tablas del sistema
+3. Verifica que existe el usuario `agrocloudbd`
 
-### Error de Permisos
-- Verificar que el usuario `agrocloudbd` tenga permisos en la base de datos
-- Verificar que la contraseña sea correcta
+### Verificar Servicios
+```powershell
+# Verificar MySQL
+netstat -ano | findstr ":3306"
 
-### Error de Puerto
-- Verificar que MySQL esté en el puerto 3306
-- Verificar que no haya conflictos de puertos
+# Verificar Backend
+netstat -ano | findstr ":8080"
+
+# Verificar Frontend
+netstat -ano | findstr ":3000"
+```
+
+## 🛠️ Solución de Problemas
+
+### Error: "Access denied for user 'agrocloudbd'"
+1. Verifica que el script SQL se ejecutó completamente
+2. Verifica que el usuario `agrocloudbd` existe en phpMyAdmin
+3. Verifica que tiene permisos en la base de datos `agroclouddb`
+
+### Error: "Database 'agroclouddb' doesn't exist"
+1. Ejecuta nuevamente el script SQL en phpMyAdmin
+2. Verifica que no haya errores en la ejecución
+
+### Error: "Table doesn't exist"
+1. Verifica que todas las tablas se crearon correctamente
+2. Ejecuta el script SQL nuevamente
+
+## ✅ Estado Final Esperado
+
+Después de completar todos los pasos:
+
+- ✅ Base de datos `agroclouddb` configurada
+- ✅ Usuario `agrocloudbd` con permisos
+- ✅ Todas las tablas creadas
+- ✅ Datos iniciales insertados
+- ✅ Backend conectado a MySQL
+- ✅ Frontend ejecutándose
+- ✅ Sistema completamente operativo
+
+## 🎉 ¡Listo para Usar!
+
+Una vez configurado, podrás:
+- Acceder al sistema en http://localhost:3000
+- Iniciar sesión con: admin@agrocloud.com / admin123
+- Gestionar campos, lotes, insumos y maquinaria
+- Administrar usuarios y roles
+- Ver datos persistentes en MySQL
 
 ---
-
-**¡La base de datos está lista para usar con el sistema AgroGestion! 🚀**
+**Fecha**: 25 de Agosto, 2025
+**Estado**: ✅ Configuración lista

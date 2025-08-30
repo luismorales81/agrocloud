@@ -22,6 +22,23 @@ public class InsumoService {
     @Autowired
     private UserRepository userRepository;
 
+    // Obtener todos los insumos (público)
+    public List<Insumo> getAllInsumos() {
+        return insumoRepository.findAll();
+    }
+
+    // Obtener insumo por ID (público)
+    public Insumo getInsumoById(Long id) {
+        return insumoRepository.findById(id).orElse(null);
+    }
+
+    // Obtener insumos con stock bajo (público)
+    public List<Insumo> getInsumosStockBajo() {
+        return insumoRepository.findAll().stream()
+                .filter(insumo -> insumo.getStockActual().compareTo(insumo.getStockMinimo()) <= 0)
+                .toList();
+    }
+
     // Obtener todos los insumos accesibles por un usuario
     public List<Insumo> getInsumosByUser(User user) {
         if (user.isAdmin()) {

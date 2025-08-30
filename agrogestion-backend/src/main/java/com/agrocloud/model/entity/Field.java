@@ -59,6 +59,12 @@ public class Field {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    @Column(name = "poligono", columnDefinition = "TEXT")
+    private String poligono;
+
+    @Column(name = "coordenadas", columnDefinition = "JSON")
+    private String coordenadas;
+
     @CreatedDate
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
@@ -149,6 +155,22 @@ public class Field {
 
     public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public String getPoligono() {
+        return poligono;
+    }
+
+    public void setPoligono(String poligono) {
+        this.poligono = poligono;
+    }
+
+    public String getCoordenadas() {
+        return coordenadas;
+    }
+
+    public void setCoordenadas(String coordenadas) {
+        this.coordenadas = coordenadas;
     }
 
     public LocalDateTime getFechaCreacion() {

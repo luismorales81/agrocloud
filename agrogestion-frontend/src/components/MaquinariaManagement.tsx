@@ -100,7 +100,7 @@ const MaquinariaManagement: React.FC = () => {
   };
 
   const deleteMaquinaria = (id: number) => {
-    if (confirm('¿Está seguro de eliminar esta maquinaria?')) {
+    if (window.confirm('¿Está seguro de eliminar esta maquinaria?')) {
       setMaquinaria(prev => prev.filter(m => m.id !== id));
     }
   };

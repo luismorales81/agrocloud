@@ -1,208 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import FieldsManagement from './components/FieldsManagement';
+import LotesManagement from './components/LotesManagement';
+import CultivosManagement from './components/CultivosManagement';
+import InsumosManagement from './components/InsumosManagement';
+import MaquinariaManagement from './components/MaquinariaManagement';
+import LaboresManagement from './components/LaboresManagement';
+import ReportsManagement from './components/ReportsManagement';
+import BalanceReport from './components/BalanceReport';
+import FinanzasManagement from './components/FinanzasManagement';
+import OfflineIndicator from './components/OfflineIndicator';
+import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import ChangePasswordModal from './components/ChangePasswordModal';
+import { AuthProvider } from './contexts/AuthContext';
 
-// FORZAR REDEPLOY - FIX MIME TYPE ISSUES
-
-// Componente de Login simplificado - Sin llamadas al backend
-const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    // Simulación de login con diferentes usuarios - SIN llamadas al backend
-    setTimeout(() => {
-      let userData;
-      
-      switch (username.toLowerCase()) {
-        case 'admin':
-          userData = {
-            id: 1,
-            username: 'admin',
-            firstName: 'Administrador',
-            lastName: 'Sistema',
-            role: 'admin',
-            email: 'admin@agrocloud.com'
-          };
-          break;
-        case 'tecnico':
-          userData = {
-            id: 2,
-            username: 'tecnico',
-            firstName: 'Técnico',
-            lastName: 'Agrícola',
-            role: 'tecnico',
-            email: 'tecnico@agrocloud.com'
-          };
-          break;
-        case 'productor':
-          userData = {
-            id: 3,
-            username: 'productor',
-            firstName: 'Productor',
-            lastName: 'Agrícola',
-            role: 'productor',
-            email: 'productor@agrocloud.com'
-          };
-          break;
-        default:
-          userData = {
-            id: 4,
-            username: username,
-            firstName: 'Usuario',
-            lastName: 'Demo',
-            role: 'usuario',
-            email: 'usuario@agrocloud.com'
-          };
-      }
-      
-      localStorage.setItem('token', 'fake-token');
-      localStorage.setItem('user', JSON.stringify(userData));
-      setLoading(false);
-      window.location.href = '/dashboard';
-    }, 1000);
-  };
-
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      backgroundColor: '#f3f4f6',
-      fontFamily: 'Arial, sans-serif'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '2rem',
-        borderRadius: '0.5rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        maxWidth: '400px'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ 
-            width: '80px', 
-            height: '80px', 
-            margin: '0 auto 1rem auto',
-            background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '40px',
-            color: 'white'
-          }}>
-            🌾
-          </div>
-          <h1 style={{ 
-            fontSize: '2rem', 
-            fontWeight: 'bold', 
-            color: '#1f2937',
-            marginBottom: '0.5rem'
-          }}>
-            AgroCloud
-          </h1>
-          <p style={{ color: '#6b7280' }}>
-            Sistema de Gestión Agrícola
-          </p>
-        </div>
-        
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem',
-              fontWeight: '500',
-              color: '#374151'
-            }}>
-              Usuario
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.375rem',
-                fontSize: '1rem'
-              }}
-              placeholder="Ingrese su usuario"
-              required
-            />
-          </div>
-          
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem',
-              fontWeight: '500',
-              color: '#374151'
-            }}>
-              Contraseña
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.375rem',
-                fontSize: '1rem'
-              }}
-              placeholder="Ingrese su contraseña"
-              required
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              backgroundColor: loading ? '#9ca3af' : '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              fontSize: '1rem',
-              fontWeight: '500',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </button>
-        </form>
-        
-        <div style={{ 
-          textAlign: 'center', 
-          marginTop: '2rem',
-          fontSize: '0.875rem',
-          color: '#6b7280'
-        }}>
-          <p style={{ marginBottom: '0.5rem' }}>Usuarios de prueba:</p>
-          <p>admin / admin123</p>
-          <p>tecnico / tecnico123</p>
-          <p>productor / productor123</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Dashboard simplificado
+// Dashboard con menú lateral
 const Dashboard: React.FC = () => {
   const [user] = useState(() => {
     const userData = localStorage.getItem('user');
     return userData ? JSON.parse(userData) : {};
   });
+
+  const [activePage, setActivePage] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState({
+    campos: 0,
+    lotes: 0,
+    cultivos: 0,
+    insumos: 0,
+    maquinaria: 0,
+    labores: 0,
+    balance: 0
+  });
+
+  // Detectar cambios de tamaño de pantalla
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Cargar estadísticas del dashboard
+  useEffect(() => {
+    // Simular carga de datos reales
+    setDashboardStats({
+      campos: 3,
+      lotes: 12,
+      cultivos: 5,
+      insumos: 8,
+      maquinaria: 4,
+      labores: 15,
+      balance: 125000
+    });
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -210,21 +67,32 @@ const Dashboard: React.FC = () => {
     window.location.href = '/login';
   };
 
+  const renderPage = () => {
+    switch (activePage) {
+      case 'fields':
+        return <FieldsManagement />;
+      case 'plots':
+        return <LotesManagement />;
+      case 'crops':
+        return <CultivosManagement />;
+      case 'inputs':
+        return <InsumosManagement />;
+      case 'machinery':
+        return <MaquinariaManagement />;
+      case 'labors':
+        return <LaboresManagement />;
+      case 'balance':
+        return <BalanceReport />;
+      case 'finanzas':
+        return <FinanzasManagement />;
+      case 'reports':
+        return <ReportsManagement />;
+      case 'users':
+        return <UserManagement />;
+      case 'dashboard':
+      default:
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#f9fafb',
-      fontFamily: 'Arial, sans-serif',
-      padding: '2rem'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '2rem',
-        borderRadius: '0.5rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-        maxWidth: '800px',
-        margin: '0 auto'
-      }}>
+          <div style={{ padding: '2rem' }}>
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -236,7 +104,7 @@ const Dashboard: React.FC = () => {
             fontWeight: 'bold', 
             color: '#1f2937'
           }}>
-            🌾 AgroCloud Dashboard
+                📊 Dashboard
           </h1>
           <button
             onClick={handleLogout}
@@ -270,71 +138,446 @@ const Dashboard: React.FC = () => {
         
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1rem'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+          gap: '1.5rem' 
         }}>
-          <div style={{
-            backgroundColor: '#eff6ff',
+          {/* Campos */}
+          <div style={{ 
+            backgroundColor: 'white', 
             padding: '1.5rem',
             borderRadius: '0.5rem',
-            border: '1px solid #3b82f6'
-          }}>
-            <h3 style={{ color: '#1e40af', marginBottom: '0.5rem' }}>🌾 Campos</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2563eb' }}>3</p>
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}
+          onClick={() => setActivePage('fields')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🌾</span>
+              <div>
+                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Campos</h3>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.campos} registrados</p>
+              </div>
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Administra tus terrenos y lotes</p>
           </div>
-          
-          <div style={{
-            backgroundColor: '#f0fdf4',
+
+          {/* Lotes */}
+          <div style={{ 
+            backgroundColor: 'white', 
             padding: '1.5rem',
             borderRadius: '0.5rem',
-            border: '1px solid #22c55e'
-          }}>
-            <h3 style={{ color: '#15803d', marginBottom: '0.5rem' }}>🏞️ Lotes</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#16a34a' }}>3</p>
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}
+          onClick={() => setActivePage('plots')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🔲</span>
+              <div>
+                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Lotes</h3>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.lotes} activos</p>
+              </div>
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Gestiona las parcelas de cultivo</p>
           </div>
-          
-          <div style={{
-            backgroundColor: '#fef3c7',
+
+          {/* Cultivos */}
+          <div style={{ 
+            backgroundColor: 'white', 
             padding: '1.5rem',
             borderRadius: '0.5rem',
-            border: '1px solid #eab308'
-          }}>
-            <h3 style={{ color: '#a16207', marginBottom: '0.5rem' }}>🌱 Cultivos</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ca8a04' }}>2</p>
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}
+          onClick={() => setActivePage('crops')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🌱</span>
+              <div>
+                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Cultivos</h3>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.cultivos} en curso</p>
+              </div>
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de plantaciones y variedades</p>
           </div>
-          
-          <div style={{
-            backgroundColor: '#fdf4ff',
+
+          {/* Insumos */}
+          <div style={{ 
+            backgroundColor: 'white', 
             padding: '1.5rem',
             borderRadius: '0.5rem',
-            border: '1px solid #a855f7'
-          }}>
-            <h3 style={{ color: '#7c3aed', marginBottom: '0.5rem' }}>🧪 Insumos</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#9333ea' }}>5</p>
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}
+          onClick={() => setActivePage('inputs')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🧪</span>
+              <div>
+                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Insumos</h3>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.insumos} en inventario</p>
+              </div>
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Gestión de fertilizantes y productos</p>
+          </div>
+
+          {/* Maquinaria */}
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '1.5rem',
+            borderRadius: '0.5rem',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}
+          onClick={() => setActivePage('machinery')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🚜</span>
+              <div>
+                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Maquinaria</h3>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.maquinaria} equipos</p>
+              </div>
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de equipos y mantenimiento</p>
+          </div>
+
+          {/* Labores */}
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '1.5rem',
+            borderRadius: '0.5rem',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}
+          onClick={() => setActivePage('labors')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>⚒️</span>
+              <div>
+                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Labores</h3>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.labores} tareas</p>
+              </div>
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Seguimiento de tareas agrícolas</p>
+          </div>
+
+          {/* Balance Total */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            padding: '1.5rem',
+            borderRadius: '0.5rem',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}
+          onClick={() => setActivePage('balance')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>💰</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Balance Total</h3>
+                <p style={{ margin: 0, opacity: '0.9', fontSize: '1.2rem', fontWeight: 'bold' }}>${dashboardStats.balance.toLocaleString()}</p>
+              </div>
+            </div>
+            <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Resumen financiero del sistema</p>
+          </div>
+
+          {/* Finanzas */}
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '1.5rem',
+            borderRadius: '0.5rem',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}
+          onClick={() => setActivePage('finanzas')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>💳</span>
+              <div>
+                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Finanzas</h3>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Control completo</p>
+              </div>
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de ingresos y egresos</p>
           </div>
         </div>
-        
-        <div style={{ 
-          marginTop: '2rem',
-          padding: '1.5rem',
-          backgroundColor: '#f9fafb',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb'
-        }}>
-          <h3 style={{ marginBottom: '1rem', color: '#374151' }}>📈 Actividad Reciente</h3>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            <li style={{ padding: '0.5rem 0', borderBottom: '1px solid #e5e7eb' }}>
-              🔧 Siembra completada en Lote A1 - 2024-11-15
-            </li>
-            <li style={{ padding: '0.5rem 0', borderBottom: '1px solid #e5e7eb' }}>
-              🧪 Nuevo insumo agregado: Semilla Soja DM 53i54 - 2024-11-14
-            </li>
-            <li style={{ padding: '0.5rem 0' }}>
-              🏞️ Lote B1 creado en Campo Norte - 2024-11-13
-            </li>
-          </ul>
+          </div>
+        );
+    }
+  };
+
+  // Componente Sidebar
+  const Sidebar: React.FC<{
+    activePage: string;
+    onPageChange: (page: string) => void;
+    user: any;
+    isMobile: boolean;
+    sidebarOpen: boolean;
+    onToggleSidebar: () => void;
+  }> = ({ activePage, onPageChange, user, isMobile, sidebarOpen, onToggleSidebar }) => {
+    const menuItems = [
+      { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+      { id: 'fields', label: 'Campos', icon: '🌾' },
+      { id: 'plots', label: 'Lotes', icon: '🔲' },
+      { id: 'crops', label: 'Cultivos', icon: '🌱' },
+      { id: 'inputs', label: 'Insumos', icon: '🧪' },
+      { id: 'machinery', label: 'Maquinaria', icon: '🚜' },
+      { id: 'labors', label: 'Labores', icon: '⚒️' },
+      { id: 'balance', label: 'Balance', icon: '💰' },
+      { id: 'finanzas', label: 'Finanzas', icon: '💳' },
+      { id: 'reports', label: 'Reportes', icon: '📋' },
+      { id: 'users', label: 'Usuarios', icon: '👥' }
+    ];
+
+    return (
+      <div style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        height: '100vh',
+        width: '250px',
+        backgroundColor: '#1f2937',
+        color: 'white',
+        transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
+        transition: 'transform 0.3s ease',
+        zIndex: 1000,
+        overflowY: 'auto'
+      }}>
+        <div style={{ padding: '1.5rem' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            marginBottom: '2rem',
+            fontSize: '1.25rem',
+            fontWeight: 'bold'
+          }}>
+            🌾 AgroGestion
+          </div>
+          
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+              Usuario
+            </div>
+            <div style={{ fontSize: '1rem', fontWeight: '500' }}>
+              {user.firstName} {user.lastName}
+            </div>
+            <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '1rem' }}>
+              {user.role?.charAt(0).toUpperCase() + user.role?.slice(1) || 'Usuario'}
+            </div>
+            <button
+              onClick={() => setShowChangePassword(true)}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                backgroundColor: '#374151',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.25rem'
+              }}
+            >
+              🔐 Cambiar Contraseña
+            </button>
+          </div>
+          
+          <nav>
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onPageChange(item.id);
+                  if (isMobile) onToggleSidebar();
+                }}
+            style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  marginBottom: '0.25rem',
+                  backgroundColor: activePage === item.id ? '#374151' : 'transparent',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+              cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '0.875rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </nav>
         </div>
       </div>
+    );
+  };
+
+  // Componente UserManagement
+  const UserManagement: React.FC = () => {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '2rem' }}>
+          👥 Gestión de Usuarios
+        </h1>
+        <div style={{ 
+          backgroundColor: 'white', 
+          padding: '1.5rem',
+          borderRadius: '0.5rem',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' 
+        }}>
+          <p style={{ color: '#6b7280' }}>Funcionalidad de gestión de usuarios en desarrollo...</p>
+        </div>
+          </div>
+        );
+  };
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Overlay para móvil */}
+      {isMobile && sidebarOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <Sidebar 
+        activePage={activePage} 
+        onPageChange={setActivePage} 
+        user={user}
+        isMobile={isMobile}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+      />
+      
+      <div style={{ 
+        marginLeft: isMobile ? 0 : '250px', 
+        flex: 1,
+        transition: 'margin-left 0.3s ease'
+      }}>
+        {/* Botón de menú para móvil */}
+        {isMobile && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              position: 'fixed',
+              top: '1rem',
+              left: '1rem',
+              zIndex: 1001,
+              padding: '0.5rem',
+              backgroundColor: '#1f2937',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer'
+            }}
+          >
+            ☰
+          </button>
+        )}
+
+        {/* Contenido principal */}
+        <div style={{ paddingTop: isMobile ? '4rem' : '0' }}>
+          {renderPage()}
+        </div>
+
+        {/* Modal de cambio de contraseña */}
+        <ChangePasswordModal 
+          isOpen={showChangePassword} 
+          onClose={() => setShowChangePassword(false)} 
+        />
+      </div>
+      
+      {/* Indicador de estado offline */}
+      <OfflineIndicator />
     </div>
   );
 };
@@ -365,6 +608,8 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+      <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
@@ -374,9 +619,11 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
+    <AuthProvider>
     <Router>
       <AppRoutes />
     </Router>
+    </AuthProvider>
   );
 };
 

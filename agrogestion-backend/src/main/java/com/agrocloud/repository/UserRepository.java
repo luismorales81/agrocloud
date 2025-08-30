@@ -47,4 +47,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findUsersWithFilters(@Param("firstName") String firstName, 
                                    @Param("email") String email, 
                                    @Param("activo") Boolean activo);
+    
+    /**
+     * Buscar usuario por token de reset de contraseña
+     */
+    Optional<User> findByResetPasswordToken(String resetPasswordToken);
+    
+    /**
+     * Buscar usuario por token de verificación
+     */
+    Optional<User> findByVerificationToken(String verificationToken);
 }

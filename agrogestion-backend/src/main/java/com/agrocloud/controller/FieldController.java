@@ -1,9 +1,13 @@
 package com.agrocloud.controller;
 
+import com.agrocloud.dto.FieldDTO;
 import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.service.FieldService;
 import com.agrocloud.service.UserService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,39 +28,102 @@ public class FieldController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    // Métodos de conversión
+    private FieldDTO convertToDTO(Field field) {
+        FieldDTO dto = new FieldDTO();
+        dto.setId(field.getId());
+        dto.setNombre(field.getNombre());
+        dto.setDescripcion(field.getDescripcion());
+        dto.setUbicacion(field.getUbicacion());
+        dto.setAreaHectareas(field.getAreaHectareas());
+        dto.setTipoSuelo(field.getTipoSuelo());
+        dto.setEstado(field.getEstado());
+        dto.setActivo(field.getActivo());
+        dto.setPoligono(field.getPoligono());
+        dto.setFechaCreacion(field.getFechaCreacion());
+        dto.setFechaActualizacion(field.getFechaActualizacion());
+
+        // Convertir coordenadas JSON a lista de DTOs
+        if (field.getCoordenadas() != null && !field.getCoordenadas().isEmpty()) {
+            try {
+                List<FieldDTO.CoordinateDTO> coordinates = objectMapper.readValue(
+                    field.getCoordenadas(), 
+                    new TypeReference<List<FieldDTO.CoordinateDTO>>() {}
+                );
+                dto.setCoordenadas(coordinates);
+            } catch (JsonProcessingException e) {
+                // Si hay error en el parsing, dejar coordenadas como null
+            }
+        }
+
+        return dto;
+    }
+
+    private Field convertToEntity(FieldDTO dto) {
+        Field field = new Field();
+        field.setId(dto.getId());
+        field.setNombre(dto.getNombre());
+        field.setDescripcion(dto.getDescripcion());
+        field.setUbicacion(dto.getUbicacion());
+        field.setAreaHectareas(dto.getAreaHectareas());
+        field.setTipoSuelo(dto.getTipoSuelo());
+        field.setEstado(dto.getEstado());
+        field.setActivo(dto.getActivo());
+        field.setPoligono(dto.getPoligono());
+
+        // Convertir coordenadas a JSON
+        if (dto.getCoordenadas() != null && !dto.getCoordenadas().isEmpty()) {
+            try {
+                field.setCoordenadas(objectMapper.writeValueAsString(dto.getCoordenadas()));
+            } catch (JsonProcessingException e) {
+                // Si hay error en la serialización, dejar coordenadas como null
+            }
+        }
+
+        return field;
+    }
+
     // Obtener todos los campos accesibles por el usuario
     @GetMapping
-    public ResponseEntity<List<Field>> getAllFields(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<List<FieldDTO>> getAllFields(@AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.findByUsername(userDetails.getUsername());
         List<Field> fields = fieldService.getFieldsByUser(user);
-        return ResponseEntity.ok(fields);
+        List<FieldDTO> dtos = fields.stream().map(this::convertToDTO).toList();
+        return ResponseEntity.ok(dtos);
     }
 
     // Obtener campo por ID
     @GetMapping("/{id}")
-    public ResponseEntity<Field> getFieldById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<FieldDTO> getFieldById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.findByUsername(userDetails.getUsername());
         Optional<Field> field = fieldService.getFieldById(id, user);
         
-        return field.map(ResponseEntity::ok)
+        return field.map(this::convertToDTO)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     // Crear nuevo campo
     @PostMapping
-    public ResponseEntity<Field> createField(@RequestBody Field field, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<FieldDTO> createField(@RequestBody FieldDTO fieldDTO, @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.findByUsername(userDetails.getUsername());
+        Field field = convertToEntity(fieldDTO);
         Field createdField = fieldService.createField(field, user);
-        return ResponseEntity.ok(createdField);
+        return ResponseEntity.ok(convertToDTO(createdField));
     }
 
     // Actualizar campo
     @PutMapping("/{id}")
-    public ResponseEntity<Field> updateField(@PathVariable Long id, @RequestBody Field field, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<FieldDTO> updateField(@PathVariable Long id, @RequestBody FieldDTO fieldDTO, @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.findByUsername(userDetails.getUsername());
+        Field field = convertToEntity(fieldDTO);
         Optional<Field> updatedField = fieldService.updateField(id, field, user);
         
-        return updatedField.map(ResponseEntity::ok)
+        return updatedField.map(this::convertToDTO)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -75,10 +142,11 @@ public class FieldController {
 
     // Buscar campo por nombre
     @GetMapping("/search")
-    public ResponseEntity<List<Field>> searchField(@RequestParam String nombre, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<List<FieldDTO>> searchField(@RequestParam String nombre, @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.findByUsername(userDetails.getUsername());
         List<Field> fields = fieldService.searchFieldByName(nombre, user);
-        return ResponseEntity.ok(fields);
+        List<FieldDTO> dtos = fields.stream().map(this::convertToDTO).toList();
+        return ResponseEntity.ok(dtos);
     }
 
     // Obtener estadísticas de campos
@@ -91,11 +159,12 @@ public class FieldController {
 
     // Obtener campos por estado
     @GetMapping("/estado/{estado}")
-    public ResponseEntity<List<Field>> getFieldsByEstado(@PathVariable String estado, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<List<FieldDTO>> getFieldsByEstado(@PathVariable String estado, @AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.findByUsername(userDetails.getUsername());
-        List<Field> fields = fieldService.getFieldsByUser(user).stream()
+        List<FieldDTO> dtos = fieldService.getFieldsByUser(user).stream()
                 .filter(f -> estado.equals(f.getEstado()))
+                .map(this::convertToDTO)
                 .toList();
-        return ResponseEntity.ok(fields);
+        return ResponseEntity.ok(dtos);
     }
 }

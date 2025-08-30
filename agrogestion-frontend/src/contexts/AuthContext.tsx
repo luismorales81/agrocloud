@@ -21,7 +21,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -35,15 +35,23 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Verificar si hay un usuario autenticado al cargar la aplicación
-    const currentUser = authService.getCurrentUser();
-    if (currentUser && authService.isAuthenticated()) {
-      setUser(currentUser);
-    }
-    setLoading(false);
+    const initializeAuth = () => {
+      try {
+        const currentUser = authService.getCurrentUser();
+        if (currentUser && authService.isAuthenticated()) {
+          setUser(currentUser);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
@@ -51,7 +59,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       const response = await authService.login(username, password);
       
-      // Guardar token y datos del usuario
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
       
@@ -59,6 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showNotification('Inicio de sesión exitoso', 'success');
       return true;
     } catch (error) {
+      console.error('Error en login:', error);
       showNotification('Error en el inicio de sesión', 'error');
       return false;
     } finally {
@@ -66,17 +74,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (): void => {
     authService.logout();
     setUser(null);
     showNotification('Sesión cerrada', 'info');
   };
 
-  const isAuthenticated = () => {
+  const isAuthenticated = (): boolean => {
     return authService.isAuthenticated();
   };
 
-  const value: AuthContextType = {
+  const contextValue: AuthContextType = {
     user,
     loading,
     login,
@@ -85,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

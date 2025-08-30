@@ -167,7 +167,7 @@ const RolesManagement: React.FC = () => {
 
   // Eliminar rol
   const deleteRole = async (roleId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este rol?')) return;
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este rol?')) return;
     
     try {
       const token = localStorage.getItem('token');

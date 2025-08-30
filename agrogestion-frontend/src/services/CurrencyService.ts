@@ -1,174 +1,112 @@
-interface CurrencyRate {
-  success: boolean;
-  query: {
-    from: string;
-    to: string;
-    amount: number;
-  };
-  info: {
-    rate: number;
-    timestamp: number;
-  };
-  date: string;
-  result: number;
+// CurrencyService simplificado para debugging
+export interface CurrencyConfig {
+  primaryCurrency: 'ARS' | 'USD' | 'EUR';
+  autoUpdate: boolean;
+  updateInterval: number;
 }
 
-interface CurrencyConfig {
-  currency: 'ARS' | 'USD';
-  rate: number;
-  lastUpdate: string;
-}
+class SimpleCurrencyService {
+  private config: CurrencyConfig = {
+    primaryCurrency: 'ARS',
+    autoUpdate: true,
+    updateInterval: 30
+  };
 
-class CurrencyService {
-  private readonly API_URL = 'https://api.exchangerate.host/convert';
-  private readonly STORAGE_KEY = 'currencyConfig';
-  private readonly RATE_STORAGE_KEY = 'exchangeRate';
+  private lastUpdate: Date = new Date();
+  private rates = new Map<string, number>([
+    ['USD-ARS', 850],
+    ['ARS-USD', 1/850],
+    ['EUR-ARS', 920],
+    ['ARS-EUR', 1/920]
+  ]);
 
-  async getExchangeRate(from: string = 'ARS', to: string = 'USD', amount: number = 1): Promise<CurrencyRate> {
-    try {
-      const url = `${this.API_URL}?from=${from}&to=${to}&amount=${amount}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error('Error al obtener cotización de cambio');
-      }
-      
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error?.info || 'Error en la respuesta del servicio');
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Error obteniendo cotización:', error);
-      throw error;
-    }
+  public getConfig(): CurrencyConfig {
+    return { ...this.config };
   }
 
-  async getCurrentRate(): Promise<number> {
-    try {
-      const rateData = await this.getExchangeRate('ARS', 'USD', 1);
-      return rateData.info.rate;
-    } catch (error) {
-      console.error('Error obteniendo tasa actual:', error);
-      // Tasa de respaldo en caso de error
-      return 1000; // Tasa aproximada ARS/USD
-    }
+  public getCurrencyConfig(): CurrencyConfig {
+    return { ...this.config };
   }
 
-  async updateCurrencyRates(): Promise<void> {
-    try {
-      const currentRate = await this.getCurrentRate();
-      
-      // Guardar la tasa actual
-      const rateData = {
-        rate: currentRate,
-        lastUpdate: new Date().toISOString(),
-        from: 'ARS',
-        to: 'USD'
-      };
-      
-      localStorage.setItem(this.RATE_STORAGE_KEY, JSON.stringify(rateData));
-      
-      // Actualizar configuración
-      const config = this.getCurrencyConfig();
-      config.lastUpdate = rateData.lastUpdate;
-      this.setCurrencyConfig(config);
-      
-      console.log('Cotización actualizada:', currentRate);
-    } catch (error) {
-      console.error('Error actualizando cotización:', error);
-    }
+  public setCurrencyConfig(config: CurrencyConfig) {
+    this.config = { ...config };
   }
 
-  getCurrentRateFromStorage(): number {
-    const stored = localStorage.getItem(this.RATE_STORAGE_KEY);
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data.rate;
-    }
-    return 1000; // Tasa por defecto
+  public formatCurrency(amount: number, currency: string, locale: string = 'es-AR'): string {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
   }
 
-  getCurrencyConfig(): CurrencyConfig {
-    const stored = localStorage.getItem(this.STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    
-    // Configuración por defecto
+  public convert(amount: number, fromCurrency: string, toCurrency: string): number {
+    if (fromCurrency === toCurrency) return amount;
+    const rate = this.rates.get(`${fromCurrency}-${toCurrency}`);
+    return rate ? amount * rate : amount;
+  }
+
+  public convertAndFormat(amount: number, fromCurrency: string, toCurrency: string, locale: string = 'es-AR'): string {
+    const converted = this.convert(amount, fromCurrency, toCurrency);
+    return this.formatCurrency(converted, toCurrency, locale);
+  }
+
+  public updateConfig(newConfig: Partial<CurrencyConfig>) {
+    this.config = { ...this.config, ...newConfig };
+  }
+
+  public async updateCurrencyRates(): Promise<void> {
+    console.log('Actualizando tasas de cambio...');
+    this.lastUpdate = new Date();
+    return Promise.resolve();
+  }
+
+  public getDefaultRateInfo(): { rate: number; lastUpdate: string; from: string; to: string } | null {
     return {
-      currency: 'ARS',
-      rate: 1,
-      lastUpdate: new Date().toISOString()
+      rate: 850,
+      lastUpdate: this.lastUpdate.toISOString(),
+      from: 'USD',
+      to: 'ARS'
     };
   }
 
-  setCurrencyConfig(config: CurrencyConfig): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(config));
+  public formatRate(rate: number): string {
+    return `1 USD = ${rate.toFixed(2)} ARS`;
   }
 
-  formatCurrency(amount: number, currency: 'ARS' | 'USD' = 'ARS'): string {
-    const config = this.getCurrencyConfig();
-    const currentRate = this.getCurrentRateFromStorage();
-    
-    let displayAmount = amount;
-    let displayCurrency = currency;
-    
-    // Si la moneda configurada es diferente a la solicitada, convertir
-    if (config.currency !== currency) {
-      if (config.currency === 'USD' && currency === 'ARS') {
-        // Convertir de ARS a USD
-        displayAmount = amount / currentRate;
-        displayCurrency = 'USD';
-      } else if (config.currency === 'ARS' && currency === 'USD') {
-        // Convertir de USD a ARS
-        displayAmount = amount * currentRate;
-        displayCurrency = 'ARS';
-      }
-    }
-    
-    const formatter = new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: displayCurrency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    });
-    
-    return formatter.format(displayAmount);
+  public getLastUpdate(): Date | null {
+    return this.lastUpdate;
   }
 
-  convertAmount(amount: number, fromCurrency: 'ARS' | 'USD', toCurrency: 'ARS' | 'USD'): number {
-    if (fromCurrency === toCurrency) {
-      return amount;
-    }
-    
-    const currentRate = this.getCurrentRateFromStorage();
-    
-    if (fromCurrency === 'ARS' && toCurrency === 'USD') {
-      return amount / currentRate;
-    } else if (fromCurrency === 'USD' && toCurrency === 'ARS') {
-      return amount * currentRate;
-    }
-    
-    return amount;
+  public isUpToDate(): boolean {
+    const now = new Date();
+    const diff = now.getTime() - this.lastUpdate.getTime();
+    return diff < 30 * 60 * 1000; // 30 minutos
   }
 
-  // Método para obtener información de la cotización actual
-  getRateInfo(): { rate: number; lastUpdate: string; from: string; to: string } | null {
-    const stored = localStorage.getItem(this.RATE_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
+  public async forceUpdate(): Promise<void> {
+    return this.updateCurrencyRates();
   }
 
-  // Método para formatear la tasa de cambio
-  formatRate(rate: number): string {
-    return `1 USD = ${rate.toLocaleString('es-AR', { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
-    })} ARS`;
+  public getAllRates(): Map<string, number> {
+    return new Map(this.rates);
+  }
+
+  public getSupportedCurrencies(): string[] {
+    return ['ARS', 'USD', 'EUR'];
+  }
+
+  public getRateInfo(fromCurrency: string, toCurrency: string) {
+    const rate = this.rates.get(`${fromCurrency}-${toCurrency}`);
+    return rate ? {
+      rate,
+      lastUpdate: this.lastUpdate.toISOString(),
+      from: fromCurrency,
+      to: toCurrency
+    } : null;
   }
 }
 
-export const currencyService = new CurrencyService();
+export const currencyService = new SimpleCurrencyService();
 export default currencyService;

@@ -46,6 +46,9 @@ public class AuthService implements UserDetailsService {
     @Autowired
     private AuthenticationManager authenticationManager;
     
+    @Autowired
+    private EmailService emailService;
+    
     /**
      * Autenticar usuario y generar token JWT
      */
@@ -53,6 +56,19 @@ public class AuthService implements UserDetailsService {
         logger.info("Intentando login para usuario: {}", loginRequest.getEmail());
         
         try {
+            // Verificar que el usuario existe antes de autenticar
+            User user = userRepository.findByEmail(loginRequest.getEmail())
+                    .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + loginRequest.getEmail()));
+            
+            logger.info("Usuario encontrado: {}, activo: {}, contraseña: {}", 
+                user.getEmail(), user.getActivo(), user.getPassword().substring(0, 10) + "...");
+            
+            // Verificar que el usuario esté activo
+            if (!user.getActivo()) {
+                logger.error("Usuario inactivo: {}", loginRequest.getEmail());
+                throw new RuntimeException("Usuario inactivo");
+            }
+            
             // Autenticar usuario
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -62,14 +78,7 @@ public class AuthService implements UserDetailsService {
             );
             
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            User user = userRepository.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
-            
-            // Verificar que el usuario esté activo
-            if (!user.getActivo()) {
-                throw new RuntimeException("Usuario inactivo");
-            }
-            userRepository.save(user);
+            logger.info("Autenticación exitosa para: {}", userDetails.getUsername());
             
             // Generar token JWT
             String token = jwtService.generateToken(userDetails);
@@ -82,7 +91,7 @@ public class AuthService implements UserDetailsService {
             return new LoginResponse(token, jwtService.getExpirationTimeInSeconds(), userDto);
             
         } catch (Exception e) {
-            logger.error("Error en login para usuario {}: {}", loginRequest.getEmail(), e.getMessage());
+            logger.error("Error en login para usuario {}: {}", loginRequest.getEmail(), e.getMessage(), e);
             throw new RuntimeException("Credenciales inválidas", e);
         }
     }
@@ -207,7 +216,16 @@ public class AuthService implements UserDetailsService {
      * Verificar email
      */
     public boolean verifyEmail(String token) {
-        // TODO: Implementar verificación de email
+        logger.info("Verificando email con token: {}", token);
+        
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new RuntimeException("Token de verificación inválido"));
+        
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        userRepository.save(user);
+        
+        logger.info("Email verificado exitosamente para usuario: {}", user.getEmail());
         return true;
     }
     
@@ -215,16 +233,71 @@ public class AuthService implements UserDetailsService {
      * Solicitar reset de contraseña
      */
     public void requestPasswordReset(String email) {
-        // TODO: Implementar reset de contraseña
-        logger.info("Reset de contraseña solicitado para usuario: {}", email);
+        logger.info("Solicitando reset de contraseña para: {}", email);
+        
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ese email"));
+        
+        if (!user.getActivo()) {
+            throw new RuntimeException("Usuario inactivo");
+        }
+        
+        // Generar token de reset
+        String resetToken = generateResetToken();
+        LocalDateTime expiryTime = LocalDateTime.now().plusHours(24); // Token válido por 24 horas
+        
+        user.setResetPasswordToken(resetToken);
+        user.setResetPasswordTokenExpiry(expiryTime);
+        userRepository.save(user);
+        
+        // Enviar email
+        emailService.sendPasswordResetEmail(email, resetToken);
+        
+        logger.info("Token de reset generado y email enviado para: {}", email);
     }
     
     /**
      * Resetear contraseña
      */
     public void resetPassword(String token, String newPassword) {
-        // TODO: Implementar reset de contraseña
-        logger.info("Contraseña reseteada para token: {}", token);
+        logger.info("Reseteando contraseña con token: {}", token);
+        
+        User user = userRepository.findByResetPasswordToken(token)
+                .orElseThrow(() -> new RuntimeException("Token de reset inválido"));
+        
+        // Verificar que el token no haya expirado
+        if (user.getResetPasswordTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Token de reset expirado");
+        }
+        
+        // Actualizar contraseña
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiry(null);
+        userRepository.save(user);
+        
+        logger.info("Contraseña reseteada exitosamente para usuario: {}", user.getEmail());
+    }
+    
+    /**
+     * Cambiar contraseña desde el perfil del usuario
+     */
+    public void changePassword(String userEmail, String currentPassword, String newPassword) {
+        logger.info("Cambiando contraseña para usuario: {}", userEmail);
+        
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        
+        // Verificar contraseña actual
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Contraseña actual incorrecta");
+        }
+        
+        // Actualizar contraseña
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        
+        logger.info("Contraseña cambiada exitosamente para usuario: {}", userEmail);
     }
     
     /**

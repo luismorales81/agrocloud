@@ -23,7 +23,7 @@ const InsumosManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('todos');
   const [loading, setLoading] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState<'ARS' | 'USD'>('ARS');
+  const [selectedCurrency, setSelectedCurrency] = useState<'ARS' | 'USD' | 'EUR'>('ARS');
   const [formData, setFormData] = useState<Insumo>({
     nombre: '',
     tipo: '',
@@ -79,8 +79,8 @@ const InsumosManagement: React.FC = () => {
 
   // Cargar configuración de moneda
   useEffect(() => {
-    const config = currencyService.getCurrencyConfig();
-    setSelectedCurrency(config.currency);
+    const config = currencyService.getConfig();
+    setSelectedCurrency(config.primaryCurrency);
   }, []);
 
   const formatCurrency = (amount: number): string => {
@@ -220,7 +220,7 @@ const InsumosManagement: React.FC = () => {
 
   // Eliminar insumo
   const deleteInsumo = (id: number) => {
-    if (confirm('¿Está seguro de que desea eliminar este insumo?')) {
+    if (window.confirm('¿Está seguro de que desea eliminar este insumo?')) {
       setInsumos(prev => prev.filter(insumo => insumo.id !== id));
       alert('Insumo eliminado exitosamente');
     }

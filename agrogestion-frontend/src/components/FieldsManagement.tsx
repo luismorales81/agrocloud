@@ -1,471 +1,501 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from '../contexts/LocationContext';
-import { getMapCenter } from '../config/googleMaps';
+import React, { useState, useEffect, useRef } from 'react';
+import FieldWeatherButton from './FieldWeatherButton';
+import OpenMeteoWeatherWidget from './OpenMeteoWeatherWidget';
+import { loadGoogleMaps, GOOGLE_MAPS_CONFIG } from '../config/googleMaps';
 
-// Declaración de tipos para NodeJS
+// Declaraciones de tipos para Google Maps
 declare global {
-  namespace NodeJS {
-    interface ProcessEnv {
-      NODE_ENV: 'development' | 'production' | 'test';
-      REACT_APP_API_URL?: string;
-    }
-    type Timeout = ReturnType<typeof setTimeout>;
+  interface Window {
+    google: any;
+    initMap: () => void;
   }
 }
 
-interface Field {
-  id?: number;
+interface Campo {
+  id: number;
   nombre: string;
   superficie: number;
-  poligono: string;
+  ubicacion: string;
+  coordenadas: Array<{lat: number; lng: number}>;
+  estado: 'activo' | 'inactivo' | 'en_mantenimiento';
+  fechaCreacion: string;
+  descripcion?: string;
 }
 
-// Componente separado para Google Maps con Drawing Manager
-const GoogleMapWithDrawing: React.FC<{ 
-  onPolygonComplete: (polygon: any) => void;
-  onMapReady: () => void;
-  center?: { lat: number; lng: number };
-  zoom?: number;
-}> = ({ onPolygonComplete, onMapReady, center, zoom = 16 }) => {
-  const { location } = useLocation();
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const drawingManagerRef = useRef<any>(null);
-
-  // Usar la ubicación del usuario o la proporcionada como prop
-  const mapCenter = center || getMapCenter(location || undefined);
-
-  useEffect(() => {
-    let isMounted = true;
-    let checkInterval: NodeJS.Timeout;
-
-    const initMap = () => {
-      if (!mapRef.current || !isMounted) return;
-
-      try {
-        if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.Map) {
-          console.log('❌ Google Maps no está completamente cargado');
-          return;
-        }
-
-        // Evitar inicialización múltiple
-        if (mapInstanceRef.current) {
-          console.log('✅ Mapa ya inicializado');
-          return;
-        }
-
-        const mapOptions = {
-          center: mapCenter,
-          zoom: zoom,
-          mapTypeId: 'satellite',
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: true,
-          streetViewControl: true,
-          fullscreenControl: true
-        };
-
-        mapInstanceRef.current = new (window as any).google.maps.Map(mapRef.current, mapOptions);
-
-        const drawingManager = new (window as any).google.maps.drawing.DrawingManager({
-          drawingMode: (window as any).google.maps.drawing.OverlayType.POLYGON,
-          drawingControl: true,
-          drawingControlOptions: {
-            position: (window as any).google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: [(window as any).google.maps.drawing.OverlayType.POLYGON]
-          },
-          polygonOptions: {
-            fillColor: '#4CAF50',
-            fillOpacity: 0.3,
-            strokeWeight: 2,
-            strokeColor: '#4CAF50',
-            editable: true,
-            draggable: true
-          }
-        });
-
-        drawingManager.setMap(mapInstanceRef.current);
-        drawingManagerRef.current = drawingManager;
-
-        (window as any).google.maps.event.addListener(drawingManager, 'polygoncomplete', (polygon: any) => {
-          if (drawingManagerRef.current && isMounted) {
-            drawingManagerRef.current.setDrawingMode(null);
-          }
-          onPolygonComplete(polygon);
-        });
-
-        // Forzar redibujado una sola vez
-        setTimeout(() => {
-          if (mapInstanceRef.current && mapInstanceRef.current.setZoom && isMounted) {
-            window.dispatchEvent(new Event('resize'));
-          }
-        }, 500);
-
-        onMapReady();
-      } catch (error) {
-        console.error('❌ Error creando mapa:', error);
-      }
-    };
-
-    if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-      initMap();
-    } else {
-      checkInterval = setInterval(() => {
-        if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-          clearInterval(checkInterval);
-          initMap();
-        }
-      }, 100);
-    }
-
-    return () => {
-      isMounted = false;
-      if (checkInterval) {
-        clearInterval(checkInterval);
-      }
-    };
-  }, []); // Solo ejecutar una vez al montar el componente
-
-  return (
-    <div
-      ref={mapRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-        top: 0,
-        left: 0
-      }}
-    />
-  );
-};
-
-// Componente para mostrar un campo específico en el mapa
-const GoogleMapViewField: React.FC<{ 
-  fieldPolygon: string;
-  fieldName: string;
-  center?: { lat: number; lng: number };
-  zoom?: number;
-}> = ({ fieldPolygon, fieldName, center = { lat: -34.6118, lng: -58.3960 }, zoom = 16 }) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const fieldPolygonRef = useRef<any>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    let checkInterval: NodeJS.Timeout;
-
-    const initMap = () => {
-      if (!mapRef.current || !isMounted) return;
-
-      try {
-        // Verificar que Google Maps esté completamente cargado
-        if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.Map) {
-          console.log('❌ Google Maps no está completamente cargado para vista de campo');
-          return;
-        }
-
-        // Evitar inicialización múltiple
-        if (mapInstanceRef.current) {
-          console.log('✅ Mapa ya inicializado para campo');
-          return;
-        }
-
-        console.log('🗺️ Inicializando mapa para mostrar campo:', fieldName);
-        
-        const mapOptions = {
-          center: center,
-          zoom: zoom,
-          mapTypeId: 'satellite',
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: true,
-          streetViewControl: true,
-          fullscreenControl: true
-        };
-
-        mapInstanceRef.current = new (window as any).google.maps.Map(mapRef.current, mapOptions);
-        console.log('✅ Mapa creado para mostrar campo');
-
-        // Dibujar el polígono del campo
-        if (fieldPolygon) {
-          try {
-            const polygonData = JSON.parse(fieldPolygon);
-            const coordinates = polygonData.coordinates[0].map((coord: number[]) => ({
-              lat: coord[1],
-              lng: coord[0]
-            }));
-
-            const fieldPolygonShape = new (window as any).google.maps.Polygon({
-              paths: coordinates,
-              strokeColor: '#4CAF50',
-              strokeOpacity: 0.8,
-              strokeWeight: 3,
-              fillColor: '#4CAF50',
-              fillOpacity: 0.2,
-              map: mapInstanceRef.current
-            });
-
-            fieldPolygonRef.current = fieldPolygonShape;
-            console.log('✅ Polígono del campo dibujado en modal');
-
-            // Centrar mapa en el campo
-            const bounds = new (window as any).google.maps.LatLngBounds();
-            coordinates.forEach((coord: any) => bounds.extend(coord));
-            mapInstanceRef.current.fitBounds(bounds);
-          } catch (error) {
-            console.error('Error dibujando polígono del campo en modal:', error);
-          }
-        }
-
-        // Forzar redibujado una sola vez
-        setTimeout(() => {
-          if (mapInstanceRef.current && isMounted) {
-            window.dispatchEvent(new Event('resize'));
-          }
-        }, 500);
-
-      } catch (error) {
-        console.error('❌ Error creando mapa para mostrar campo:', error);
-      }
-    };
-
-    // Verificar si Google Maps está disponible
-    if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-      console.log('✅ Google Maps disponible, inicializando mapa para campo...');
-      initMap();
-    } else {
-      console.log('⏳ Google Maps no disponible para campo, esperando...');
-      checkInterval = setInterval(() => {
-        if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-          clearInterval(checkInterval);
-          console.log('✅ Google Maps cargado, inicializando mapa para campo...');
-          initMap();
-        }
-      }, 100);
-    }
-
-    return () => {
-      isMounted = false;
-      if (checkInterval) {
-        clearInterval(checkInterval);
-      }
-    };
-  }, []); // Solo ejecutar una vez al montar el componente
-
-  return (
-    <div
-      ref={mapRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-        top: 0,
-        left: 0
-      }}
-    />
-  );
-};
+interface FormData {
+  nombre: string;
+  superficie: number;
+  ubicacion: string;
+  descripcion: string;
+  estado: 'activo' | 'inactivo' | 'en_mantenimiento';
+  coordenadas: Array<{lat: number; lng: number}>;
+}
 
 const FieldsManagement: React.FC = () => {
-  const [fields, setFields] = useState<Field[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [showMap, setShowMap] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedField, setSelectedField] = useState<Field | null>(null);
-  const [formData, setFormData] = useState<Field>({
+  const [campos, setCampos] = useState<Campo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedField, setSelectedField] = useState<Campo | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [map, setMap] = useState<any>(null);
+  const [drawingManager, setDrawingManager] = useState<any>(null);
+  const [formData, setFormData] = useState<FormData>({
     nombre: '',
     superficie: 0,
-    poligono: ''
+    ubicacion: '',
+    descripcion: '',
+    estado: 'activo',
+    coordenadas: []
   });
-  const [loading, setLoading] = useState(false);
-  const [googleMapsReady, setGoogleMapsReady] = useState(false);
-  // const [mapReady, setMapReady] = useState(false); // Variable no utilizada
-  const [currentPolygon, setCurrentPolygon] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
 
-  // Cargar campos desde la API
-  const loadFields = async () => {
+  // Detectar tamaño de pantalla
+  const isMobile = window.innerWidth <= 768;
+
+  useEffect(() => {
+    cargarCampos();
+    initializeMap();
+  }, []);
+
+  const initializeMap = () => {
+    loadGoogleMaps(() => {
+      console.log('Google Maps cargado, inicializando mapa...');
+      setMapLoaded(true);
+    });
+  };
+
+  const cargarCampos = async () => {
     try {
       setLoading(true);
-      // Simulación de carga desde API
-      const mockFields: Field[] = [
+      // Simular datos de campos con coordenadas
+      const camposSimulados: Campo[] = [
         {
           id: 1,
           nombre: 'Campo Norte',
           superficie: 150.5,
-          poligono: '{"type":"Polygon","coordinates":[[[-58.3960,-34.6118],[-58.3950,-34.6118],[-58.3950,-34.6128],[-58.3960,-34.6128],[-58.3960,-34.6118]]]}'
+          ubicacion: 'Ruta 9, Km 45',
+          coordenadas: [
+            { lat: -34.6118, lng: -58.3960 },
+            { lat: -34.6120, lng: -58.3962 },
+            { lat: -34.6122, lng: -58.3960 },
+            { lat: -34.6120, lng: -58.3958 }
+          ],
+          estado: 'activo',
+          fechaCreacion: '2024-01-15',
+          descripcion: 'Campo principal para cultivo de soja'
         },
         {
           id: 2,
           nombre: 'Campo Sur',
-          superficie: 200.0,
-          poligono: '{"type":"Polygon","coordinates":[[[-58.3970,-34.6138],[-58.3960,-34.6138],[-58.3960,-34.6148],[-58.3970,-34.6148],[-58.3970,-34.6138]]]}'
+          superficie: 89.3,
+          ubicacion: 'Ruta 9, Km 47',
+          coordenadas: [
+            { lat: -34.6130, lng: -58.3970 },
+            { lat: -34.6132, lng: -58.3972 },
+            { lat: -34.6134, lng: -58.3970 },
+            { lat: -34.6132, lng: -58.3968 }
+          ],
+          estado: 'activo',
+          fechaCreacion: '2024-02-20',
+          descripcion: 'Campo para rotación de cultivos'
+        },
+        {
+          id: 3,
+          nombre: 'Campo Este',
+          superficie: 120.0,
+          ubicacion: 'Ruta 9, Km 50',
+          coordenadas: [
+            { lat: -34.6140, lng: -58.3980 },
+            { lat: -34.6142, lng: -58.3982 },
+            { lat: -34.6144, lng: -58.3980 },
+            { lat: -34.6142, lng: -58.3978 }
+          ],
+          estado: 'en_mantenimiento',
+          fechaCreacion: '2024-03-10',
+          descripcion: 'Campo en preparación para maíz'
         }
       ];
-      setFields(mockFields);
-    } catch (error) {
-      console.error('Error cargando campos:', error);
+
+      setCampos(camposSimulados);
+    } catch (err) {
+      setError('Error al cargar los campos');
+      console.error('Error cargando campos:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadFields();
-  }, []);
-
-  // Cargar Google Maps cuando se muestra el formulario
-  useEffect(() => {
-    if (showForm && !googleMapsReady) {
-      const loadGoogleMaps = async () => {
-        try {
-          if (!(window as any).google || !(window as any).google.maps) {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyCWz9FKCHBdLqbjhHCPcECww5hs2ugiWA0&libraries=drawing,geometry&loading=async`;
-            script.async = true;
-            script.defer = true;
-            
-            script.onload = () => {
-              const checkInterval = setInterval(() => {
-                if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-                  clearInterval(checkInterval);
-                  console.log('✅ Google Maps cargado correctamente');
-                  setGoogleMapsReady(true);
-                }
-              }, 100);
-            };
-            
-            document.head.appendChild(script);
-          } else {
-            console.log('✅ Google Maps ya está cargado');
-            setGoogleMapsReady(true);
-          }
-        } catch (error) {
-          console.error('Error cargando Google Maps:', error);
-        }
-      };
-
-      loadGoogleMaps();
+  const getEstadoColor = (estado: string) => {
+    switch (estado) {
+      case 'activo': return '#10b981';
+      case 'inactivo': return '#6b7280';
+      case 'en_mantenimiento': return '#f59e0b';
+      default: return '#6b7280';
     }
-  }, [showForm]); // Remover googleMapsReady de las dependencias
+  };
 
-  // Manejar cuando se completa un polígono
-  const handlePolygonComplete = useCallback((polygon: any) => {
-    setCurrentPolygon(polygon);
+  const getEstadoTexto = (estado: string) => {
+    switch (estado) {
+      case 'activo': return 'Activo';
+      case 'inactivo': return 'Inactivo';
+      case 'en_mantenimiento': return 'En Mantenimiento';
+      default: return 'Desconocido';
+    }
+  };
 
-    // Calcular superficie del polígono
-    const area = (window as any).google.maps.geometry.spherical.computeArea(polygon.getPath());
-    const areaHectareas = area / 10000; // Convertir m² a hectáreas
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-AR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
-    setFormData(prev => ({
-      ...prev,
-      superficie: Math.round(areaHectareas * 100) / 100
-    }));
+  const handleVerDetalles = (campo: Campo) => {
+    setSelectedField(campo);
+    setShowDetailsModal(true);
+  };
 
-    // Convertir polígono a GeoJSON
-    const coordinates = polygon.getPath().getArray().map((latLng: any) => [latLng.lng(), latLng.lat()]);
-    const geoJson = {
-      type: 'Polygon',
-      coordinates: [coordinates]
-    };
-
-    setFormData(prev => ({
-      ...prev,
-      poligono: JSON.stringify(geoJson)
-    }));
-  }, []);
-
-  // Manejar cuando el mapa está listo
-  const handleMapReady = useCallback(() => {
-    // setMapReady(true); // Variable no utilizada
-  }, []);
-
-  // Guardar campo
-  const saveField = async () => {
-    try {
-      setLoading(true);
-      
-      // Simulación de guardado en API
-      const newField: Field = {
-        id: fields.length + 1,
-        ...formData
-      };
-      
-      setFields(prev => [...prev, newField]);
-      setFormData({ nombre: '', superficie: 0, poligono: '' });
-      setShowForm(false);
-      setCurrentPolygon(null);
-      // setMapReady(false); // Variable no utilizada
-      
-      // Limpiar polígono del mapa
-      if (currentPolygon) {
-        currentPolygon.setMap(null);
+  const handleEditarCampo = (campo: Campo) => {
+    setSelectedField(campo);
+    setFormData({
+      nombre: campo.nombre,
+      superficie: campo.superficie,
+      ubicacion: campo.ubicacion,
+      descripcion: campo.descripcion || '',
+      estado: campo.estado,
+      coordenadas: campo.coordenadas
+    });
+    setIsEditing(true);
+    setShowEditModal(true);
+    // Inicializar mapa cuando se abre el modal
+    setTimeout(() => {
+      if (mapLoaded && mapRef.current && !map) {
+        initializeMapInForm();
       }
-    } catch (error) {
-      console.error('Error guardando campo:', error);
-    } finally {
-      setLoading(false);
-    }
+    }, 100);
   };
 
-  // Cancelar formulario
-  const cancelForm = () => {
-    setFormData({ nombre: '', superficie: 0, poligono: '' });
-    setShowForm(false);
-    setCurrentPolygon(null);
-    // setMapReady(false); // Variable no utilizada
-    
-    // Limpiar polígono del mapa
-    if (currentPolygon) {
-      currentPolygon.setMap(null);
-    }
+  const handleAgregarCampo = () => {
+    setFormData({
+      nombre: '',
+      superficie: 0,
+      ubicacion: '',
+      descripcion: '',
+      estado: 'activo',
+      coordenadas: []
+    });
+    setIsEditing(false);
+    setShowAddModal(true);
+    // Inicializar mapa cuando se abre el modal
+    setTimeout(() => {
+      if (mapLoaded && mapRef.current && !map) {
+        initializeMapInForm();
+      }
+    }, 100);
   };
 
-  // Mostrar campo en el mapa
-  const showFieldOnMap = (field: Field) => {
-    setSelectedField(field);
-    setShowMap(true);
-    // Asegurar que Google Maps esté cargado para el modal
-    if (!googleMapsReady) {
-      const loadGoogleMaps = async () => {
-        try {
-          if (!(window as any).google || !(window as any).google.maps) {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyCWz9FKCHBdLqbjhHCPcECww5hs2ugiWA0&libraries=drawing,geometry&loading=async`;
-            script.async = true;
-            script.defer = true;
-            
-            script.onload = () => {
-              const checkGoogleMaps = () => {
-                if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-                  console.log('✅ Google Maps cargado para modal');
-                  setGoogleMapsReady(true);
-                } else {
-                  setTimeout(checkGoogleMaps, 100);
-                }
-              };
-              checkGoogleMaps();
-            };
-            
-            document.head.appendChild(script);
-          } else {
-            setGoogleMapsReady(true);
-          }
-        } catch (error) {
-          console.error('Error cargando Google Maps:', error);
-        }
+  const handleVerMapa = () => {
+    setShowMapModal(true);
+    // Inicializar mapa cuando se abre el modal
+    setTimeout(() => {
+      if (mapLoaded && mapRef.current && !map) {
+        initializeMapInModal();
+      }
+    }, 100);
+  };
+
+  const initializeMapInModal = () => {
+    if (!window.google || !mapRef.current) return;
+
+    const mapInstance = new window.google.maps.Map(mapRef.current, {
+      center: GOOGLE_MAPS_CONFIG.DEFAULT_CENTER,
+      zoom: GOOGLE_MAPS_CONFIG.DEFAULT_ZOOM,
+      mapTypeId: 'satellite',
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true
+    });
+
+    setMap(mapInstance);
+
+    // Agregar Drawing Manager
+    const drawingManagerInstance = new window.google.maps.drawing.DrawingManager({
+      drawingMode: null,
+      drawingControl: true,
+      drawingControlOptions: {
+        position: window.google.maps.ControlPosition.TOP_CENTER,
+        drawingModes: [window.google.maps.drawing.OverlayType.POLYGON]
+      }
+    });
+
+    drawingManagerInstance.setMap(mapInstance);
+    setDrawingManager(drawingManagerInstance);
+
+    // Dibujar campos existentes
+    campos.forEach((campo, index) => {
+      if (campo.coordenadas.length > 2) {
+        const polygon = new window.google.maps.Polygon({
+          paths: campo.coordenadas,
+          strokeColor: getEstadoColor(campo.estado),
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: getEstadoColor(campo.estado),
+          fillOpacity: 0.35,
+          map: mapInstance
+        });
+
+        // Info window para cada campo
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="padding: 10px; min-width: 200px;">
+              <h3 style="margin: 0 0 10px 0; color: #1f2937;">${campo.nombre}</h3>
+              <p style="margin: 5px 0; color: #6b7280;"><strong>Superficie:</strong> ${campo.superficie} ha</p>
+              <p style="margin: 5px 0; color: #6b7280;"><strong>Estado:</strong> ${getEstadoTexto(campo.estado)}</p>
+              <p style="margin: 5px 0; color: #6b7280;"><strong>Ubicación:</strong> ${campo.ubicacion}</p>
+            </div>
+          `
+        });
+
+        polygon.addListener('click', () => {
+          infoWindow.setPosition(polygon.getPath().getArray()[0]);
+          infoWindow.open(mapInstance);
+        });
+      }
+    });
+
+    // Escuchar eventos de dibujo
+    window.google.maps.event.addListener(drawingManagerInstance, 'polygoncomplete', (polygon: any) => {
+      const path = polygon.getPath();
+      const coordinates = path.getArray().map((latLng: any) => ({
+        lat: latLng.lat(),
+        lng: latLng.lng()
+      }));
+
+      // Calcular superficie aproximada
+      const area = window.google.maps.geometry.spherical.computeArea(path);
+      const superficie = Math.round((area / 10000) * 100) / 100; // Convertir a hectáreas
+
+      setFormData(prev => ({
+        ...prev,
+        coordenadas: coordinates,
+        superficie: superficie
+      }));
+
+      // Agregar marcador con información
+      const center = polygon.getBounds().getCenter();
+      const infoWindow = new window.google.maps.InfoWindow({
+        content: `
+          <div style="padding: 10px;">
+            <h4 style="margin: 0 0 10px 0;">Nuevo Campo</h4>
+            <p style="margin: 5px 0;"><strong>Superficie:</strong> ${superficie} ha</p>
+            <p style="margin: 5px 0;"><strong>Coordenadas:</strong> ${coordinates.length} puntos</p>
+          </div>
+        `
+      });
+
+      infoWindow.setPosition(center);
+      infoWindow.open(mapInstance);
+    });
+  };
+
+  const initializeMapInForm = () => {
+    if (!window.google || !mapRef.current) return;
+
+    const mapInstance = new window.google.maps.Map(mapRef.current, {
+      center: GOOGLE_MAPS_CONFIG.DEFAULT_CENTER,
+      zoom: 15,
+      mapTypeId: 'satellite',
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true
+    });
+
+    setMap(mapInstance);
+
+    // Agregar Drawing Manager
+    const drawingManagerInstance = new window.google.maps.drawing.DrawingManager({
+      drawingMode: null,
+      drawingControl: true,
+      drawingControlOptions: {
+        position: window.google.maps.ControlPosition.TOP_CENTER,
+        drawingModes: [window.google.maps.drawing.OverlayType.POLYGON]
+      }
+    });
+
+    drawingManagerInstance.setMap(mapInstance);
+    setDrawingManager(drawingManagerInstance);
+
+    // Si estamos editando, mostrar el polígono existente
+    if (isEditing && formData.coordenadas.length > 2) {
+      const polygon = new window.google.maps.Polygon({
+        paths: formData.coordenadas,
+        strokeColor: getEstadoColor(formData.estado),
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: getEstadoColor(formData.estado),
+        fillOpacity: 0.35,
+        map: mapInstance
+      });
+
+      // Ajustar el zoom para mostrar el polígono
+      const bounds = new window.google.maps.LatLngBounds();
+      formData.coordenadas.forEach(coord => {
+        bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
+      });
+      mapInstance.fitBounds(bounds);
+    }
+
+    // Escuchar eventos de dibujo
+    window.google.maps.event.addListener(drawingManagerInstance, 'polygoncomplete', (polygon: any) => {
+      const path = polygon.getPath();
+      const coordinates = path.getArray().map((latLng: any) => ({
+        lat: latLng.lat(),
+        lng: latLng.lng()
+      }));
+
+      // Calcular superficie aproximada
+      const area = window.google.maps.geometry.spherical.computeArea(path);
+      const superficie = Math.round((area / 10000) * 100) / 100; // Convertir a hectáreas
+
+      setFormData(prev => ({
+        ...prev,
+        coordenadas: coordinates,
+        superficie: superficie
+      }));
+
+      // Cambiar color del polígono según el estado
+      polygon.setOptions({
+        strokeColor: getEstadoColor(formData.estado),
+        fillColor: getEstadoColor(formData.estado)
+      });
+
+      // Mostrar información del área
+      const center = polygon.getBounds().getCenter();
+      const infoWindow = new window.google.maps.InfoWindow({
+        content: `
+          <div style="padding: 10px;">
+            <h4 style="margin: 0 0 10px 0;">Campo Dibujado</h4>
+            <p style="margin: 5px 0;"><strong>Superficie:</strong> ${superficie} ha</p>
+            <p style="margin: 5px 0;"><strong>Coordenadas:</strong> ${coordinates.length} puntos</p>
+          </div>
+        `
+      });
+
+      infoWindow.setPosition(center);
+      infoWindow.open(mapInstance);
+    });
+  };
+
+  const handleSaveField = () => {
+    if (isEditing && selectedField) {
+      // Editar campo existente
+      const updatedCampos = campos.map((campo: Campo) => 
+        campo.id === selectedField.id 
+          ? { ...campo, ...formData }
+          : campo
+      );
+      setCampos(updatedCampos);
+    } else {
+      // Agregar nuevo campo
+      const nuevoCampo: Campo = {
+        id: Math.max(...campos.map((c: Campo) => c.id)) + 1,
+        ...formData,
+        fechaCreacion: new Date().toISOString().split('T')[0]
       };
-      loadGoogleMaps();
+      setCampos([...campos, nuevoCampo]);
+    }
+    closeModal();
+  };
+
+  const handleEliminarCampo = (campoId: number) => {
+    if (window.confirm(`¿Estás seguro de que quieres eliminar el campo?`)) {
+      setCampos(campos.filter((c: Campo) => c.id !== campoId));
     }
   };
 
-  // Filtrar campos por búsqueda
-  const filteredFields = fields.filter(field =>
-    field.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const closeModal = () => {
+    setShowDetailsModal(false);
+    setShowEditModal(false);
+    setShowAddModal(false);
+    setShowMapModal(false);
+    setSelectedField(null);
+    setIsEditing(false);
+  };
+
+  const handleInputChange = (field: keyof FormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '40px', 
+            height: '40px', 
+            border: '4px solid #f3f3f3', 
+            borderTop: '4px solid #4CAF50', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }}></div>
+          <p style={{ color: '#666' }}>Cargando campos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        padding: '2rem', 
+        textAlign: 'center',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{ 
+          color: '#ef4444', 
+          fontSize: '1.5rem', 
+          marginBottom: '1rem' 
+        }}>
+          ❌ Error
+        </div>
+        <p style={{ color: '#666' }}>{error}</p>
+        <button 
+          onClick={cargarCampos}
+          style={{
+            background: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '0.5rem',
+            cursor: 'pointer',
+            marginTop: '1rem'
+          }}
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      {/* Header */}
       <div style={{ 
         background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)', 
         color: 'white', 
@@ -475,256 +505,315 @@ const FieldsManagement: React.FC = () => {
       }}>
         <h1 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>🏞️ Gestión de Campos</h1>
         <p style={{ margin: '0', opacity: '0.9' }}>
-          Administra los campos agrícolas de tu propiedad
+          Administra los campos agrícolas con información meteorológica específica por ubicación
         </p>
       </div>
 
-      {/* Botón para agregar nuevo campo */}
-      <div style={{ marginBottom: '20px' }}>
-        <button
-          onClick={() => setShowForm(true)}
+      {/* Estadísticas */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: '1rem',
+        marginBottom: '2rem'
+      }}>
+        <div style={{
+          background: '#eff6ff',
+          padding: '1rem',
+          borderRadius: '0.5rem',
+          border: '1px solid #3b82f6',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2563eb' }}>
+            {campos.length}
+          </div>
+          <div style={{ fontSize: '0.875rem', color: '#1e40af' }}>Total Campos</div>
+        </div>
+        
+        <div style={{
+          background: '#f0fdf4',
+          padding: '1rem',
+          borderRadius: '0.5rem',
+          border: '1px solid #22c55e',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#16a34a' }}>
+            {campos.filter(c => c.estado === 'activo').length}
+          </div>
+          <div style={{ fontSize: '0.875rem', color: '#15803d' }}>Activos</div>
+        </div>
+        
+        <div style={{
+          background: '#fef3c7',
+          padding: '1rem',
+          borderRadius: '0.5rem',
+          border: '1px solid #eab308',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ca8a04' }}>
+            {campos.filter(c => c.estado === 'en_mantenimiento').length}
+          </div>
+          <div style={{ fontSize: '0.875rem', color: '#a16207' }}>En Mantenimiento</div>
+        </div>
+        
+        <div style={{
+          background: '#fdf4ff',
+          padding: '1rem',
+          borderRadius: '0.5rem',
+          border: '1px solid #a855f7',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#9333ea' }}>
+            {campos.reduce((sum, campo) => sum + campo.superficie, 0).toFixed(1)} ha
+          </div>
+          <div style={{ fontSize: '0.875rem', color: '#7c3aed' }}>Superficie Total</div>
+        </div>
+      </div>
+
+      {/* Botones de acción */}
+      <div style={{
+        display: 'flex',
+        gap: '1rem',
+        marginBottom: '2rem',
+        flexWrap: 'wrap'
+      }}>
+        <button 
+          onClick={handleAgregarCampo}
           style={{
             background: '#4CAF50',
             color: 'white',
             border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '0.5rem',
             cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: 'bold'
+            fontSize: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
           }}
         >
-          ➕ Agregar Nuevo Campo
+          ➕ Agregar Campo
+        </button>
+        
+        <button 
+          onClick={handleVerMapa}
+          style={{
+            background: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '0.5rem',
+            cursor: 'pointer',
+            fontSize: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          🗺️ Ver Mapa
         </button>
       </div>
 
-      {/* Formulario para nuevo campo */}
-      {showForm && (
-        <div style={{ 
-          background: '#f9f9f9', 
-          padding: '20px', 
-          borderRadius: '10px', 
-          marginBottom: '20px',
-          border: '1px solid #ddd'
-        }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#333' }}>📝 Nuevo Campo</h3>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Nombre del Campo:
-            </label>
-            <input
-              type="text"
-              value={formData.nombre}
-              onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '5px',
-                fontSize: '14px'
-              }}
-              placeholder="Ej: Campo Norte"
-            />
-          </div>
-
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Superficie (hectáreas):
-            </label>
-            <input
-              type="number"
-              value={formData.superficie}
-              onChange={(e) => setFormData(prev => ({ ...prev, superficie: parseFloat(e.target.value) || 0 }))}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '5px',
-                fontSize: '14px'
-              }}
-              placeholder="0.00"
-              step="0.01"
-            />
-          </div>
-
-          {/* Mapa para dibujar polígono */}
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              🗺️ Dibuja el polígono del campo:
-            </label>
-            <div style={{
-              width: '100%',
-              height: '400px',
-              border: '2px solid #ddd',
-              borderRadius: '8px',
-              position: 'relative',
-              overflow: 'hidden',
-              background: '#f0f0f0'
-            }}>
-              {!googleMapsReady && (
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  color: '#666',
-                  fontSize: '16px',
-                  textAlign: 'center'
-                }}>
-                  🔄 Cargando Google Maps...
-                </div>
-              )}
-              
-              {googleMapsReady && (
-                <GoogleMapWithDrawing
-                  onPolygonComplete={handlePolygonComplete}
-                  onMapReady={handleMapReady}
-                />
-              )}
-            </div>
-            <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-              💡 Haz clic en el botón de polígono y dibuja el área del campo en el mapa
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={saveField}
-              disabled={loading || !formData.nombre || formData.superficie === 0}
-              style={{
-                background: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '5px',
-                cursor: loading || !formData.nombre || formData.superficie === 0 ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                opacity: loading || !formData.nombre || formData.superficie === 0 ? 0.6 : 1
-              }}
-            >
-              {loading ? '💾 Guardando...' : '💾 Guardar Campo'}
-            </button>
-            
-            <button
-              onClick={cancelForm}
-              style={{
-                background: '#f44336',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              ❌ Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Búsqueda */}
-      <div style={{ marginBottom: '20px' }}>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="🔍 Buscar campos..."
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: '1px solid #ddd',
-            borderRadius: '8px',
-            fontSize: '16px'
-          }}
-        />
-      </div>
-
-      {/* Lista de campos */}
-      <div style={{ 
-        background: 'white', 
-        borderRadius: '10px', 
-        overflow: 'hidden',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      {/* Lista de Campos */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem'
       }}>
-        <div style={{ 
-          background: '#f5f5f5', 
-          padding: '15px', 
-          borderBottom: '1px solid #ddd',
-          fontWeight: 'bold'
-        }}>
-          📋 Campos Registrados ({filteredFields.length})
-        </div>
-        
-        {filteredFields.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-            {searchTerm ? 'No se encontraron campos que coincidan con la búsqueda' : 'No hay campos registrados'}
-          </div>
-        ) : (
-          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            {filteredFields.map((field) => (
-              <div key={field.id} style={{ 
-                padding: '15px', 
-                borderBottom: '1px solid #eee',
+        {campos.map(campo => (
+          <div key={campo.id} style={{
+            background: 'white',
+            borderRadius: '10px',
+            padding: '1rem',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb',
+            display: 'flex',
+            gap: '1rem',
+            alignItems: 'flex-start'
+          }}>
+            {/* Información del campo - Lado izquierdo */}
+            <div style={{
+              flex: '1',
+              minWidth: '0'
+            }}>
+              {/* Header del campo */}
+              <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'flex-start',
+                marginBottom: '0.75rem'
               }}>
                 <div>
-                  <h4 style={{ margin: '0 0 5px 0', color: '#333' }}>{field.nombre}</h4>
-                  <p style={{ margin: '0', color: '#666', fontSize: '14px' }}>
-                    Superficie: {field.superficie} hectáreas
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    onClick={() => showFieldOnMap(field)}
-                    style={{
-                      background: '#2196F3',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}
-                  >
-                    🗺️ Ver en Mapa
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Implementar eliminación
-                      setFields(prev => prev.filter(f => f.id !== field.id));
-                    }}
-                    style={{
-                      background: '#f44336',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}
-                  >
-                    🗑️ Eliminar
-                  </button>
+                  <h3 style={{ 
+                    margin: '0 0 0.5rem 0', 
+                    fontSize: '1.25rem',
+                    color: '#1f2937'
+                  }}>
+                    {campo.nombre}
+                  </h3>
+                  <div style={{
+                    display: 'inline-block',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '1rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    color: 'white',
+                    backgroundColor: getEstadoColor(campo.estado)
+                  }}>
+                    {getEstadoTexto(campo.estado)}
+                  </div>
                 </div>
               </div>
-            ))}
+
+              {/* Información del campo */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '0.75rem',
+                marginBottom: '0.75rem'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    📍 Ubicación
+                  </div>
+                  <div style={{ fontSize: '0.95rem', color: '#374151' }}>
+                    {campo.ubicacion}
+                  </div>
+                </div>
+                
+                <div>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    📏 Superficie
+                  </div>
+                  <div style={{ fontSize: '0.95rem', color: '#374151' }}>
+                    {campo.superficie} hectáreas
+                  </div>
+                </div>
+                
+                <div>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    📅 Fecha de Creación
+                  </div>
+                  <div style={{ fontSize: '0.95rem', color: '#374151' }}>
+                    {formatDate(campo.fechaCreacion)}
+                  </div>
+                </div>
+                
+                <div>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    🗺️ Coordenadas
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#374151', fontFamily: 'monospace' }}>
+                    {campo.coordenadas[0]?.lat.toFixed(4)}, {campo.coordenadas[0]?.lng.toFixed(4)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Descripción */}
+              {campo.descripcion && (
+                <div style={{
+                  padding: '0.75rem',
+                  background: '#f9fafb',
+                  borderRadius: '0.5rem',
+                  marginBottom: '0.75rem'
+                }}>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    📝 Descripción
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#374151' }}>
+                    {campo.descripcion}
+                  </div>
+                </div>
+              )}
+
+              {/* Acciones */}
+              <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                flexWrap: 'wrap'
+              }}>
+                <button 
+                  onClick={() => handleVerDetalles(campo)}
+                  style={{
+                    background: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                >
+                  👁️ Ver Detalles
+                </button>
+                
+                <button 
+                  onClick={() => handleEditarCampo(campo)}
+                  style={{
+                    background: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
+                >
+                  ✏️ Editar
+                </button>
+                
+                <button 
+                  onClick={() => handleEliminarCampo(campo.id)}
+                  style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                >
+                  🗑️ Eliminar
+                </button>
+              </div>
+            </div>
+
+            {/* Carrusel del clima - Lado derecho */} 
+            <div style={{
+              width: '250px',
+              flexShrink: 0
+            }}>
+              <OpenMeteoWeatherWidget
+                fieldName={campo.nombre}
+                coordinates={{
+                  lat: campo.coordenadas[0]?.lat || 0,
+                  lon: campo.coordenadas[0]?.lng || 0
+                }}
+                compact={false}
+              />
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
-      {/* Modal para mostrar campo en mapa */}
-      {showMap && selectedField && (
+      {/* Modal de Mapa */}
+      {showMapModal && (
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
+          backgroundColor: 'rgba(0,0,0,0.8)',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -733,72 +822,544 @@ const FieldsManagement: React.FC = () => {
           <div style={{
             background: 'white',
             borderRadius: '10px',
-            padding: '20px',
             width: '90%',
-            height: '80%',
-            position: 'relative'
+            height: '90%',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <div style={{
+              padding: '1rem',
+              borderBottom: '1px solid #e5e7eb',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '15px'
+              alignItems: 'center'
             }}>
-              <div>
-                <h3 style={{ margin: '0 0 5px 0' }}>🗺️ {selectedField.nombre}</h3>
-                <p style={{ margin: '0', color: '#666', fontSize: '14px' }}>
-                  Superficie: {selectedField.superficie} hectáreas
-                </p>
-              </div>
+              <h2 style={{ margin: 0, color: '#1f2937' }}>
+                🗺️ Mapa de Campos
+              </h2>
               <button
-                onClick={() => setShowMap(false)}
+                onClick={closeModal}
                 style={{
-                  background: '#f44336',
+                  background: '#6b7280',
                   color: 'white',
                   border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '5px',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.375rem',
                   cursor: 'pointer'
                 }}
               >
-                ❌ Cerrar
+                ✕ Cerrar
               </button>
             </div>
             
             <div style={{
-              width: '100%',
-              height: 'calc(100% - 60px)',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              position: 'relative',
-              overflow: 'hidden',
-              background: '#f0f0f0'
+              flex: 1,
+              position: 'relative'
             }}>
-              {!googleMapsReady && (
+              <div 
+                ref={mapRef}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '0 0 10px 10px'
+                }}
+              />
+              
+              {!mapLoaded && (
                 <div style={{
                   position: 'absolute',
                   top: '50%',
                   left: '50%',
                   transform: 'translate(-50%, -50%)',
-                  color: '#666',
-                  fontSize: '16px',
                   textAlign: 'center',
-                  zIndex: 10
+                  color: '#666'
                 }}>
-                  🔄 Cargando mapa...
+                  <div style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    border: '4px solid #f3f3f3', 
+                    borderTop: '4px solid #4CAF50', 
+                    borderRadius: '50%', 
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 1rem'
+                  }}></div>
+                  <p>Cargando mapa...</p>
                 </div>
-              )}
-              
-              {googleMapsReady && (
-                <GoogleMapViewField
-                  fieldPolygon={selectedField.poligono}
-                  fieldName={selectedField.nombre}
-                />
               )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Modal de Detalles */}
+      {showDetailsModal && selectedField && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '10px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <h2 style={{ margin: '0 0 1rem 0', color: '#1f2937' }}>
+              Detalles del Campo: {selectedField.nombre}
+            </h2>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Descripción:</strong> {selectedField.descripcion || 'Sin descripción'}
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Ubicación:</strong> {selectedField.ubicacion}
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Superficie:</strong> {selectedField.superficie} hectáreas
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Estado:</strong> {getEstadoTexto(selectedField.estado)}
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Fecha de Creación:</strong> {formatDate(selectedField.fechaCreacion)}
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Coordenadas:</strong>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                {selectedField.coordenadas.map((coord, index) => (
+                  <div key={index}>
+                    Punto {index + 1}: {coord.lat.toFixed(6)}, {coord.lng.toFixed(6)}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button 
+              onClick={closeModal}
+              style={{
+                background: '#6b7280',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '0.375rem',
+                cursor: 'pointer'
+              }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Agregar/Editar Campo */}
+      {(showAddModal || showEditModal) && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '10px',
+            padding: '2rem',
+            maxWidth: '800px',
+            width: '95%',
+            maxHeight: '95vh',
+            overflowY: 'auto'
+          }}>
+            <h2 style={{ margin: '0 0 1.5rem 0', color: '#1f2937' }}>
+              {isEditing ? '✏️ Editar Campo' : '➕ Agregar Nuevo Campo'}
+            </h2>
+            
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveField(); }}>
+              {/* Formulario - Parte Superior */}
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {/* Nombre del campo */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      Nombre del Campo *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.nombre}
+                      onChange={(e) => handleInputChange('nombre', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        fontSize: '1rem'
+                      }}
+                      placeholder="Ej: Campo Norte"
+                      required
+                    />
+                  </div>
+
+                  {/* Ubicación */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      Ubicación *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.ubicacion}
+                      onChange={(e) => handleInputChange('ubicacion', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        fontSize: '1rem'
+                      }}
+                      placeholder="Ej: Ruta 9, Km 45"
+                      required
+                    />
+                  </div>
+
+                  {/* Superficie */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      Superficie (hectáreas) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={formData.superficie}
+                      onChange={(e) => handleInputChange('superficie', parseFloat(e.target.value) || 0)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        fontSize: '1rem'
+                      }}
+                      placeholder="0.0"
+                      required
+                    />
+                  </div>
+
+                  {/* Estado */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      Estado *
+                    </label>
+                    <select
+                      value={formData.estado}
+                      onChange={(e) => handleInputChange('estado', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        fontSize: '1rem'
+                      }}
+                      required
+                    >
+                      <option value="activo">Activo</option>
+                      <option value="inactivo">Inactivo</option>
+                      <option value="en_mantenimiento">En Mantenimiento</option>
+                    </select>
+                  </div>
+
+                  {/* Descripción */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      Descripción
+                    </label>
+                    <textarea
+                      value={formData.descripcion}
+                      onChange={(e) => handleInputChange('descripcion', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        fontSize: '1rem',
+                        minHeight: '80px',
+                        resize: 'vertical'
+                      }}
+                      placeholder="Descripción del campo, cultivos, etc."
+                    />
+                  </div>
+
+                  {/* Coordenadas */}
+                  {formData.coordenadas.length > 0 && (
+                    <div>
+                      <label style={{ 
+                        display: 'block', 
+                        marginBottom: '0.5rem',
+                        fontWeight: '500',
+                        color: '#374151'
+                      }}>
+                        Coordenadas ({formData.coordenadas.length} puntos)
+                      </label>
+                      <div style={{
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        backgroundColor: '#f9fafb',
+                        maxHeight: '120px',
+                        overflowY: 'auto'
+                      }}>
+                        {formData.coordenadas.map((coord, index) => (
+                          <div key={index} style={{
+                            fontSize: '0.875rem',
+                            fontFamily: 'monospace',
+                            marginBottom: '0.25rem'
+                          }}>
+                            Punto {index + 1}: {coord.lat.toFixed(6)}, {coord.lng.toFixed(6)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Mapa - Parte Inferior */}
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#374151', fontSize: '1.1rem' }}>
+                    🗺️ Dibujar Campo en el Mapa
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
+                    Usa la herramienta de polígono para dibujar el contorno del campo. La superficie se calculará automáticamente.
+                  </p>
+                </div>
+                
+                <div style={{
+                  height: '350px',
+                  border: '2px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <div 
+                    ref={mapRef}
+                    style={{
+                      width: '100%',
+                      height: '100%'
+                    }}
+                  />
+                  
+                  {!mapLoaded && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      color: '#666'
+                    }}>
+                      <div style={{ 
+                        width: '40px', 
+                        height: '40px', 
+                        border: '4px solid #f3f3f3', 
+                        borderTop: '4px solid #4CAF50', 
+                        borderRadius: '50%', 
+                        animation: 'spin 1s linear infinite',
+                        margin: '0 auto 1rem'
+                      }}></div>
+                      <p>Cargando mapa...</p>
+                    </div>
+                  )}
+
+                  {/* Controles de zoom personalizados */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                    zIndex: 1000
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => map?.setZoom((map.getZoom() || 15) + 1)}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: 'white',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => map?.setZoom((map.getZoom() || 15) - 1)}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: 'white',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      −
+                    </button>
+                  </div>
+
+                  {/* Botón de herramienta de polígono personalizado */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: '10px',
+                    zIndex: 1000
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (drawingManager) {
+                          drawingManager.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
+                        }
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      🔷 Dibujar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Instrucciones del mapa */}
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #0ea5e9'
+                }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#0c4a6e', fontSize: '1rem' }}>
+                    💡 Instrucciones para móvil:
+                  </h4>
+                  <ul style={{ margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#0c4a6e' }}>
+                    <li>Usa los botones + y − para hacer zoom</li>
+                    <li>Haz clic en "🔷 Dibujar" para activar la herramienta</li>
+                    <li>Toca en cada punto del contorno del campo</li>
+                    <li>Doble toque para finalizar el polígono</li>
+                    <li>La superficie se calculará automáticamente</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Botones de acción */}
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
+                justifyContent: 'flex-end',
+                paddingTop: '1rem',
+                borderTop: '1px solid #e5e7eb'
+              }}>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontSize: '1rem'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontSize: '1rem'
+                  }}
+                >
+                  {isEditing ? 'Guardar Cambios' : 'Crear Campo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Estilos CSS para la animación de carga */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
