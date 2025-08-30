@@ -4,11 +4,14 @@ import { authService, showNotification } from '../services/api';
 
 interface User {
   id: number;
-  username: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  roles: string[];
+  roleName: string;
+  permissions: string[];
+  active: boolean;
+  emailVerified: boolean;
+  lastLogin?: string;
+  createdAt?: string;
 }
 
 interface AuthContextType {

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroCloud - Modo Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .offline-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .offline-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        h1 {
+            color: #374151;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .features {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .features h3 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            color: #6b7280;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .retry-button {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-top: 20px;
+        }
+
+        .retry-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #ef4444;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .connection-status {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            color: #991b1b;
+            font-size: 14px;
+        }
+
+        .offline-data-info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 20px;
+            color: #1e40af;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📡</div>
+        
+        <h1>Modo Offline</h1>
+        <p class="subtitle">
+            No hay conexión a internet, pero puedes seguir trabajando con las funciones disponibles offline. Haz clic en "Ir a la Aplicación" para continuar.
+        </p>
+
+        <div class="connection-status">
+            <span class="status-indicator"></span>
+            Sin conexión a internet
+        </div>
+
+        <div class="features">
+            <h3>✅ Funciones disponibles offline:</h3>
+            <ul class="feature-list">
+                <li>Gestión de lotes y campos</li>
+                <li>Control de stock de insumos</li>
+                <li>Registro de labores agrícolas</li>
+                <li>Alertas y notificaciones</li>
+                <li>Visualización de datos guardados</li>
+            </ul>
+        </div>
+
+        <div class="offline-data-info">
+            <strong>💾 Datos guardados localmente:</strong><br>
+            Los cambios se guardarán automáticamente y se sincronizarán cuando vuelva la conexión.
+        </div>
+
+        <button class="retry-button" onclick="retryConnection()">
+            🔄 Reintentar conexión
+        </button>
+        
+        <button class="retry-button" onclick="goToApp()" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); margin-left: 10px;">
+            🚀 Ir a la Aplicación
+        </button>
+    </div>
+
+    <script>
+        function retryConnection() {
+            // Verificar si hay conexión
+            if (navigator.onLine) {
+                window.location.reload();
+            } else {
+                // Mostrar mensaje de que aún no hay conexión
+                alert('Aún no hay conexión a internet. Los datos se sincronizarán automáticamente cuando vuelva la conexión.');
+            }
+        }
+
+        function goToApp() {
+            // Intentar ir a la aplicación principal
+            window.location.href = '/';
+        }
+
+        // Escuchar cambios en la conectividad
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+
+        // Verificar estado de sincronización
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(registration => {
+                // Verificar si hay datos offline pendientes
+                registration.active.postMessage({
+                    type: 'GET_OFFLINE_STATUS'
+                });
+            });
+        }
+    </script>
+</body>
+</html>

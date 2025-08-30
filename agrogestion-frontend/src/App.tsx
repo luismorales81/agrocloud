@@ -14,19 +14,17 @@ import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ChangePasswordModal from './components/ChangePasswordModal';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Dashboard con menú lateral
 const Dashboard: React.FC = () => {
-  const [user] = useState(() => {
-    const userData = localStorage.getItem('user');
-    return userData ? JSON.parse(userData) : {};
-  });
+  const { user } = useAuth();
 
   const [activePage, setActivePage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [dashboardStats, setDashboardStats] = useState({
     campos: 0,
     lotes: 0,
@@ -46,6 +44,22 @@ const Dashboard: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Detectar cambios de conectividad
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+
 
   // Cargar estadísticas del dashboard
   useEffect(() => {
@@ -129,10 +143,10 @@ const Dashboard: React.FC = () => {
           marginBottom: '2rem' 
         }}>
           <h2 style={{ marginBottom: '0.5rem' }}>
-            Bienvenido, {user.firstName} {user.lastName}!
+            Bienvenido, {user?.name || 'Usuario'}!
           </h2>
           <p style={{ opacity: '0.9' }}>
-            Rol: {user.role?.charAt(0).toUpperCase() + user.role?.slice(1) || 'Usuario'}
+            Rol: {user?.roleName ? user.roleName.charAt(0).toUpperCase() + user.roleName.slice(1) : 'Usuario'}
           </p>
         </div>
         
@@ -429,13 +443,13 @@ const Dashboard: React.FC = () => {
           
           <div style={{ marginBottom: '2rem' }}>
             <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
-              Usuario
+              Perfil
             </div>
             <div style={{ fontSize: '1rem', fontWeight: '500' }}>
-              {user.firstName} {user.lastName}
+              {user?.name || 'Usuario'}
             </div>
             <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '1rem' }}>
-              {user.role?.charAt(0).toUpperCase() + user.role?.slice(1) || 'Usuario'}
+              {user?.roleName ? user.roleName.charAt(0).toUpperCase() + user.roleName.slice(1) : 'Usuario'}
             </div>
             <button
               onClick={() => setShowChangePassword(true)}
@@ -576,8 +590,27 @@ const Dashboard: React.FC = () => {
         />
       </div>
       
-      {/* Indicador de estado offline */}
-      <OfflineIndicator />
+              {/* Indicador de estado offline */}
+        <OfflineIndicator />
+        
+        {/* Banner de estado offline */}
+        {!isOnline && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: '#fef3c7',
+            color: '#92400e',
+            padding: '0.5rem',
+            textAlign: 'center',
+            fontSize: '0.875rem',
+            zIndex: 1000,
+            borderBottom: '1px solid #f59e0b'
+          }}>
+            📡 Modo Offline - Trabajando con datos locales
+          </div>
+        )}
     </div>
   );
 };
