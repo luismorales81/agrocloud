@@ -311,7 +311,7 @@ class AgroGestionIntegrationTest extends BaseTest {
         cosecha.setObservaciones("Cosecha de soja con buen rendimiento");
         cosecha.setUsuario(usuarioTest);
         cosecha.setActivo(true);
-        Cosecha cosechaGuardada = cosechaRepository.save(cosecha);
+        Cosecha cosechaRegistrada = cosechaRepository.save(cosecha);
         entityManager.flush();
 
         // 4.5. Cambiar estado del lote a COSECHADO
@@ -322,7 +322,7 @@ class AgroGestionIntegrationTest extends BaseTest {
         entityManager.flush();
 
         assertEquals(Labor.EstadoLabor.COMPLETADA, cosechaGuardada.getEstado());
-        assertEquals(new BigDecimal("89.25"), cosechaGuardada.getCantidadCosechada());
+        assertEquals(new BigDecimal("89.25"), cosechaRegistrada.getCantidadCosechada());
         assertEquals(EstadoLote.COSECHADO, loteTest.getEstado());
 
         // ===== FASE 5: REGISTRO FINANCIERO =====
