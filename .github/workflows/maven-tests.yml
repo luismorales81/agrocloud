@@ -60,12 +60,14 @@ jobs:
         
     - name: Run tests
       run: mvn test -Dspring.profiles.active=test
+      working-directory: ./agrogestion-backend
       env:
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASS: ${{ secrets.DB_PASS }}
         
     - name: Generate test reports
       run: mvn jacoco:report
+      working-directory: ./agrogestion-backend
       if: always()
       
     - name: Upload test results
@@ -74,6 +76,6 @@ jobs:
       with:
         name: test-results
         path: |
-          target/surefire-reports/
-          target/site/jacoco/
+          agrogestion-backend/target/surefire-reports/
+          agrogestion-backend/target/site/jacoco/
         retention-days: 30
