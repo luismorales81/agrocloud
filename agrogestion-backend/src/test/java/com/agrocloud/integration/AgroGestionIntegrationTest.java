@@ -121,7 +121,7 @@ class AgroGestionIntegrationTest extends BaseTest {
         // Crear insumos de prueba
         semillaTest = new Insumo();
         semillaTest.setNombre("Semilla Soja DM 53i53");
-        semillaTest.setTipo("Semilla");
+        semillaTest.setTipo(Insumo.TipoInsumo.SEMILLA);
         semillaTest.setDescripcion("Semilla de soja de primera calidad");
         semillaTest.setUnidadMedida("kg");
         semillaTest.setPrecioUnitario(new BigDecimal("15.50"));
@@ -134,7 +134,7 @@ class AgroGestionIntegrationTest extends BaseTest {
 
         fertilizanteTest = new Insumo();
         fertilizanteTest.setNombre("Fertilizante Urea");
-        fertilizanteTest.setTipo("Fertilizante");
+        fertilizanteTest.setTipo(Insumo.TipoInsumo.FERTILIZANTE);
         fertilizanteTest.setDescripcion("Fertilizante nitrogenado");
         fertilizanteTest.setUnidadMedida("kg");
         fertilizanteTest.setPrecioUnitario(new BigDecimal("0.85"));

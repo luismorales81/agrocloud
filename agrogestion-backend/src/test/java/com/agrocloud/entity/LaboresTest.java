@@ -93,7 +93,7 @@ class LaboresTest extends BaseTest {
         // Crear insumo de prueba
         insumoTest = new Insumo();
         insumoTest.setNombre("Semilla Soja DM 53i53");
-        insumoTest.setTipo("Semilla");
+        insumoTest.setTipo(Insumo.TipoInsumo.SEMILLA);
         insumoTest.setDescripcion("Semilla de soja");
         insumoTest.setUnidadMedida("kg");
         insumoTest.setPrecioUnitario(new BigDecimal("15.50"));

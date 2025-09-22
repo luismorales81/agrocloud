@@ -56,7 +56,7 @@ class InsumosTest extends BaseTest {
         // Arrange
         Insumo insumo = new Insumo();
         insumo.setNombre("Semilla Soja DM 53i53");
-        insumo.setTipo("Semilla");
+        insumo.setTipo(Insumo.TipoInsumo.SEMILLA);
         insumo.setDescripcion("Semilla de soja de primera calidad");
         insumo.setUnidadMedida("kg");
         insumo.setPrecioUnitario(new BigDecimal("15.50"));
@@ -335,7 +335,7 @@ class InsumosTest extends BaseTest {
     void testValidarDatosObligatorios() {
         // Arrange
         Insumo insumoSinNombre = new Insumo();
-        insumoSinNombre.setTipo("Semilla");
+        insumoSinNombre.setTipo(Insumo.TipoInsumo.SEMILLA);
         insumoSinNombre.setUnidadMedida("kg");
         insumoSinNombre.setPrecioUnitario(new BigDecimal("15.00"));
         insumoSinNombre.setStockDisponible(new BigDecimal("1000.00"));
@@ -352,7 +352,7 @@ class InsumosTest extends BaseTest {
                                BigDecimal precioUnitario, BigDecimal stockDisponible, BigDecimal stockMinimo) {
         Insumo insumo = new Insumo();
         insumo.setNombre(nombre);
-        insumo.setTipo(tipo);
+        insumo.setTipo(Insumo.TipoInsumo.valueOf(tipo.toUpperCase()));
         insumo.setDescripcion("Descripción de " + nombre);
         insumo.setUnidadMedida(unidadMedida);
         insumo.setPrecioUnitario(precioUnitario);

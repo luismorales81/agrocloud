@@ -254,7 +254,7 @@ class ReportsTest extends BaseTest {
 
         Map<String, BigDecimal> valorPorTipo = insumos.stream()
                 .collect(Collectors.groupingBy(
-                        Insumo::getTipo,
+                        insumo -> insumo.getTipo().name(),
                         Collectors.reducing(BigDecimal.ZERO, 
                                 insumo -> insumo.getPrecioUnitario().multiply(insumo.getStockDisponible()), 
                                 BigDecimal::add)
@@ -466,7 +466,7 @@ class ReportsTest extends BaseTest {
                                BigDecimal stock, BigDecimal stockMinimo) {
         Insumo insumo = new Insumo();
         insumo.setNombre(nombre);
-        insumo.setTipo(tipo);
+        insumo.setTipo(Insumo.TipoInsumo.valueOf(tipo.toUpperCase()));
         insumo.setDescripcion("Descripción de " + nombre);
         insumo.setUnidadMedida("kg");
         insumo.setPrecioUnitario(precio);
