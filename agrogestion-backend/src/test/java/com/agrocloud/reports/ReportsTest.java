@@ -344,7 +344,8 @@ class ReportsTest extends BaseTest {
                 .map(Plot::getAreaHectareas)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        List<Cosecha> cosechasCampo = cosechasCampo.stream()
+        List<Cosecha> todasLasCosechas = cosechaRepository.findAll();
+        List<Cosecha> cosechasCampo = todasLasCosechas.stream()
                 .filter(cosecha -> lotesCampo.stream()
                         .anyMatch(lote -> lote.getId().equals(cosecha.getLote().getId())))
                 .toList();
