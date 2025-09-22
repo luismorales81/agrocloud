@@ -1,0 +1,6 @@
+export enum EstadoUsuario {
+  PENDIENTE = 'PENDIENTE',
+  ACTIVO = 'ACTIVO',
+  SUSPENDIDO = 'SUSPENDIDO',
+  ELIMINADO = 'ELIMINADO'
+}

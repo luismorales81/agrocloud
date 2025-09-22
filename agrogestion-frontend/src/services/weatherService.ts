@@ -19,6 +19,7 @@ export interface WeatherForecast {
   weatherCode: number;
   weatherDescription: string;
   icon: string;
+  agriculturalAdvice: string;
 }
 
 export interface WeatherData {
@@ -29,16 +30,32 @@ export interface WeatherData {
 }
 
 class WeatherService {
+  private cache = new Map<string, { data: WeatherData; timestamp: number }>();
+  private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutos en milisegundos
+
   /**
-   * Obtiene datos meteorológicos por coordenadas
+   * Obtiene datos meteorológicos por coordenadas con cache
    */
   async getWeatherByCoordinates(latitude: number, longitude: number): Promise<WeatherData> {
+    const cacheKey = `${latitude.toFixed(4)}_${longitude.toFixed(4)}`;
+    const now = Date.now();
+    
+    // Verificar si hay datos en cache y si aún son válidos
+    const cached = this.cache.get(cacheKey);
+    if (cached && (now - cached.timestamp) < this.CACHE_DURATION) {
+      return cached.data;
+    }
+
     try {
       console.log(`🌤️ [WeatherService] Obteniendo clima REAL para lat: ${latitude}, lon: ${longitude}`);
       
       // Llamar al endpoint real de Open-Meteo
-      const response = await api.get(`/v1/weather-simple/coordinates?latitude=${latitude}&longitude=${longitude}`);
+      const response = await api.get(`/api/v1/weather-simple/coordinates?latitude=${latitude}&longitude=${longitude}`);
       console.log('🌤️ [WeatherService] Datos meteorológicos REALES obtenidos:', response.data);
+      
+      // Guardar en cache
+      this.cache.set(cacheKey, { data: response.data, timestamp: now });
+      console.log(`💾 [WeatherService] Datos guardados en cache para lat: ${latitude}, lon: ${longitude}`);
       
       return response.data;
       
@@ -48,8 +65,13 @@ class WeatherService {
       // Fallback: intentar con el endpoint simple
       try {
         console.log('🔄 [WeatherService] Intentando con endpoint simple...');
-        const fallbackResponse = await api.get(`/v1/weather-simple/coordinates-simple?latitude=${latitude}&longitude=${longitude}`);
+        const fallbackResponse = await api.get(`/api/v1/weather-simple/coordinates-simple?latitude=${latitude}&longitude=${longitude}`);
         console.log('🌤️ [WeatherService] Datos meteorológicos obtenidos con fallback:', fallbackResponse.data);
+        
+        // Guardar en cache también el fallback
+        this.cache.set(cacheKey, { data: fallbackResponse.data, timestamp: now });
+        console.log(`💾 [WeatherService] Datos de fallback guardados en cache para lat: ${latitude}, lon: ${longitude}`);
+        
         return fallbackResponse.data;
       } catch (fallbackError) {
         console.error('❌ [WeatherService] Error en fallback también:', fallbackError);
@@ -59,15 +81,69 @@ class WeatherService {
   }
 
   /**
-   * Obtiene datos meteorológicos por ID de campo
+   * Limpia el cache expirado
+   */
+  clearExpiredCache(): void {
+    const now = Date.now();
+    for (const [key, value] of this.cache.entries()) {
+      if ((now - value.timestamp) >= this.CACHE_DURATION) {
+        this.cache.delete(key);
+        console.log(`🗑️ [WeatherService] Cache expirado eliminado para key: ${key}`);
+      }
+    }
+  }
+
+  /**
+   * Limpia todo el cache
+   */
+  clearAllCache(): void {
+    this.cache.clear();
+    console.log('🗑️ [WeatherService] Todo el cache eliminado');
+  }
+
+  /**
+   * Obtiene información del cache
+   */
+  getCacheInfo(): { size: number; keys: string[]; oldestEntry?: number } {
+    const keys = Array.from(this.cache.keys());
+    let oldestEntry: number | undefined;
+    
+    if (keys.length > 0) {
+      oldestEntry = Math.min(...Array.from(this.cache.values()).map(v => v.timestamp));
+    }
+    
+    return {
+      size: this.cache.size,
+      keys,
+      oldestEntry
+    };
+  }
+
+  /**
+   * Obtiene datos meteorológicos por ID de campo con cache
    */
   async getWeatherByField(fieldId: number): Promise<WeatherData> {
+    const cacheKey = `field_${fieldId}`;
+    const now = Date.now();
+    
+    // Verificar si hay datos en cache y si aún son válidos
+    const cached = this.cache.get(cacheKey);
+    if (cached && (now - cached.timestamp) < this.CACHE_DURATION) {
+      console.log(`🔄 [WeatherService] Usando datos en cache para campo ID: ${fieldId}`);
+      return cached.data;
+    }
+
     try {
       console.log(`🌤️ [WeatherService] Obteniendo clima para campo ID: ${fieldId}`);
       
-      const response = await api.get(`/v1/weather-simple/field/${fieldId}`);
+      const response = await api.get(`/api/v1/weather-simple/field/${fieldId}`);
       
       console.log('🌤️ [WeatherService] Datos meteorológicos obtenidos:', response.data);
+      
+      // Guardar en cache
+      this.cache.set(cacheKey, { data: response.data, timestamp: now });
+      console.log(`💾 [WeatherService] Datos guardados en cache para campo ID: ${fieldId}`);
+      
       return response.data;
       
     } catch (error) {
@@ -81,7 +157,7 @@ class WeatherService {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      const response = await api.get('/v1/weather-simple/health');
+      const response = await api.get('/api/v1/weather-simple/health');
       return response.status === 200;
     } catch (error) {
       console.error('❌ [WeatherService] Error verificando salud del servicio:', error);

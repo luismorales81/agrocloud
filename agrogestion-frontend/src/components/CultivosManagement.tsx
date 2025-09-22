@@ -3,13 +3,17 @@ import React, { useState, useEffect } from 'react';
 interface Cultivo {
   id?: number;
   nombre: string;
+  tipo: string;
   variedad: string;
-  ciclo_dias: number;
-  rendimiento_esperado: number;
-  unidad_rendimiento: string;
+  cicloDias: number;
+  rendimientoEsperado: number;
+  unidadRendimiento: string;
+  precioPorTonelada: number;
   descripcion: string;
-  estado: 'activo' | 'inactivo';
-  fecha_creacion?: string;
+  estado: 'ACTIVO' | 'INACTIVO';
+  createdAt?: string;
+  updatedAt?: string;
+  activo?: boolean;
 }
 
 const CultivosManagement: React.FC = () => {
@@ -20,13 +24,26 @@ const CultivosManagement: React.FC = () => {
   const [editingCultivo, setEditingCultivo] = useState<Cultivo | null>(null);
   const [formData, setFormData] = useState<Cultivo>({
     nombre: '',
+    tipo: '',
     variedad: '',
-    ciclo_dias: 0,
-    rendimiento_esperado: 0,
-    unidad_rendimiento: 'kg/ha',
+    cicloDias: 0,
+    rendimientoEsperado: 0,
+    unidadRendimiento: 'kg/ha',
+    precioPorTonelada: 0,
     descripcion: '',
-    estado: 'activo'
+    estado: 'ACTIVO'
   });
+
+  // Tipos de cultivo disponibles
+  const tiposCultivo = [
+    { value: 'Cereal', label: 'Cereal' },
+    { value: 'Oleaginosa', label: 'Oleaginosa' },
+    { value: 'Leguminosa', label: 'Leguminosa' },
+    { value: 'Forrajera', label: 'Forrajera' },
+    { value: 'Hortaliza', label: 'Hortaliza' },
+    { value: 'Frutal', label: 'Frutal' },
+    { value: 'Industrial', label: 'Industrial' }
+  ];
 
   // Unidades de rendimiento disponibles
   const unidadesRendimiento = [
@@ -36,60 +53,38 @@ const CultivosManagement: React.FC = () => {
     { value: 'kg/m2', label: 'kg/m² (Kilogramos por metro cuadrado)' }
   ];
 
-  // Cargar cultivos desde la API (simulación)
+  // Cargar cultivos desde la API real
   const loadCultivos = async () => {
     try {
       setLoading(true);
-      // Simulación de carga desde API
-      const mockCultivos: Cultivo[] = [
-        {
-          id: 1,
-          nombre: 'Soja',
-          variedad: 'DM 53i54',
-          ciclo_dias: 120,
-          rendimiento_esperado: 3500,
-          unidad_rendimiento: 'kg/ha',
-          descripcion: 'Soja de ciclo corto, resistente a sequía y enfermedades',
-          estado: 'activo',
-          fecha_creacion: '2024-01-15'
-        },
-        {
-          id: 2,
-          nombre: 'Maíz',
-          variedad: 'DK 72-10',
-          ciclo_dias: 140,
-          rendimiento_esperado: 12,
-          unidad_rendimiento: 'tn/ha',
-          descripcion: 'Maíz híbrido de alto rendimiento, adaptado a diferentes suelos',
-          estado: 'activo',
-          fecha_creacion: '2024-01-20'
-        },
-        {
-          id: 3,
-          nombre: 'Trigo',
-          variedad: 'Klein Pantera',
-          ciclo_dias: 180,
-          rendimiento_esperado: 4500,
-          unidad_rendimiento: 'kg/ha',
-          descripcion: 'Trigo de calidad panadera, resistente a royas',
-          estado: 'activo',
-          fecha_creacion: '2024-02-01'
-        },
-        {
-          id: 4,
-          nombre: 'Girasol',
-          variedad: 'Paraíso 33',
-          ciclo_dias: 110,
-          rendimiento_esperado: 2.5,
-          unidad_rendimiento: 'tn/ha',
-          descripcion: 'Girasol confitero de alto contenido oleico',
-          estado: 'inactivo',
-          fecha_creacion: '2024-02-10'
+      
+      // Obtener token del localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No hay token de autenticación');
+        return;
+      }
+
+      // Llamada real a la API
+      const response = await fetch('http://localhost:8080/api/cultivos', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      ];
-      setCultivos(mockCultivos);
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Cultivos cargados desde API:', data);
+      setCultivos(data);
     } catch (error) {
       console.error('Error cargando cultivos:', error);
+      // En caso de error, mostrar mensaje al usuario
+      alert('Error al cargar los cultivos. Verifica la conexión con el servidor.');
     } finally {
       setLoading(false);
     }
@@ -104,27 +99,44 @@ const CultivosManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      if (editingCultivo) {
-        // Actualizar cultivo existente
-        const updatedCultivos = cultivos.map(cultivo => 
-          cultivo.id === editingCultivo.id 
-            ? { ...formData, id: cultivo.id, fecha_creacion: cultivo.fecha_creacion }
-            : cultivo
-        );
-        setCultivos(updatedCultivos);
-      } else {
-        // Crear nuevo cultivo
-        const newCultivo: Cultivo = {
-          id: cultivos.length + 1,
-          ...formData,
-          fecha_creacion: new Date().toISOString().split('T')[0]
-        };
-        setCultivos(prev => [...prev, newCultivo]);
+      // Obtener token del localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No hay token de autenticación');
+        alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
       }
+
+      const url = editingCultivo 
+        ? `http://localhost:8080/api/cultivos/${editingCultivo.id}`
+        : 'http://localhost:8080/api/cultivos';
       
+      const method = editingCultivo ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const savedCultivo = await response.json();
+      console.log('Cultivo guardado:', savedCultivo);
+      
+      // Recargar la lista de cultivos desde la API
+      await loadCultivos();
       resetForm();
+      
+      alert(editingCultivo ? 'Cultivo actualizado exitosamente' : 'Cultivo creado exitosamente');
     } catch (error) {
       console.error('Error guardando cultivo:', error);
+      alert('Error al guardar el cultivo. Verifica la conexión con el servidor.');
     } finally {
       setLoading(false);
     }
@@ -138,20 +150,60 @@ const CultivosManagement: React.FC = () => {
   };
 
   // Eliminar cultivo
-  const deleteCultivo = (cultivoId: number) => {
-    setCultivos(prev => prev.filter(cultivo => cultivo.id !== cultivoId));
+  const deleteCultivo = async (cultivoId: number) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este cultivo?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Obtener token del localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No hay token de autenticación');
+        alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:8080/api/cultivos/${cultivoId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('Cultivo eliminado exitosamente');
+      
+      // Recargar la lista de cultivos desde la API
+      await loadCultivos();
+      
+      alert('Cultivo eliminado exitosamente');
+    } catch (error) {
+      console.error('Error eliminando cultivo:', error);
+      alert('Error al eliminar el cultivo. Verifica la conexión con el servidor.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Resetear formulario
   const resetForm = () => {
     setFormData({
       nombre: '',
+      tipo: '',
       variedad: '',
-      ciclo_dias: 0,
-      rendimiento_esperado: 0,
-      unidad_rendimiento: 'kg/ha',
+      cicloDias: 0,
+      rendimientoEsperado: 0,
+      unidadRendimiento: 'kg/ha',
+      precioPorTonelada: 0,
       descripcion: '',
-      estado: 'activo'
+      estado: 'ACTIVO'
     });
     setEditingCultivo(null);
     setShowForm(false);
@@ -244,6 +296,30 @@ const CultivosManagement: React.FC = () => {
 
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                Tipo de Cultivo:
+              </label>
+              <select
+                value={formData.tipo}
+                onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">Seleccionar tipo</option>
+                {tiposCultivo.map(tipo => (
+                  <option key={tipo.value} value={tipo.value}>
+                    {tipo.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                 Variedad:
               </label>
               <input
@@ -267,8 +343,8 @@ const CultivosManagement: React.FC = () => {
               </label>
               <input
                 type="number"
-                value={formData.ciclo_dias}
-                onChange={(e) => setFormData(prev => ({ ...prev, ciclo_dias: parseInt(e.target.value) || 0 }))}
+                value={formData.cicloDias}
+                onChange={(e) => setFormData(prev => ({ ...prev, cicloDias: parseInt(e.target.value) || 0 }))}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -288,8 +364,8 @@ const CultivosManagement: React.FC = () => {
               <div style={{ display: 'flex', gap: '10px' }}>
                 <input
                   type="number"
-                  value={formData.rendimiento_esperado}
-                  onChange={(e) => setFormData(prev => ({ ...prev, rendimiento_esperado: parseFloat(e.target.value) || 0 }))}
+                  value={formData.rendimientoEsperado}
+                  onChange={(e) => setFormData(prev => ({ ...prev, rendimientoEsperado: parseFloat(e.target.value) || 0 }))}
                   style={{
                     flex: 1,
                     padding: '10px',
@@ -302,8 +378,8 @@ const CultivosManagement: React.FC = () => {
                   min="0"
                 />
                 <select
-                  value={formData.unidad_rendimiento}
-                  onChange={(e) => setFormData(prev => ({ ...prev, unidad_rendimiento: e.target.value }))}
+                  value={formData.unidadRendimiento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, unidadRendimiento: e.target.value }))}
                   style={{
                     padding: '10px',
                     border: '1px solid #ddd',
@@ -322,11 +398,32 @@ const CultivosManagement: React.FC = () => {
 
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                Precio por Tonelada ($):
+              </label>
+              <input
+                type="number"
+                value={formData.precioPorTonelada}
+                onChange={(e) => setFormData(prev => ({ ...prev, precioPorTonelada: parseFloat(e.target.value) || 0 }))}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  fontSize: '14px'
+                }}
+                placeholder="450.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                 Estado:
               </label>
               <select
                 value={formData.estado}
-                onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value as 'activo' | 'inactivo' }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value as 'ACTIVO' | 'INACTIVO' }))}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -335,8 +432,8 @@ const CultivosManagement: React.FC = () => {
                   fontSize: '14px'
                 }}
               >
-                <option value="activo">✅ Activo</option>
-                <option value="inactivo">❌ Inactivo</option>
+                <option value="ACTIVO">✅ Activo</option>
+                <option value="INACTIVO">❌ Inactivo</option>
               </select>
             </div>
           </div>
@@ -465,24 +562,30 @@ const CultivosManagement: React.FC = () => {
                       borderRadius: '12px',
                       fontSize: '12px',
                       fontWeight: 'bold',
-                      background: cultivo.estado === 'activo' ? '#dcfce7' : '#fee2e2',
-                      color: cultivo.estado === 'activo' ? '#166534' : '#991b1b'
+                      background: cultivo.estado === 'ACTIVO' ? '#dcfce7' : '#fee2e2',
+                      color: cultivo.estado === 'ACTIVO' ? '#166534' : '#991b1b'
                     }}>
-                      {cultivo.estado === 'activo' ? '✅ Activo' : '❌ Inactivo'}
+                      {cultivo.estado === 'ACTIVO' ? '✅ Activo' : '❌ Inactivo'}
                     </span>
                   </div>
                   <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '14px' }}>
-                    <strong>Ciclo:</strong> {cultivo.ciclo_dias} días | 
-                    <strong> Rendimiento:</strong> {cultivo.rendimiento_esperado} {cultivo.unidad_rendimiento}
+                    <strong>Tipo:</strong> {cultivo.tipo} | 
+                    <strong> Ciclo:</strong> {cultivo.cicloDias} días | 
+                    <strong> Rendimiento:</strong> {cultivo.rendimientoEsperado} {cultivo.unidadRendimiento}
                   </p>
+                  {cultivo.precioPorTonelada > 0 && (
+                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '14px' }}>
+                      <strong>Precio por Tonelada:</strong> ${cultivo.precioPorTonelada.toFixed(2)}
+                    </p>
+                  )}
                   {cultivo.descripcion && (
                     <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '14px' }}>
                       <strong>Descripción:</strong> {cultivo.descripcion}
                     </p>
                   )}
-                  {cultivo.fecha_creacion && (
+                  {cultivo.createdAt && (
                     <p style={{ margin: '0', color: '#666', fontSize: '12px' }}>
-                      <strong>Creado:</strong> {formatDate(cultivo.fecha_creacion)}
+                      <strong>Creado:</strong> {formatDate(cultivo.createdAt)}
                     </p>
                   )}
                 </div>

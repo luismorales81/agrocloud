@@ -35,7 +35,11 @@ const Input: React.FC<InputProps> = ({
         type={type}
         placeholder={placeholder}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          if (e && e.target) {
+            onChange(e.target.value);
+          }
+        }}
         disabled={disabled}
         className={`input ${error ? 'input-error' : ''}`}
       />

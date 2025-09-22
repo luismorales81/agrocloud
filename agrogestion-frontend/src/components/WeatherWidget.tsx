@@ -45,7 +45,7 @@ const WeatherWidget: React.FC = () => {
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
 
   // API Key de OpenWeatherMap - Usar datos simulados si no hay API key válida
-  const API_KEY = 'demo-key';
+  const API_KEY = '9dee7c2c4e36ce49c32fab5a51d6e25b'; // API key real del backend
   const USE_MOCK_DATA = API_KEY === 'demo-key' || API_KEY === '1234567890abcdef';
   const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 

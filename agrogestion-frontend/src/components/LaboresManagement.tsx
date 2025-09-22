@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useCurrency } from '../hooks/useCurrency';
+import { useCurrencyContext } from '../contexts/CurrencyContext';
+import { offlineService } from '../services/offlineService';
 
 interface Insumo {
   id: number;
@@ -33,15 +34,19 @@ interface Labor {
   responsable: string;
   horas_trabajo?: number;
   costo_total?: number;
-  progreso?: number;
+  // Nuevos campos para costos detallados
+  costo_base?: number;
+  costo_maquinaria?: number;
+  costo_mano_obra?: number;
+  maquinarias?: LaborMaquinaria[];
+  mano_obra?: LaborManoObra[];
 }
 
 interface MaquinariaAsignada {
   maquinaria_id: number;
   maquinaria_nombre: string;
-  horas_uso: number;
-  kilometros_recorridos: number;
   costo_total: number;
+  proveedor?: string;
 }
 
 interface InsumoUsado {
@@ -54,6 +59,27 @@ interface InsumoUsado {
   costo_total: number;
 }
 
+// Nuevas interfaces para costos detallados
+interface LaborMaquinaria {
+  id_labor_maquinaria: number;
+  id_labor: number;
+  descripcion: string;
+  proveedor?: string;
+  costo: number;
+  observaciones?: string;
+}
+
+interface LaborManoObra {
+  id_labor_mano_obra: number;
+  id_labor: number;
+  descripcion: string;
+  cantidad_personas: number;
+  proveedor?: string;
+  costo_total: number;
+  horas_trabajo?: number;
+  observaciones?: string;
+}
+
 interface Lote {
   id: number;
   nombre: string;
@@ -62,13 +88,115 @@ interface Lote {
 }
 
 const LaboresManagement: React.FC = () => {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrencyContext();
+  
+  // Función para mapear estados del frontend al backend
+  const mapEstadoToBackend = (estado: string) => {
+    const estadoMap: { [key: string]: string } = {
+      'planificada': 'PLANIFICADA',
+      'en_progreso': 'EN_PROGRESO',
+      'completada': 'COMPLETADA',
+      'cancelada': 'CANCELADA'
+    };
+    return estadoMap[estado] || 'PLANIFICADA';
+  };
+
+  // Función para mapear estados del backend al frontend
+  const mapEstadoFromBackend = (estado: string) => {
+    const estadoMap: { [key: string]: string } = {
+      'PLANIFICADA': 'planificada',
+      'EN_PROGRESO': 'en_progreso',
+      'COMPLETADA': 'completada',
+      'CANCELADA': 'cancelada'
+    };
+    return estadoMap[estado] || 'planificada';
+  };
+
+  // Función para mapear tipos de labor del frontend al backend
+  const mapTipoLaborToBackend = (tipo: string) => {
+    const tipoMap: { [key: string]: string } = {
+      'siembra': 'SIEMBRA',
+      'fertilizacion': 'FERTILIZACION',
+      'riego': 'RIEGO',
+      'cosecha': 'COSECHA',
+      'mantenimiento': 'MANTENIMIENTO',
+      'poda': 'PODA',
+      'control_plagas': 'CONTROL_PLAGAS',
+      'control_malezas': 'CONTROL_MALEZAS',
+      'desmalezado': 'CONTROL_MALEZAS', // Mapear desmalezado a CONTROL_MALEZAS
+      'aplicacion_herbicida': 'CONTROL_MALEZAS', // Mapear aplicación herbicida a CONTROL_MALEZAS
+      'aplicacion_insecticida': 'CONTROL_PLAGAS', // Mapear aplicación insecticida a CONTROL_PLAGAS
+      'pulverizacion': 'MANTENIMIENTO', // Mapear pulverización a MANTENIMIENTO
+      'arado': 'MANTENIMIENTO', // Mapear arado a MANTENIMIENTO
+      'rastra': 'MANTENIMIENTO', // Mapear rastra a MANTENIMIENTO
+      'monitoreo': 'ANALISIS_SUELO', // Mapear monitoreo a ANALISIS_SUELO
+      'otro': 'OTROS', // Mapear otro a OTROS
+      'analisis_suelo': 'ANALISIS_SUELO',
+      'otros': 'OTROS'
+    };
+    return tipoMap[tipo.toLowerCase()] || 'OTROS';
+  };
+
+  // Función para mapear tipos de labor del backend al frontend
+  const mapTipoLaborFromBackend = (tipo: string) => {
+    const tipoMap: { [key: string]: string } = {
+      'SIEMBRA': 'siembra',
+      'FERTILIZACION': 'fertilizacion',
+      'RIEGO': 'riego',
+      'COSECHA': 'cosecha',
+      'MANTENIMIENTO': 'mantenimiento',
+      'PODA': 'poda',
+      'CONTROL_PLAGAS': 'control_plagas',
+      'CONTROL_MALEZAS': 'control_malezas',
+      'ANALISIS_SUELO': 'analisis_suelo',
+      'OTROS': 'otros'
+    };
+    return tipoMap[tipo] || 'otros';
+  };
+  
   const [labores, setLabores] = useState<Labor[]>([]);
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [insumos, setInsumos] = useState<Insumo[]>([]);
   const [maquinaria, setMaquinaria] = useState<Maquinaria[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingLabor, setEditingLabor] = useState<Labor | null>(null);
+  const [showDetallesCostos, setShowDetallesCostos] = useState(false);
+  const [laborSeleccionada, setLaborSeleccionada] = useState<Labor | null>(null);
+  
+  // Estados para formularios de maquinaria y mano de obra
+  const [showFormMaquinaria, setShowFormMaquinaria] = useState(false);
+  const [showFormMaquinariaAlquilada, setShowFormMaquinariaAlquilada] = useState(false);
+  const [showFormManoObra, setShowFormManoObra] = useState(false);
+  const [laborParaMaquinaria, setLaborParaMaquinaria] = useState<Labor | null>(null);
+  const [laborParaManoObra, setLaborParaManoObra] = useState<Labor | null>(null);
+  
+  // Formulario de maquinaria
+  const [formMaquinaria, setFormMaquinaria] = useState({
+    descripcion: '',
+    proveedor: '',
+    horas_uso: '',
+    costo: '',
+    kilometros_recorridos: '',
+    observaciones: ''
+  });
+  
+  // Formulario de mano de obra
+  const [formManoObra, setFormManoObra] = useState({
+    descripcion: '',
+    cantidad_personas: 1,
+    proveedor: '',
+    costo_total: '',
+    horas_trabajo: '',
+    observaciones: ''
+  });
+
+  // Formulario de maquinaria alquilada
+  const [formMaquinariaAlquilada, setFormMaquinariaAlquilada] = useState({
+    descripcion: '',
+    proveedor: '',
+    costo: '',
+    observaciones: ''
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState('todos');
   const [loading, setLoading] = useState(false);
@@ -81,13 +209,13 @@ const LaboresManagement: React.FC = () => {
     estado: 'planificada',
     insumos_usados: [],
     maquinaria_asignada: [],
-    responsable: '',
-    progreso: 0
+    responsable: ''
   });
 
   // Estados para manejar insumos y maquinaria en el formulario
   const [selectedInsumos, setSelectedInsumos] = useState<InsumoUsado[]>([]);
   const [selectedMaquinaria, setSelectedMaquinaria] = useState<MaquinariaAsignada[]>([]);
+  const [selectedManoObra, setSelectedManoObra] = useState<LaborManoObra[]>([]);
   const [showInsumosModal, setShowInsumosModal] = useState(false);
   const [showMaquinariaModal, setShowMaquinariaModal] = useState(false);
   
@@ -112,61 +240,122 @@ const LaboresManagement: React.FC = () => {
     { value: 'cancelada', label: 'Cancelada', color: '#ef4444' }
   ];
 
-  // Cargar datos mock
+  // Cargar datos desde la API real
   const loadData = async () => {
     setLoading(true);
     
-    setTimeout(() => {
-      const mockLotes: Lote[] = [
-        { id: 1, nombre: 'Lote A1', superficie: 25.5, cultivo: 'Soja' },
-        { id: 2, nombre: 'Lote A2', superficie: 30.25, cultivo: 'Maíz' },
-        { id: 3, nombre: 'Lote B1', superficie: 40.0, cultivo: 'Trigo' }
-      ];
+    try {
+      // Obtener token del localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No hay token de autenticación');
+        alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
 
-      const mockInsumos: Insumo[] = [
-        { id: 1, nombre: 'Semilla Soja DM 53i54', tipo: 'semilla', stock_actual: 2500, unidad_medida: 'kg', precio_unitario: 8500 },
-        { id: 2, nombre: 'Fertilizante Urea 46%', tipo: 'fertilizante', stock_actual: 8000, unidad_medida: 'kg', precio_unitario: 450 },
-        { id: 3, nombre: 'Glifosato 48%', tipo: 'herbicida', stock_actual: 150, unidad_medida: 'L', precio_unitario: 2800 },
-        { id: 4, nombre: 'Aceite de Motor 15W40', tipo: 'lubricante', stock_actual: 80, unidad_medida: 'L', precio_unitario: 1200 }
-      ];
-
-      const mockMaquinaria: Maquinaria[] = [
-        { id: 1, nombre: 'Tractor John Deere 5075E', tipo: 'tractor', estado: 'activo', kilometros_uso: 12500.50, costo_por_hora: 45.00 },
-        { id: 2, nombre: 'Cosechadora New Holland CR8.90', tipo: 'cosechadora', estado: 'activo', kilometros_uso: 8500.25, costo_por_hora: 120.00 },
-        { id: 3, nombre: 'Pulverizadora Jacto 2000', tipo: 'pulverizadora', estado: 'activo', kilometros_uso: 3200.75, costo_por_hora: 35.00 },
-        { id: 4, nombre: 'Sembradora de Precisión', tipo: 'sembradora', estado: 'activo', kilometros_uso: 1800.00, costo_por_hora: 25.00 }
-      ];
-
-      const mockLabores: Labor[] = [
-        {
-          id: 1,
-          tipo: 'siembra',
-          fecha: '2024-11-15',
-          fecha_fin: '2024-11-15',
-          observaciones: 'Siembra de soja con densidad de 25 plantas/m²',
-          lote_id: 1,
-          lote_nombre: 'Lote A1',
-          estado: 'completada',
-          insumos_usados: [
-            { insumo_id: 1, insumo_nombre: 'Semilla Soja DM 53i54', cantidad_usada: 500, cantidad_planificada: 500, unidad_medida: 'kg', costo_unitario: 8500, costo_total: 4250000 }
-          ],
-          maquinaria_asignada: [
-            { maquinaria_id: 1, maquinaria_nombre: 'Tractor John Deere 5075E', horas_uso: 8, kilometros_recorridos: 45.5, costo_total: 360 },
-            { maquinaria_id: 4, maquinaria_nombre: 'Sembradora de Precisión', horas_uso: 8, kilometros_recorridos: 45.5, costo_total: 200 }
-          ],
-          responsable: 'Juan Pérez',
-          horas_trabajo: 8,
-          costo_total: 4250560,
-          progreso: 100
+      // Cargar lotes
+      const lotesResponse = await fetch('http://localhost:8080/api/lotes', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      ];
+      });
 
-      setLotes(mockLotes);
-      setInsumos(mockInsumos);
-      setMaquinaria(mockMaquinaria);
-      setLabores(mockLabores);
+      if (lotesResponse.ok) {
+        const lotesData = await lotesResponse.json();
+        const lotesMapeados: Lote[] = lotesData.map((lote: any) => ({
+          id: lote.id,
+          nombre: lote.nombre,
+          superficie: lote.areaHectareas || 0,
+          cultivo: lote.cultivoActual || ''
+        }));
+        setLotes(lotesMapeados);
+      }
+
+      // Cargar insumos
+      const insumosResponse = await fetch('http://localhost:8080/api/insumos', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (insumosResponse.ok) {
+        const insumosData = await insumosResponse.json();
+        const insumosMapeados: Insumo[] = insumosData.map((insumo: any) => ({
+          id: insumo.id,
+          nombre: insumo.nombre,
+          tipo: insumo.tipo,
+          stock_actual: insumo.stockActual || 0,
+          unidad_medida: insumo.unidadMedida || '',
+          precio_unitario: insumo.precioUnitario || 0
+        }));
+        setInsumos(insumosMapeados);
+      }
+
+      // Cargar maquinaria
+      const maquinariaResponse = await fetch('http://localhost:8080/api/maquinaria', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (maquinariaResponse.ok) {
+        const maquinariaData = await maquinariaResponse.json();
+        const maquinariaMapeada: Maquinaria[] = maquinariaData.map((maq: any) => ({
+          id: maq.id,
+          nombre: maq.nombre,
+          tipo: maq.tipo,
+          estado: maq.estado,
+          kilometros_uso: maq.kilometrosUso || 0,
+          costo_por_hora: maq.costoPorHora || 0
+        }));
+        setMaquinaria(maquinariaMapeada);
+      }
+
+      // Cargar labores usando servicio offline
+      try {
+        const laboresData = await offlineService.getLabores();
+        if (laboresData) {
+          // Filtrar solo labores activas (no eliminadas)
+          const laboresActivas = laboresData.filter((labor: any) => labor.activo !== false);
+          const laboresMapeadas: Labor[] = laboresActivas.map((labor: any) => ({
+            id: labor.id,
+            tipo: labor.tipo || '',
+            fecha: labor.fechaInicio || '',
+            fecha_fin: labor.fechaFin || '',
+            observaciones: labor.observaciones || '',
+            lote_id: labor.loteId || 0,
+            lote_nombre: labor.loteNombre || '',
+            estado: mapEstadoFromBackend(labor.estado || 'PLANIFICADA'),
+            insumos_usados: labor.insumosUsados || [],
+            maquinaria_asignada: labor.maquinariaAsignada || [],
+            responsable: labor.responsable || '',
+            horas_trabajo: labor.horasTrabajo || 0,
+            costo_total: labor.costoTotal || 0,
+            // Nuevos campos para costos detallados - mapeo correcto del backend
+            costo_base: labor.costoBase || 0,
+            costo_maquinaria: labor.costoMaquinaria || 0,
+            costo_mano_obra: labor.costoManoObra || 0,
+            maquinarias: labor.maquinarias || [],
+            mano_obra: labor.manoObra || []
+          }));
+          setLabores(laboresMapeadas);
+        }
+      } catch (error) {
+        console.error('Error cargando labores:', error);
+      }
+
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+      alert('Error al cargar los datos. Verifica la conexión con el servidor.');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   useEffect(() => {
@@ -198,17 +387,33 @@ const LaboresManagement: React.FC = () => {
       estado: 'planificada',
       insumos_usados: [],
       maquinaria_asignada: [],
-      responsable: '',
-      progreso: 0
+      responsable: ''
     });
     setSelectedInsumos([]);
     setSelectedMaquinaria([]);
+    setSelectedManoObra([]);
     setSelectedInsumoId(0);
     setSelectedMaquinariaId(0);
     setInsumoCantidad(0);
     setMaquinariaHoras(0);
     setMaquinariaKilometros(0);
     setEditingLabor(null);
+    
+    // Limpiar formularios de maquinaria
+    setFormMaquinaria({
+      descripcion: '',
+      proveedor: '',
+      horas_uso: '',
+      costo: '',
+      kilometros_recorridos: '',
+      observaciones: ''
+    });
+    setFormMaquinariaAlquilada({
+      descripcion: '',
+      proveedor: '',
+      costo: '',
+      observaciones: ''
+    });
   };
 
   const handleOpenAddModal = () => {
@@ -230,11 +435,190 @@ const LaboresManagement: React.FC = () => {
   };
 
   const handleOpenEditModal = (labor: Labor) => {
-    setFormData(labor);
-    setSelectedInsumos(labor.insumos_usados);
-    setSelectedMaquinaria(labor.maquinaria_asignada);
+    // Mapear el tipo de labor del backend al frontend
+    const laborMapeada = {
+      ...labor,
+      tipo: mapTipoLaborFromBackend(labor.tipo)
+    };
+    
+    setFormData(laborMapeada);
+    
+    // Mapear insumos del formato del backend al formato del frontend
+    const insumosMapeados = (labor.insumos_usados || []).map((insumo: any) => ({
+      insumo_id: insumo.insumo_id || insumo.id,
+      insumo_nombre: insumo.insumo_nombre || insumo.nombre,
+      cantidad_usada: insumo.cantidad_usada || insumo.cantidad,
+      cantidad_planificada: insumo.cantidad_planificada || insumo.cantidad,
+      unidad_medida: insumo.unidad_medida || insumo.unidad,
+      costo_unitario: insumo.costo_unitario || insumo.precio_unitario,
+      costo_total: insumo.costo_total || (insumo.cantidad * insumo.precio_unitario)
+    }));
+    
+    setSelectedInsumos(insumosMapeados);
+    
+    // Mapear maquinarias del formato del backend al formato del frontend
+    const maquinariasMapeadas = (labor.maquinarias || []).map((maq: any) => ({
+      maquinaria_id: maq.id_labor_maquinaria,
+      maquinaria_nombre: maq.descripcion, // El frontend espera maquinaria_nombre
+      descripcion: maq.descripcion,
+      proveedor: maq.proveedor,
+      costo_total: maq.costo, // Mapear costo a costo_total
+      horas_uso: 0, // No se almacena en el backend
+      kilometros_recorridos: 0 // No se almacena en el backend
+    }));
+    
+    // Mapear mano de obra del formato del backend al formato del frontend
+    const manoObraMapeada = (labor.mano_obra || []).map((mo: any) => ({
+      id_labor_mano_obra: mo.idLaborManoObra || mo.id_labor_mano_obra,
+      id_labor: mo.idLabor || mo.id_labor,
+      descripcion: mo.descripcion,
+      cantidad_personas: mo.cantidadPersonas || mo.cantidad_personas,
+      proveedor: mo.proveedor,
+      costo_total: mo.costoTotal || mo.costo_total || 0,
+      horas_trabajo: mo.horasTrabajo || mo.horas_trabajo,
+      observaciones: mo.observaciones
+    }));
+    
+    setSelectedMaquinaria(maquinariasMapeadas);
+    setSelectedManoObra(manoObraMapeada);
     setEditingLabor(labor);
     setShowForm(true);
+  };
+
+  const handleVerDetallesCostos = (labor: Labor) => {
+    setLaborSeleccionada(labor);
+    setShowDetallesCostos(true);
+  };
+
+  // Funciones para manejar formularios de maquinaria
+  const handleAgregarMaquinaria = (labor: Labor) => {
+    setLaborParaMaquinaria(labor);
+    setFormMaquinaria({
+      descripcion: '',
+      proveedor: '',
+      horas_uso: '',
+      costo: '',
+      kilometros_recorridos: '',
+      observaciones: ''
+    });
+    setShowFormMaquinaria(true);
+  };
+
+  const handleGuardarMaquinaria = () => {
+    if (!formMaquinaria.descripcion || !formMaquinaria.horas_uso || !formMaquinaria.costo) {
+      alert('Por favor complete la descripción, horas de uso y verifique que el costo se haya calculado');
+      return;
+    }
+
+    const nuevaMaquinaria: LaborMaquinaria = {
+      id_labor_maquinaria: Date.now(), // ID temporal
+      id_labor: 0, // Se asignará cuando se guarde la labor
+      descripcion: formMaquinaria.descripcion,
+      proveedor: undefined, // Maquinaria propia no tiene proveedor
+      costo: parseFloat(formMaquinaria.costo) || 0,
+      observaciones: formMaquinaria.observaciones || undefined
+    };
+
+    // Agregar a la lista de maquinaria seleccionada
+    const maquinariaAsignada: MaquinariaAsignada = {
+      maquinaria_id: nuevaMaquinaria.id_labor_maquinaria,
+      maquinaria_nombre: nuevaMaquinaria.descripcion,
+      costo_total: nuevaMaquinaria.costo
+    };
+
+    setSelectedMaquinaria(prev => [...prev, maquinariaAsignada]);
+    
+    // Limpiar formulario
+    setFormMaquinaria({
+      descripcion: '',
+      proveedor: '',
+      horas_uso: '',
+      costo: '',
+      kilometros_recorridos: '',
+      observaciones: ''
+    });
+    
+    setShowFormMaquinaria(false);
+  };
+
+  const handleGuardarMaquinariaAlquilada = () => {
+    if (!formMaquinariaAlquilada.descripcion || !formMaquinariaAlquilada.costo || !formMaquinariaAlquilada.proveedor) {
+      alert('Por favor complete la descripción, proveedor y costo');
+      return;
+    }
+
+    const nuevaMaquinaria: LaborMaquinaria = {
+      id_labor_maquinaria: Date.now(), // ID temporal
+      id_labor: 0, // Se asignará cuando se guarde la labor
+      descripcion: formMaquinariaAlquilada.descripcion,
+      proveedor: formMaquinariaAlquilada.proveedor,
+      costo: parseFloat(formMaquinariaAlquilada.costo) || 0,
+      observaciones: formMaquinariaAlquilada.observaciones || undefined
+    };
+
+    // Agregar a la lista de maquinaria seleccionada
+    const maquinariaAsignada: MaquinariaAsignada = {
+      maquinaria_id: nuevaMaquinaria.id_labor_maquinaria,
+      maquinaria_nombre: `${nuevaMaquinaria.descripcion} (${nuevaMaquinaria.proveedor})`,
+      costo_total: nuevaMaquinaria.costo
+    };
+
+    setSelectedMaquinaria(prev => [...prev, maquinariaAsignada]);
+    
+    // Limpiar formulario
+    setFormMaquinariaAlquilada({
+      descripcion: '',
+      proveedor: '',
+      costo: '',
+      observaciones: ''
+    });
+    
+    setShowFormMaquinariaAlquilada(false);
+  };
+
+  // Funciones para manejar formularios de mano de obra
+  const handleAgregarManoObra = () => {
+    setFormManoObra({
+      descripcion: '',
+      cantidad_personas: 1,
+      proveedor: '',
+      costo_total: '',
+      horas_trabajo: '',
+      observaciones: ''
+    });
+    setShowFormManoObra(true);
+  };
+
+  const handleGuardarManoObra = () => {
+    if (!formManoObra.descripcion || !formManoObra.costo_total) {
+      alert('Por favor complete la descripción y el costo total');
+      return;
+    }
+
+    const nuevaManoObra: LaborManoObra = {
+      id_labor_mano_obra: Date.now(), // ID temporal
+      id_labor: 0, // Se asignará cuando se guarde la labor
+      descripcion: formManoObra.descripcion,
+      cantidad_personas: formManoObra.cantidad_personas,
+      proveedor: formManoObra.proveedor || undefined,
+      costo_total: parseFloat(formManoObra.costo_total) || 0,
+      horas_trabajo: formManoObra.horas_trabajo ? parseFloat(formManoObra.horas_trabajo) : undefined,
+      observaciones: formManoObra.observaciones || undefined
+    };
+
+    addManoObra(nuevaManoObra);
+    
+    // Limpiar formulario
+    setFormManoObra({
+      descripcion: '',
+      cantidad_personas: 1,
+      proveedor: '',
+      costo_total: '',
+      horas_trabajo: '',
+      observaciones: ''
+    });
+    
+    setShowFormManoObra(false);
   };
 
   const handleCloseModal = () => {
@@ -258,44 +642,170 @@ const LaboresManagement: React.FC = () => {
     }));
   };
 
-  const saveLabor = () => {
+  const saveLabor = async () => {
     if (!formData.tipo || !formData.fecha || !formData.lote_id || !formData.responsable) {
       alert('Por favor complete todos los campos obligatorios');
       return;
     }
 
-    // Crear labor con insumos y maquinaria
-    const laborCompleta = {
-      ...formData,
-      insumos_usados: selectedInsumos,
-      maquinaria_asignada: selectedMaquinaria,
-      costo_total: calcularCostoTotal()
-    };
+    try {
+      setLoading(true);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
 
-    if (editingLabor) {
-      // Editar labor existente
-      setLabores(prev => prev.map(l => l.id === editingLabor.id ? { ...laborCompleta, id: l.id } : l));
-      alert('Labor actualizada exitosamente');
-    } else {
-      // Crear nueva labor
-      const newId = Math.max(...labores.map(l => l.id || 0)) + 1;
-      const newLabor = { ...laborCompleta, id: newId };
-      setLabores(prev => [...prev, newLabor]);
+      // Crear labor con insumos, maquinaria y mano de obra
+      console.log('Tipo original:', formData.tipo);
+      console.log('Tipo mapeado:', mapTipoLaborToBackend(formData.tipo));
       
-      // Actualizar stock de insumos y uso de maquinaria
-      actualizarStockInsumos();
-      actualizarUsoMaquinaria();
+      // Transformar maquinaria al formato que espera el backend
+      const maquinariaTransformada = selectedMaquinaria.map(maq => {
+        // Determinar si es propia o alquilada basado en si tiene proveedor
+        const esAlquilada = maq.proveedor && maq.proveedor.trim() !== '';
+        return {
+          descripcion: maq.maquinaria_nombre,
+          proveedor: esAlquilada ? maq.proveedor : null,
+          costo: maq.costo_total,
+          observaciones: null
+        };
+      });
       
-      alert('Labor creada exitosamente');
+      // Transformar mano de obra al formato que espera el backend
+      const manoObraTransformada = selectedManoObra.map(mo => ({
+        descripcion: mo.descripcion || 'Mano de obra',
+        cantidad_personas: mo.cantidad_personas || 1,
+        proveedor: mo.proveedor || null,
+        costo_total: mo.costo_total || 0,
+        horas_trabajo: mo.horas_trabajo || null,
+        observaciones: mo.observaciones || null
+      }));
+      
+      const laborCompleta = {
+        // Mapear campos del frontend al backend
+        tipoLabor: mapTipoLaborToBackend(formData.tipo), // Mapear tipo al formato del backend
+        descripcion: formData.observaciones || '',
+        fechaInicio: formData.fecha, // Frontend: fecha -> Backend: fechaInicio
+        fechaFin: formData.fecha_fin || null,
+        estado: mapEstadoToBackend(formData.estado), // Mapear estado al formato del backend
+        responsable: formData.responsable || '',
+        horasTrabajo: formData.horas_trabajo || 0,
+        costoTotal: calcularCostoTotal(),
+        lote: formData.lote_id ? { id: formData.lote_id } : null,
+        // Campos adicionales del frontend - transformados al formato correcto
+        insumosUsados: selectedInsumos,
+        maquinariaAsignada: maquinariaTransformada,
+        manoObra: manoObraTransformada
+      };
+
+      console.log('Datos a enviar al backend:', laborCompleta);
+      console.log('Maquinaria seleccionada:', selectedMaquinaria);
+      console.log('Maquinaria transformada:', maquinariaTransformada);
+      console.log('Mano de obra seleccionada:', selectedManoObra);
+      console.log('Mano de obra transformada:', manoObraTransformada);
+
+      let response;
+      if (editingLabor) {
+        // Editar labor existente
+        response = await fetch(`http://localhost:8080/api/labores/${editingLabor.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(laborCompleta)
+        });
+      } else {
+        // Crear nueva labor
+        response = await fetch('http://localhost:8080/api/labores', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(laborCompleta)
+        });
+      }
+
+      if (response.ok) {
+        alert(editingLabor ? 'Labor actualizada exitosamente' : 'Labor creada exitosamente');
+        handleCloseModal();
+        loadData(); // Recargar datos desde el backend
+      } else {
+        let errorMessage = 'Error al guardar la labor';
+        try {
+          // Leer el cuerpo de la respuesta una sola vez
+          const responseText = await response.text();
+          try {
+            // Intentar parsear como JSON
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (jsonError) {
+            // Si no es JSON válido, usar el texto directamente
+            errorMessage = responseText || `Error ${response.status}: ${response.statusText}`;
+          }
+        } catch (textError) {
+          // Si no se puede leer el texto, usar información básica
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
+        }
+        console.error('Error al guardar labor:', response.status, response.statusText, errorMessage);
+        alert(`Error: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar la labor');
+    } finally {
+      setLoading(false);
     }
-
-    handleCloseModal();
   };
 
-  const deleteLabor = (id: number) => {
+  const deleteLabor = async (id: number) => {
     if (window.confirm('¿Está seguro de que desea eliminar esta labor?')) {
-      setLabores(prev => prev.filter(l => l.id !== id));
-      alert('Labor eliminada exitosamente');
+      try {
+        setLoading(true);
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
+          return;
+        }
+
+        const response = await fetch(`http://localhost:8080/api/labores/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok || response.status === 204) {
+          // Eliminar del estado local solo si la API confirma la eliminación
+          setLabores(prev => prev.filter(l => l.id !== id));
+          alert('Labor eliminada exitosamente');
+        } else {
+          let errorMessage = 'Error al eliminar la labor';
+          try {
+            const responseText = await response.text();
+            try {
+              const errorData = JSON.parse(responseText);
+              errorMessage = errorData.error || errorMessage;
+            } catch (jsonError) {
+              errorMessage = responseText || `Error ${response.status}: ${response.statusText}`;
+            }
+          } catch (textError) {
+            errorMessage = `Error ${response.status}: ${response.statusText}`;
+          }
+          console.error('Error al eliminar la labor:', response.status, response.statusText, errorMessage);
+          alert(`Error al eliminar la labor: ${errorMessage}`);
+        }
+      } catch (error) {
+        console.error('Error de conexión al eliminar la labor:', error);
+        alert('Error de conexión al eliminar la labor. Por favor, verifica tu conexión e intenta nuevamente.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -359,7 +869,7 @@ const LaboresManagement: React.FC = () => {
       // Actualizar si ya existe
       setSelectedMaquinaria(prev => prev.map(m => 
         m.maquinaria_id === maq.id 
-          ? { ...m, horas_uso: horas, kilometros_recorridos: kilometros, costo_total: horas * maq.costo_por_hora }
+          ? { ...m, costo_total: horas * maq.costo_por_hora }
           : m
       ));
     } else {
@@ -367,8 +877,6 @@ const LaboresManagement: React.FC = () => {
       const nuevaMaquinaria: MaquinariaAsignada = {
         maquinaria_id: maq.id,
         maquinaria_nombre: maq.nombre,
-        horas_uso: horas,
-        kilometros_recorridos: kilometros,
         costo_total: horas * maq.costo_por_hora
       };
       setSelectedMaquinaria(prev => [...prev, nuevaMaquinaria]);
@@ -379,12 +887,21 @@ const LaboresManagement: React.FC = () => {
     setSelectedMaquinaria(prev => prev.filter(m => m.maquinaria_id !== maquinariaId));
   };
 
+  // Funciones para manejar mano de obra en el formulario
+  const addManoObra = (manoObra: LaborManoObra) => {
+    setSelectedManoObra(prev => [...prev, manoObra]);
+  };
+
+  const removeManoObra = (index: number) => {
+    setSelectedManoObra(prev => prev.filter((_, i) => i !== index));
+  };
+
   const updateMaquinariaUso = (maquinariaId: number, horas: number, kilometros: number) => {
     const maq = maquinaria.find(m => m.id === maquinariaId);
     if (maq) {
       setSelectedMaquinaria(prev => prev.map(m => 
         m.maquinaria_id === maquinariaId 
-          ? { ...m, horas_uso: horas, kilometros_recorridos: kilometros, costo_total: horas * maq.costo_por_hora }
+          ? { ...m, costo_total: horas * maq.costo_por_hora }
           : m
       ));
     }
@@ -394,7 +911,8 @@ const LaboresManagement: React.FC = () => {
   const calcularCostoTotal = () => {
     const costoInsumos = selectedInsumos.reduce((sum, insumo) => sum + insumo.costo_total, 0);
     const costoMaquinaria = selectedMaquinaria.reduce((sum, maq) => sum + maq.costo_total, 0);
-    return costoInsumos + costoMaquinaria;
+    const costoManoObra = selectedManoObra.reduce((sum, mo) => sum + mo.costo_total, 0);
+    return costoInsumos + costoMaquinaria + costoManoObra;
   };
 
   // Actualizar stock de insumos
@@ -412,22 +930,21 @@ const LaboresManagement: React.FC = () => {
 
   // Actualizar uso de maquinaria
   const actualizarUsoMaquinaria = () => {
+    // Actualizar uso de maquinaria (sin kilómetros)
     selectedMaquinaria.forEach(maqUsada => {
       const maq = maquinaria.find(m => m.id === maqUsada.maquinaria_id);
       if (maq) {
-        const nuevosKilometros = maq.kilometros_uso + maqUsada.kilometros_recorridos;
-        setMaquinaria(prev => prev.map(m => 
-          m.id === maq.id ? { ...m, kilometros_uso: nuevosKilometros } : m
-        ));
+        // Solo actualizar horas de uso si es necesario
+        // Los kilómetros ya no se manejan
       }
     });
   };
 
   // Filtrar labores
   const filteredLabores = labores.filter(labor => {
-    const matchesSearch = labor.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         labor.lote_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         labor.responsable.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (labor.tipo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (labor.lote_nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (labor.responsable || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesEstado = filterEstado === 'todos' || labor.estado === filterEstado;
     return matchesSearch && matchesEstado;
   });
@@ -606,7 +1123,10 @@ const LaboresManagement: React.FC = () => {
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Estado</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Responsable</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Costo</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Costo Base</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Maquinaria</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Mano de Obra</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Total</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Acciones</th>
                 </tr>
               </thead>
@@ -625,7 +1145,7 @@ const LaboresManagement: React.FC = () => {
                       <span style={{ fontWeight: 'bold' }}>{labor.lote_nombre}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      {new Date(labor.fecha).toLocaleDateString('es-ES')}
+                      {labor.fecha ? new Date(labor.fecha).toLocaleDateString('es-ES') : 'Sin fecha'}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{
@@ -643,12 +1163,37 @@ const LaboresManagement: React.FC = () => {
                       {labor.responsable}
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <span style={{ fontWeight: 'bold', color: '#10b981' }}>
-                        {formatCurrency(labor.costo_total || 0)}
+                      <span style={{ fontWeight: 'bold', color: '#6b7280' }}>
+                        {formatCurrency(labor.costo_base || 0)}
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '5px' }}>
+                      <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>
+                        {formatCurrency(labor.costo_maquinaria || 0)}
+                      </span>
+                      {labor.maquinarias && labor.maquinarias.length > 0 && (
+                        <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>
+                          {labor.maquinarias.length} maquinaria(s)
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <span style={{ fontWeight: 'bold', color: '#f59e0b' }}>
+                        {formatCurrency(labor.costo_mano_obra || 0)}
+                      </span>
+                      {labor.mano_obra && labor.mano_obra.length > 0 && (
+                        <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>
+                          {labor.mano_obra.length} registro(s)
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <span style={{ fontWeight: 'bold', color: '#10b981', fontSize: '16px' }}>
+                        {formatCurrency((labor.costo_base || 0) + (labor.costo_maquinaria || 0) + (labor.costo_mano_obra || 0))}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => handleOpenEditModal(labor)}
                           style={{
@@ -660,8 +1205,24 @@ const LaboresManagement: React.FC = () => {
                             cursor: 'pointer',
                             fontSize: '12px'
                           }}
+                          title="Editar labor"
                         >
                           ✏️
+                        </button>
+                        <button
+                          onClick={() => handleVerDetallesCostos(labor)}
+                          style={{
+                            padding: '4px 8px',
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          title="Ver detalles de costos"
+                        >
+                          💰
                         </button>
                         <button
                           onClick={() => deleteLabor(labor.id!)}
@@ -674,6 +1235,7 @@ const LaboresManagement: React.FC = () => {
                             cursor: 'pointer',
                             fontSize: '12px'
                           }}
+                          title="Eliminar labor"
                         >
                           🗑️
                         </button>
@@ -876,26 +1438,6 @@ const LaboresManagement: React.FC = () => {
                   />
                 </div>
 
-                {/* Progreso */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
-                    Progreso (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.progreso}
-                    onChange={(e) => handleInputChange('progreso', Number(e.target.value))}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px'
-                    }}
-                  />
-                </div>
 
                 {/* Sección de Insumos */}
                 <div>
@@ -933,8 +1475,8 @@ const LaboresManagement: React.FC = () => {
                       maxHeight: '150px',
                       overflowY: 'auto'
                     }}>
-                      {selectedInsumos.map((insumo) => (
-                        <div key={insumo.insumo_id} style={{
+                      {selectedInsumos.map((insumo, index) => (
+                        <div key={insumo.insumo_id || `insumo-${index}`} style={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
@@ -992,21 +1534,38 @@ const LaboresManagement: React.FC = () => {
                     <label style={{ fontWeight: 'bold', color: '#374151' }}>
                       🚜 Maquinaria Utilizada
                     </label>
-                    <button
-                      type="button"
-                      onClick={handleOpenMaquinariaModal}
-                      style={{
-                        padding: '5px 10px',
-                        background: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      ➕ Agregar
-                    </button>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowFormMaquinaria(true)}
+                        style={{
+                          padding: '5px 10px',
+                          background: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '5px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        🏠 Propia
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowFormMaquinariaAlquilada(true)}
+                        style={{
+                          padding: '5px 10px',
+                          background: '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '5px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        🏢 Alquilada
+                      </button>
+                    </div>
                   </div>
                   
                   {selectedMaquinaria.length > 0 ? (
@@ -1017,8 +1576,8 @@ const LaboresManagement: React.FC = () => {
                       maxHeight: '150px',
                       overflowY: 'auto'
                     }}>
-                      {selectedMaquinaria.map((maq) => (
-                        <div key={maq.maquinaria_id} style={{
+                      {selectedMaquinaria.map((maq, index) => (
+                        <div key={maq.maquinaria_id || `maquinaria-${index}`} style={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
@@ -1030,7 +1589,7 @@ const LaboresManagement: React.FC = () => {
                               {maq.maquinaria_nombre}
                             </div>
                             <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                              {maq.horas_uso}h - {maq.kilometros_recorridos}km - {formatCurrency(maq.costo_total)}
+                              {formatCurrency(maq.costo_total)}
                             </div>
                           </div>
                           <button
@@ -1065,6 +1624,94 @@ const LaboresManagement: React.FC = () => {
                   )}
                 </div>
 
+                {/* Sección de Mano de Obra */}
+                <div>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    <label style={{ fontWeight: 'bold', color: '#374151' }}>
+                      👥 Mano de Obra
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowFormManoObra(true)}
+                      style={{
+                        padding: '5px 10px',
+                        background: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      ➕ Agregar
+                    </button>
+                  </div>
+                  
+                  {selectedManoObra.length > 0 ? (
+                    <div style={{ 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      padding: '10px',
+                      maxHeight: '150px',
+                      overflowY: 'auto'
+                    }}>
+                      {selectedManoObra.map((mo, index) => (
+                        <div key={mo.id_labor_mano_obra || `mano-obra-${index}`} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '5px 0',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '13px' }}>
+                              {mo.descripcion}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                              {mo.cantidad_personas} persona(s) {mo.proveedor && `- ${mo.proveedor}`}
+                              {mo.horas_trabajo && ` - ${mo.horas_trabajo}h`}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 'bold' }}>
+                              {formatCurrency(mo.costo_total)}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeManoObra(index)}
+                            style={{
+                              padding: '2px 6px',
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '10px'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      padding: '20px',
+                      textAlign: 'center',
+                      color: '#6b7280',
+                      fontSize: '14px'
+                    }}>
+                      No hay mano de obra agregada
+                    </div>
+                  )}
+                </div>
+
                 {/* Resumen de Costos */}
                 <div style={{
                   background: '#f8f9fa',
@@ -1081,6 +1728,10 @@ const LaboresManagement: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>Maquinaria:</span>
                       <span>{formatCurrency(selectedMaquinaria.reduce((sum, m) => sum + m.costo_total, 0))}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Mano de Obra:</span>
+                      <span>{formatCurrency(selectedManoObra.reduce((sum, mo) => sum + mo.costo_total, 0))}</span>
                     </div>
                     <div style={{ 
                       display: 'flex', 
@@ -1487,6 +2138,614 @@ const LaboresManagement: React.FC = () => {
                   </div>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalles de Costos */}
+      {showDetallesCostos && laborSeleccionada && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '20px',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '10px'
+            }}>
+              <h2 style={{ margin: 0, color: '#374151' }}>
+                💰 Detalles de Costos - {laborSeleccionada.tipo}
+              </h2>
+              <button
+                onClick={() => setShowDetallesCostos(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Resumen de Costos */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '15px',
+              marginBottom: '30px'
+            }}>
+              <div style={{
+                padding: '15px',
+                backgroundColor: '#f3f4f6',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '5px' }}>Costo Base</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#6b7280' }}>
+                  {formatCurrency(laborSeleccionada.costo_base || 0)}
+                </div>
+              </div>
+              <div style={{
+                padding: '15px',
+                backgroundColor: '#dbeafe',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '14px', color: '#1d4ed8', marginBottom: '5px' }}>Maquinaria</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1d4ed8' }}>
+                  {formatCurrency(laborSeleccionada.costo_maquinaria || 0)}
+                </div>
+              </div>
+              <div style={{
+                padding: '15px',
+                backgroundColor: '#fef3c7',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '14px', color: '#d97706', marginBottom: '5px' }}>Mano de Obra</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#d97706' }}>
+                  {formatCurrency(laborSeleccionada.costo_mano_obra || 0)}
+                </div>
+              </div>
+              <div style={{
+                padding: '15px',
+                backgroundColor: '#d1fae5',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '14px', color: '#059669', marginBottom: '5px' }}>Total</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#059669' }}>
+                  {formatCurrency((laborSeleccionada.costo_base || 0) + (laborSeleccionada.costo_maquinaria || 0) + (laborSeleccionada.costo_mano_obra || 0))}
+                </div>
+              </div>
+            </div>
+
+            {/* Detalles de Maquinaria */}
+            {laborSeleccionada.maquinarias && laborSeleccionada.maquinarias.length > 0 && (
+              <div style={{ marginBottom: '30px' }}>
+                <h3 style={{ color: '#374151', marginBottom: '15px' }}>🔧 Maquinaria Utilizada</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {laborSeleccionada.maquinarias.map((maq, index) => (
+                    <div key={maq.id_labor_maquinaria || `maquinaria-${index}`} style={{
+                      padding: '15px',
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 'bold', color: '#374151' }}>{maq.descripcion}</div>
+                          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                            Tipo: {maq.tipo} {maq.proveedor && `- ${maq.proveedor}`}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1d4ed8' }}>
+                          {formatCurrency(maq.costo)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Detalles de Mano de Obra */}
+            {laborSeleccionada.mano_obra && laborSeleccionada.mano_obra.length > 0 && (
+              <div style={{ marginBottom: '30px' }}>
+                <h3 style={{ color: '#374151', marginBottom: '15px' }}>👥 Mano de Obra</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {laborSeleccionada.mano_obra.map((mo, index) => (
+                    <div key={mo.id_labor_mano_obra || `mano-obra-detail-${index}`} style={{
+                      padding: '15px',
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 'bold', color: '#374151' }}>{mo.descripcion}</div>
+                          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                            {mo.cantidad_personas} persona(s) {mo.proveedor && `- ${mo.proveedor}`}
+                          </div>
+                          {mo.horas_trabajo && (
+                            <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                              Horas de trabajo: {mo.horas_trabajo}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#d97706' }}>
+                          {formatCurrency(mo.costo_total)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Información de la Labor */}
+            <div style={{
+              padding: '15px',
+              backgroundColor: '#f9fafb',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <h4 style={{ color: '#374151', marginBottom: '10px' }}>Información de la Labor</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                <div><strong>Lote:</strong> {laborSeleccionada.lote_nombre}</div>
+                <div><strong>Fecha:</strong> {new Date(laborSeleccionada.fecha).toLocaleDateString('es-ES')}</div>
+                <div><strong>Estado:</strong> {laborSeleccionada.estado}</div>
+                <div><strong>Responsable:</strong> {laborSeleccionada.responsable}</div>
+              </div>
+              {laborSeleccionada.observaciones && (
+                <div style={{ marginTop: '10px' }}>
+                  <strong>Observaciones:</strong> {laborSeleccionada.observaciones}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para agregar maquinaria propia */}
+      {showFormMaquinaria && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '10px',
+            width: '500px',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, color: '#374151' }}>
+                🏠 Agregar Maquinaria Propia
+              </h2>
+              <button
+                onClick={() => setShowFormMaquinaria(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Maquinaria de la Empresa:</label>
+                <select
+                  value={formMaquinaria.descripcion}
+                  onChange={(e) => setFormMaquinaria({...formMaquinaria, descripcion: e.target.value})}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                >
+                  <option value="">Seleccionar maquinaria</option>
+                  {maquinaria.map(maq => (
+                    <option key={maq.id} value={maq.nombre}>
+                      {maq.nombre} - {maq.tipo} ({formatCurrency(maq.costo_por_hora)}/h)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Horas de Uso:</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formMaquinaria.horas_uso}
+                  onChange={(e) => {
+                    const horas = e.target.value;
+                    const maqSeleccionada = maquinaria.find(m => m.nombre === formMaquinaria.descripcion);
+                    const costoCalculado = (parseFloat(horas) || 0) * (maqSeleccionada?.costo_por_hora || 0);
+                    setFormMaquinaria({
+                      ...formMaquinaria, 
+                      horas_uso: horas,
+                      costo: costoCalculado.toString()
+                    });
+                  }}
+                  placeholder="0.0"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Costo Total:</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formMaquinaria.costo}
+                  readOnly
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    border: '1px solid #d1d5db', 
+                    borderRadius: '4px',
+                    backgroundColor: '#f9fafb',
+                    color: '#374151'
+                  }}
+                />
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                  Se calcula automáticamente: {formMaquinaria.horas_uso ? parseFloat(formMaquinaria.horas_uso) : 0} horas × {maquinaria.find(m => m.nombre === formMaquinaria.descripcion)?.costo_por_hora || 0} = {formatCurrency((parseFloat(formMaquinaria.horas_uso) || 0) * (maquinaria.find(m => m.nombre === formMaquinaria.descripcion)?.costo_por_hora || 0))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Kilómetros Recorridos:</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formMaquinaria.kilometros_recorridos}
+                  onChange={(e) => setFormMaquinaria({...formMaquinaria, kilometros_recorridos: e.target.value})}
+                  placeholder="0.0"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Observaciones:</label>
+                <textarea
+                  value={formMaquinaria.observaciones}
+                  onChange={(e) => setFormMaquinaria({...formMaquinaria, observaciones: e.target.value})}
+                  placeholder="Observaciones adicionales..."
+                  rows={3}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button
+                  onClick={() => setShowFormMaquinaria(false)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleGuardarMaquinaria}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Guardar Maquinaria
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para agregar maquinaria alquilada */}
+      {showFormMaquinariaAlquilada && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '10px',
+            width: '500px',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, color: '#374151' }}>
+                🏢 Agregar Maquinaria Alquilada
+              </h2>
+              <button
+                onClick={() => setShowFormMaquinariaAlquilada(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Descripción:</label>
+                <input
+                  type="text"
+                  value={formMaquinariaAlquilada.descripcion}
+                  onChange={(e) => setFormMaquinariaAlquilada({...formMaquinariaAlquilada, descripcion: e.target.value})}
+                  placeholder="Ej: Fertilizadora Amazone"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Proveedor:</label>
+                <input
+                  type="text"
+                  value={formMaquinariaAlquilada.proveedor}
+                  onChange={(e) => setFormMaquinariaAlquilada({...formMaquinariaAlquilada, proveedor: e.target.value})}
+                  placeholder="Ej: AgroServicios SRL"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Costo:</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formMaquinariaAlquilada.costo}
+                  onChange={(e) => setFormMaquinariaAlquilada({...formMaquinariaAlquilada, costo: e.target.value})}
+                  placeholder="0.00"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Observaciones:</label>
+                <textarea
+                  value={formMaquinariaAlquilada.observaciones}
+                  onChange={(e) => setFormMaquinariaAlquilada({...formMaquinariaAlquilada, observaciones: e.target.value})}
+                  placeholder="Observaciones adicionales..."
+                  rows={3}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button
+                  onClick={() => setShowFormMaquinariaAlquilada(false)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleGuardarMaquinariaAlquilada}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Guardar Maquinaria Alquilada
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para agregar mano de obra */}
+      {showFormManoObra && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '10px',
+            width: '500px',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, color: '#374151' }}>
+                👥 Agregar Mano de Obra
+              </h2>
+              <button
+                onClick={() => setShowFormManoObra(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Descripción:</label>
+                <input
+                  type="text"
+                  value={formManoObra.descripcion}
+                  onChange={(e) => setFormManoObra({...formManoObra, descripcion: e.target.value})}
+                  placeholder="Ej: Operador de tractor"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Cantidad de Personas:</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formManoObra.cantidad_personas}
+                  onChange={(e) => setFormManoObra({...formManoObra, cantidad_personas: parseInt(e.target.value) || 1})}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Proveedor (opcional):</label>
+                <input
+                  type="text"
+                  value={formManoObra.proveedor}
+                  onChange={(e) => setFormManoObra({...formManoObra, proveedor: e.target.value})}
+                  placeholder="Ej: Trabajadores Rurales"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Costo Total:</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formManoObra.costo_total}
+                  onChange={(e) => setFormManoObra({...formManoObra, costo_total: e.target.value})}
+                  placeholder="0.00"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Horas de Trabajo:</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formManoObra.horas_trabajo}
+                  onChange={(e) => setFormManoObra({...formManoObra, horas_trabajo: e.target.value})}
+                  placeholder="0.0"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                />
+              </div>
+
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Observaciones:</label>
+                <textarea
+                  value={formManoObra.observaciones}
+                  onChange={(e) => setFormManoObra({...formManoObra, observaciones: e.target.value})}
+                  placeholder="Observaciones adicionales..."
+                  rows={3}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button
+                  onClick={() => setShowFormManoObra(false)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleGuardarManoObra}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Guardar Mano de Obra
+                </button>
+              </div>
             </div>
           </div>
         </div>

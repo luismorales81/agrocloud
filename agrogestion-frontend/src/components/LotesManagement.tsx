@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useCurrencyContext } from '../contexts/CurrencyContext';
 
 interface Campo {
   id: number;
@@ -12,11 +13,12 @@ interface Campo {
 interface Lote {
   id?: number;
   nombre: string;
-  superficie: number;
+  superficie: number | '';
   cultivo: string;
   campo_id: number;
   estado: string;
   descripcion?: string;
+  tipoSuelo?: string;
 }
 
 interface Labor {
@@ -37,6 +39,7 @@ interface Labor {
 }
 
 const LotesManagement: React.FC = () => {
+  const { formatCurrency } = useCurrencyContext();
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [campos, setCampos] = useState<Campo[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -49,6 +52,36 @@ const LotesManagement: React.FC = () => {
   const [showHistorialModal, setShowHistorialModal] = useState(false);
   const [selectedLoteForHistorial, setSelectedLoteForHistorial] = useState<Lote | null>(null);
   const [labores, setLabores] = useState<Labor[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Función para calcular fecha de cosecha esperada según el cultivo
+  const calcularFechaCosecha = (fechaSiembra: string, cultivo: string): string => {
+    const fecha = new Date(fechaSiembra);
+    let diasCrecimiento = 0;
+
+    // Días de crecimiento según el cultivo (en días)
+    const cultivosCrecimiento: { [key: string]: number } = {
+      'Soja': 120,      // 4 meses
+      'Maíz': 150,      // 5 meses
+      'Trigo': 180,     // 6 meses
+      'Cebada': 120,    // 4 meses
+      'Alfalfa': 90,    // 3 meses (primer corte)
+      'Girasol': 120,   // 4 meses
+      'Sorgo': 120,     // 4 meses
+      'Avena': 150,     // 5 meses
+      'Centeno': 180,   // 6 meses
+      'Colza': 180      // 6 meses
+    };
+
+    diasCrecimiento = cultivosCrecimiento[cultivo] || 120; // Default 4 meses
+
+    // Agregar días de crecimiento
+    fecha.setDate(fecha.getDate() + diasCrecimiento);
+
+    // Formatear como YYYY-MM-DD
+    return fecha.toISOString().split('T')[0];
+  };
 
   // Datos simulados de campos
   const camposSimulados: Campo[] = [
@@ -102,7 +135,8 @@ const LotesManagement: React.FC = () => {
       cultivo: 'Soja',
       campo_id: 1,
       estado: 'activo',
-      descripcion: 'Lote de soja de primera'
+      descripcion: 'Lote de soja de primera',
+      tipoSuelo: 'Franco Limoso'
     },
     {
       id: 2,
@@ -111,7 +145,8 @@ const LotesManagement: React.FC = () => {
       cultivo: 'Maíz',
       campo_id: 1,
       estado: 'activo',
-      descripcion: 'Lote de maíz tardío'
+      descripcion: 'Lote de maíz tardío',
+      tipoSuelo: 'Franco Arenoso'
     },
     {
       id: 3,
@@ -120,17 +155,21 @@ const LotesManagement: React.FC = () => {
       cultivo: 'Trigo',
       campo_id: 2,
       estado: 'activo',
-      descripcion: 'Lote de trigo de invierno'
+      descripcion: 'Lote de trigo de invierno',
+      tipoSuelo: 'Arcilloso'
     }
   ];
 
   const [formData, setFormData] = useState<Lote>({
     nombre: '',
-    superficie: 0,
+    superficie: '',
     cultivo: '',
     campo_id: 0,
     estado: 'activo',
-    descripcion: ''
+    descripcion: '',
+    tipoSuelo: 'Franco Limoso',
+    fechaSiembra: '',
+    fechaCosechaEsperada: ''
   });
 
   // Datos simulados de labores
@@ -237,14 +276,243 @@ const LotesManagement: React.FC = () => {
     }
   ];
 
-  // Cultivos disponibles
-  const cultivos = ['Soja', 'Maíz', 'Trigo', 'Girasol', 'Sorgo', 'Cebada', 'Avena', 'Arroz'];
+  // Estado para cultivos
+  const [cultivos, setCultivos] = useState<string[]>([]);
 
   useEffect(() => {
-    setCampos(camposSimulados);
-    setLotes(lotesSimulados);
-    setLabores(laboresSimuladas);
+    cargarDatos();
   }, []);
+
+  // Función para cargar datos del backend
+  const cargarDatos = async () => {
+    await Promise.all([
+      cargarCampos(),
+      cargarLotes(),
+      cargarLabores(),
+      cargarCultivos()
+    ]);
+  };
+
+  // Función para formatear el tipo de labor
+  const formatearTipoLabor = (tipo: string) => {
+    if (!tipo) return '';
+    
+    // Mapeo de tipos de labor a nombres legibles
+    const tiposLabor: { [key: string]: string } = {
+      'SIEMBRA': 'Siembra',
+      'FERTILIZACION': 'Fertilización',
+      'RIEGO': 'Riego',
+      'COSECHA': 'Cosecha',
+      'MANTENIMIENTO': 'Mantenimiento',
+      'PODA': 'Poda',
+      'CONTROL_PLAGAS': 'Control de Plagas',
+      'CONTROL_MALEZAS': 'Control de Malezas',
+      'ANALISIS_SUELO': 'Análisis de Suelo',
+      'OTROS': 'Otros'
+    };
+    
+    // Si el tipo contiene información adicional (como "en V4"), extraer solo el tipo
+    const tipoBase = tipo.split(' ')[0];
+    
+    // Retornar el nombre formateado o el tipo original si no está en el mapeo
+    return tiposLabor[tipoBase] || tipoBase.charAt(0).toUpperCase() + tipoBase.slice(1).toLowerCase();
+  };
+
+  // Cargar campos del backend
+  const cargarCampos = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8080/api/campos', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Mapear los datos de la API al formato del frontend
+      const camposMapeados: Campo[] = data.map((field: any) => {
+        let coordenadas = [];
+        if (field.coordenadas) {
+          try {
+            // Si ya es un array, usarlo directamente
+            if (Array.isArray(field.coordenadas)) {
+              coordenadas = field.coordenadas;
+            } else if (typeof field.coordenadas === 'string') {
+              // Si es string, intentar parsearlo como JSON
+              coordenadas = JSON.parse(field.coordenadas);
+            }
+          } catch (error) {
+            console.warn('Error parseando coordenadas del campo:', field.nombre, error);
+            coordenadas = [];
+          }
+        }
+        
+        return {
+          id: field.id,
+          nombre: field.nombre,
+          superficie: field.areaHectareas || 0,
+          ubicacion: field.ubicacion || '',
+          estado: field.estado?.toLowerCase() || 'activo',
+          coordenadas: coordenadas
+        };
+      });
+
+      console.log('Campos cargados desde API:', camposMapeados);
+      setCampos(camposMapeados);
+    } catch (error) {
+      console.error('Error cargando campos:', error);
+      console.log('Usando datos simulados como fallback');
+      setError('Error al cargar los campos. Usando datos de ejemplo.');
+      // Fallback a datos simulados
+      setCampos(camposSimulados);
+    }
+  };
+
+  // Cargar lotes del backend
+  const cargarLotes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8080/api/lotes', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Mapear los datos de la API al formato del frontend
+      const lotesMapeados: Lote[] = data.map((lote: any) => ({
+        id: lote.id,
+        nombre: lote.nombre,
+        superficie: lote.areaHectareas || 0,
+        cultivo: lote.cultivoActual || '',
+        campo_id: lote.campo?.id || lote.campoId || 0,
+        estado: lote.estado?.toLowerCase() || 'activo',
+        descripcion: lote.descripcion || '',
+        tipoSuelo: lote.tipoSuelo || 'Franco Limoso',
+        fechaSiembra: lote.fechaSiembra || '',
+        fechaCosechaEsperada: lote.fechaCosechaEsperada || ''
+      }));
+
+      setLotes(lotesMapeados);
+    } catch (error) {
+      console.error('Error cargando lotes:', error);
+      setError('Error al cargar los lotes. Usando datos de ejemplo.');
+      // Fallback a datos simulados
+      setLotes(lotesSimulados);
+    }
+  };
+
+  // Cargar labores del backend
+  const cargarLabores = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8080/api/labores', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Mapear los datos de la API al formato del frontend
+      const laboresMapeadas: Labor[] = data.map((labor: any) => ({
+        id: labor.id,
+        nombre: labor.nombre,
+        tipo: labor.tipo || '',
+        fecha: labor.fechaInicio || '',
+        lote_id: labor.loteId || 0,
+        lote_nombre: labor.lote?.nombre || '',
+        responsable: labor.responsable || '',
+        horas_trabajo: labor.horasTrabajo || 0,
+        costo_total: labor.costoTotal || 0,
+        descripcion: labor.descripcion || '',
+        estado: labor.estado || 'planificada',
+        observaciones: labor.observaciones || ''
+      }));
+
+      setLabores(laboresMapeadas);
+    } catch (error) {
+      console.error('Error cargando labores:', error);
+      setError('Error al cargar las labores. Usando datos de ejemplo.');
+      // Fallback a datos simulados
+      setLabores(laboresSimuladas);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar cultivos del backend
+  const cargarCultivos = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No hay token de autenticación para cargar cultivos');
+        // Fallback a lista básica
+        setCultivos(['Soja', 'Maíz', 'Trigo', 'Girasol', 'Sorgo', 'Cebada', 'Avena', 'Arroz']);
+        return;
+      }
+
+      const response = await fetch('http://localhost:8080/api/cultivos', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Extraer nombres únicos de cultivos
+        const nombresCultivos = [...new Set(data.map((cultivo: any) => cultivo.nombre))];
+        setCultivos(nombresCultivos);
+      } else {
+        console.warn('Error cargando cultivos, usando lista básica');
+        setCultivos(['Soja', 'Maíz', 'Trigo', 'Girasol', 'Sorgo', 'Cebada', 'Avena', 'Arroz']);
+      }
+    } catch (error) {
+      console.error('Error cargando cultivos:', error);
+      // Fallback a lista básica
+      setCultivos(['Soja', 'Maíz', 'Trigo', 'Girasol', 'Sorgo', 'Cebada', 'Avena', 'Arroz']);
+    }
+  };
 
   const handleInputChange = (field: keyof Lote, value: any) => {
     setFormData(prev => ({
@@ -275,15 +543,22 @@ const LotesManagement: React.FC = () => {
   const handleAgregarLote = () => {
     setFormData({
       nombre: '',
-      superficie: 0,
+      superficie: '',
       cultivo: '',
       campo_id: 0,
       estado: 'activo',
-      descripcion: ''
+      descripcion: '',
+      tipoSuelo: 'Franco Limoso',
+      fechaSiembra: '',
+      fechaCosechaEsperada: ''
     });
     setIsEditing(false);
     setShowAddModal(true);
     setValidationError('');
+    // Scroll al modal
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleEditar = (lote: Lote) => {
@@ -294,21 +569,34 @@ const LotesManagement: React.FC = () => {
       cultivo: lote.cultivo,
       campo_id: lote.campo_id,
       estado: lote.estado,
-      descripcion: lote.descripcion || ''
+      descripcion: lote.descripcion || '',
+      tipoSuelo: lote.tipoSuelo || 'Franco Limoso',
+      fechaSiembra: lote.fechaSiembra || '',
+      fechaCosechaEsperada: lote.fechaCosechaEsperada || ''
     });
     setIsEditing(true);
     setShowEditModal(true);
     setValidationError('');
+    // Scroll al modal
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
-  const handleSaveLote = () => {
+  const handleSaveLote = async () => {
     if (!formData.nombre || !formData.cultivo || formData.campo_id === 0) {
       alert('Por favor complete todos los campos obligatorios');
       return;
     }
 
     // Validar superficie
-    if (!validateSuperficie(formData.campo_id, formData.superficie, selectedLote?.id)) {
+    if (formData.superficie === '' || formData.superficie <= 0) {
+      alert('Por favor ingrese una superficie válida');
+      return;
+    }
+
+    // Validar superficie contra el campo
+    if (!validateSuperficie(formData.campo_id, formData.superficie as number, selectedLote?.id)) {
       const campo = campos.find(c => c.id === formData.campo_id);
       const superficieLotesExistentes = lotes
         .filter(lote => lote.campo_id === formData.campo_id && lote.id !== selectedLote?.id)
@@ -317,31 +605,105 @@ const LotesManagement: React.FC = () => {
       const superficieDisponible = (campo?.superficie || 0) - superficieLotesExistentes;
       
       setValidationError(
-        `La superficie total de lotes (${superficieLotesExistentes + formData.superficie} ha) excede la superficie del campo (${campo?.superficie} ha). Superficie disponible: ${superficieDisponible.toFixed(2)} ha`
+        `La superficie total de lotes (${superficieLotesExistentes + (formData.superficie as number)} ha) excede la superficie del campo (${campo?.superficie} ha). Superficie disponible: ${superficieDisponible.toFixed(2)} ha`
       );
       return;
     }
 
-    if (isEditing && selectedLote) {
-      // Editar lote existente
-      setLotes(prev => prev.map(lote => 
-        lote.id === selectedLote.id ? { ...formData, id: selectedLote.id } : lote
-      ));
-    } else {
-      // Agregar nuevo lote
-      const newLote: Lote = {
-        ...formData,
-        id: Math.max(...lotes.map(l => l.id || 0)) + 1
-      };
-      setLotes(prev => [...prev, newLote]);
-    }
+    // Guardar en el backend
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
 
-    closeModal();
+      const loteData = {
+        nombre: formData.nombre,
+        descripcion: formData.descripcion,
+        areaHectareas: formData.superficie as number,
+        estado: formData.estado.toUpperCase(),
+        tipoSuelo: formData.tipoSuelo,
+        cultivoActual: formData.cultivo,
+        fechaSiembra: formData.fechaSiembra || null,
+        fechaCosechaEsperada: formData.fechaCosechaEsperada || null,
+        activo: true,
+        campo: { id: formData.campo_id }
+      };
+
+      let response;
+      if (isEditing && selectedLote) {
+        // Editar lote existente
+        response = await fetch(`http://localhost:8080/api/lotes/${selectedLote.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(loteData)
+        });
+      } else {
+        // Crear nuevo lote
+        response = await fetch('http://localhost:8080/api/lotes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(loteData)
+        });
+      }
+
+      if (response.ok) {
+        alert(isEditing ? 'Lote actualizado exitosamente' : 'Lote creado exitosamente');
+        closeModal();
+        
+        // Recargar lotes del backend
+        await cargarLotes();
+      } else {
+        const errorData = await response.text();
+        console.error('Error del servidor:', errorData);
+        alert('Error al guardar el lote. Por favor, inténtalo de nuevo.');
+      }
+    } catch (error) {
+      console.error('Error de conexión:', error);
+      alert('Error de conexión. Por favor, verifica tu conexión e intenta nuevamente.');
+    }
   };
 
-  const handleEliminar = (id: number) => {
+  const handleEliminar = async (id: number) => {
     if (window.confirm('¿Está seguro de que desea eliminar este lote?')) {
-      setLotes(prev => prev.filter(lote => lote.id !== id));
+      try {
+        setLoading(true);
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
+          return;
+        }
+
+        const response = await fetch(`http://localhost:8080/api/lotes/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok || response.status === 204) {
+          // Eliminar del estado local solo si la API confirma la eliminación
+          setLotes(prev => prev.filter(lote => lote.id !== id));
+          alert('Lote eliminado exitosamente');
+        } else {
+          console.error('Error al eliminar el lote:', response.status, response.statusText);
+          alert('Error al eliminar el lote. Por favor, inténtalo de nuevo.');
+        }
+      } catch (error) {
+        console.error('Error de conexión al eliminar el lote:', error);
+        alert('Error de conexión al eliminar el lote. Por favor, verifica tu conexión e intenta nuevamente.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -352,15 +714,6 @@ const LotesManagement: React.FC = () => {
 
   const getLaboresPorLote = (loteId: number): Labor[] => {
     return labores.filter(labor => labor.lote_id === loteId);
-  };
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
   };
 
   const getEstadoColor = (estado: string): string => {
@@ -380,11 +733,14 @@ const LotesManagement: React.FC = () => {
     setSelectedLote(null);
     setFormData({
       nombre: '',
-      superficie: 0,
+      superficie: '',
       cultivo: '',
       campo_id: 0,
       estado: 'activo',
-      descripcion: ''
+      descripcion: '',
+      tipoSuelo: 'Franco Limoso',
+      fechaSiembra: '',
+      fechaCosechaEsperada: ''
     });
     setValidationError('');
   };
@@ -392,6 +748,16 @@ const LotesManagement: React.FC = () => {
   const getCampoName = (campoId: number) => {
     const campo = campos.find(c => c.id === campoId);
     return campo ? campo.nombre : 'Campo no encontrado';
+  };
+
+  const getEstadoTraducido = (estado: string) => {
+    const traducciones: { [key: string]: string } = {
+      'en_cultivo': 'En Cultivo',
+      'disponible': 'Disponible',
+      'activo': 'Activo',
+      'inactivo': 'Inactivo'
+    };
+    return traducciones[estado] || estado;
   };
 
   const getSuperficieDisponible = (campoId: number) => {
@@ -533,6 +899,9 @@ const LotesManagement: React.FC = () => {
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Campo</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Superficie</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cultivo</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Tipo de Suelo</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha Siembra</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha Cosecha</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Estado</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Acciones</th>
                 </tr>
@@ -568,6 +937,50 @@ const LotesManagement: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{
+                        background: '#f3e5f5',
+                        color: '#7b1fa2',
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        {lote.tipoSuelo || 'No especificado'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      {lote.fechaSiembra ? (
+                        <span style={{
+                          background: '#e8f5e8',
+                          color: '#2e7d32',
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          {new Date(lote.fechaSiembra).toLocaleDateString('es-ES')}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#999', fontSize: '12px' }}>No especificada</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      {lote.fechaCosechaEsperada ? (
+                        <span style={{
+                          background: '#fff3e0',
+                          color: '#e65100',
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          {new Date(lote.fechaCosechaEsperada).toLocaleDateString('es-ES')}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#999', fontSize: '12px' }}>No calculada</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <span style={{
                         background: lote.estado === 'activo' ? '#e8f5e8' : 
                                    lote.estado === 'inactivo' ? '#ffebee' : '#fff3e0',
                         color: lote.estado === 'activo' ? '#2e7d32' : 
@@ -577,7 +990,7 @@ const LotesManagement: React.FC = () => {
                         fontSize: '12px',
                         fontWeight: 'bold'
                       }}>
-                        {lote.estado}
+                        {getEstadoTraducido(lote.estado)}
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
@@ -777,7 +1190,14 @@ const LotesManagement: React.FC = () => {
                   </label>
                   <select
                     value={formData.cultivo}
-                    onChange={(e) => handleInputChange('cultivo', e.target.value)}
+                    onChange={(e) => {
+                      handleInputChange('cultivo', e.target.value);
+                      // Recalcular fecha de cosecha si ya hay fecha de siembra
+                      if (formData.fechaSiembra && e.target.value) {
+                        const fechaCosecha = calcularFechaCosecha(formData.fechaSiembra, e.target.value);
+                        handleInputChange('fechaCosechaEsperada', fechaCosecha);
+                      }
+                    }}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -806,11 +1226,11 @@ const LotesManagement: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    step="0.1"
+                    step="0.01"
                     min="0"
                     max={formData.campo_id > 0 ? getSuperficieDisponible(formData.campo_id) : undefined}
                     value={formData.superficie}
-                    onChange={(e) => handleInputChange('superficie', parseFloat(e.target.value) || 0)}
+                    onChange={(e) => handleInputChange('superficie', e.target.value === '' ? '' : parseFloat(e.target.value) || '')}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -818,7 +1238,7 @@ const LotesManagement: React.FC = () => {
                       borderRadius: '0.375rem',
                       fontSize: '1rem'
                     }}
-                    placeholder="0.0"
+                    placeholder="Ej: 25.50"
                     required
                   />
                   {formData.campo_id > 0 && (
@@ -880,6 +1300,97 @@ const LotesManagement: React.FC = () => {
                     }}
                     placeholder="Descripción del lote, tipo de cultivo, etc."
                   />
+                </div>
+
+                {/* Tipo de Suelo */}
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    fontWeight: '500',
+                    color: '#374151'
+                  }}>
+                    Tipo de Suelo *
+                  </label>
+                  <select
+                    value={formData.tipoSuelo}
+                    onChange={(e) => handleInputChange('tipoSuelo', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      fontSize: '1rem'
+                    }}
+                    required
+                  >
+                    <option value="Franco Limoso">Franco Limoso</option>
+                    <option value="Franco Arenoso">Franco Arenoso</option>
+                    <option value="Arcilloso">Arcilloso</option>
+                    <option value="Arenoso">Arenoso</option>
+                    <option value="Limoso">Limoso</option>
+                    <option value="Franco Arcilloso">Franco Arcilloso</option>
+                  </select>
+                </div>
+
+                {/* Fecha de Siembra */}
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    fontWeight: '500',
+                    color: '#374151'
+                  }}>
+                    Fecha de Siembra
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.fechaSiembra}
+                    onChange={(e) => {
+                      handleInputChange('fechaSiembra', e.target.value);
+                      // Calcular fecha de cosecha esperada automáticamente
+                      if (e.target.value && formData.cultivo) {
+                        const fechaCosecha = calcularFechaCosecha(e.target.value, formData.cultivo);
+                        handleInputChange('fechaCosechaEsperada', fechaCosecha);
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+
+                {/* Fecha de Cosecha Esperada */}
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    fontWeight: '500',
+                    color: '#374151'
+                  }}>
+                    Fecha de Cosecha Esperada
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.fechaCosechaEsperada}
+                    onChange={(e) => handleInputChange('fechaCosechaEsperada', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      fontSize: '1rem',
+                      backgroundColor: '#f9fafb'
+                    }}
+                    readOnly
+                  />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                    Se calcula automáticamente según el cultivo seleccionado
+                  </small>
                 </div>
 
                 {/* Error de validación */}
@@ -1008,7 +1519,7 @@ const LotesManagement: React.FC = () => {
                   <strong>Cultivo:</strong> {selectedLoteForHistorial.cultivo}
                 </div>
                 <div>
-                  <strong>Estado:</strong> {selectedLoteForHistorial.estado}
+                  <strong>Estado:</strong> {getEstadoTraducido(selectedLoteForHistorial.estado)}
                 </div>
               </div>
             </div>
@@ -1060,7 +1571,7 @@ const LotesManagement: React.FC = () => {
                           }}>
                             <div>
                               <h4 style={{ margin: '0 0 0.25rem 0', color: '#1f2937' }}>
-                                {labor.tipo.charAt(0).toUpperCase() + labor.tipo.slice(1)}
+                                {formatearTipoLabor(labor.tipo)}
                               </h4>
                               <p style={{ margin: '0 0 0.5rem 0', color: '#6b7280', fontSize: '14px' }}>
                                 {labor.observaciones}

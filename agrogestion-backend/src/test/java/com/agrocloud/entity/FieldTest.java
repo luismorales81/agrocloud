@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@DataJpaTest
+@SpringBootTest
 class FieldTest extends BaseTest {
 
     @Autowired

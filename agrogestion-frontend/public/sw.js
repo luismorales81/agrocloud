@@ -95,9 +95,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Para peticiones POST/PUT/DELETE, usar network first
+  // Para peticiones POST/PUT/DELETE, solo hacer fetch sin cache
   if (['POST', 'PUT', 'DELETE'].includes(request.method)) {
-    event.respondWith(networkFirst(request, DYNAMIC_CACHE));
+    event.respondWith(fetch(request));
     return;
   }
 });
@@ -123,8 +123,13 @@ async function cacheFirst(request, cacheName) {
   }
 }
 
-// Estrategia Network First para API y recursos dinámicos
+// Estrategia Network First para API y recursos dinámicos (solo GET)
 async function networkFirst(request, cacheName) {
+  // Solo hacer cache de peticiones GET
+  if (request.method !== 'GET') {
+    return fetch(request);
+  }
+  
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {

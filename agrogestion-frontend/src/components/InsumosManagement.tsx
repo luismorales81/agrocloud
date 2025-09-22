@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import currencyService from '../services/CurrencyService';
+import { useCurrencyContext } from '../contexts/CurrencyContext';
+import api from '../services/api';
 
 interface Insumo {
   id?: number;
@@ -17,6 +18,7 @@ interface Insumo {
 }
 
 const InsumosManagement: React.FC = () => {
+  const { formatCurrency } = useCurrencyContext();
   const [insumos, setInsumos] = useState<Insumo[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null);
@@ -38,137 +40,102 @@ const InsumosManagement: React.FC = () => {
     categoria: ''
   });
 
-  // Tipos de insumos disponibles
-  const tiposInsumo = [
-    'semilla',
-    'fertilizante',
-    'herbicida',
-    'fungicida',
-    'insecticida',
-    'combustible',
-    'lubricante',
-    'repuesto',
-    'herramienta',
-    'otro'
-  ];
 
   // Categorías de insumos
   const categorias = [
     'Semillas',
     'Fertilizantes',
-    'Agroquímicos',
+    'Herbicidas',
+    'Fungicidas',
+    'Insecticidas',
     'Combustibles',
     'Repuestos',
     'Herramientas',
     'Otros'
   ];
 
+  // Función para mapear categorías del frontend a tipos del backend
+  const mapearCategoriaATipo = (categoria: string): string => {
+    const mapeo: { [key: string]: string } = {
+      'Semillas': 'SEMILLA',
+      'Fertilizantes': 'FERTILIZANTE',
+      'Herbicidas': 'HERBICIDA',
+      'Fungicidas': 'FUNGICIDA',
+      'Insecticidas': 'INSECTICIDA',
+      'Combustibles': 'COMBUSTIBLE',
+      'Repuestos': 'REPUESTO',
+      'Herramientas': 'HERRAMIENTA',
+      'Otros': 'OTROS'
+    };
+    return mapeo[categoria] || 'OTROS';
+  };
+
+  // Función para mapear tipos del backend a categorías del frontend
+  const mapearTipoACategoria = (tipo: string): string => {
+    const mapeo: { [key: string]: string } = {
+      'SEMILLA': 'Semillas',
+      'FERTILIZANTE': 'Fertilizantes',
+      'HERBICIDA': 'Herbicidas',
+      'FUNGICIDA': 'Fungicidas',
+      'INSECTICIDA': 'Insecticidas',
+      'COMBUSTIBLE': 'Combustibles',
+      'LUBRICANTE': 'Combustibles',
+      'REPUESTO': 'Repuestos',
+      'HERRAMIENTA': 'Herramientas',
+      'OTROS': 'Otros'
+    };
+    return mapeo[tipo] || 'Otros';
+  };
+
   // Unidades de medida
   const unidadesMedida = [
-    'kg',
-    'L',
+    'Kg',
+    'Litro',
+    'Bolsa',
     'unidad',
     'm²',
     'm³',
     'tonelada',
-    'litro',
     'metro',
-    'caja',
-    'bolsa'
+    'caja'
   ];
 
   // Cargar configuración de moneda
   useEffect(() => {
-    const config = currencyService.getConfig();
-    setSelectedCurrency(config.primaryCurrency);
+    // La configuración se maneja ahora a través del contexto
   }, []);
 
-  const formatCurrency = (amount: number): string => {
-    return currencyService.formatCurrency(amount, selectedCurrency);
-  };
-
-  // Cargar datos mock
-  const loadInsumos = async () => {
-    setLoading(true);
-    
-    // Simulación de carga
-    setTimeout(() => {
-      const mockInsumos: Insumo[] = [
-        {
-          id: 1,
-          nombre: 'Semilla Soja DM 53i54',
-          tipo: 'semilla',
-          descripcion: 'Semilla de soja de ciclo corto, resistente a sequía',
-          unidad_medida: 'kg',
-          precio_unitario: 8500,
-          stock_actual: 2500,
-          stock_minimo: 500,
-          proveedor: 'Don Mario Semillas',
-          fecha_vencimiento: '2025-06-30',
-          estado: 'activo',
-          categoria: 'Semillas'
-        },
-        {
-          id: 2,
-          nombre: 'Fertilizante Urea 46%',
-          tipo: 'fertilizante',
-          descripcion: 'Fertilizante nitrogenado de alta concentración',
-          unidad_medida: 'kg',
-          precio_unitario: 450,
-          stock_actual: 8000,
-          stock_minimo: 1000,
-          proveedor: 'Profertil S.A.',
-          fecha_vencimiento: '2024-12-31',
-          estado: 'activo',
-          categoria: 'Fertilizantes'
-        },
-        {
-          id: 3,
-          nombre: 'Glifosato 48%',
-          tipo: 'herbicida',
-          descripcion: 'Herbicida sistémico de amplio espectro',
-          unidad_medida: 'L',
-          precio_unitario: 2800,
-          stock_actual: 150,
-          stock_minimo: 50,
-          proveedor: 'Syngenta',
-          fecha_vencimiento: '2025-03-15',
-          estado: 'activo',
-          categoria: 'Agroquímicos'
-        },
-        {
-          id: 4,
-          nombre: 'Aceite de Motor 15W40',
-          tipo: 'lubricante',
-          descripcion: 'Aceite lubricante para motores diesel',
-          unidad_medida: 'L',
-          precio_unitario: 1200,
-          stock_actual: 80,
-          stock_minimo: 20,
-          proveedor: 'YPF',
-          fecha_vencimiento: '2026-01-01',
-          estado: 'activo',
-          categoria: 'Combustibles'
-        },
-        {
-          id: 5,
-          nombre: 'Filtro de Aire',
-          tipo: 'repuesto',
-          descripcion: 'Filtro de aire para tractor Massey Ferguson',
-          unidad_medida: 'unidad',
-          precio_unitario: 850,
-          stock_actual: 5,
-          stock_minimo: 2,
-          proveedor: 'Massey Ferguson',
-          fecha_vencimiento: '2027-01-01',
-          estado: 'activo',
-          categoria: 'Repuestos'
-        }
-      ];
+  // Cargar datos desde la API
+    const loadInsumos = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/api/v1/insumos');
+        
+        
+        // Mapear datos del backend al frontend con valores por defecto
+        const insumosMapeados = response.data.map((insumo: any) => ({
+        id: insumo.id,
+        nombre: insumo.nombre || 'Sin nombre',
+        tipo: insumo.tipo || 'otro',
+        descripcion: insumo.descripcion || 'Sin descripción',
+        unidad_medida: insumo.unidadMedida || insumo.unidad_medida || 'unidad',
+        precio_unitario: insumo.precioUnitario || insumo.precio_unitario || 0,
+        stock_actual: insumo.stockActual || insumo.stock_actual || 0,
+        stock_minimo: insumo.stockMinimo || insumo.stock_minimo || 0,
+        proveedor: insumo.proveedor || 'No especificado',
+        fecha_vencimiento: insumo.fechaVencimiento || insumo.fecha_vencimiento || '',
+        estado: insumo.estado || 'activo',
+        categoria: mapearTipoACategoria(insumo.tipo || insumo.categoria || 'OTROS')
+      }));
       
-      setInsumos(mockInsumos);
+      
+      setInsumos(insumosMapeados);
+    } catch (error) {
+      console.error('Error cargando insumos:', error);
+      setInsumos([]);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   useEffect(() => {
@@ -180,25 +147,37 @@ const InsumosManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      if (!formData.nombre || !formData.tipo || !formData.unidad_medida) {
+      if (!formData.nombre || !formData.categoria || !formData.unidad_medida) {
         alert('Por favor complete todos los campos obligatorios');
         return;
       }
 
+      // Preparar datos para envío al backend (camelCase)
+      const datosParaEnvio = {
+        nombre: formData.nombre,
+        descripcion: formData.descripcion,
+        unidadMedida: formData.unidad_medida,
+        precioUnitario: formData.precio_unitario || 0,
+        stockActual: formData.stock_actual || 0,
+        stockMinimo: formData.stock_minimo || 0,
+        proveedor: formData.proveedor,
+        fechaVencimiento: formData.fecha_vencimiento,
+        estado: formData.estado,
+        tipo: mapearCategoriaATipo(formData.categoria)
+      };
+
       if (editingInsumo) {
         // Editar insumo existente
+        const response = await api.put(`/insumos/${editingInsumo.id}`, datosParaEnvio);
         const updatedInsumos = insumos.map(insumo => 
-          insumo.id === editingInsumo.id ? { ...formData, id: insumo.id } : insumo
+          insumo.id === editingInsumo.id ? response.data : insumo
         );
         setInsumos(updatedInsumos);
         alert('Insumo actualizado exitosamente');
       } else {
         // Crear nuevo insumo
-        const newInsumo: Insumo = {
-          ...formData,
-          id: insumos.length + 1
-        };
-        setInsumos(prev => [...prev, newInsumo]);
+        const response = await api.post('/insumos', datosParaEnvio);
+        setInsumos(prev => [...prev, response.data]);
         alert('Insumo creado exitosamente');
       }
 
@@ -211,18 +190,55 @@ const InsumosManagement: React.FC = () => {
     }
   };
 
+  // Mostrar formulario con scroll
+  const showFormWithScroll = () => {
+    setShowForm(true);
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+  };
+
   // Editar insumo
   const editInsumo = (insumo: Insumo) => {
     setEditingInsumo(insumo);
     setFormData(insumo);
-    setShowForm(true);
+    showFormWithScroll();
   };
 
   // Eliminar insumo
-  const deleteInsumo = (id: number) => {
+  const deleteInsumo = async (id: number) => {
     if (window.confirm('¿Está seguro de que desea eliminar este insumo?')) {
-      setInsumos(prev => prev.filter(insumo => insumo.id !== id));
-      alert('Insumo eliminado exitosamente');
+      try {
+        setLoading(true);
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
+          return;
+        }
+
+        const response = await fetch(`http://localhost:8080/api/insumos/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok || response.status === 204) {
+          // Eliminar del estado local solo si la API confirma la eliminación
+          setInsumos(prev => prev.filter(insumo => insumo.id !== id));
+          alert('Insumo eliminado exitosamente');
+        } else {
+          console.error('Error al eliminar el insumo:', response.status, response.statusText);
+          alert('Error al eliminar el insumo. Por favor, inténtalo de nuevo.');
+        }
+      } catch (error) {
+        console.error('Error de conexión al eliminar el insumo:', error);
+        alert('Error de conexión al eliminar el insumo. Por favor, verifica tu conexión e intenta nuevamente.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -251,7 +267,7 @@ const InsumosManagement: React.FC = () => {
                          insumo.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          insumo.proveedor.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesType = filterType === 'todos' || insumo.tipo === filterType;
+    const matchesType = filterType === 'todos' || insumo.categoria === filterType;
     
     return matchesSearch && matchesType;
   });
@@ -339,7 +355,7 @@ const InsumosManagement: React.FC = () => {
       {/* Botones de acción */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={showFormWithScroll}
           style={{
             background: '#8b5cf6',
             color: 'white',
@@ -383,10 +399,10 @@ const InsumosManagement: React.FC = () => {
               fontSize: '14px'
             }}
           >
-            <option value="todos">Todos los tipos</option>
-            {tiposInsumo.map(tipo => (
-              <option key={tipo} value={tipo}>
-                {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+            <option value="todos">Todas las categorías</option>
+            {categorias.map(categoria => (
+              <option key={categoria} value={categoria}>
+                {categoria}
               </option>
             ))}
           </select>
@@ -425,32 +441,9 @@ const InsumosManagement: React.FC = () => {
               />
             </div>
 
-            {/* Tipo */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Tipo *:</label>
-              <select
-                value={formData.tipo}
-                onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="">Seleccionar tipo</option>
-                {tiposInsumo.map(tipo => (
-                  <option key={tipo} value={tipo}>
-                    {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Categoría */}
             <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Categoría:</label>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Categoría *:</label>
               <select
                 value={formData.categoria}
                 onChange={(e) => setFormData(prev => ({ ...prev, categoria: e.target.value }))}
@@ -485,7 +478,7 @@ const InsumosManagement: React.FC = () => {
               >
                 <option value="">Seleccionar unidad</option>
                 {unidadesMedida.map(unidad => (
-                  <option key={unidad} value={unidad}>{unidad.toUpperCase()}</option>
+                  <option key={unidad} value={unidad}>{unidad}</option>
                 ))}
               </select>
             </div>
@@ -740,7 +733,7 @@ const InsumosManagement: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ fontWeight: 'bold', color: '#10b981' }}>
-                        {formatCurrency(insumo.precio_unitario)}
+                        {formatCurrency(insumo.precio_unitario || 0)}
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>

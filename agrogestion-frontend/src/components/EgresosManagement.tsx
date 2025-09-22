@@ -16,7 +16,7 @@ interface Egreso {
   unidadMedida?: string;
   cantidad?: number;
   proveedor?: string;
-  estado: string;
+  estado: 'REGISTRADO' | 'CONFIRMADO' | 'PAGADO' | 'CANCELADO';
   observaciones?: string;
   lote?: {
     id: number;
@@ -60,17 +60,23 @@ const EgresosManagement: React.FC = () => {
     observaciones: '',
     loteId: '',
     insumoId: '',
-    actualizarInsumo: false
+    actualizarInsumo: false,
+    // Campos para maquinaria
+    marca: '',
+    modelo: '',
+    // Campos para alquiler
+    maquinariaId: '',
+    fechaInicio: new Date().toISOString().split('T')[0],
+    fechaFin: new Date().toISOString().split('T')[0],
+    costoDia: ''
   });
 
   const tiposEgreso = [
-    { value: 'INSUMOS', label: 'Insumos' },
-    { value: 'COMBUSTIBLE', label: 'Combustible' },
-    { value: 'MANO_OBRA', label: 'Mano de Obra' },
-    { value: 'MAQUINARIA', label: 'Maquinaria' },
-    { value: 'SERVICIOS', label: 'Servicios' },
-    { value: 'IMPUESTOS', label: 'Impuestos' },
-    { value: 'OTROS_EGRESOS', label: 'Otros Egresos' }
+    { value: 'INSUMO', label: 'Insumos' },
+    { value: 'MAQUINARIA_COMPRA', label: 'Compra de Maquinaria' },
+    { value: 'MAQUINARIA_ALQUILER', label: 'Alquiler de Maquinaria' },
+    { value: 'SERVICIO', label: 'Servicios' },
+    { value: 'OTROS', label: 'Otros Egresos' }
   ];
 
   const estadosEgreso = [
@@ -99,7 +105,7 @@ const EgresosManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/api/public/campos');
+      const response = await api.get('/api/v1/campos');
       setLotes(response.data);
     } catch (error) {
       console.error('Error cargando lotes:', error);
@@ -108,7 +114,7 @@ const EgresosManagement: React.FC = () => {
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/api/public/insumos');
+      const response = await api.get('/api/v1/insumos');
       setInsumos(response.data);
     } catch (error) {
       console.error('Error cargando insumos:', error);
@@ -121,21 +127,40 @@ const EgresosManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      const egresoData = {
-        concepto: formData.concepto,
-        descripcion: formData.descripcion,
+      // Preparar datos según el tipo de egreso
+      let egresoData: any = {
         tipoEgreso: formData.tipoEgreso,
         fechaEgreso: formData.fechaEgreso,
-        monto: parseFloat(formData.monto),
-        unidadMedida: formData.unidadMedida,
-        cantidad: formData.cantidad ? parseFloat(formData.cantidad) : null,
-        proveedor: formData.proveedor,
         observaciones: formData.observaciones,
-        lote: formData.loteId ? { id: parseInt(formData.loteId) } : null,
-        insumo: formData.insumoId ? { id: parseInt(formData.insumoId) } : null
+        loteId: formData.loteId ? parseInt(formData.loteId) : null
       };
 
-      await api.post('/api/v1/egresos', egresoData);
+      switch (formData.tipoEgreso) {
+        case 'INSUMO':
+          egresoData.insumoId = parseInt(formData.insumoId);
+          egresoData.cantidad = parseFloat(formData.cantidad);
+          break;
+        case 'MAQUINARIA_COMPRA':
+          egresoData.concepto = formData.concepto;
+          egresoData.marca = formData.marca;
+          egresoData.modelo = formData.modelo;
+          egresoData.monto = parseFloat(formData.monto);
+          break;
+        case 'MAQUINARIA_ALQUILER':
+          egresoData.maquinariaId = parseInt(formData.maquinariaId);
+          egresoData.fechaInicio = formData.fechaInicio;
+          egresoData.fechaFin = formData.fechaFin;
+          egresoData.costoDia = parseFloat(formData.costoDia);
+          egresoData.monto = parseFloat(formData.monto);
+          break;
+        default:
+          egresoData.concepto = formData.concepto;
+          egresoData.monto = parseFloat(formData.monto);
+          break;
+      }
+
+      // Usar el endpoint integrado
+      await api.post('/api/v1/egresos/integrado', egresoData);
       
       // Limpiar formulario
       setFormData({
@@ -150,7 +175,13 @@ const EgresosManagement: React.FC = () => {
         observaciones: '',
         loteId: '',
         insumoId: '',
-        actualizarInsumo: false
+        actualizarInsumo: false,
+        marca: '',
+        modelo: '',
+        maquinariaId: '',
+        fechaInicio: new Date().toISOString().split('T')[0],
+        fechaFin: new Date().toISOString().split('T')[0],
+        costoDia: ''
       });
       
       setShowForm(false);
@@ -188,12 +219,11 @@ const EgresosManagement: React.FC = () => {
 
   const getTipoColor = (tipo: string) => {
     switch (tipo) {
-      case 'INSUMOS': return 'blue';
-      case 'COMBUSTIBLE': return 'orange';
-      case 'MANO_OBRA': return 'purple';
-      case 'MAQUINARIA': return 'red';
-      case 'SERVICIOS': return 'green';
-      case 'IMPUESTOS': return 'yellow';
+      case 'INSUMO': return 'blue';
+      case 'MAQUINARIA_COMPRA': return 'red';
+      case 'MAQUINARIA_ALQUILER': return 'orange';
+      case 'SERVICIO': return 'green';
+      case 'OTROS': return 'gray';
       default: return 'gray';
     }
   };
@@ -225,20 +255,8 @@ const EgresosManagement: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">📝 Registrar Nuevo Egreso</h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Concepto *
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.concepto}
-                    onChange={(e) => setFormData({...formData, concepto: e.target.value})}
-                    placeholder="Ej: Compra de fertilizante"
-                    required
-                  />
-                </div>
-
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Paso 1: Selección del tipo de egreso */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tipo de Egreso *
@@ -272,20 +290,6 @@ const EgresosManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monto *
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.monto}
-                    onChange={(e) => setFormData({...formData, monto: e.target.value})}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Lote (opcional)
                   </label>
                   <Select
@@ -304,80 +308,205 @@ const EgresosManagement: React.FC = () => {
                   </Select>
                 </div>
 
-                                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                     Insumo (opcional)
-                   </label>
-                   <Select
-                     value={formData.insumoId}
-                     onValueChange={(value) => setFormData({...formData, insumoId: value})}
-                     placeholder="Seleccionar insumo"
-                   >
-                     <SelectContent>
-                       <SelectItem value="">Sin insumo específico</SelectItem>
-                       {insumos.map(insumo => (
-                         <SelectItem key={insumo.id} value={insumo.id.toString()}>
-                           {insumo.nombre} ({insumo.stockActual} {insumo.unidad})
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
-                   <p className="text-xs text-gray-500 mt-1">
-                     💡 Al registrar un egreso de insumos, el inventario se actualiza automáticamente
-                   </p>
-                 </div>
+                {/* Paso 2: Campos dinámicos según el tipo de egreso */}
+                
+                {/* INSUMO → seleccionar insumo, cantidad, costo se calcula automáticamente */}
+                {formData.tipoEgreso === 'INSUMO' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Insumo *
+                      </label>
+                      <Select
+                        value={formData.insumoId}
+                        onValueChange={(value) => setFormData({...formData, insumoId: value})}
+                        placeholder="Seleccionar insumo"
+                      >
+                        <SelectContent>
+                          {insumos.map(insumo => (
+                            <SelectItem key={insumo.id} value={insumo.id.toString()}>
+                              {insumo.nombre} - Stock: {insumo.stockActual} {insumo.unidad}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Cantidad *
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.cantidad}
+                        onChange={(e) => setFormData({...formData, cantidad: e.target.value})}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                        💡 El costo total se calculará automáticamente basado en el precio histórico del insumo
+                      </p>
+                    </div>
+                  </>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unidad de Medida
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.unidadMedida}
-                    onChange={(e) => setFormData({...formData, unidadMedida: e.target.value})}
-                    placeholder="Ej: kg, litros, etc."
-                  />
-                </div>
+                {/* MAQUINARIA_COMPRA → registrar maquinaria y costo */}
+                {formData.tipoEgreso === 'MAQUINARIA_COMPRA' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nombre de la Maquinaria *
+                      </label>
+                      <Input
+                        type="text"
+                        value={formData.concepto}
+                        onChange={(e) => setFormData({...formData, concepto: e.target.value})}
+                        placeholder="Ej: Tractor John Deere"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Marca *
+                      </label>
+                      <Input
+                        type="text"
+                        value={formData.marca}
+                        onChange={(e) => setFormData({...formData, marca: e.target.value})}
+                        placeholder="Marca de la maquinaria"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Modelo *
+                      </label>
+                      <Input
+                        type="text"
+                        value={formData.modelo}
+                        onChange={(e) => setFormData({...formData, modelo: e.target.value})}
+                        placeholder="Modelo de la maquinaria"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Costo de Compra *
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.monto}
+                        onChange={(e) => setFormData({...formData, monto: e.target.value})}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-green-600 bg-green-50 p-2 rounded">
+                        💡 Se creará automáticamente un registro de maquinaria en el inventario
+                      </p>
+                    </div>
+                  </>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Cantidad
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.cantidad}
-                    onChange={(e) => setFormData({...formData, cantidad: e.target.value})}
-                    placeholder="0.00"
-                  />
-                </div>
+                {/* MAQUINARIA_ALQUILER → seleccionar maquinaria, fecha inicio, fin, costo */}
+                {formData.tipoEgreso === 'MAQUINARIA_ALQUILER' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Maquinaria a Alquilar *
+                      </label>
+                      <Select
+                        value={formData.maquinariaId}
+                        onValueChange={(value) => setFormData({...formData, maquinariaId: value})}
+                        placeholder="Seleccionar maquinaria"
+                      >
+                        <SelectContent>
+                          {/* Aquí deberías cargar la lista de maquinaria disponible */}
+                          <SelectItem value="1">Tractor John Deere</SelectItem>
+                          <SelectItem value="2">Cosechadora New Holland</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha Inicio *
+                      </label>
+                      <Input
+                        type="date"
+                        value={formData.fechaInicio}
+                        onChange={(e) => setFormData({...formData, fechaInicio: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha Fin *
+                      </label>
+                      <Input
+                        type="date"
+                        value={formData.fechaFin}
+                        onChange={(e) => setFormData({...formData, fechaFin: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Costo por Día *
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.costoDia}
+                        onChange={(e) => setFormData({...formData, costoDia: e.target.value})}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-orange-600 bg-orange-50 p-2 rounded">
+                        💡 Se registrará automáticamente el alquiler y se calculará el costo total
+                      </p>
+                    </div>
+                  </>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Proveedor
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.proveedor}
-                    onChange={(e) => setFormData({...formData, proveedor: e.target.value})}
-                    placeholder="Nombre del proveedor"
-                  />
-                </div>
+                {/* SERVICIO/OTROS → descripción libre, costo */}
+                {(formData.tipoEgreso === 'SERVICIO' || formData.tipoEgreso === 'OTROS') && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Concepto *
+                      </label>
+                      <Input
+                        type="text"
+                        value={formData.concepto}
+                        onChange={(e) => setFormData({...formData, concepto: e.target.value})}
+                        placeholder="Descripción del servicio o gasto"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Monto *
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.monto}
+                        onChange={(e) => setFormData({...formData, monto: e.target.value})}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Descripción
-                </label>
-                <textarea
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                  placeholder="Descripción detallada del egreso..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                />
-              </div>
-
+              {/* Campo de observaciones común para todos los tipos */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Observaciones
@@ -385,9 +514,9 @@ const EgresosManagement: React.FC = () => {
                 <textarea
                   value={formData.observaciones}
                   onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
-                  placeholder="Observaciones adicionales..."
+                  placeholder="Observaciones adicionales, detalles del proveedor, notas importantes..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={2}
+                  rows={3}
                 />
               </div>
 

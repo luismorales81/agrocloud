@@ -1,4 +1,4 @@
-# AgroGestion Frontend
+# AgroCloud Frontend
 
 Sistema de gestión agrícola - Frontend en React con TypeScript
 
@@ -24,7 +24,7 @@ Sistema de gestión agrícola - Frontend en React con TypeScript
 
 - Node.js 16+ 
 - npm o yarn
-- Backend AgroGestion ejecutándose en `http://localhost:8080`
+- Backend AgroCloud ejecutándose en `http://localhost:8080`
 
 ## 🔧 Instalación
 
@@ -169,7 +169,7 @@ npm run lint         # Linting con ESLint
 
 ```env
 VITE_API_BASE_URL=http://localhost:8080/api
-VITE_APP_TITLE=AgroGestion
+VITE_APP_TITLE=AgroCloud
 ```
 
 ### Configuración TailwindCSS

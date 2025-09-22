@@ -11,6 +11,7 @@ const Trash2 = () => <span>🗑️</span>;
 const DollarSign = () => <span>💰</span>;
 const Calendar = () => <span>📅</span>;
 import api from '../services/api';
+import { useCurrencyContext } from '../contexts/CurrencyContext';
 
 interface Ingreso {
   id?: number;
@@ -22,7 +23,7 @@ interface Ingreso {
   unidadMedida?: string;
   cantidad?: number;
   clienteComprador?: string;
-  estado: 'REGISTRADO' | 'CONFIRMADO' | 'CANCELADO';
+  estado: 'REGISTRADO' | 'CONFIRMADO' | 'PAGADO' | 'CANCELADO';
   observaciones?: string;
   lote?: {
     id: number;
@@ -31,6 +32,7 @@ interface Ingreso {
 }
 
 const IngresosManagement: React.FC = () => {
+  const { formatCurrency } = useCurrencyContext();
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [lotes, setLotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,7 +70,7 @@ const IngresosManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/api/public/campos');
+      const response = await api.get('/api/v1/campos');
       setLotes(response.data);
     } catch (error) {
       console.error('Error cargando lotes:', error);
@@ -110,6 +112,10 @@ const IngresosManagement: React.FC = () => {
       lote: ingreso.lote
     });
     setShowForm(true);
+    // Scroll al formulario
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleDelete = async (id: number) => {
@@ -141,13 +147,6 @@ const IngresosManagement: React.FC = () => {
     setShowForm(false);
   };
 
-  const formatearMoneda = (monto: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS'
-    }).format(monto);
-  };
-
   const formatearFecha = (fecha: string) => {
     return new Date(fecha).toLocaleDateString('es-AR');
   };
@@ -170,7 +169,12 @@ const IngresosManagement: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Button onClick={() => setShowForm(true)} className="mb-4">
+          <Button onClick={() => {
+            setShowForm(true);
+            setTimeout(() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 100);
+          }} className="mb-4">
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Ingreso
           </Button>
@@ -349,7 +353,7 @@ const IngresosManagement: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-bold text-green-600">
-                          {formatearMoneda(ingreso.monto)}
+                          {formatCurrency(ingreso.monto)}
                         </p>
                         <div className="flex gap-2 mt-2">
                           <Button

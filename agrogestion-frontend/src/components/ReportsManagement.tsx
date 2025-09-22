@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { useCurrency } from '../hooks/useCurrency';
+import React, { useState, useEffect } from 'react';
+import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { exportService } from '../services/ExportService';
 import type { ExportOptions } from '../services/ExportService';
+import api from '../services/api';
 
 // interface ReportData {
 //   id: number;
@@ -31,7 +32,7 @@ interface ProduccionData {
 }
 
 const ReportsManagement: React.FC = () => {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrencyContext();
   const [activeReport, setActiveReport] = useState<string>('rindes');
   const [dateRange, setDateRange] = useState({ inicio: '', fin: '' });
   const [loading, setLoading] = useState(false);
@@ -54,44 +55,54 @@ const ReportsManagement: React.FC = () => {
   const generateReport = async (tipo: string) => {
     setLoading(true);
     
-    // Simulación de generación de reporte
-    setTimeout(() => {
+    try {
       let data;
+      const fechaInicio = dateRange.inicio || null;
+      const fechaFin = dateRange.fin || null;
+      
       switch (tipo) {
         case 'rindes':
+                    const rendimientoResponse = await api.get('/api/v1/reportes/rendimiento', {
+                      params: { fechaInicio, fechaFin }
+                    });
           data = {
             titulo: 'Reporte de Rindes por Lote',
             fechaGeneracion: new Date().toLocaleDateString('es-ES'),
-            datos: mockRindeData,
-            estadisticas: {
-              promedioRinde: mockRindeData.reduce((sum, item) => sum + item.rindeReal, 0) / mockRindeData.length,
-              mejorRinde: Math.max(...mockRindeData.map(item => item.rindeReal)),
-              peorRinde: Math.min(...mockRindeData.map(item => item.rindeReal)),
-              promedioCumplimiento: mockRindeData.reduce((sum, item) => sum + item.cumplimiento, 0) / mockRindeData.length
-            }
+                      datos: rendimientoResponse.data,
+                      estadisticas: calcularEstadisticasRendimiento(rendimientoResponse.data)
           };
           break;
         case 'produccion':
+                    const estadisticasResponse = await api.get('/api/v1/reportes/estadisticas-produccion', {
+                      params: { fechaInicio, fechaFin }
+                    });
           data = {
             titulo: 'Reporte de Producción por Cultivo',
             fechaGeneracion: new Date().toLocaleDateString('es-ES'),
-            datos: mockProduccionData,
-            estadisticas: {
-              superficieTotal: mockProduccionData.reduce((sum, item) => sum + item.superficieTotal, 0),
-              produccionTotal: mockProduccionData.reduce((sum, item) => sum + item.produccionTotal, 0),
-              cultivosActivos: mockProduccionData.length
-            }
+                      datos: estadisticasResponse.data,
+                      estadisticas: estadisticasResponse.data
           };
           break;
-        case 'costos':
+                  case 'cosechas':
+                    const cosechasResponse = await api.get('/api/v1/reportes/cosechas', {
+                      params: { fechaInicio, fechaFin }
+                    });
           data = {
-            titulo: 'Reporte de Costos y Rentabilidad',
+                      titulo: 'Reporte de Cosechas',
             fechaGeneracion: new Date().toLocaleDateString('es-ES'),
-            datos: [
-              { cultivo: 'Soja', costoHectarea: 850, precioVenta: 450, rentabilidad: 89.4 },
-              { cultivo: 'Maíz', costoHectarea: 1200, precioVenta: 180, rentabilidad: 50.0 },
-              { cultivo: 'Trigo', costoHectarea: 950, precioVenta: 380, rentabilidad: 300.0 }
-            ]
+                      datos: cosechasResponse.data,
+                      estadisticas: calcularEstadisticasCosechas(cosechasResponse.data)
+                    };
+                    break;
+                  case 'rentabilidad':
+                    const rentabilidadResponse = await api.get('/api/v1/reportes/rentabilidad', {
+                      params: { fechaInicio, fechaFin }
+                    });
+                    data = {
+                      titulo: 'Reporte de Rentabilidad por Cultivo',
+                      fechaGeneracion: new Date().toLocaleDateString('es-ES'),
+                      datos: rentabilidadResponse.data,
+                      estadisticas: calcularEstadisticasRentabilidad(rentabilidadResponse.data)
           };
           break;
         default:
@@ -99,8 +110,56 @@ const ReportsManagement: React.FC = () => {
       }
       
       setReportData(data);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      alert('Error al generar el reporte. Verifica la conexión con el servidor.');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  // Funciones de cálculo de estadísticas
+  const calcularEstadisticasRendimiento = (datos: any[]) => {
+    if (!datos || datos.length === 0) return {};
+    
+    const rendimientos = datos.map(item => parseFloat(item.rendimientoReal) || 0);
+    const cumplimientos = datos.map(item => parseFloat(item.porcentajeCumplimiento) || 0);
+    
+    return {
+      promedioRinde: rendimientos.reduce((sum, r) => sum + r, 0) / rendimientos.length,
+      mejorRinde: Math.max(...rendimientos),
+      peorRinde: Math.min(...rendimientos),
+      promedioCumplimiento: cumplimientos.reduce((sum, c) => sum + c, 0) / cumplimientos.length,
+      totalLotes: datos.length
+    };
+  };
+
+  const calcularEstadisticasCosechas = (datos: any[]) => {
+    if (!datos || datos.length === 0) return {};
+    
+    const rendimientos = datos.map(item => parseFloat(item.rendimientoReal) || 0);
+    
+    return {
+      totalCosechas: datos.length,
+      rendimientoPromedio: rendimientos.reduce((sum, r) => sum + r, 0) / rendimientos.length
+    };
+  };
+
+
+  const calcularEstadisticasRentabilidad = (datos: any[]) => {
+    if (!datos || datos.length === 0) return {};
+    
+    const rentabilidades = datos.map(item => parseFloat(item.porcentajeRentabilidad) || 0);
+    const ingresos = datos.map(item => parseFloat(item.ingresoTotal) || 0);
+    const costos = datos.map(item => parseFloat(item.costoTotal) || 0);
+    
+    return {
+      totalAnalisis: datos.length,
+      rentabilidadPromedio: rentabilidades.reduce((sum, r) => sum + r, 0) / rentabilidades.length,
+      ingresoTotal: ingresos.reduce((sum, i) => sum + i, 0),
+      costoTotal: costos.reduce((sum, c) => sum + c, 0),
+      cultivosRentables: datos.filter(item => parseFloat(item.porcentajeRentabilidad) > 0).length
+    };
   };
 
   const exportReport = async (format: 'excel' | 'pdf' | 'csv') => {
@@ -490,6 +549,279 @@ const ReportsManagement: React.FC = () => {
     </div>
   );
 
+  const renderCosechasReport = () => (
+    <div>
+      <div style={{ 
+        background: '#f3e8ff', 
+        padding: '20px', 
+        borderRadius: '10px', 
+        marginBottom: '20px',
+        border: '1px solid #8b5cf6'
+      }}>
+        <h3 style={{ margin: '0 0 15px 0', color: '#6b21a8' }}>🌾 Análisis de Cosechas</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#6b21a8' }}>
+              {reportData.estadisticas.totalCosechas}
+            </div>
+            <div style={{ fontSize: '14px', color: '#6b21a8' }}>Total Cosechas</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#6b21a8' }}>
+              {Math.round(reportData.estadisticas.rendimientoPromedio * 10) / 10}
+            </div>
+            <div style={{ fontSize: '14px', color: '#6b21a8' }}>Rendimiento Promedio</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '10px', 
+        overflow: 'hidden',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ 
+          background: '#f8f9fa', 
+          padding: '15px', 
+          borderBottom: '1px solid #dee2e6',
+          fontWeight: 'bold'
+        }}>
+          🌾 Detalle de Cosechas
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ 
+            width: '100%', 
+            borderCollapse: 'collapse',
+            fontSize: '14px'
+          }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Lote</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cultivo</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cantidad</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Estado</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Rendimiento</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportData.datos.map((item: any, index: number) => (
+                <tr key={index} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                  <td style={{ padding: '12px' }}><strong>{item.nombreLote}</strong></td>
+                  <td style={{ padding: '12px' }}>{item.nombreCultivo}</td>
+                  <td style={{ padding: '12px' }}>
+                    {new Date(item.fechaCosecha).toLocaleDateString('es-ES')}
+                  </td>
+                  <td style={{ padding: '12px' }}>{item.cantidadCosechada} {item.unidadCosecha}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      background: item.estadoHumedad === 'Óptimo' ? '#dcfce7' : 
+                                  item.estadoHumedad === 'Aceptable' ? '#fef3c7' : '#fecaca',
+                      color: item.estadoHumedad === 'Óptimo' ? '#166534' : 
+                             item.estadoHumedad === 'Aceptable' ? '#92400e' : '#991b1b'
+                    }}>
+                      {item.estadoHumedad}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>{item.rendimientoReal} {item.unidadRendimiento}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderHumedadReport = () => (
+    <div>
+      <div style={{ 
+        background: '#ecfeff', 
+        padding: '20px', 
+        borderRadius: '10px', 
+        marginBottom: '20px',
+        border: '1px solid #06b6d4'
+      }}>
+        <h3 style={{ margin: '0 0 15px 0', color: '#155e75' }}>💧 Análisis de Humedad por Ubicación</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#155e75' }}>
+              {reportData.estadisticas.ubicacionesAnalizadas}
+            </div>
+            <div style={{ fontSize: '14px', color: '#155e75' }}>Ubicaciones</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#155e75' }}>
+              {Math.round(reportData.estadisticas.humedadPromedioGeneral * 10) / 10}%
+            </div>
+            <div style={{ fontSize: '14px', color: '#155e75' }}>Humedad Promedio</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#155e75' }}>
+              {reportData.estadisticas.ubicacionesOptimas}
+            </div>
+            <div style={{ fontSize: '14px', color: '#155e75' }}>Ubicaciones Óptimas</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '10px', 
+        overflow: 'hidden',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ 
+          background: '#f8f9fa', 
+          padding: '15px', 
+          borderBottom: '1px solid #dee2e6',
+          fontWeight: 'bold'
+        }}>
+          💧 Análisis por Ubicación
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ 
+            width: '100%', 
+            borderCollapse: 'collapse',
+            fontSize: '14px'
+          }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Ubicación</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Humedad Promedio</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Rango</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cosechas</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Estado</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Recomendación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportData.datos.map((item: any, index: number) => (
+                <tr key={index} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                  <td style={{ padding: '12px' }}><strong>{item.ubicacion}</strong></td>
+                  <td style={{ padding: '12px' }}>{item.humedadPromedio}%</td>
+                  <td style={{ padding: '12px' }}>{item.humedadMinima}% - {item.humedadMaxima}%</td>
+                  <td style={{ padding: '12px' }}>{item.cantidadCosechas}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      background: item.estadoHumedad === 'Óptimo' ? '#dcfce7' : 
+                                  item.estadoHumedad === 'Aceptable' ? '#fef3c7' : '#fecaca',
+                      color: item.estadoHumedad === 'Óptimo' ? '#166534' : 
+                             item.estadoHumedad === 'Aceptable' ? '#92400e' : '#991b1b'
+                    }}>
+                      {item.estadoHumedad}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px', fontSize: '12px' }}>{item.recomendaciones}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRentabilidadReport = () => (
+    <div>
+      <div style={{ 
+        background: '#fef2f2', 
+        padding: '20px', 
+        borderRadius: '10px', 
+        marginBottom: '20px',
+        border: '1px solid #ef4444'
+      }}>
+        <h3 style={{ margin: '0 0 15px 0', color: '#991b1b' }}>💰 Análisis de Rentabilidad</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#991b1b' }}>
+              {reportData.estadisticas.totalAnalisis}
+            </div>
+            <div style={{ fontSize: '14px', color: '#991b1b' }}>Análisis Realizados</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#991b1b' }}>
+              {Math.round(reportData.estadisticas.rentabilidadPromedio * 10) / 10}%
+            </div>
+            <div style={{ fontSize: '14px', color: '#991b1b' }}>Rentabilidad Promedio</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#991b1b' }}>
+              {reportData.estadisticas.cultivosRentables}
+            </div>
+            <div style={{ fontSize: '14px', color: '#991b1b' }}>Cultivos Rentables</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '10px', 
+        overflow: 'hidden',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ 
+          background: '#f8f9fa', 
+          padding: '15px', 
+          borderBottom: '1px solid #dee2e6',
+          fontWeight: 'bold'
+        }}>
+          💰 Detalle de Rentabilidad
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ 
+            width: '100%', 
+            borderCollapse: 'collapse',
+            fontSize: '14px'
+          }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Lote</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cultivo</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Ingreso Total</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Costo Total</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Margen</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Rentabilidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportData.datos.map((item: any, index: number) => (
+                <tr key={index} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                  <td style={{ padding: '12px' }}><strong>{item.lote}</strong></td>
+                  <td style={{ padding: '12px' }}>{item.cultivo}</td>
+                  <td style={{ padding: '12px' }}>{formatCurrency(item.ingresoTotal)}</td>
+                  <td style={{ padding: '12px' }}>{formatCurrency(item.costoTotal)}</td>
+                  <td style={{ padding: '12px' }}>{formatCurrency(item.margen)}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      background: item.porcentajeRentabilidad > 0 ? '#dcfce7' : '#fecaca',
+                      color: item.porcentajeRentabilidad > 0 ? '#166534' : '#991b1b'
+                    }}>
+                      {item.porcentajeRentabilidad}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <div style={{ 
@@ -565,10 +897,10 @@ const ReportsManagement: React.FC = () => {
             🌾 Producción
           </button>
           <button
-            onClick={() => setActiveReport('costos')}
+            onClick={() => setActiveReport('cosechas')}
             style={{
-              background: activeReport === 'costos' ? '#ef4444' : '#e5e7eb',
-              color: activeReport === 'costos' ? 'white' : '#374151',
+              background: activeReport === 'cosechas' ? '#8b5cf6' : '#e5e7eb',
+              color: activeReport === 'cosechas' ? 'white' : '#374151',
               border: 'none',
               padding: '12px 20px',
               borderRadius: '8px',
@@ -577,7 +909,22 @@ const ReportsManagement: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            💰 Costos
+            🌾 Cosechas
+          </button>
+          <button
+            onClick={() => setActiveReport('rentabilidad')}
+            style={{
+              background: activeReport === 'rentabilidad' ? '#ef4444' : '#e5e7eb',
+              color: activeReport === 'rentabilidad' ? 'white' : '#374151',
+              border: 'none',
+              padding: '12px 20px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            💰 Rentabilidad
           </button>
         </div>
 
@@ -772,7 +1119,8 @@ const ReportsManagement: React.FC = () => {
           {/* Contenido específico del reporte */}
           {activeReport === 'rindes' && renderRindeReport()}
           {activeReport === 'produccion' && renderProduccionReport()}
-          {activeReport === 'costos' && renderCostosReport()}
+          {activeReport === 'cosechas' && renderCosechasReport()}
+          {activeReport === 'rentabilidad' && renderRentabilidadReport()}
         </div>
       )}
 

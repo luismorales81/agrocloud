@@ -9,8 +9,6 @@ export interface OfflineStats {
 }
 
 export const useOffline = () => {
-  console.log('🔧 [useOffline] Inicializando hook...');
-  
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [offlineStats, setOfflineStats] = useState<OfflineStats>({
     offlineActionsCount: 0,
@@ -20,25 +18,19 @@ export const useOffline = () => {
   });
   const [syncInProgress, setSyncInProgress] = useState(false);
 
-  console.log('🔧 [useOffline] Estado inicial - Online:', isOnline);
-
   // Actualizar estadísticas del almacenamiento
   const updateStats = useCallback(async () => {
     try {
       const stats = await offlineStorage.getStorageStats();
       setOfflineStats(stats);
-      console.log('📊 [useOffline] Estadísticas actualizadas:', stats);
     } catch (error) {
-      console.error('❌ [useOffline] Error actualizando estadísticas:', error);
+      console.error('Error actualizando estadísticas offline:', error);
     }
   }, []);
 
   useEffect(() => {
-    console.log('🔧 [useOffline] Configurando event listeners...');
-    
     // Event listeners para cambios de conectividad
     const handleOnline = () => {
-      console.log('🌐 [useOffline] Conexión restaurada');
       setIsOnline(true);
       // Sincronizar automáticamente cuando vuelve la conexión
       setTimeout(() => {
@@ -47,7 +39,6 @@ export const useOffline = () => {
     };
 
     const handleOffline = () => {
-      console.log('📡 [useOffline] Conexión perdida');
       setIsOnline(false);
     };
 
@@ -63,11 +54,8 @@ export const useOffline = () => {
       offlineStorage.cleanExpiredCache().catch(console.error);
     }, 300000); // Cada 5 minutos
 
-    console.log('🔧 [useOffline] Event listeners configurados');
-
     // Limpiar event listeners
     return () => {
-      console.log('🔧 [useOffline] Limpiando event listeners');
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(cleanCacheInterval);
@@ -76,21 +64,16 @@ export const useOffline = () => {
 
   // Sincronizar datos offline
   const syncOfflineData = async () => {
-    console.log('🔄 [useOffline] Iniciando sincronización...');
     if (!isOnline || syncInProgress) {
-      console.log('⚠️ [useOffline] Sincronización cancelada - Online:', isOnline, 'Sync en progreso:', syncInProgress);
       return;
     }
 
     setSyncInProgress(true);
     try {
-      console.log('⏳ [useOffline] Sincronizando datos offline...');
-      
       // Obtener acciones offline
       const offlineActions = await offlineStorage.getOfflineActions();
       
       if (offlineActions.length === 0) {
-        console.log('✅ [useOffline] No hay datos para sincronizar');
         await updateStats();
         return;
       }
@@ -100,9 +83,8 @@ export const useOffline = () => {
         try {
           await processOfflineAction(action);
           await offlineStorage.removeOfflineAction(action.id);
-          console.log('✅ [useOffline] Acción sincronizada:', action.id);
         } catch (error) {
-          console.error('❌ [useOffline] Error sincronizando acción:', action.id, error);
+          console.error('Error sincronizando acción offline:', action.id, error);
           
           // Incrementar contador de reintentos
           if (action.retryCount < action.maxRetries) {
@@ -117,10 +99,9 @@ export const useOffline = () => {
       }
 
       await updateStats();
-      console.log('✅ [useOffline] Sincronización completada');
       
     } catch (error) {
-      console.error('❌ [useOffline] Error sincronizando datos:', error);
+      console.error('Error sincronizando datos offline:', error);
     } finally {
       setSyncInProgress(false);
     }
@@ -148,10 +129,9 @@ export const useOffline = () => {
     try {
       const id = await offlineStorage.saveOfflineAction(action);
       await updateStats();
-      console.log('💾 [useOffline] Acción offline guardada:', id);
       return id;
     } catch (error) {
-      console.error('❌ [useOffline] Error guardando acción offline:', error);
+      console.error('Error guardando acción offline:', error);
       throw error;
     }
   };
@@ -161,10 +141,9 @@ export const useOffline = () => {
     try {
       const id = await offlineStorage.saveOfflineData(data);
       await updateStats();
-      console.log('💾 [useOffline] Datos offline guardados:', id);
       return id;
     } catch (error) {
-      console.error('❌ [useOffline] Error guardando datos offline:', error);
+      console.error('Error guardando datos offline:', error);
       throw error;
     }
   };
@@ -173,35 +152,30 @@ export const useOffline = () => {
   const getOfflineData = async (type?: string) => {
     try {
       const data = await offlineStorage.getOfflineData(type);
-      console.log('📋 [useOffline] Datos offline obtenidos:', data.length);
       return data;
     } catch (error) {
-      console.error('❌ [useOffline] Error obteniendo datos offline:', error);
+      console.error('Error obteniendo datos offline:', error);
       throw error;
     }
   };
 
   // Limpiar cache
   const cleanCache = async () => {
-    console.log('🗑️ [useOffline] Limpiando cache...');
     try {
       await offlineStorage.cleanExpiredCache();
       await updateStats();
-      console.log('✅ [useOffline] Cache limpiado');
     } catch (error) {
-      console.error('❌ [useOffline] Error limpiando cache:', error);
+      console.error('Error limpiando cache offline:', error);
     }
   };
 
   // Limpiar todos los datos offline
   const clearAllOfflineData = async () => {
-    console.log('🗑️ [useOffline] Limpiando todos los datos offline...');
     try {
       await offlineStorage.clearAll();
       await updateStats();
-      console.log('✅ [useOffline] Todos los datos offline limpiados');
     } catch (error) {
-      console.error('❌ [useOffline] Error limpiando datos offline:', error);
+      console.error('Error limpiando datos offline:', error);
     }
   };
 
@@ -215,7 +189,6 @@ export const useOffline = () => {
     return 'actualizado';
   };
 
-  console.log('🔧 [useOffline] Hook renderizado - Online:', isOnline, 'Pending:', hasPendingData);
 
   return {
     // Estado

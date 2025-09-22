@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { authService } from '../services/api';
 
 interface LoginProps {
   onLoginSuccess: (token: string, user: any) => void;
@@ -10,6 +11,8 @@ interface LoginForm {
 }
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+  console.log('🔧 [Login] Componente Login renderizado');
+  
   const [formData, setFormData] = useState<LoginForm>({
     email: '',
     password: ''
@@ -20,38 +23,50 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔧 [Login] Formulario enviado con datos:', formData);
     setError('');
     setLoading(true);
 
     try {
-      // Usar la configuración de API desde el archivo api.ts
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://agrocloud-production.up.railway.app/api';
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        onLoginSuccess(data.token, data.user);
+      console.log('🔧 [Login] Intentando autenticación...');
+      // Usar el servicio de autenticación
+      const data = await authService.login(formData.email, formData.password);
+      console.log('✅ [Login] Autenticación exitosa:', data);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      onLoginSuccess(data.token, data.user);
+    } catch (error: any) {
+      console.error('❌ [Login] Error de login:', error);
+      
+      // Manejar diferentes tipos de errores de autenticación
+      if (error.response?.status === 401) {
+        const errorData = error.response.data;
+        
+        if (errorData?.error === 'Credenciales inválidas') {
+          setError('Email o contraseña incorrectos. Por favor, verifica tus credenciales.');
+        } else if (errorData?.error === 'Usuario no encontrado') {
+          setError('El email proporcionado no está registrado en el sistema.');
+        } else if (errorData?.error === 'Usuario inactivo') {
+          setError('Tu cuenta está desactivada. Contacta al administrador.');
+        } else {
+          setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+        }
+      } else if (error.response?.status === 403) {
+        setError('Tu cuenta está desactivada. Contacta al administrador.');
+      } else if (error.response?.status === 500) {
+        setError('Error interno del servidor. Inténtalo de nuevo más tarde.');
+      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+        setError('Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.');
       } else {
-        await response.text(); // Ignorar el error data por ahora
-        setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+        setError('Error en el inicio de sesión. Inténtalo de nuevo.');
       }
-    } catch (error) {
-      console.error('Error de login:', error);
-      setError('Error de conexión. Por favor, intenta nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🔧 [Login] Input cambiado:', e.target.name, e.target.value);
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -98,7 +113,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             fontSize: '28px',
             fontWeight: 'bold'
           }}>
-            AgroGestion
+            AgroCloud
           </h1>
           <p style={{
             margin: '0',
@@ -254,16 +269,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </h3>
           <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.6' }}>
             <p style={{ margin: '0 0 5px 0' }}>
-              <strong>Administrador:</strong> admin@agrogestion.com / admin123
+              <strong>Administrador:</strong> admin@agrocloud.com / admin123
             </p>
             <p style={{ margin: '0 0 5px 0' }}>
-              <strong>Operario:</strong> operario@agrogestion.com / operario123
+              <strong>Técnico:</strong> tecnico@agrocloud.com / tecnico123
             </p>
             <p style={{ margin: '0 0 5px 0' }}>
-              <strong>Ingeniero:</strong> ingeniero@agrogestion.com / ingeniero123
-            </p>
-            <p style={{ margin: '0' }}>
-              <strong>Invitado:</strong> invitado@agrogestion.com / invitado123
+              <strong>Productor:</strong> productor@agrocloud.com / productor123
             </p>
           </div>
         </div>
@@ -276,7 +288,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           fontSize: '12px'
         }}>
           <p style={{ margin: '0' }}>
-            © 2024 AgroGestion - Sistema de Gestión Agropecuaria
+            © 2024 AgroCloud - Sistema de Gestión Agropecuaria
           </p>
           <p style={{ margin: '5px 0 0 0' }}>
             Desarrollado con ❤️ para el sector agrícola

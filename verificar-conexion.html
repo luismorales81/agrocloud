@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación de Conexión - AgroCloud</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Verificación de Conexión - AgroCloud</h1>
+        
+        <div id="status-container">
+            <div class="status warning">⏳ Verificando servicios...</div>
+        </div>
+
+        <div>
+            <button onclick="verificarBackend()">🔄 Verificar Backend</button>
+            <button onclick="verificarFrontend()">🔄 Verificar Frontend</button>
+            <button onclick="verificarConexion()">🔄 Verificar Conexión</button>
+            <button onclick="limpiarLog()">🗑️ Limpiar Log</button>
+        </div>
+
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const statusContainer = document.getElementById('status-container');
+
+        function agregarLog(mensaje, tipo = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${mensaje}`;
+            logEntry.style.color = tipo === 'error' ? '#dc3545' : tipo === 'success' ? '#28a745' : '#6c757d';
+            log.appendChild(logEntry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function actualizarStatus(mensaje, tipo) {
+            statusContainer.innerHTML = `<div class="status ${tipo}">${mensaje}</div>`;
+        }
+
+        function limpiarLog() {
+            log.innerHTML = '';
+        }
+
+        async function verificarBackend() {
+            agregarLog('🔍 Verificando backend en http://localhost:8080...');
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/health', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    agregarLog('✅ Backend funcionando correctamente', 'success');
+                    agregarLog(`📊 Estado: ${JSON.stringify(data)}`, 'success');
+                    actualizarStatus('✅ Backend: Funcionando', 'success');
+                } else {
+                    agregarLog(`❌ Backend respondió con estado: ${response.status}`, 'error');
+                    actualizarStatus('❌ Backend: Error de conexión', 'error');
+                }
+            } catch (error) {
+                agregarLog(`❌ Error conectando al backend: ${error.message}`, 'error');
+                actualizarStatus('❌ Backend: No disponible', 'error');
+            }
+        }
+
+        async function verificarFrontend() {
+            agregarLog('🔍 Verificando frontend en http://localhost:3000...');
+            
+            try {
+                const response = await fetch('http://localhost:3000', {
+                    method: 'GET'
+                });
+
+                if (response.ok) {
+                    agregarLog('✅ Frontend funcionando correctamente', 'success');
+                    actualizarStatus('✅ Frontend: Funcionando', 'success');
+                } else {
+                    agregarLog(`❌ Frontend respondió con estado: ${response.status}`, 'error');
+                    actualizarStatus('❌ Frontend: Error de conexión', 'error');
+                }
+            } catch (error) {
+                agregarLog(`❌ Error conectando al frontend: ${error.message}`, 'error');
+                actualizarStatus('❌ Frontend: No disponible', 'error');
+            }
+        }
+
+        async function verificarConexion() {
+            agregarLog('🔍 Verificando conexión completa...');
+            
+            // Verificar backend
+            await verificarBackend();
+            
+            // Verificar frontend
+            await verificarFrontend();
+            
+            // Verificar API desde frontend
+            agregarLog('🔍 Verificando llamada a API desde frontend...');
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin@agrocloud.com',
+                        password: 'admin123'
+                    })
+                });
+
+                if (response.ok) {
+                    agregarLog('✅ Conexión API funcionando correctamente', 'success');
+                } else {
+                    agregarLog(`⚠️ API respondió con estado: ${response.status}`, 'warning');
+                }
+            } catch (error) {
+                agregarLog(`❌ Error en llamada API: ${error.message}`, 'error');
+            }
+        }
+
+        // Verificación automática al cargar
+        window.onload = function() {
+            agregarLog('🚀 Iniciando verificación automática...');
+            setTimeout(verificarConexion, 1000);
+        };
+    </script>
+</body>
+</html>

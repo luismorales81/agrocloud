@@ -14,8 +14,8 @@ interface RindeLote {
   otros_insumos: string;
   fecha_cosecha: string;
   cantidad_cosechada: number;
+  cantidad_esperada: number;
   unidad_cosecha: 'kg' | 'tn' | 'qq';
-  humedad_cosecha: number;
   rinde_real: number;
   rinde_esperado: number;
   diferencia_rinde: number;
@@ -63,8 +63,8 @@ const RindeManagement: React.FC = () => {
     otros_insumos: '',
     fecha_cosecha: '',
     cantidad_cosechada: 0,
+    cantidad_esperada: 0,
     unidad_cosecha: 'kg',
-    humedad_cosecha: 0,
     rinde_real: 0,
     rinde_esperado: 0,
     diferencia_rinde: 0,
@@ -115,12 +115,12 @@ const RindeManagement: React.FC = () => {
           otros_insumos: '{"herbicida": "Glifosato 3L/ha"}',
           fecha_cosecha: '2024-07-15',
           cantidad_cosechada: 89250,
+          cantidad_esperada: 87500,
           unidad_cosecha: 'kg',
-          humedad_cosecha: 13.5,
           rinde_real: 3500,
           rinde_esperado: 3500,
           diferencia_rinde: 0,
-          porcentaje_cumplimiento: 100,
+          porcentaje_cumplimiento: 102,
           clima_favorable: true,
           plagas_enfermedades: false,
           riego_suficiente: true,
@@ -140,12 +140,12 @@ const RindeManagement: React.FC = () => {
           otros_insumos: '{"fungicida": "Azoxystrobin 0.5L/ha"}',
           fecha_cosecha: '2024-07-20',
           cantidad_cosechada: 378125,
+          cantidad_esperada: 375000,
           unidad_cosecha: 'kg',
-          humedad_cosecha: 14.2,
           rinde_real: 12500,
           rinde_esperado: 12500,
           diferencia_rinde: 0,
-          porcentaje_cumplimiento: 100,
+          porcentaje_cumplimiento: 100.8,
           clima_favorable: true,
           plagas_enfermedades: false,
           riego_suficiente: true,
@@ -166,14 +166,23 @@ const RindeManagement: React.FC = () => {
 
   // Calcular rinde automáticamente
   const calcularRinde = () => {
-    if (formData.cantidad_cosechada > 0 && formData.superficie_ha > 0) {
-      const rindeReal = formData.cantidad_cosechada / formData.superficie_ha;
+    if (formData.superficie_ha > 0) {
       const rindeEsperado = formData.rinde_esperado;
-      const diferencia = rindeReal - rindeEsperado;
-      const porcentaje = (rindeReal / rindeEsperado) * 100;
+      const cantidadEsperada = rindeEsperado * formData.superficie_ha;
+      
+      let rindeReal = 0;
+      let diferencia = 0;
+      let porcentaje = 0;
+      
+      if (formData.cantidad_cosechada > 0) {
+        rindeReal = formData.cantidad_cosechada / formData.superficie_ha;
+        diferencia = rindeReal - rindeEsperado;
+        porcentaje = (rindeReal / rindeEsperado) * 100;
+      }
 
       setFormData(prev => ({
         ...prev,
+        cantidad_esperada: Math.round(cantidadEsperada * 100) / 100,
         rinde_real: Math.round(rindeReal * 100) / 100,
         diferencia_rinde: Math.round(diferencia * 100) / 100,
         porcentaje_cumplimiento: Math.round(porcentaje * 100) / 100
@@ -222,8 +231,8 @@ const RindeManagement: React.FC = () => {
         otros_insumos: '',
         fecha_cosecha: '',
         cantidad_cosechada: 0,
+        cantidad_esperada: 0,
         unidad_cosecha: 'kg',
-        humedad_cosecha: 0,
         rinde_real: 0,
         rinde_esperado: 0,
         diferencia_rinde: 0,
@@ -656,21 +665,27 @@ const RindeManagement: React.FC = () => {
               </select>
             </div>
 
+            {/* Cantidad esperada */}
             <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Humedad Cosecha (%):</label>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Cantidad Esperada ({formData.unidad_cosecha}):</label>
               <input
                 type="number"
                 step="0.1"
-                value={formData.humedad_cosecha}
-                onChange={(e) => setFormData(prev => ({ ...prev, humedad_cosecha: Number(e.target.value) }))}
+                value={formData.cantidad_esperada}
+                readOnly
                 style={{
                   width: '100%',
                   padding: '10px',
                   border: '1px solid #ddd',
                   borderRadius: '5px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  backgroundColor: '#f5f5f5',
+                  color: '#666'
                 }}
               />
+              <small style={{ color: '#666', fontSize: '12px' }}>
+                Calculado automáticamente: {formData.rinde_esperado} kg/ha × {formData.superficie_ha} ha
+              </small>
             </div>
 
             {/* Rinde esperado */}
@@ -857,8 +872,9 @@ const RindeManagement: React.FC = () => {
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Lote</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cultivo</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Superficie</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Rinde Real</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Rinde Esperado</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cantidad Esperada</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cantidad Obtenida</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Rinde (kg/ha)</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cumplimiento</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha Cosecha</th>
                 </tr>
@@ -880,12 +896,23 @@ const RindeManagement: React.FC = () => {
                         {rinde.superficie_ha} ha
                       </td>
                       <td style={{ padding: '12px' }}>
-                        <span style={{ fontWeight: 'bold', color: '#10b981' }}>
-                          {rinde.rinde_real} kg/ha
+                        <span style={{ fontWeight: 'bold', color: '#6b7280' }}>
+                          {rinde.cantidad_esperada?.toLocaleString()} {rinde.unidad_cosecha}
                         </span>
                       </td>
                       <td style={{ padding: '12px' }}>
-                        {rinde.rinde_esperado} kg/ha
+                        <span style={{ fontWeight: 'bold', color: '#10b981' }}>
+                          {rinde.cantidad_cosechada?.toLocaleString()} {rinde.unidad_cosecha}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>
+                          {rinde.rinde_real} kg/ha
+                        </span>
+                        <br />
+                        <small style={{ color: '#6b7280' }}>
+                          Esperado: {rinde.rinde_esperado} kg/ha
+                        </small>
                       </td>
                       <td style={{ padding: '12px' }}>
                         <span style={{
@@ -893,11 +920,22 @@ const RindeManagement: React.FC = () => {
                           borderRadius: '12px',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          background: rinde.porcentaje_cumplimiento >= 100 ? '#dcfce7' : '#fef3c7',
-                          color: rinde.porcentaje_cumplimiento >= 100 ? '#166534' : '#92400e'
+                          background: rinde.porcentaje_cumplimiento >= 100 ? '#dcfce7' : 
+                                     rinde.porcentaje_cumplimiento >= 80 ? '#fef3c7' : '#fee2e2',
+                          color: rinde.porcentaje_cumplimiento >= 100 ? '#166534' : 
+                                 rinde.porcentaje_cumplimiento >= 80 ? '#92400e' : '#dc2626'
                         }}>
                           {rinde.porcentaje_cumplimiento}%
                         </span>
+                        <br />
+                        <small style={{ 
+                          color: rinde.porcentaje_cumplimiento >= 100 ? '#166534' : 
+                                 rinde.porcentaje_cumplimiento >= 80 ? '#92400e' : '#dc2626',
+                          fontSize: '10px'
+                        }}>
+                          {rinde.porcentaje_cumplimiento >= 100 ? 'Excelente' : 
+                           rinde.porcentaje_cumplimiento >= 80 ? 'Bueno' : 'Requiere atención'}
+                        </small>
                       </td>
                       <td style={{ padding: '12px' }}>
                         {new Date(rinde.fecha_cosecha).toLocaleDateString('es-ES')}

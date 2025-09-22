@@ -1,102 +1,153 @@
 import React, { useState, useEffect } from 'react';
-import { useCurrency } from '../hooks/useCurrency';
+import { useCurrencyContext } from '../contexts/CurrencyContext';
+import api from '../services/api';
 
 interface Maquinaria {
   id?: number;
   nombre: string;
   tipo: string;
+  marca?: string;
+  modelo?: string;
+  anio_fabricacion?: number | null;
+  numero_serie?: string;
   fecha_compra: string;
-  kilometros_uso: number;
+  kilometros_uso: number | null;
   estado: string;
-  costo_por_hora: number;
-  kilometros_mantenimiento_intervalo: number;
-  ultimo_mantenimiento_kilometros: number;
-  rendimiento_combustible?: number;
+  costo_por_hora: number | null;
+  kilometros_mantenimiento_intervalo: number | null;
+  ultimo_mantenimiento_kilometros: number | null;
+  rendimiento_combustible?: number | null;
   unidad_rendimiento?: string;
-  costo_combustible_por_litro?: number;
-  valor_actual?: number;
+  costo_combustible_por_litro?: number | null;
+  valor_actual?: number | null;
   notas: string;
 }
 
 const MaquinariaManagement: React.FC = () => {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrencyContext();
   const [maquinaria, setMaquinaria] = useState<Maquinaria[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingMaquinaria, setEditingMaquinaria] = useState<Maquinaria | null>(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Maquinaria>({
     nombre: '',
     tipo: 'tractor',
+    marca: '',
+    modelo: '',
+    anio_fabricacion: null,
+    numero_serie: '',
     fecha_compra: '',
-    kilometros_uso: 0,
-    estado: 'activo',
-    costo_por_hora: 0,
-    kilometros_mantenimiento_intervalo: 5000,
-    ultimo_mantenimiento_kilometros: 0,
-    rendimiento_combustible: 0,
+    kilometros_uso: null,
+    estado: 'ACTIVA',
+    costo_por_hora: null,
+    kilometros_mantenimiento_intervalo: null,
+    ultimo_mantenimiento_kilometros: null,
+    rendimiento_combustible: null,
     unidad_rendimiento: 'km/L',
-    costo_combustible_por_litro: 0,
-    valor_actual: 0,
+    costo_combustible_por_litro: null,
+    valor_actual: null,
     notas: ''
   });
 
   const tiposMaquinaria = ['tractor', 'cosechadora', 'pulverizadora', 'sembradora', 'arado', 'rastra', 'otro'];
-  const estadosMaquinaria = ['activo', 'mantenimiento', 'inactivo', 'retirado'];
+  const estadosMaquinaria = ['ACTIVA', 'OPERATIVA', 'EN_MANTENIMIENTO', 'FUERA_DE_SERVICIO', 'RETIRADA'];
   const unidadesRendimiento = ['km/L', 'L/hora', 'L/km'];
 
-  // Cargar datos mock
+  // Cargar datos desde la API
+  const loadMaquinaria = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/v1/maquinaria');
+      
+      // Mapear datos del backend al formato esperado por el frontend
+      const maquinariaMapeada = response.data.map((maq: any) => ({
+        id: maq.id,
+        nombre: maq.nombre || '',
+        tipo: maq.tipo || 'No especificado',
+        marca: maq.marca || '',
+        modelo: maq.modelo || '',
+        anio_fabricacion: maq.anioFabricacion || null,
+        numero_serie: maq.numeroSerie || '',
+        fecha_compra: maq.fechaCompra ? new Date(maq.fechaCompra).toISOString().split('T')[0] : '',
+        kilometros_uso: maq.kilometrosUso || null,
+        estado: maq.estado || 'ACTIVA',
+        costo_por_hora: maq.costoPorHora || null,
+        kilometros_mantenimiento_intervalo: maq.kilometrosMantenimientoIntervalo || null,
+        ultimo_mantenimiento_kilometros: maq.ultimoMantenimientoKilometros || null,
+        rendimiento_combustible: maq.rendimientoCombustible || null,
+        unidad_rendimiento: maq.unidadRendimiento || 'km/L',
+        costo_combustible_por_litro: maq.costoCombustiblePorLitro || null,
+        valor_actual: maq.valorActual || null,
+        notas: maq.descripcion || ''
+      }));
+      
+      console.log('🔧 [Maquinaria] Datos mapeados:', maquinariaMapeada);
+      console.log('🔧 [Maquinaria] Total cargado:', maquinariaMapeada.length);
+      setMaquinaria(maquinariaMapeada);
+    } catch (error) {
+      console.error('Error cargando maquinaria:', error);
+      setMaquinaria([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const mockData: Maquinaria[] = [
-      {
-        id: 1,
-        nombre: 'Tractor John Deere 5075E',
-        tipo: 'tractor',
-        fecha_compra: '2020-03-15',
-        kilometros_uso: 12500.50,
-        estado: 'activo',
-        costo_por_hora: 45.00,
-        kilometros_mantenimiento_intervalo: 5000,
-        ultimo_mantenimiento_kilometros: 12000.00,
-        rendimiento_combustible: 12.5,
-        unidad_rendimiento: 'km/L',
-        costo_combustible_por_litro: 450.00,
-        valor_actual: 8500000.00,
-        notas: 'Tractor principal para labores generales'
-      },
-      {
-        id: 2,
-        nombre: 'Cosechadora New Holland CR8.90',
-        tipo: 'cosechadora',
-        fecha_compra: '2019-11-20',
-        kilometros_uso: 8500.25,
-        estado: 'activo',
-        costo_por_hora: 120.00,
-        kilometros_mantenimiento_intervalo: 3000,
-        ultimo_mantenimiento_kilometros: 8000.00,
-        rendimiento_combustible: 8.2,
-        unidad_rendimiento: 'km/L',
-        costo_combustible_por_litro: 450.00,
-        valor_actual: 45000000.00,
-        notas: 'Cosechadora de alta capacidad'
-      }
-    ];
-    setMaquinaria(mockData);
+    loadMaquinaria();
   }, []);
 
-  const saveMaquinaria = () => {
-    if (editingMaquinaria) {
-      setMaquinaria(prev => prev.map(m => m.id === editingMaquinaria.id ? { ...formData, id: m.id } : m));
-    } else {
-      const newId = Math.max(...maquinaria.map(m => m.id || 0)) + 1;
-      setMaquinaria(prev => [...prev, { ...formData, id: newId }]);
+  const saveMaquinaria = async () => {
+    try {
+      // Preparar datos para envío, mapeando a camelCase para el backend
+      const datosParaEnvio = {
+        nombre: formData.nombre,
+        tipo: formData.tipo,
+        marca: formData.marca,
+        modelo: formData.modelo,
+        anioFabricacion: formData.anio_fabricacion || null,
+        numeroSerie: formData.numero_serie,
+        fechaCompra: formData.fecha_compra,
+        kilometrosUso: formData.kilometros_uso || 0,
+        estado: formData.estado,
+        costoPorHora: formData.costo_por_hora || 0,
+        kilometrosMantenimientoIntervalo: formData.kilometros_mantenimiento_intervalo || 5000,
+        ultimoMantenimientoKilometros: formData.ultimo_mantenimiento_kilometros || 0,
+        rendimientoCombustible: formData.rendimiento_combustible || 0,
+        unidadRendimiento: formData.unidad_rendimiento,
+        costoCombustiblePorLitro: formData.costo_combustible_por_litro || 0,
+        valorActual: formData.valor_actual || 0,
+        descripcion: formData.notas
+      };
+
+      if (editingMaquinaria) {
+        // Actualizar maquinaria existente
+        await api.put(`/maquinaria/${editingMaquinaria.id}`, datosParaEnvio);
+        setMaquinaria(prev => prev.map(m => m.id === editingMaquinaria.id ? { ...formData, id: m.id } : m));
+      } else {
+        // Crear nueva maquinaria
+        const response = await api.post('/maquinaria', datosParaEnvio);
+        setMaquinaria(prev => [...prev, { ...formData, id: response.data.id }]);
+      }
+      resetForm();
+    } catch (error) {
+      console.error('Error guardando maquinaria:', error);
+      alert('Error al guardar la maquinaria. Por favor, intente nuevamente.');
     }
-    resetForm();
+  };
+
+  // Mostrar formulario con scroll
+  const showFormWithScroll = () => {
+    setShowForm(true);
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const editMaquinaria = (maq: Maquinaria) => {
     setEditingMaquinaria(maq);
     setFormData(maq);
-    setShowForm(true);
+    showFormWithScroll();
   };
 
   const deleteMaquinaria = (id: number) => {
@@ -109,16 +160,20 @@ const MaquinariaManagement: React.FC = () => {
     setFormData({
       nombre: '',
       tipo: 'tractor',
+      marca: '',
+      modelo: '',
+      anio_fabricacion: null,
+      numero_serie: '',
       fecha_compra: '',
-      kilometros_uso: 0,
-      estado: 'activo',
-      costo_por_hora: 0,
-      kilometros_mantenimiento_intervalo: 5000,
-      ultimo_mantenimiento_kilometros: 0,
-      rendimiento_combustible: 0,
+      kilometros_uso: null,
+      estado: 'ACTIVA',
+      costo_por_hora: null,
+      kilometros_mantenimiento_intervalo: null,
+      ultimo_mantenimiento_kilometros: null,
+      rendimiento_combustible: null,
       unidad_rendimiento: 'km/L',
-      costo_combustible_por_litro: 0,
-      valor_actual: 0,
+      costo_combustible_por_litro: null,
+      valor_actual: null,
       notas: ''
     });
     setEditingMaquinaria(null);
@@ -126,10 +181,14 @@ const MaquinariaManagement: React.FC = () => {
   };
 
   const getEstadoMantenimiento = (maq: Maquinaria) => {
-    const kilometrosDesdeMantenimiento = maq.kilometros_uso - maq.ultimo_mantenimiento_kilometros;
-    if (kilometrosDesdeMantenimiento >= maq.kilometros_mantenimiento_intervalo) {
+    const kilometrosUso = maq.kilometros_uso || 0;
+    const ultimoMantenimiento = maq.ultimo_mantenimiento_kilometros || 0;
+    const intervaloMantenimiento = maq.kilometros_mantenimiento_intervalo || 1000;
+    
+    const kilometrosDesdeMantenimiento = kilometrosUso - ultimoMantenimiento;
+    if (kilometrosDesdeMantenimiento >= intervaloMantenimiento) {
       return { estado: 'MANTENIMIENTO REQUERIDO', color: '#ef4444' };
-    } else if (kilometrosDesdeMantenimiento >= maq.kilometros_mantenimiento_intervalo * 0.8) {
+    } else if (kilometrosDesdeMantenimiento >= intervaloMantenimiento * 0.8) {
       return { estado: 'MANTENIMIENTO PRÓXIMO', color: '#f59e0b' };
     }
     return { estado: 'OK', color: '#10b981' };
@@ -141,9 +200,13 @@ const MaquinariaManagement: React.FC = () => {
 
   const estadisticas = {
     total: maquinaria.length,
-    activas: maquinaria.filter(m => m.estado === 'activo').length,
+    activas: maquinaria.filter(m => m.estado === 'ACTIVA' || m.estado === 'OPERATIVA').length,
     alertas: 0
   };
+
+  // Debug: Log de estadísticas
+  console.log('🔧 [Maquinaria] Estadísticas calculadas:', estadisticas);
+  console.log('🔧 [Maquinaria] Estados encontrados:', maquinaria.map(m => m.estado));
 
   return (
     <div style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -183,7 +246,7 @@ const MaquinariaManagement: React.FC = () => {
       {/* Botones de acción */}
       <div style={{ marginBottom: '1.5rem' }}>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={showFormWithScroll}
           style={{
             background: '#2563eb',
             color: 'white',
@@ -221,9 +284,10 @@ const MaquinariaManagement: React.FC = () => {
             <thead>
               <tr style={{ background: '#f9fafb' }}>
                 <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Maquinaria</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Tipo</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Marca/Modelo</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Año</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Estado</th>
-                                 <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Kilómetros</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Kilómetros</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Mantenimiento</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Costo/Hora (ARS)</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Rendimiento</th>
@@ -238,7 +302,13 @@ const MaquinariaManagement: React.FC = () => {
                     <td style={{ padding: '0.75rem' }}>
                       <div style={{ fontWeight: 'bold' }}>{maq.nombre}</div>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        Compra: {new Date(maq.fecha_compra).toLocaleDateString()}
+                        {maq.tipo || 'No especificado'} • Compra: {maq.fecha_compra ? new Date(maq.fecha_compra).toLocaleDateString() : 'No especificada'}
+                      </div>
+                    </td>
+                    <td style={{ padding: '0.75rem' }}>
+                      <div style={{ fontWeight: 'bold' }}>{maq.marca || 'Sin marca'}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {maq.modelo || 'Sin modelo'}
                       </div>
                     </td>
                     <td style={{ padding: '0.75rem' }}>
@@ -248,13 +318,13 @@ const MaquinariaManagement: React.FC = () => {
                         borderRadius: '0.25rem',
                         fontSize: '0.75rem'
                       }}>
-                        {maq.tipo}
+                        {maq.anio_fabricacion || 'N/A'}
                       </span>
                     </td>
                     <td style={{ padding: '0.75rem' }}>
                       <span style={{
-                        background: maq.estado === 'activo' ? '#d1fae5' : '#fef3c7',
-                        color: maq.estado === 'activo' ? '#065f46' : '#92400e',
+                        background: (maq.estado === 'ACTIVA' || maq.estado === 'OPERATIVA') ? '#d1fae5' : '#fef3c7',
+                        color: (maq.estado === 'ACTIVA' || maq.estado === 'OPERATIVA') ? '#065f46' : '#92400e',
                         padding: '0.25rem 0.5rem',
                         borderRadius: '0.25rem',
                         fontSize: '0.75rem'
@@ -262,12 +332,12 @@ const MaquinariaManagement: React.FC = () => {
                         {maq.estado}
                       </span>
                     </td>
-                                         <td style={{ padding: '0.75rem' }}>
-                       <div>{maq.kilometros_uso.toFixed(1)} km</div>
-                       <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                         Último: {maq.ultimo_mantenimiento_kilometros.toFixed(1)} km
-                       </div>
-                     </td>
+                    <td style={{ padding: '0.75rem' }}>
+                      <div>{(maq.kilometros_uso || 0).toFixed(1)} km</div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        Último: {(maq.ultimo_mantenimiento_kilometros || 0).toFixed(1)} km
+                      </div>
+                    </td>
                     <td style={{ padding: '0.75rem' }}>
                       <span style={{
                         background: mantenimiento.color === '#ef4444' ? '#fee2e2' : '#d1fae5',
@@ -281,7 +351,7 @@ const MaquinariaManagement: React.FC = () => {
                       </span>
                     </td>
                     <td style={{ padding: '0.75rem' }}>
-                      {formatCurrency(maq.costo_por_hora)}/hs
+                      {formatCurrency(maq.costo_por_hora || 0)}/hs
                     </td>
                     <td style={{ padding: '0.75rem' }}>
                       <div>{maq.rendimiento_combustible || 0} {maq.unidad_rendimiento || 'km/L'}</div>
@@ -406,6 +476,76 @@ const MaquinariaManagement: React.FC = () => {
                   Categoría principal de la maquinaria
                 </small>
               </div>
+
+              {/* Marca */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
+                  🏭 Marca
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: John Deere, Case IH, New Holland"
+                  value={formData.marca || ''}
+                  onChange={(e) => setFormData({...formData, marca: e.target.value})}
+                  style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
+                />
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                  Marca o fabricante de la maquinaria
+                </small>
+              </div>
+
+              {/* Modelo */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
+                  🔧 Modelo
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: 5075E, Axial Flow 2388, T6.180"
+                  value={formData.modelo || ''}
+                  onChange={(e) => setFormData({...formData, modelo: e.target.value})}
+                  style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
+                />
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                  Modelo específico de la maquinaria
+                </small>
+              </div>
+
+              {/* Año de Fabricación */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
+                  📅 Año de Fabricación
+                </label>
+                <input
+                  type="number"
+                  placeholder="2020"
+                  value={formData.anio_fabricacion || ''}
+                  onChange={(e) => setFormData({...formData, anio_fabricacion: e.target.value ? parseInt(e.target.value) : null})}
+                  style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
+                  min="1900"
+                  max="2030"
+                />
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                  Año en que fue fabricada la maquinaria
+                </small>
+              </div>
+
+              {/* Número de Serie */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
+                  🔢 Número de Serie
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: JD5075E123456"
+                  value={formData.numero_serie || ''}
+                  onChange={(e) => setFormData({...formData, numero_serie: e.target.value})}
+                  style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
+                />
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                  Número de serie único del fabricante
+                </small>
+              </div>
               
               {/* Fecha de Compra */}
               <div>
@@ -431,8 +571,8 @@ const MaquinariaManagement: React.FC = () => {
                  <input
                    type="number"
                    placeholder="0.0"
-                   value={formData.kilometros_uso}
-                   onChange={(e) => setFormData({...formData, kilometros_uso: parseFloat(e.target.value) || 0})}
+                   value={formData.kilometros_uso || ''}
+                   onChange={(e) => setFormData({...formData, kilometros_uso: e.target.value ? parseFloat(e.target.value) : null})}
                    style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
                    step="0.1"
                  />
@@ -452,7 +592,7 @@ const MaquinariaManagement: React.FC = () => {
                   style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
                 >
                   {estadosMaquinaria.map(estado => (
-                    <option key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</option>
+                    <option key={estado} value={estado}>{estado.replace(/_/g, ' ')}</option>
                   ))}
                 </select>
                 <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
@@ -468,8 +608,8 @@ const MaquinariaManagement: React.FC = () => {
                 <input
                   type="number"
                   placeholder="0.00"
-                  value={formData.costo_por_hora}
-                  onChange={(e) => setFormData({...formData, costo_por_hora: parseFloat(e.target.value) || 0})}
+                  value={formData.costo_por_hora || ''}
+                  onChange={(e) => setFormData({...formData, costo_por_hora: e.target.value ? parseFloat(e.target.value) : null})}
                   style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
                   step="0.01"
                 />
@@ -486,8 +626,8 @@ const MaquinariaManagement: React.FC = () => {
                  <input
                    type="number"
                    placeholder="5000"
-                   value={formData.kilometros_mantenimiento_intervalo}
-                   onChange={(e) => setFormData({...formData, kilometros_mantenimiento_intervalo: parseInt(e.target.value) || 5000})}
+                   value={formData.kilometros_mantenimiento_intervalo || ''}
+                   onChange={(e) => setFormData({...formData, kilometros_mantenimiento_intervalo: e.target.value ? parseInt(e.target.value) : null})}
                    style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
                  />
                  <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
@@ -503,8 +643,8 @@ const MaquinariaManagement: React.FC = () => {
                  <input
                    type="number"
                    placeholder="0.0"
-                   value={formData.ultimo_mantenimiento_kilometros}
-                   onChange={(e) => setFormData({...formData, ultimo_mantenimiento_kilometros: parseFloat(e.target.value) || 0})}
+                   value={formData.ultimo_mantenimiento_kilometros || ''}
+                   onChange={(e) => setFormData({...formData, ultimo_mantenimiento_kilometros: e.target.value ? parseFloat(e.target.value) : null})}
                    style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
                    step="0.1"
                  />
@@ -522,8 +662,8 @@ const MaquinariaManagement: React.FC = () => {
                    <input
                      type="number"
                      placeholder="0.0"
-                     value={formData.rendimiento_combustible || 0}
-                     onChange={(e) => setFormData({...formData, rendimiento_combustible: parseFloat(e.target.value) || 0})}
+                     value={formData.rendimiento_combustible || ''}
+                     onChange={(e) => setFormData({...formData, rendimiento_combustible: e.target.value ? parseFloat(e.target.value) : null})}
                      style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem' }}
                      step="0.1"
                    />
@@ -550,8 +690,8 @@ const MaquinariaManagement: React.FC = () => {
                  <input
                    type="number"
                    placeholder="0.00"
-                   value={formData.costo_combustible_por_litro || 0}
-                   onChange={(e) => setFormData({...formData, costo_combustible_por_litro: parseFloat(e.target.value) || 0})}
+                   value={formData.costo_combustible_por_litro || ''}
+                   onChange={(e) => setFormData({...formData, costo_combustible_por_litro: e.target.value ? parseFloat(e.target.value) : null})}
                    style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
                    step="0.01"
                  />
@@ -568,8 +708,8 @@ const MaquinariaManagement: React.FC = () => {
                  <input
                    type="number"
                    placeholder="0.00"
-                   value={formData.valor_actual || 0}
-                   onChange={(e) => setFormData({...formData, valor_actual: parseFloat(e.target.value) || 0})}
+                   value={formData.valor_actual || ''}
+                   onChange={(e) => setFormData({...formData, valor_actual: e.target.value ? parseFloat(e.target.value) : null})}
                    style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', width: '100%' }}
                    step="0.01"
                  />

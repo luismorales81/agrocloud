@@ -19,6 +19,7 @@ const OpenMeteoWeatherWidget: React.FC<OpenMeteoWeatherWidgetProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [cacheInfo, setCacheInfo] = useState<{ size: number; oldestEntry?: number } | null>(null);
 
   useEffect(() => {
     if (coordinates) {
@@ -28,14 +29,15 @@ const OpenMeteoWeatherWidget: React.FC<OpenMeteoWeatherWidgetProps> = ({
 
   const fetchWeatherData = async () => {
     try {
-      console.log(`🌤️ [OpenMeteoWidget] Obteniendo clima para campo: ${fieldName}`);
       setLoading(true);
       setError(null);
 
       const data = await weatherService.getWeatherByCoordinates(coordinates.lat, coordinates.lon);
-      console.log('🌤️ [OpenMeteoWidget] Datos recibidos:', data);
-      console.log('🌤️ [OpenMeteoWidget] Forecast length:', data.forecast?.length);
       setWeatherData(data);
+      
+      // Actualizar información del cache
+      const cacheInfo = weatherService.getCacheInfo();
+      setCacheInfo(cacheInfo);
       
     } catch (err) {
       console.error(`❌ [OpenMeteoWidget] Error obteniendo clima para ${fieldName}:`, err);
@@ -43,6 +45,12 @@ const OpenMeteoWeatherWidget: React.FC<OpenMeteoWeatherWidgetProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClearCache = () => {
+    weatherService.clearAllCache();
+    setCacheInfo({ size: 0 });
+    console.log('🗑️ [OpenMeteoWidget] Cache limpiado manualmente');
   };
 
   const getAgriculturalAdvice = (current: WeatherCurrent): string => {
@@ -400,14 +408,16 @@ const OpenMeteoWeatherWidget: React.FC<OpenMeteoWeatherWidgetProps> = ({
         border: '1px solid #0ea5e9'
       }}>
         <div style={{ fontSize: '10px', fontWeight: '600', color: '#0c4a6e', marginBottom: '2px' }}>
-          💡 Consejo
+          💡 Consejo {forecast && forecast.length > 0 ? `- ${forecast[currentSlide]?.dayOfWeek}` : ''}
         </div>
         <div style={{ fontSize: '9px', color: '#0369a1' }}>
-          {getAgriculturalAdvice(current)}
+          {forecast && forecast.length > 0 && forecast[currentSlide]?.agriculturalAdvice 
+            ? forecast[currentSlide].agriculturalAdvice 
+            : getAgriculturalAdvice(current)}
         </div>
       </div>
 
-      {/* Información */}
+      {/* Información del Cache y API */}
       <div style={{
         fontSize: '8px',
         color: '#6b7280',
@@ -416,7 +426,17 @@ const OpenMeteoWeatherWidget: React.FC<OpenMeteoWeatherWidgetProps> = ({
         paddingTop: '0.5rem',
         borderTop: '1px solid #e2e8f0'
       }}>
-        🌤️ Open-Meteo API
+        <div>🌤️ Open-Meteo API</div>
+        {cacheInfo && (
+          <div style={{ marginTop: '2px' }}>
+            💾 Cache: {cacheInfo.size} entrada{cacheInfo.size !== 1 ? 's' : ''}
+            {cacheInfo.oldestEntry && (
+              <span style={{ marginLeft: '4px' }}>
+                (hace {Math.round((Date.now() - cacheInfo.oldestEntry) / 60000)} min)
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

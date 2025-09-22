@@ -11,6 +11,8 @@ const TrendingDown = () => <span>📉</span>;
 const DollarSign = () => <span>💰</span>;
 const BarChart3 = () => <span>📊</span>;
 import api from '../services/api';
+import { useCurrencyContext } from '../contexts/CurrencyContext';
+import { useCurrencyUpdate } from '../hooks/useCurrencyUpdate';
 
 interface BalanceData {
   fechaInicio: string;
@@ -33,8 +35,12 @@ interface DetalleBalance {
 }
 
 const BalanceReport: React.FC = () => {
+  const { formatCurrency } = useCurrencyContext();
   const [balance, setBalance] = useState<BalanceData | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Forzar actualización cuando cambie la moneda
+  useCurrencyUpdate();
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [tipoReporte, setTipoReporte] = useState('general');
@@ -55,7 +61,7 @@ const BalanceReport: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/api/public/campos');
+      const response = await api.get('/api/v1/lotes');
       setLotes(response.data);
     } catch (error) {
       console.error('Error cargando lotes:', error);
@@ -67,13 +73,13 @@ const BalanceReport: React.FC = () => {
     try {
       let url = '';
       if (tipoReporte === 'general') {
-        url = `/api/public/balance/general?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+        url = `/api/v1/balance/general?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
       } else if (tipoReporte === 'lote') {
-        url = `/api/public/balance/lote/${loteId}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+        url = `/api/v1/balance/lote/${loteId}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
       } else if (tipoReporte === 'mes-actual') {
-        url = '/api/public/balance/mes-actual';
+        url = '/api/v1/balance/mes-actual';
       } else if (tipoReporte === 'año-actual') {
-        url = '/api/public/balance/año-actual';
+        url = '/api/v1/balance/año-actual';
       }
 
       const response = await api.get(url);
@@ -84,13 +90,6 @@ const BalanceReport: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatearMoneda = (monto: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS'
-    }).format(monto);
   };
 
   const formatearFecha = (fecha: string) => {
@@ -156,7 +155,7 @@ const BalanceReport: React.FC = () => {
                   <Input
                     type="date"
                     value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
+                    onChange={(value) => setFechaInicio(value)}
                   />
                 </div>
                 <div>
@@ -164,7 +163,7 @@ const BalanceReport: React.FC = () => {
                   <Input
                     type="date"
                     value={fechaFin}
-                    onChange={(e) => setFechaFin(e.target.value)}
+                    onChange={(value) => setFechaFin(value)}
                   />
                 </div>
               </>
@@ -191,7 +190,7 @@ const BalanceReport: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Total Ingresos</p>
                     <p className="text-2xl font-bold text-green-600">
-                      {formatearMoneda(balance.totalIngresos)}
+                      {formatCurrency(balance.totalIngresos)}
                     </p>
                   </div>
                   <DollarSign className="w-8 h-8 text-green-600" />
@@ -205,7 +204,7 @@ const BalanceReport: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Total Costos</p>
                     <p className="text-2xl font-bold text-red-600">
-                      {formatearMoneda(balance.totalCostos)}
+                      {formatCurrency(balance.totalCostos)}
                     </p>
                   </div>
                   <DollarSign className="w-8 h-8 text-red-600" />
@@ -219,7 +218,7 @@ const BalanceReport: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Balance Neto</p>
                     <p className={`text-2xl font-bold ${obtenerColorBalance(balance.balanceNeto)}`}>
-                      {formatearMoneda(balance.balanceNeto)}
+                      {formatCurrency(balance.balanceNeto)}
                     </p>
                   </div>
                   {obtenerIconoBalance(balance.balanceNeto)}
@@ -283,7 +282,7 @@ const BalanceReport: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <p className={`font-bold ${detalle.tipo === 'INGRESO' ? 'text-green-600' : 'text-red-600'}`}>
-                        {detalle.tipo === 'INGRESO' ? '+' : '-'} {formatearMoneda(detalle.monto)}
+                        {detalle.tipo === 'INGRESO' ? '+' : '-'} {formatCurrency(detalle.monto)}
                       </p>
                     </div>
                   </div>
