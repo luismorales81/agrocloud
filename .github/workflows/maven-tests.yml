@@ -7,10 +7,6 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-env:
-  MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASS }}
-  MYSQL_DATABASE: agrocloud_test
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -19,12 +15,12 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE: ${{ env.MYSQL_DATABASE }}
+          MYSQL_ROOT_PASSWORD: 123456
+          MYSQL_DATABASE: agrocloud_test
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -u root -p${{ env.MYSQL_ROOT_PASSWORD }}"
+          --health-cmd="mysqladmin ping -h localhost -u root -p123456"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -44,7 +40,7 @@ jobs:
       run: |
         echo "Esperando a que MySQL esté listo..."
         for i in {1..30}; do
-          if mysqladmin ping -h"127.0.0.1" -P3306 -u"root" -p"${{ env.MYSQL_ROOT_PASSWORD }}" --silent; then
+          if mysqladmin ping -h"127.0.0.1" -P3306 -u"root" -p"123456" --silent; then
             echo "MySQL está listo!"
             break
           fi
@@ -55,12 +51,12 @@ jobs:
     - name: Verify MySQL connection
       run: |
         echo "Verificando conexión a MySQL..."
-        mysql -h 127.0.0.1 -P 3306 -u root -p"${{ env.MYSQL_ROOT_PASSWORD }}" -e "SHOW DATABASES;"
+        mysql -h 127.0.0.1 -P 3306 -u root -p"123456" -e "SHOW DATABASES;"
         
     - name: Create test database
       run: |
         echo "Creando base de datos de pruebas..."
-        mysql -h 127.0.0.1 -P 3306 -u root -p"${{ env.MYSQL_ROOT_PASSWORD }}" -e "CREATE DATABASE IF NOT EXISTS agrocloud_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+        mysql -h 127.0.0.1 -P 3306 -u root -p"123456" -e "CREATE DATABASE IF NOT EXISTS agrocloud_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
         
     - name: Run tests
       run: mvn test -Dspring.profiles.active=test
