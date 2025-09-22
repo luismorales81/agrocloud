@@ -67,4 +67,9 @@ public interface PlotRepository extends JpaRepository<Plot, Long> {
            "p.user.parentUser.id = :userId OR " +
            "p.user.parentUser.id IN (SELECT u.id FROM User u WHERE u.parentUser.id = :userId)")
     List<Plot> findByUserIdOrParentUserId(@Param("userId") Long userId);
+    
+    // Métodos faltantes para los tests
+    List<Plot> findByCampoId(Long campoId);
+    List<Plot> findByNombreContainingIgnoreCase(String nombre);
+    List<Plot> findByUsuarioIdAndActivoTrue(Long usuarioId);
 }

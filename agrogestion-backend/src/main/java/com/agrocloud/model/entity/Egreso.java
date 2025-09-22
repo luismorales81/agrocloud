@@ -251,4 +251,8 @@ public class Egreso {
     public void setUsuario(User usuario) {
         this.user = usuario;
     }
+    
+    public void setTipoEgreso(TipoEgreso tipoEgreso) {
+        this.tipo = tipoEgreso;
+    }
 }

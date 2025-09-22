@@ -209,6 +209,20 @@ public class UsuarioEmpresa {
     public boolean tienePermisoFinanciero() {
         return isActivo() && (isAdministrador() || isAsesor() || isContador());
     }
+    
+    // Métodos faltantes para los tests
+    public void setRolNombre(String rolNombre) {
+        try {
+            this.rol = RolEmpresa.valueOf(rolNombre);
+        } catch (IllegalArgumentException e) {
+            // Si no se puede convertir, usar valor por defecto
+            this.rol = RolEmpresa.OPERARIO;
+        }
+    }
+    
+    public String getRolNombre() {
+        return this.rol != null ? this.rol.name() : "OPERARIO";
+    }
 
     @Override
     public String toString() {

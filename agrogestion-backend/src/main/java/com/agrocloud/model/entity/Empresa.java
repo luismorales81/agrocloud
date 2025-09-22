@@ -53,6 +53,10 @@ public class Empresa {
     @Size(max = 500, message = "La dirección no puede exceder 500 caracteres")
     @Column(name = "direccion", columnDefinition = "TEXT")
     private String direccion;
+    
+    @Size(max = 1000, message = "La descripción no puede exceder 1000 caracteres")
+    @Column(name = "descripcion", columnDefinition = "TEXT")
+    private String descripcion;
 
 
     @Enumerated(EnumType.STRING)
@@ -309,6 +313,14 @@ public class Empresa {
 
     public void setCultivos(Set<Cultivo> cultivos) {
         this.cultivos = cultivos;
+    }
+    
+    public String getDescripcion() {
+        return descripcion;
+    }
+    
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
 
     // Métodos de utilidad

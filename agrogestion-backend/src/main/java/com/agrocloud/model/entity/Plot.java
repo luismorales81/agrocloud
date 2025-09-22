@@ -284,9 +284,13 @@ public class Plot {
         this.user = user;
     }
     
-    // Método de compatibilidad para los tests
+    // Métodos de compatibilidad para los tests
     public void setUsuario(User usuario) {
         this.user = usuario;
+    }
+    
+    public User getUsuario() {
+        return this.user;
     }
 
 

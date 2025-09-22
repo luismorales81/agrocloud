@@ -224,6 +224,18 @@ public class Cosecha {
     public String getEstado() {
         return "ACTIVO"; // Valor por defecto
     }
+    
+    public LocalDate getFechaCosecha() {
+        return this.fecha;
+    }
+    
+    public BigDecimal getPrecioPorUnidad() {
+        return this.precioPorTonelada;
+    }
+    
+    public BigDecimal getValorTotal() {
+        return this.costoTotal;
+    }
 
     @Override
     public String toString() {

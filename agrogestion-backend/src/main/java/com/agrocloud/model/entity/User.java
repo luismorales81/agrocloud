@@ -408,6 +408,10 @@ public class User implements UserDetails {
     public void setApellido(String apellido) {
         this.lastName = apellido;
     }
+    
+    public String getNombreUsuario() {
+        return this.username;
+    }
 
     @Override
     public String toString() {

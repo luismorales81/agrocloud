@@ -96,7 +96,8 @@ public class Maquinaria {
         FUERA_DE_SERVICIO,
         EN_MANTENIMIENTO,
         RETIRADA,
-        DISPONIBLE
+        DISPONIBLE,
+        EN_USO
     }
     
     // Constructor por defecto
