@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @TestPropertySource(locations = "classpath:application-test.properties")
 @Transactional
