@@ -102,4 +102,5 @@ public interface LaborRepository extends JpaRepository<Labor, Long> {
     List<Labor> findByLoteId(Long loteId);
     List<Labor> findByUsuarioId(Long usuarioId);
     List<Labor> findByFechaInicio(LocalDate fechaInicio);
+    List<Labor> findByTipoLabor(Labor.TipoLabor tipoLabor);
 }

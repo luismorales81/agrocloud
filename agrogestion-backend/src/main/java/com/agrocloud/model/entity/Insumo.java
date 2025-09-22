@@ -230,6 +230,23 @@ public class Insumo {
     public void setEmpresa(Empresa empresa) {
         this.empresa = empresa;
     }
+    
+    // Métodos faltantes para los tests
+    public BigDecimal getStockDisponible() {
+        return this.stockActual;
+    }
+    
+    public void setStockDisponible(BigDecimal stockDisponible) {
+        this.stockActual = stockDisponible;
+    }
+    
+    public void setUsuario(User usuario) {
+        this.user = usuario;
+    }
+    
+    public User getUsuario() {
+        return this.user;
+    }
 
     // Helper methods
     public boolean isStockBajo() {

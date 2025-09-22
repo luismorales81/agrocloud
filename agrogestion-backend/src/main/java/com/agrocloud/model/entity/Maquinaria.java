@@ -95,7 +95,8 @@ public class Maquinaria {
         OPERATIVA,
         FUERA_DE_SERVICIO,
         EN_MANTENIMIENTO,
-        RETIRADA
+        RETIRADA,
+        DISPONIBLE
     }
     
     // Constructor por defecto
@@ -315,5 +316,14 @@ public class Maquinaria {
     @PreUpdate
     public void preUpdate() {
         this.fechaActualizacion = LocalDateTime.now();
+    }
+    
+    // Métodos faltantes para los tests
+    public void setAño(int año) {
+        this.anioFabricacion = año;
+    }
+    
+    public void setUsuario(User usuario) {
+        this.user = usuario;
     }
 }

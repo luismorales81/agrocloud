@@ -237,4 +237,13 @@ public class Ingreso {
     public void preUpdate() {
         this.fechaActualizacion = LocalDateTime.now();
     }
+    
+    // Método faltante para los tests
+    public void setFechaIngreso(LocalDate fechaIngreso) {
+        this.fecha = fechaIngreso;
+    }
+    
+    public void setUsuario(User usuario) {
+        this.user = usuario;
+    }
 }

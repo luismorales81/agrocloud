@@ -92,4 +92,7 @@ public interface EgresoRepository extends JpaRepository<Egreso, Long> {
     List<Egreso> findByUserIdAndActivoTrue(Long userId);
     long countByUserIdAndActivoTrue(Long userId);
     List<Egreso> findByActivoTrue();
+    
+    // Método faltante para los tests
+    List<Egreso> findByUsuarioId(Long usuarioId);
 }

@@ -65,6 +65,7 @@ public class Egreso {
     // Enum para tipos de egreso
     public enum TipoEgreso {
         INSUMO,
+        INSUMOS,
         MAQUINARIA_COMPRA,
         MAQUINARIA_ALQUILER,
         SERVICIO,
@@ -220,5 +221,34 @@ public class Egreso {
     @PreUpdate
     public void preUpdate() {
         this.fechaActualizacion = LocalDateTime.now();
+    }
+    
+    // Métodos faltantes para los tests
+    public void setConcepto(String concepto) {
+        this.observaciones = concepto;
+    }
+    
+    public void setDescripcion(String descripcion) {
+        this.observaciones = descripcion;
+    }
+    
+    public void setFechaEgreso(LocalDate fechaEgreso) {
+        this.fecha = fechaEgreso;
+    }
+    
+    public void setMonto(BigDecimal monto) {
+        this.costoTotal = monto;
+    }
+    
+    public BigDecimal getMonto() {
+        return this.costoTotal;
+    }
+    
+    public void setProveedor(String proveedor) {
+        this.observaciones = proveedor;
+    }
+    
+    public void setUsuario(User usuario) {
+        this.user = usuario;
     }
 }

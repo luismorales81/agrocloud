@@ -51,4 +51,10 @@ public interface InsumoRepository extends JpaRepository<Insumo, Long> {
     List<Insumo> findByActivoTrue();
     List<Insumo> findByActivoFalse();
     List<Insumo> findByUserIdAndActivoFalse(Long userId);
+    
+    // Métodos faltantes para los tests
+    List<Insumo> findByUsuarioIdAndActivoTrue(Long usuarioId);
+    List<Insumo> findByNombreContainingIgnoreCase(String nombre);
+    List<Insumo> findByTipo(String tipo);
+    List<Insumo> findByProveedor(String proveedor);
 }

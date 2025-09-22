@@ -92,4 +92,7 @@ public interface CosechaRepository extends JpaRepository<Cosecha, Long> {
     // Obtener cosechas del año actual por cultivo
     @Query("SELECT c FROM Cosecha c WHERE c.cultivo.id = :cultivoId AND YEAR(c.fecha) = YEAR(CURRENT_DATE)")
     List<Cosecha> findCosechasAnioActualPorCultivo(@Param("cultivoId") Long cultivoId);
+    
+    // Método faltante para los tests
+    List<Cosecha> findByLoteId(Long loteId);
 }
