@@ -58,14 +58,54 @@ jobs:
         echo "Creando base de datos de pruebas..."
         mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.DB_PASS }}" -e "CREATE DATABASE IF NOT EXISTS agrocloud_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
         
-    - name: Run tests
-      run: mvn test -Dspring.profiles.active=test -Dspring.datasource.url=jdbc:mysql://127.0.0.1:3306/agrocloud_test?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    - name: Display Maven version
+      run: mvn -version
+        
+    - name: Display Java version
+      run: java -version
+        
+    - name: List test files
+      run: |
+        echo "=== Archivos de prueba encontrados ==="
+        find src/test -name "*.java" -type f
+        
+    - name: Run Maven clean
+      run: mvn clean
+      
+    - name: Run Maven compile
+      run: mvn compile
+      
+    - name: Run Maven test-compile
+      run: mvn test-compile
+      
+    - name: Run tests with detailed output
+      run: |
+        echo "=== Ejecutando pruebas con salida detallada ==="
+        mvn test -Dspring.profiles.active=test \
+                 -Dspring.datasource.url=jdbc:mysql://127.0.0.1:3306/agrocloud_test?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true \
+                 -Dspring.datasource.username=${{ secrets.DB_USER }} \
+                 -Dspring.datasource.password=${{ secrets.DB_PASS }} \
+                 -Dspring.jpa.hibernate.ddl-auto=create-drop \
+                 -Dspring.sql.init.mode=always \
+                 -Dspring.sql.init.schema-locations=classpath:test-schema.sql \
+                 -Dspring.sql.init.data-locations=classpath:test-data.sql \
+                 --batch-mode \
+                 --show-version
       env:
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASS: ${{ secrets.DB_PASS }}
         
     - name: Generate test reports
       run: mvn jacoco:report
+      if: always()
+      
+    - name: List generated files
+      run: |
+        echo "=== Archivos generados ==="
+        ls -la target/ || echo "No hay directorio target"
+        ls -la target/surefire-reports/ || echo "No hay reportes de surefire"
+        ls -la target/site/jacoco/ || echo "No hay reportes de jacoco"
+      if: always()
       
     - name: Upload test results
       uses: actions/upload-artifact@v4
