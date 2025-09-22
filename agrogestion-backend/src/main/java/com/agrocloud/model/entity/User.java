@@ -396,6 +396,19 @@ public class User implements UserDetails {
         // Se mantiene para compatibilidad con el código existente
     }
 
+    // Métodos faltantes para los tests
+    public void setNombreUsuario(String nombreUsuario) {
+        this.username = nombreUsuario;
+    }
+    
+    public void setNombre(String nombre) {
+        this.firstName = nombre;
+    }
+    
+    public void setApellido(String apellido) {
+        this.lastName = apellido;
+    }
+
     @Override
     public String toString() {
         return "User{" +

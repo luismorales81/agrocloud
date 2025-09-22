@@ -96,4 +96,10 @@ public interface LaborRepository extends JpaRepository<Labor, Long> {
     
     // Buscar labores por lote y tipo de labor
     List<Labor> findByLoteAndTipoLaborOrderByFechaInicioDesc(Plot lote, Labor.TipoLabor tipoLabor);
+    
+    // Métodos faltantes para los tests
+    List<Labor> findByEstado(Labor.EstadoLabor estado);
+    List<Labor> findByLoteId(Long loteId);
+    List<Labor> findByUsuarioId(Long usuarioId);
+    List<Labor> findByFechaInicio(LocalDate fechaInicio);
 }
