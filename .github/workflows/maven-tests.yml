@@ -2,21 +2,10 @@ name: Maven Tests - AgroGestion
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ "main" ]
   workflow_dispatch:
-
-env:
-  MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASS }}
-  MYSQL_DATABASE: agrogestion
-  MYSQL_USER: ${{ secrets.DB_USER }}
-  MYSQL_PASSWORD: ${{ secrets.DB_PASS }}
-  DB_HOST: localhost
-  DB_PORT: 3306
-  DB_NAME: agrogestion
-  DB_USER: ${{ secrets.DB_USER }}
-  DB_PASS: ${{ secrets.DB_PASS }}
 
 jobs:
   test:
@@ -27,171 +16,49 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASS }}
-          MYSQL_DATABASE: agrogestion
-          MYSQL_USER: ${{ secrets.DB_USER }}
-          MYSQL_PASSWORD: ${{ secrets.DB_PASS }}
+          MYSQL_DATABASE: agrocloud_test
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -u root -p${{ secrets.DB_PASS }}"
+          --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
-        volumes:
-          - mysql_data:/var/lib/mysql
+          --health-retries=3
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
+      
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
-
-    - name: Wait for MySQL to be ready
-      run: |
-        echo "Esperando a que MySQL esté listo..."
-        timeout 60s bash -c 'until mysqladmin ping -h localhost -u root -p${{ secrets.DB_PASS }} --silent; do sleep 2; done'
-        echo "MySQL está listo!"
-
-    - name: Verify MySQL connection
-      run: |
-        echo "Verificando conexión a MySQL..."
-        mysql -h localhost -u root -p${{ secrets.DB_PASS }} -e "SHOW DATABASES;"
-        mysql -h localhost -u root -p${{ secrets.DB_PASS }} -e "SELECT User, Host FROM mysql.user WHERE User='${{ secrets.DB_USER }}';"
-
-    - name: Create test database
-      run: |
-        echo "Creando base de datos de pruebas..."
-        mysql -h localhost -u root -p${{ secrets.DB_PASS }} -e "CREATE DATABASE IF NOT EXISTS agrocloud_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-        mysql -h localhost -u root -p${{ secrets.DB_PASS }} -e "GRANT ALL PRIVILEGES ON agrocloud_test.* TO '${{ secrets.DB_USER }}'@'%';"
-        mysql -h localhost -u root -p${{ secrets.DB_PASS }} -e "GRANT ALL PRIVILEGES ON agrogestion.* TO '${{ secrets.DB_USER }}'@'%';"
-        mysql -h localhost -u root -p${{ secrets.DB_PASS }} -e "FLUSH PRIVILEGES;"
-        echo "Base de datos de pruebas creada exitosamente!"
-
-    - name: Verify test database
-      run: |
-        echo "Verificando base de datos de pruebas..."
-        mysql -h localhost -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASS }} -e "SHOW DATABASES;"
-        mysql -h localhost -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASS }} -e "USE agrocloud_test; SHOW TABLES;"
-
-    - name: Cache Maven dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-
-    - name: Display Maven version
-      run: mvn -version
-
-    - name: Display Java version
-      run: java -version
-
-    - name: Display environment variables
-      run: |
-        echo "=== Variables de entorno ==="
-        echo "DB_HOST: $DB_HOST"
-        echo "DB_PORT: $DB_PORT"
-        echo "DB_NAME: $DB_NAME"
-        echo "DB_USER: $DB_USER"
-        echo "MYSQL_DATABASE: $MYSQL_DATABASE"
-        echo "MYSQL_USER: $MYSQL_USER"
-
-    - name: Run Maven clean
-      run: mvn clean -X
-
-    - name: Run Maven compile
-      run: mvn compile -X
-
-    - name: Run Maven tests with full logging
-      run: |
-        echo "=== Ejecutando pruebas automatizadas ==="
-        mvn test -Dspring.profiles.active=test \
-                 -Dspring.datasource.url=jdbc:mysql://localhost:3306/agrocloud_test?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true \
-                 -Dspring.datasource.username=${{ secrets.DB_USER }} \
-                 -Dspring.datasource.password=${{ secrets.DB_PASS }} \
-                 -Dspring.jpa.hibernate.ddl-auto=create-drop \
-                 -Dspring.sql.init.mode=always \
-                 -Dspring.sql.init.schema-locations=classpath:test-schema.sql \
-                 -Dspring.sql.init.data-locations=classpath:test-data.sql \
-                 -X \
-                 --batch-mode \
-                 --show-version \
-                 --no-transfer-progress
-      env:
-        SPRING_PROFILES_ACTIVE: test
-        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/agrocloud_test?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-        SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USER }}
-        SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASS }}
-        SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
-        SPRING_SQL_INIT_MODE: always
-        SPRING_SQL_INIT_SCHEMA_LOCATIONS: classpath:test-schema.sql
-        SPRING_SQL_INIT_DATA_LOCATIONS: classpath:test-data.sql
-
-    - name: Generate test reports
-      run: |
-        echo "=== Generando reportes de pruebas ==="
-        mvn jacoco:report -Dspring.profiles.active=test
-        mvn surefire-report:report -Dspring.profiles.active=test
-
-    - name: Display test results summary
-      run: |
-        echo "=== Resumen de resultados de pruebas ==="
-        if [ -d "target/surefire-reports" ]; then
-          echo "Reportes de pruebas disponibles en target/surefire-reports/"
-          ls -la target/surefire-reports/
-        fi
         
-        if [ -d "target/site/jacoco" ]; then
-          echo "Reporte de cobertura disponible en target/site/jacoco/"
-          ls -la target/site/jacoco/
-        fi
-
+    - name: Wait for MySQL
+      run: |
+        while ! mysqladmin ping -h"127.0.0.1" -P3306 -u"root" -p"${{ secrets.DB_PASS }}" --silent; do
+          echo "Waiting for MySQL..."
+          sleep 2
+        done
+        echo "MySQL is ready!"
+        
+    - name: Run tests
+      run: mvn test -Dspring.profiles.active=test
+      env:
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASS: ${{ secrets.DB_PASS }}
+        
+    - name: Generate test reports
+      run: mvn jacoco:report
+      
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
         path: |
           target/surefire-reports/
           target/site/jacoco/
-          target/site/surefire-report.html
         retention-days: 30
-
-    - name: Upload Maven logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: maven-logs
-        path: |
-          target/
-        retention-days: 7
-
-    - name: Display MySQL logs on failure
-      if: failure()
-      run: |
-        echo "=== Logs de MySQL (en caso de fallo) ==="
-        docker logs $(docker ps -q --filter "ancestor=mysql:8.0") || echo "No se pudieron obtener los logs de MySQL"
-
-    - name: Display database state on failure
-      if: failure()
-      run: |
-        echo "=== Estado de la base de datos (en caso de fallo) ==="
-        mysql -h localhost -u root -p${{ secrets.DB_PASS }} -e "SHOW DATABASES;" || echo "No se pudo conectar a MySQL"
-        mysql -h localhost -u root -p${{ secrets.DB_PASS }} -e "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'agrocloud_test';" || echo "No se pudo consultar las tablas"
-
-    - name: Cleanup MySQL container
-      if: always()
-      run: |
-        echo "=== Limpiando contenedor MySQL ==="
-        docker stop $(docker ps -q --filter "ancestor=mysql:8.0") || echo "No hay contenedores MySQL ejecutándose"
-        docker rm $(docker ps -aq --filter "ancestor=mysql:8.0") || echo "No hay contenedores MySQL para eliminar"
-
-volumes:
-  mysql_data:
