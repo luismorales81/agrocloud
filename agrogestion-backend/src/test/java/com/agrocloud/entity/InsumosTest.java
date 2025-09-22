@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest
+@SpringBootTest(classes = com.agrocloud.AgroCloudApplication.class)
 class InsumosTest extends BaseTest {
 
     @Autowired

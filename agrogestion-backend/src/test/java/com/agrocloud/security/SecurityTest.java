@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest
+@SpringBootTest(classes = com.agrocloud.AgroCloudApplication.class)
 @AutoConfigureMockMvc
 @Transactional
 class SecurityTest extends BaseTest {
