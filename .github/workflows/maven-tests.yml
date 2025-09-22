@@ -62,8 +62,8 @@ jobs:
       run: mvn test -Dspring.profiles.active=test
       working-directory: ./agrogestion-backend
       env:
-        DB_USER: ${{ secrets.DB_USER }}
-        DB_PASS: ${{ secrets.DB_PASS }}
+        DB_USER: root
+        DB_PASS: 123456
         
     - name: Generate test reports
       run: mvn jacoco:report
