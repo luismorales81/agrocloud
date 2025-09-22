@@ -1,5 +1,8 @@
 package com.agrocloud.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.agrocloud.model.enums.EstadoLote;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,6 +13,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,13 +47,38 @@ public class Plot {
     @Column(name = "area_hectareas", nullable = false, precision = 10, scale = 2)
     private BigDecimal areaHectareas;
 
-    @Size(max = 100, message = "El estado del lote no puede exceder 100 caracteres")
-    @Column(name = "estado", length = 100)
-    private String estado = "DISPONIBLE";
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado")
+    private EstadoLote estado = EstadoLote.DISPONIBLE;
+    
+    @Column(name = "fecha_ultimo_cambio_estado")
+    private LocalDateTime fechaUltimoCambioEstado;
+    
+    @Column(name = "motivo_cambio_estado")
+    private String motivoCambioEstado;
 
     @Size(max = 100, message = "El tipo de suelo no puede exceder 100 caracteres")
     @Column(name = "tipo_suelo", length = 100)
     private String tipoSuelo;
+
+    @Size(max = 100, message = "El cultivo actual no puede exceder 100 caracteres")
+    @Column(name = "cultivo_actual", length = 100)
+    private String cultivoActual;
+
+    @Column(name = "fecha_siembra")
+    private LocalDate fechaSiembra;
+
+    @Column(name = "fecha_cosecha_esperada")
+    private LocalDate fechaCosechaEsperada;
+    
+    @Column(name = "fecha_cosecha_real")
+    private LocalDate fechaCosechaReal;
+    
+    @Column(name = "rendimiento_esperado", precision = 10, scale = 2)
+    private BigDecimal rendimientoEsperado;
+    
+    @Column(name = "rendimiento_real", precision = 10, scale = 2)
+    private BigDecimal rendimientoReal;
 
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
@@ -67,12 +96,21 @@ public class Plot {
     private Field campo;
 
     @OneToMany(mappedBy = "lote", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Labor> labores = new ArrayList<>();
 
     // Relación con el usuario propietario
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
+
+    // Relación con la empresa (para sistema multitenant)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id")
+    @JsonIgnore
+    private Empresa empresa;
+
 
     // Constructors
     public Plot() {}
@@ -82,7 +120,7 @@ public class Plot {
         this.areaHectareas = areaHectareas;
         this.campo = campo;
         this.activo = true;
-        this.estado = "DISPONIBLE";
+        this.estado = EstadoLote.DISPONIBLE;
     }
 
     // Getters and Setters
@@ -118,12 +156,28 @@ public class Plot {
         this.areaHectareas = areaHectareas;
     }
 
-    public String getEstado() {
+    public EstadoLote getEstado() {
         return estado;
     }
 
-    public void setEstado(String estado) {
+    public void setEstado(EstadoLote estado) {
         this.estado = estado;
+    }
+    
+    public LocalDateTime getFechaUltimoCambioEstado() {
+        return fechaUltimoCambioEstado;
+    }
+    
+    public void setFechaUltimoCambioEstado(LocalDateTime fechaUltimoCambioEstado) {
+        this.fechaUltimoCambioEstado = fechaUltimoCambioEstado;
+    }
+    
+    public String getMotivoCambioEstado() {
+        return motivoCambioEstado;
+    }
+    
+    public void setMotivoCambioEstado(String motivoCambioEstado) {
+        this.motivoCambioEstado = motivoCambioEstado;
     }
 
     public String getTipoSuelo() {
@@ -132,6 +186,54 @@ public class Plot {
 
     public void setTipoSuelo(String tipoSuelo) {
         this.tipoSuelo = tipoSuelo;
+    }
+
+    public String getCultivoActual() {
+        return cultivoActual;
+    }
+
+    public void setCultivoActual(String cultivoActual) {
+        this.cultivoActual = cultivoActual;
+    }
+
+    public LocalDate getFechaSiembra() {
+        return fechaSiembra;
+    }
+
+    public void setFechaSiembra(LocalDate fechaSiembra) {
+        this.fechaSiembra = fechaSiembra;
+    }
+
+    public LocalDate getFechaCosechaEsperada() {
+        return fechaCosechaEsperada;
+    }
+
+    public void setFechaCosechaEsperada(LocalDate fechaCosechaEsperada) {
+        this.fechaCosechaEsperada = fechaCosechaEsperada;
+    }
+    
+    public LocalDate getFechaCosechaReal() {
+        return fechaCosechaReal;
+    }
+    
+    public void setFechaCosechaReal(LocalDate fechaCosechaReal) {
+        this.fechaCosechaReal = fechaCosechaReal;
+    }
+    
+    public BigDecimal getRendimientoEsperado() {
+        return rendimientoEsperado;
+    }
+    
+    public void setRendimientoEsperado(BigDecimal rendimientoEsperado) {
+        this.rendimientoEsperado = rendimientoEsperado;
+    }
+    
+    public BigDecimal getRendimientoReal() {
+        return rendimientoReal;
+    }
+    
+    public void setRendimientoReal(BigDecimal rendimientoReal) {
+        this.rendimientoReal = rendimientoReal;
     }
 
     public Boolean getActivo() {
@@ -182,6 +284,7 @@ public class Plot {
         this.user = user;
     }
 
+
     // Helper methods
     public void addLabor(Labor labor) {
         labores.add(labor);
@@ -191,6 +294,46 @@ public class Plot {
     public void removeLabor(Labor labor) {
         labores.remove(labor);
         labor.setLote(null);
+    }
+    
+    // Métodos para gestión de estados
+    public boolean puedeSembrar() {
+        return estado == EstadoLote.DISPONIBLE || 
+               estado == EstadoLote.PREPARADO ||
+               estado == EstadoLote.EN_PREPARACION;
+    }
+    
+    public boolean puedeCosechar() {
+        return estado == EstadoLote.LISTO_PARA_COSECHA;
+    }
+    
+    public void cambiarEstado(EstadoLote nuevoEstado, String motivo) {
+        this.estado = nuevoEstado;
+        this.fechaUltimoCambioEstado = LocalDateTime.now();
+        this.motivoCambioEstado = motivo;
+    }
+    
+    public long calcularDiasDesdeSiembra() {
+        if (fechaSiembra == null) {
+            return 0;
+        }
+        return java.time.temporal.ChronoUnit.DAYS.between(fechaSiembra, LocalDate.now());
+    }
+    
+    public long calcularDiasDesdeUltimoCambioEstado() {
+        if (fechaUltimoCambioEstado == null) {
+            return 0;
+        }
+        return java.time.temporal.ChronoUnit.DAYS.between(fechaUltimoCambioEstado.toLocalDate(), LocalDate.now());
+    }
+
+    // Getters y Setters para empresa
+    public Empresa getEmpresa() {
+        return empresa;
+    }
+
+    public void setEmpresa(Empresa empresa) {
+        this.empresa = empresa;
     }
 
     @Override

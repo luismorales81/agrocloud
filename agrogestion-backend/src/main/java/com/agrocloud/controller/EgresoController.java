@@ -8,6 +8,8 @@ import com.agrocloud.repository.EgresoRepository;
 import com.agrocloud.repository.InsumoRepository;
 import com.agrocloud.repository.PlotRepository;
 import com.agrocloud.repository.UserRepository;
+import com.agrocloud.service.EgresoService;
+import com.agrocloud.dto.CrearEgresoRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -44,6 +46,9 @@ public class EgresoController {
     @Autowired
     private InsumoRepository insumoRepository;
 
+    @Autowired
+    private EgresoService egresoService;
+
     /**
      * Obtiene todos los egresos del usuario autenticado.
      */
@@ -51,7 +56,7 @@ public class EgresoController {
     public ResponseEntity<List<Egreso>> obtenerEgresos(Authentication authentication) {
         try {
             Long usuarioId = Long.parseLong(authentication.getName());
-            List<Egreso> egresos = egresoRepository.findByUsuarioIdAndFechaEgresoBetweenOrderByFechaEgresoDesc(
+            List<Egreso> egresos = egresoRepository.findByUserIdAndFechaBetweenOrderByFechaDesc(
                     usuarioId, LocalDate.now().minusYears(1), LocalDate.now());
             return ResponseEntity.ok(egresos);
         } catch (Exception e) {
@@ -68,7 +73,7 @@ public class EgresoController {
             Long usuarioId = Long.parseLong(authentication.getName());
             Optional<Egreso> egreso = egresoRepository.findById(id);
             
-            if (egreso.isPresent() && egreso.get().getUsuario().getId().equals(usuarioId)) {
+            if (egreso.isPresent() && egreso.get().getUser().getId().equals(usuarioId)) {
                 return ResponseEntity.ok(egreso.get());
             } else {
                 return ResponseEntity.notFound().build();
@@ -91,7 +96,7 @@ public class EgresoController {
                 return ResponseEntity.badRequest().build();
             }
 
-            egreso.setUsuario(usuario.get());
+            egreso.setUser(usuario.get());
 
             // Si se especifica un lote, validar que existe
             if (egreso.getLote() != null && egreso.getLote().getId() != null) {
@@ -103,11 +108,11 @@ public class EgresoController {
             }
 
             // Si es un egreso de insumos, actualizar el stock del insumo
-            if (egreso.getTipoEgreso() == Egreso.TipoEgreso.INSUMOS && egreso.getInsumo() != null && egreso.getInsumo().getId() != null) {
-                Optional<Insumo> insumo = insumoRepository.findById(egreso.getInsumo().getId());
+            if (egreso.getTipo() == Egreso.TipoEgreso.INSUMO && egreso.getReferenciaId() != null) {
+                Optional<Insumo> insumo = insumoRepository.findById(egreso.getReferenciaId());
                 if (insumo.isPresent()) {
                     Insumo insumoActual = insumo.get();
-                    egreso.setInsumo(insumoActual);
+                    egreso.setReferenciaId(insumoActual.getId());
                     
                     // Actualizar la cantidad del insumo si se especifica
                     if (egreso.getCantidad() != null && egreso.getCantidad().compareTo(BigDecimal.ZERO) > 0) {
@@ -134,6 +139,22 @@ public class EgresoController {
     }
 
     /**
+     * Crea un nuevo egreso con integración automática.
+     */
+    @PostMapping("/integrado")
+    public ResponseEntity<Egreso> crearEgresoIntegrado(@Valid @RequestBody CrearEgresoRequest request, Authentication authentication) {
+        try {
+            Long usuarioId = Long.parseLong(authentication.getName());
+            request.setUserId(usuarioId);
+            
+            Egreso egreso = egresoService.crearEgreso(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(egreso);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * Actualiza un egreso existente.
      */
     @PutMapping("/{id}")
@@ -142,22 +163,22 @@ public class EgresoController {
             Long usuarioId = Long.parseLong(authentication.getName());
             Optional<Egreso> egresoExistente = egresoRepository.findById(id);
             
-            if (!egresoExistente.isPresent() || !egresoExistente.get().getUsuario().getId().equals(usuarioId)) {
+            if (!egresoExistente.isPresent() || !egresoExistente.get().getUser().getId().equals(usuarioId)) {
                 return ResponseEntity.notFound().build();
             }
 
             Egreso egreso = egresoExistente.get();
             
             // Actualizar campos
-            egreso.setConcepto(egresoActualizado.getConcepto());
-            egreso.setDescripcion(egresoActualizado.getDescripcion());
-            egreso.setTipoEgreso(egresoActualizado.getTipoEgreso());
-            egreso.setFechaEgreso(egresoActualizado.getFechaEgreso());
-            egreso.setMonto(egresoActualizado.getMonto());
-            egreso.setUnidadMedida(egresoActualizado.getUnidadMedida());
+            egreso.setTipo(egresoActualizado.getTipo());
+            egreso.setReferenciaId(egresoActualizado.getReferenciaId());
+
+            egreso.setFecha(egresoActualizado.getFecha());
+            egreso.setCostoTotal(egresoActualizado.getCostoTotal());
+
             egreso.setCantidad(egresoActualizado.getCantidad());
-            egreso.setProveedor(egresoActualizado.getProveedor());
-            egreso.setEstado(egresoActualizado.getEstado());
+
+
             egreso.setObservaciones(egresoActualizado.getObservaciones());
 
             // Actualizar lote si se especifica
@@ -168,12 +189,9 @@ public class EgresoController {
                 }
             }
 
-            // Actualizar insumo si se especifica
-            if (egresoActualizado.getInsumo() != null && egresoActualizado.getInsumo().getId() != null) {
-                Optional<Insumo> insumo = insumoRepository.findById(egresoActualizado.getInsumo().getId());
-                if (insumo.isPresent()) {
-                    egreso.setInsumo(insumo.get());
-                }
+            // Actualizar referencia si se especifica
+            if (egresoActualizado.getReferenciaId() != null) {
+                egreso.setReferenciaId(egresoActualizado.getReferenciaId());
             }
 
             Egreso egresoActualizadoGuardado = egresoRepository.save(egreso);
@@ -193,7 +211,7 @@ public class EgresoController {
             Long usuarioId = Long.parseLong(authentication.getName());
             Optional<Egreso> egreso = egresoRepository.findById(id);
             
-            if (!egreso.isPresent() || !egreso.get().getUsuario().getId().equals(usuarioId)) {
+            if (!egreso.isPresent() || !egreso.get().getUser().getId().equals(usuarioId)) {
                 return ResponseEntity.notFound().build();
             }
 
@@ -215,7 +233,7 @@ public class EgresoController {
             Authentication authentication) {
         try {
             Long usuarioId = Long.parseLong(authentication.getName());
-            List<Egreso> egresos = egresoRepository.findByUsuarioIdAndFechaEgresoBetweenOrderByFechaEgresoDesc(
+            List<Egreso> egresos = egresoRepository.findByUserIdAndFechaBetweenOrderByFechaDesc(
                     usuarioId, fechaInicio, fechaFin);
             return ResponseEntity.ok(egresos);
         } catch (Exception e) {
@@ -232,7 +250,7 @@ public class EgresoController {
             Authentication authentication) {
         try {
             Long usuarioId = Long.parseLong(authentication.getName());
-            List<Egreso> egresos = egresoRepository.findByTipoEgresoAndUsuarioIdOrderByFechaEgresoDesc(
+            List<Egreso> egresos = egresoRepository.findByTipoAndUserIdOrderByFechaDesc(
                     tipoEgreso, usuarioId);
             return ResponseEntity.ok(egresos);
         } catch (Exception e) {
@@ -249,7 +267,7 @@ public class EgresoController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
         try {
-            List<Egreso> egresos = egresoRepository.findByLoteIdAndFechaEgresoBetweenOrderByFechaEgresoDesc(
+            List<Egreso> egresos = egresoRepository.findByLoteIdAndFechaBetweenOrderByFechaDesc(
                     loteId, fechaInicio, fechaFin);
             return ResponseEntity.ok(egresos);
         } catch (Exception e) {

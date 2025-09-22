@@ -11,6 +11,7 @@ import com.agrocloud.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -49,27 +50,35 @@ public class AuthService implements UserDetailsService {
     @Autowired
     private EmailService emailService;
     
+    @Autowired
+    private PermissionService permissionService;
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    
     /**
      * Autenticar usuario y generar token JWT
      */
     public LoginResponse login(LoginRequest loginRequest) {
-        logger.info("Intentando login para usuario: {}", loginRequest.getEmail());
+        logger.info("🔧 [AuthService] Intentando login para usuario: {}", loginRequest.getEmail());
         
         try {
             // Verificar que el usuario existe antes de autenticar
+            logger.info("🔍 [AuthService] Buscando usuario en la base de datos...");
             User user = userRepository.findByEmail(loginRequest.getEmail())
                     .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + loginRequest.getEmail()));
             
-            logger.info("Usuario encontrado: {}, activo: {}, contraseña: {}", 
+            logger.info("✅ [AuthService] Usuario encontrado: {}, activo: {}, contraseña: {}", 
                 user.getEmail(), user.getActivo(), user.getPassword().substring(0, 10) + "...");
             
             // Verificar que el usuario esté activo
             if (!user.getActivo()) {
-                logger.error("Usuario inactivo: {}", loginRequest.getEmail());
+                logger.error("❌ [AuthService] Usuario inactivo: {}", loginRequest.getEmail());
                 throw new RuntimeException("Usuario inactivo");
             }
             
             // Autenticar usuario
+            logger.info("🔐 [AuthService] Iniciando autenticación con AuthenticationManager...");
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                     loginRequest.getEmail(),
@@ -77,22 +86,38 @@ public class AuthService implements UserDetailsService {
                 )
             );
             
+            logger.info("✅ [AuthService] Autenticación exitosa, obteniendo UserDetails...");
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            logger.info("Autenticación exitosa para: {}", userDetails.getUsername());
+            logger.info("✅ [AuthService] Autenticación exitosa para: {}", userDetails.getUsername());
             
             // Generar token JWT
+            logger.info("🔑 [AuthService] Generando token JWT...");
             String token = jwtService.generateToken(userDetails);
             
             // Convertir a DTO
+            logger.info("🔄 [AuthService] Convirtiendo usuario a DTO...");
             UserDto userDto = convertToDto(user);
             
-            logger.info("Login exitoso para usuario: {}", user.getEmail());
+            logger.info("✅ [AuthService] Login exitoso para usuario: {}", user.getEmail());
             
             return new LoginResponse(token, jwtService.getExpirationTimeInSeconds(), userDto);
             
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            logger.warn("🔐 [AuthService] Credenciales incorrectas para usuario: {}", loginRequest.getEmail());
+            throw e; // Re-lanzar BadCredentialsException para que sea manejada por GlobalExceptionHandler
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            logger.warn("👤 [AuthService] Usuario no encontrado: {}", loginRequest.getEmail());
+            throw e; // Re-lanzar UsernameNotFoundException para que sea manejada por GlobalExceptionHandler
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().contains("Usuario inactivo")) {
+                logger.warn("🚫 [AuthService] Usuario inactivo: {}", loginRequest.getEmail());
+                throw e; // Re-lanzar para usuario inactivo
+            }
+            logger.error("❌ [AuthService] Error inesperado en login para usuario {}: {}", loginRequest.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Error interno del servidor", e);
         } catch (Exception e) {
-            logger.error("Error en login para usuario {}: {}", loginRequest.getEmail(), e.getMessage(), e);
-            throw new RuntimeException("Credenciales inválidas", e);
+            logger.error("💥 [AuthService] Error no controlado en login para usuario {}: {}", loginRequest.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Error interno del servidor", e);
         }
     }
     
@@ -326,6 +351,28 @@ public class AuthService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
         
+        // Obtener permisos según el rol (sistema multitenant o legacy)
+        String roleName = "Sin rol";
+        List<String> authorities = new ArrayList<>();
+        
+        // Verificar en el sistema multitenant (UserCompanyRole) primero
+        if (!user.getUserCompanyRoles().isEmpty()) {
+            roleName = user.getUserCompanyRoles().iterator().next().getRol().getNombre();
+            authorities.addAll(user.getUserCompanyRoles().stream()
+                .map(ucr -> "ROLE_" + ucr.getRol().getNombre())
+                .collect(Collectors.toList()));
+        }
+        // Fallback: verificar en el sistema legacy (Roles directos)
+        else if (!user.getRoles().isEmpty()) {
+            roleName = user.getRoles().iterator().next().getNombre();
+            authorities.addAll(user.getRoles().stream()
+                .map(role -> "ROLE_" + role.getNombre())
+                .collect(Collectors.toList()));
+        }
+        
+        Set<String> permissions = permissionService.getPermissionsByRole(roleName);
+        authorities.addAll(permissions);
+        
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
@@ -333,7 +380,7 @@ public class AuthService implements UserDetailsService {
                 .accountExpired(false)
                 .credentialsExpired(false)
                 .accountLocked(false)
-                .authorities(user.getRoles().stream().map(role -> "ROLE_" + role.getName()).toArray(String[]::new))
+                .authorities(authorities.toArray(new String[0]))
                 .build();
     }
     
@@ -341,13 +388,34 @@ public class AuthService implements UserDetailsService {
      * Convertir User a UserDto
      */
     private UserDto convertToDto(User user) {
-        String roleName = user.getRoles().isEmpty() ? "Sin rol" : user.getRoles().iterator().next().getName();
+        // Obtener rol del sistema multitenant o legacy
+        String roleName = "Sin rol";
+        
+        // Consultar directamente la tabla usuario_empresas para obtener el rol
+        try {
+            String sql = "SELECT rol FROM usuario_empresas WHERE usuario_id = ? AND estado = 'ACTIVO' LIMIT 1";
+            List<String> roles = jdbcTemplate.queryForList(sql, String.class, user.getId());
+            if (!roles.isEmpty()) {
+                roleName = roles.get(0);
+            }
+        } catch (Exception e) {
+            logger.warn("Error consultando roles del usuario: {}", e.getMessage());
+        }
+        
+        // Fallback: verificar en el sistema legacy (Roles directos)
+        if ("Sin rol".equals(roleName) && !user.getRoles().isEmpty()) {
+            roleName = user.getRoles().iterator().next().getNombre();
+        }
+        
+        Set<String> permissions = permissionService.getPermissionsByRole(roleName);
+        
         return new UserDto(
             user.getId(),
+            user.getUsername(),
             user.getFirstName() + " " + user.getLastName(),
             user.getEmail(),
             roleName,
-            new java.util.HashSet<>(),
+            permissions,
             user.getActivo(),
             true,
             null,

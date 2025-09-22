@@ -22,30 +22,25 @@ public interface EgresoRepository extends JpaRepository<Egreso, Long> {
     /**
      * Busca egresos por usuario y rango de fechas.
      */
-    List<Egreso> findByUsuarioIdAndFechaEgresoBetweenOrderByFechaEgresoDesc(
-            Long usuarioId, LocalDate fechaInicio, LocalDate fechaFin);
+    List<Egreso> findByUserIdAndFechaBetweenOrderByFechaDesc(
+            Long userId, LocalDate fechaInicio, LocalDate fechaFin);
 
     /**
      * Busca egresos por lote y rango de fechas.
      */
-    List<Egreso> findByLoteIdAndFechaEgresoBetweenOrderByFechaEgresoDesc(
+    List<Egreso> findByLoteIdAndFechaBetweenOrderByFechaDesc(
             Long loteId, LocalDate fechaInicio, LocalDate fechaFin);
 
     /**
      * Busca egresos por tipo de egreso.
      */
-    List<Egreso> findByTipoEgresoAndUsuarioIdOrderByFechaEgresoDesc(
-            Egreso.TipoEgreso tipoEgreso, Long usuarioId);
-
-    /**
-     * Busca egresos por insumo.
-     */
-    List<Egreso> findByInsumoIdOrderByFechaEgresoDesc(Long insumoId);
+    List<Egreso> findByTipoAndUserIdOrderByFechaDesc(
+            Egreso.TipoEgreso tipo, Long userId);
 
     /**
      * Calcula el total de egresos por usuario y rango de fechas.
      */
-    @Query("SELECT COALESCE(SUM(e.monto), 0) FROM Egreso e WHERE e.usuario.id = :usuarioId AND e.fechaEgreso BETWEEN :fechaInicio AND :fechaFin")
+    @Query("SELECT COALESCE(SUM(e.costoTotal), 0) FROM Egreso e WHERE e.user.id = :usuarioId AND e.fecha BETWEEN :fechaInicio AND :fechaFin")
     BigDecimal calcularTotalEgresosPorUsuarioYFecha(
             @Param("usuarioId") Long usuarioId, 
             @Param("fechaInicio") LocalDate fechaInicio, 
@@ -54,7 +49,7 @@ public interface EgresoRepository extends JpaRepository<Egreso, Long> {
     /**
      * Calcula el total de egresos por lote y rango de fechas.
      */
-    @Query("SELECT COALESCE(SUM(e.monto), 0) FROM Egreso e WHERE e.lote.id = :loteId AND e.fechaEgreso BETWEEN :fechaInicio AND :fechaFin")
+    @Query("SELECT COALESCE(SUM(e.costoTotal), 0) FROM Egreso e WHERE e.lote.id = :loteId AND e.fecha BETWEEN :fechaInicio AND :fechaFin")
     BigDecimal calcularTotalEgresosPorLoteYFecha(
             @Param("loteId") Long loteId, 
             @Param("fechaInicio") LocalDate fechaInicio, 
@@ -63,22 +58,38 @@ public interface EgresoRepository extends JpaRepository<Egreso, Long> {
     /**
      * Calcula el total de egresos por tipo y usuario.
      */
-    @Query("SELECT COALESCE(SUM(e.monto), 0) FROM Egreso e WHERE e.tipoEgreso = :tipoEgreso AND e.usuario.id = :usuarioId AND e.fechaEgreso BETWEEN :fechaInicio AND :fechaFin")
+    @Query("SELECT COALESCE(SUM(e.costoTotal), 0) FROM Egreso e WHERE e.tipo = :tipoEgreso AND e.user.id = :usuarioId AND e.fecha BETWEEN :fechaInicio AND :fechaFin")
     BigDecimal calcularTotalEgresosPorTipoYUsuario(
             @Param("tipoEgreso") Egreso.TipoEgreso tipoEgreso,
             @Param("usuarioId") Long usuarioId,
             @Param("fechaInicio") LocalDate fechaInicio,
             @Param("fechaFin") LocalDate fechaFin);
 
-    /**
-     * Busca egresos por estado.
-     */
-    List<Egreso> findByEstadoAndUsuarioIdOrderByFechaEgresoDesc(
-            Egreso.EstadoEgreso estado, Long usuarioId);
+
+
+    // ========================================
+    // MÉTODOS PARA EL DASHBOARD
+    // ========================================
 
     /**
-     * Busca egresos por proveedor.
+     * Contar egresos por usuario
      */
-    List<Egreso> findByProveedorContainingIgnoreCaseAndUsuarioIdOrderByFechaEgresoDesc(
-            String proveedor, Long usuarioId);
+    long countByUserId(Long userId);
+
+    /**
+     * Sumar todos los egresos (para ADMIN)
+     */
+    @Query("SELECT COALESCE(SUM(e.costoTotal), 0) FROM Egreso e")
+    BigDecimal sumAllEgresos();
+
+    /**
+     * Sumar egresos por usuario
+     */
+    @Query("SELECT COALESCE(SUM(e.costoTotal), 0) FROM Egreso e WHERE e.user.id = :usuarioId")
+    BigDecimal sumEgresosByUsuarioId(@Param("usuarioId") Long usuarioId);
+
+    // Métodos para eliminación lógica
+    List<Egreso> findByUserIdAndActivoTrue(Long userId);
+    long countByUserIdAndActivoTrue(Long userId);
+    List<Egreso> findByActivoTrue();
 }

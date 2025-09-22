@@ -18,7 +18,6 @@ public class FieldDTO {
     private String descripcion;
     private String ubicacion;
     private BigDecimal areaHectareas;
-    private String tipoSuelo;
     private String estado;
     private Boolean activo;
     private String poligono;
@@ -79,13 +78,6 @@ public class FieldDTO {
         this.areaHectareas = areaHectareas;
     }
 
-    public String getTipoSuelo() {
-        return tipoSuelo;
-    }
-
-    public void setTipoSuelo(String tipoSuelo) {
-        this.tipoSuelo = tipoSuelo;
-    }
 
     public String getEstado() {
         return estado;

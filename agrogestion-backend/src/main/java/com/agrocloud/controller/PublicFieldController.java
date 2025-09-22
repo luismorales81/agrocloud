@@ -31,7 +31,6 @@ public class PublicFieldController {
         dto.setDescripcion(field.getDescripcion());
         dto.setUbicacion(field.getUbicacion());
         dto.setAreaHectareas(field.getAreaHectareas());
-        dto.setTipoSuelo(field.getTipoSuelo());
         dto.setEstado(field.getEstado());
         dto.setActivo(field.getActivo());
         dto.setPoligono(field.getPoligono());
@@ -62,10 +61,10 @@ public class PublicFieldController {
             List<FieldDTO> dtos = fields.stream().map(this::convertToDTO).toList();
             return ResponseEntity.ok(dtos);
         } catch (Exception e) {
-            // Retornar lista vacía en lugar de error 500
+            // Retornar error 500 en lugar de lista vacía
             System.err.println("Error en getAllFields: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.ok(List.of());
+            return ResponseEntity.status(500).body(null);
         }
     }
 

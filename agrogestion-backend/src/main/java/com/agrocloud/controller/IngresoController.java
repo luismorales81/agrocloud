@@ -35,7 +35,7 @@ public class IngresoController {
     @GetMapping
     public ResponseEntity<List<Ingreso>> obtenerIngresos(Authentication authentication) {
         Long usuarioId = Long.parseLong(authentication.getName());
-        List<Ingreso> ingresos = ingresoRepository.findByUsuarioIdOrderByFechaIngresoDesc(usuarioId);
+        List<Ingreso> ingresos = ingresoRepository.findByUserIdOrderByFechaDesc(usuarioId);
         return ResponseEntity.ok(ingresos);
     }
 
@@ -47,7 +47,7 @@ public class IngresoController {
         Long usuarioId = Long.parseLong(authentication.getName());
         Optional<Ingreso> ingreso = ingresoRepository.findById(id);
         
-        if (ingreso.isPresent() && ingreso.get().getUsuario().getId().equals(usuarioId)) {
+        if (ingreso.isPresent() && ingreso.get().getUser().getId().equals(usuarioId)) {
             return ResponseEntity.ok(ingreso.get());
         } else {
             return ResponseEntity.notFound().build();
@@ -72,7 +72,7 @@ public class IngresoController {
         // Establecer el usuario
         com.agrocloud.model.entity.User usuario = new com.agrocloud.model.entity.User();
         usuario.setId(usuarioId);
-        ingreso.setUsuario(usuario);
+        ingreso.setUser(usuario);
         
         Ingreso ingresoGuardado = ingresoRepository.save(ingreso);
         return ResponseEntity.ok(ingresoGuardado);
@@ -86,7 +86,7 @@ public class IngresoController {
         Long usuarioId = Long.parseLong(authentication.getName());
         Optional<Ingreso> ingresoExistente = ingresoRepository.findById(id);
         
-        if (ingresoExistente.isEmpty() || !ingresoExistente.get().getUsuario().getId().equals(usuarioId)) {
+        if (ingresoExistente.isEmpty() || !ingresoExistente.get().getUser().getId().equals(usuarioId)) {
             return ResponseEntity.notFound().build();
         }
         
@@ -94,12 +94,12 @@ public class IngresoController {
         ingresoActual.setConcepto(ingreso.getConcepto());
         ingresoActual.setDescripcion(ingreso.getDescripcion());
         ingresoActual.setTipoIngreso(ingreso.getTipoIngreso());
-        ingresoActual.setFechaIngreso(ingreso.getFechaIngreso());
+        ingresoActual.setFecha(ingreso.getFecha());
         ingresoActual.setMonto(ingreso.getMonto());
         ingresoActual.setUnidadMedida(ingreso.getUnidadMedida());
         ingresoActual.setCantidad(ingreso.getCantidad());
         ingresoActual.setClienteComprador(ingreso.getClienteComprador());
-        ingresoActual.setEstado(ingreso.getEstado());
+
         ingresoActual.setObservaciones(ingreso.getObservaciones());
         ingresoActual.setLote(ingreso.getLote());
         
@@ -115,7 +115,7 @@ public class IngresoController {
         Long usuarioId = Long.parseLong(authentication.getName());
         Optional<Ingreso> ingreso = ingresoRepository.findById(id);
         
-        if (ingreso.isPresent() && ingreso.get().getUsuario().getId().equals(usuarioId)) {
+        if (ingreso.isPresent() && ingreso.get().getUser().getId().equals(usuarioId)) {
             ingresoRepository.deleteById(id);
             return ResponseEntity.ok().build();
         } else {
@@ -128,7 +128,7 @@ public class IngresoController {
      */
     @GetMapping("/tipo/{tipoIngreso}")
     public ResponseEntity<List<Ingreso>> obtenerIngresosPorTipo(@PathVariable Ingreso.TipoIngreso tipoIngreso) {
-        List<Ingreso> ingresos = ingresoRepository.findByTipoIngresoOrderByFechaIngresoDesc(tipoIngreso);
+        List<Ingreso> ingresos = ingresoRepository.findByTipoIngresoOrderByFechaDesc(tipoIngreso);
         return ResponseEntity.ok(ingresos);
     }
 
@@ -137,7 +137,7 @@ public class IngresoController {
      */
     @GetMapping("/lote/{loteId}")
     public ResponseEntity<List<Ingreso>> obtenerIngresosPorLote(@PathVariable Long loteId) {
-        List<Ingreso> ingresos = ingresoRepository.findByLoteIdOrderByFechaIngresoDesc(loteId);
+        List<Ingreso> ingresos = ingresoRepository.findByLoteIdOrderByFechaDesc(loteId);
         return ResponseEntity.ok(ingresos);
     }
 }

@@ -21,6 +21,11 @@ public class MaquinariaService {
     @Autowired
     private UserRepository userRepository;
 
+    // Obtener todas las maquinarias (para administración global)
+    public List<Maquinaria> getAllMaquinaria() {
+        return maquinariaRepository.findAll();
+    }
+
     // Obtener todas las maquinarias accesibles por un usuario
     public List<Maquinaria> getMaquinariasByUser(User user) {
         if (user.isAdmin()) {
@@ -49,6 +54,7 @@ public class MaquinariaService {
     // Crear nueva maquinaria
     public Maquinaria createMaquinaria(Maquinaria maquinaria, User user) {
         maquinaria.setUser(user);
+        maquinaria.setEmpresa(user.getEmpresa());
         return maquinariaRepository.save(maquinaria);
     }
 
@@ -61,19 +67,26 @@ public class MaquinariaService {
             
             // Verificar acceso
             if (user.isAdmin() || user.canAccessUser(maquinaria.getUser())) {
-                // Actualizar campos
+                // Actualizar campos básicos
                 maquinaria.setNombre(maquinariaData.getNombre());
                 maquinaria.setDescripcion(maquinariaData.getDescripcion());
-                maquinaria.setTipo(maquinariaData.getTipo());
                 maquinaria.setMarca(maquinariaData.getMarca());
                 maquinaria.setModelo(maquinariaData.getModelo());
-                maquinaria.setAñoFabricacion(maquinariaData.getAñoFabricacion());
+                maquinaria.setAnioFabricacion(maquinariaData.getAnioFabricacion());
                 maquinaria.setNumeroSerie(maquinariaData.getNumeroSerie());
                 maquinaria.setEstado(maquinariaData.getEstado());
-                maquinaria.setHorasTrabajo(maquinariaData.getHorasTrabajo());
-                maquinaria.setCostoAdquisicion(maquinariaData.getCostoAdquisicion());
+                
+                // Actualizar campos de costos
+                maquinaria.setKilometrosUso(maquinariaData.getKilometrosUso());
+                maquinaria.setCostoPorHora(maquinariaData.getCostoPorHora());
+                maquinaria.setKilometrosMantenimientoIntervalo(maquinariaData.getKilometrosMantenimientoIntervalo());
+                maquinaria.setUltimoMantenimientoKilometros(maquinariaData.getUltimoMantenimientoKilometros());
+                maquinaria.setRendimientoCombustible(maquinariaData.getRendimientoCombustible());
+                maquinaria.setUnidadRendimiento(maquinariaData.getUnidadRendimiento());
+                maquinaria.setCostoCombustiblePorLitro(maquinariaData.getCostoCombustiblePorLitro());
                 maquinaria.setValorActual(maquinariaData.getValorActual());
-                maquinaria.setActivo(maquinariaData.getActivo());
+                maquinaria.setFechaCompra(maquinariaData.getFechaCompra());
+                maquinaria.setTipo(maquinariaData.getTipo());
                 
                 return Optional.of(maquinariaRepository.save(maquinaria));
             }
@@ -82,16 +95,32 @@ public class MaquinariaService {
         return Optional.empty();
     }
 
-    // Eliminar maquinaria (con validación de acceso)
+    // Eliminar maquinaria lógicamente (con validación de acceso)
     public boolean deleteMaquinaria(Long id, User user) {
         Optional<Maquinaria> maquinaria = maquinariaRepository.findById(id);
         
         if (maquinaria.isPresent()) {
             Maquinaria m = maquinaria.get();
             if (user.isAdmin() || user.canAccessUser(m.getUser())) {
-                maquinariaRepository.delete(m);
+                m.setActivo(false);
+                maquinariaRepository.save(m);
                 return true;
             }
+        }
+        
+        return false;
+    }
+
+    // Eliminar maquinaria físicamente (solo para administradores)
+    public boolean deleteMaquinariaFisicamente(Long id, User user) {
+        if (!user.isAdmin()) {
+            return false;
+        }
+        
+        Optional<Maquinaria> maquinaria = maquinariaRepository.findById(id);
+        if (maquinaria.isPresent()) {
+            maquinariaRepository.delete(maquinaria.get());
+            return true;
         }
         
         return false;
@@ -117,9 +146,9 @@ public class MaquinariaService {
         List<Maquinaria> maquinarias = getMaquinariasByUser(user);
         
         long total = maquinarias.size();
-        long activas = maquinarias.stream().filter(Maquinaria::getActivo).count();
+        long activas = maquinarias.stream().filter(m -> Maquinaria.EstadoMaquinaria.ACTIVA.equals(m.getEstado())).count();
         long operativas = maquinarias.stream()
-                .filter(m -> Maquinaria.EstadoMaquinaria.OPERATIVA.equals(m.getEstado()))
+                .filter(m -> Maquinaria.EstadoMaquinaria.ACTIVA.equals(m.getEstado()))
                 .count();
         
         return new MaquinariaStats(total, activas, operativas);

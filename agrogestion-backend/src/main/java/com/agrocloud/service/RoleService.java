@@ -20,34 +20,32 @@ public class RoleService {
     private RoleRepository roleRepository;
     
     /**
-     * Inicializar roles por defecto
+     * Inicializar roles globales por defecto
+     * Estos roles se usan solo para el acceso general al sistema
      */
     public void initializeDefaultRoles() {
-        logger.info("Inicializando roles por defecto...");
+        logger.info("Inicializando roles globales por defecto...");
         
-        // Crear rol Administrador
-        createRoleIfNotExists("ADMINISTRADOR", "Acceso total al sistema");
+        // Crear rol Super Administrador
+        createRoleIfNotExists("SUPERADMIN", "Controla el sistema completo, puede crear/eliminar empresas y usuarios");
         
-        // Crear rol Operario
-        createRoleIfNotExists("OPERARIO", "Registrar trabajos en lotes y consumir insumos");
-        
-        // Crear rol Ingeniero Agrónomo
-        createRoleIfNotExists("INGENIERO_AGRONOMO", "Ver lotes y registrar recomendaciones técnicas");
+        // Crear rol Usuario Registrado
+        createRoleIfNotExists("USUARIO_REGISTRADO", "Usuario común que puede loguearse y acceder a empresas");
         
         // Crear rol Invitado
-        createRoleIfNotExists("INVITADO", "Solo lectura");
+        createRoleIfNotExists("INVITADO", "Acceso muy limitado o de prueba");
         
-        logger.info("Roles por defecto inicializados correctamente");
+        logger.info("Roles globales inicializados correctamente");
     }
     
     /**
      * Crear rol si no existe
      */
     private void createRoleIfNotExists(String name, String description) {
-        if (!roleRepository.existsByName(name)) {
+        if (!roleRepository.existsByNombre(name)) {
             Role role = new Role();
-            role.setName(name);
-            role.setDescription(description);
+            role.setNombre(name);
+            role.setDescripcion(description);
             roleRepository.save(role);
             logger.info("Rol creado: {}", name);
         } else {
@@ -74,7 +72,7 @@ public class RoleService {
      * Obtener rol por nombre
      */
     public Role getRoleByName(String name) {
-        return roleRepository.findByName(name)
+        return roleRepository.findByNombre(name)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + name));
     }
     
@@ -82,13 +80,13 @@ public class RoleService {
      * Crear nuevo rol
      */
     public Role createRole(String name, String description) {
-        if (roleRepository.existsByName(name)) {
+        if (roleRepository.existsByNombre(name)) {
             throw new RuntimeException("El rol ya existe: " + name);
         }
         
         Role role = new Role();
-        role.setName(name);
-        role.setDescription(description);
+        role.setNombre(name);
+        role.setDescripcion(description);
         
         return roleRepository.save(role);
     }
@@ -100,12 +98,12 @@ public class RoleService {
         Role role = getRoleById(id);
         
         // Verificar nombre único si cambió
-        if (!role.getName().equals(name) && roleRepository.existsByName(name)) {
+        if (!role.getNombre().equals(name) && roleRepository.existsByNombre(name)) {
             throw new RuntimeException("El nombre del rol ya existe: " + name);
         }
         
-        role.setName(name);
-        role.setDescription(description);
+        role.setNombre(name);
+        role.setDescripcion(description);
         
         return roleRepository.save(role);
     }
@@ -138,7 +136,7 @@ public class RoleService {
         
         Map<String, Integer> roleUserCount = new HashMap<>();
         for (Role role : roles) {
-            roleUserCount.put(role.getName(), 0);
+            roleUserCount.put(role.getNombre(), 0);
         }
         stats.put("usersPerRole", roleUserCount);
         

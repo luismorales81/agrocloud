@@ -37,13 +37,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
         
+        // Permitir que los endpoints públicos pasen sin procesamiento
+        String requestURI = request.getRequestURI();
+        logger.info("🔧 [JwtFilter] Procesando petición: {} {}", request.getMethod(), requestURI);
+        
+        if (requestURI.contains("/api/auth/login") || 
+            requestURI.contains("/api/auth/register") || 
+            requestURI.contains("/api/auth/test") ||
+            requestURI.contains("/api/auth/test-auth") ||
+            requestURI.contains("/api/health") ||
+            requestURI.contains("/api/public/") ||
+            requestURI.contains("/api/admin-global/dashboard-test") ||
+            requestURI.contains("/api/admin-global/test-simple") ||
+            requestURI.contains("/api/admin-global/dashboard-simple") ||
+            requestURI.contains("/api/admin-global/empresas-basic") ||
+            requestURI.contains("/api/admin-global/usuarios-basic") ||
+            requestURI.contains("/api/v1/weather-simple/") ||
+            requestURI.contains("/api/v1/weather/")) {
+            logger.info("✅ [JwtFilter] Endpoint público detectado, permitiendo paso: {}", requestURI);
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
+        logger.info("🔒 [JwtFilter] Endpoint protegido, verificando token JWT: {}", requestURI);
+        
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
         
         // Verificar si el header Authorization existe y comienza con "Bearer "
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
+            logger.warn("❌ [JwtFilter] Token JWT no encontrado o inválido en el header Authorization.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Token JWT requerido");
             return;
         }
         
@@ -78,15 +104,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     
                     logger.debug("Usuario autenticado: {}", userEmail);
                 } else {
-                    logger.warn("Token JWT inválido para usuario: {}", userEmail);
+                    logger.warn("❌ [JwtFilter] Token JWT inválido para usuario: {}", userEmail);
                 }
             }
         } catch (Exception e) {
-            logger.error("Error procesando token JWT: {}", e.getMessage());
-            // No lanzar excepción aquí para permitir que la request continúe
+            logger.error("❌ [JwtFilter] Error procesando token JWT: {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Token JWT inválido: " + e.getMessage());
+            return;
         }
         
-        // Continuar con el filtro
+        // Continuar con el filtro solo si la autenticación fue exitosa
         filterChain.doFilter(request, response);
     }
 }

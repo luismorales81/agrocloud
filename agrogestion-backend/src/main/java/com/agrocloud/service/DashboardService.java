@@ -1,0 +1,448 @@
+package com.agrocloud.service;
+
+import com.agrocloud.model.entity.User;
+import com.agrocloud.model.entity.Insumo;
+import com.agrocloud.repository.InsumoRepository;
+import com.agrocloud.repository.FieldRepository;
+import com.agrocloud.repository.PlotRepository;
+import com.agrocloud.repository.MaquinariaRepository;
+import com.agrocloud.repository.LaborRepository;
+import com.agrocloud.repository.IngresoRepository;
+import com.agrocloud.repository.EgresoRepository;
+import com.agrocloud.repository.CultivoRepository;
+import com.agrocloud.repository.CosechaRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Servicio para obtener estadísticas del dashboard
+ */
+@Service
+public class DashboardService {
+
+    @Autowired
+    private InsumoRepository insumoRepository;
+
+    @Autowired
+    private FieldRepository fieldRepository;
+
+    @Autowired
+    private PlotRepository plotRepository;
+
+    @Autowired
+    private MaquinariaRepository maquinariaRepository;
+
+    @Autowired
+    private LaborRepository laborRepository;
+
+    @Autowired
+    private IngresoRepository ingresoRepository;
+
+    @Autowired
+    private EgresoRepository egresoRepository;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private CultivoRepository cultivoRepository;
+
+    @Autowired
+    private CosechaRepository cosechaRepository;
+
+    /**
+     * Obtener estadísticas del dashboard para un usuario específico
+     */
+    public Map<String, Object> obtenerEstadisticasDashboard(User usuario) {
+        Map<String, Object> estadisticas = new HashMap<>();
+
+        if (usuario == null) {
+            return estadisticas;
+        }
+
+        // Obtener estadísticas del usuario actual (usuario + usuarios dependientes)
+        Long userId = usuario.getId();
+        
+        System.out.println("🔍 [DashboardService] Obteniendo estadísticas para usuario ID: " + userId);
+        
+        // Si es ADMINISTRADOR, obtener datos de todos los usuarios de la empresa
+        if (esAdmin(usuario)) {
+            System.out.println("🔍 [DashboardService] Usuario es ADMIN - obteniendo datos globales");
+            return obtenerEstadisticasAdmin(usuario);
+        }
+        
+        // Obtener estadísticas del usuario actual
+        long camposUsuario = fieldRepository.countByUserId(userId);
+        long lotesUsuario = plotRepository.countByUserId(userId);
+        long cultivosUsuario = cultivoRepository.countByUsuarioId(userId);
+        long insumosUsuario = insumoRepository.countByUserId(userId);
+        long maquinariaUsuario = maquinariaRepository.countByUserId(userId);
+        long laboresUsuario = laborRepository.countByUsuarioId(userId);
+        long ingresosUsuario = ingresoRepository.countByUserId(userId);
+        long egresosUsuario = egresoRepository.countByUserId(userId);
+        long cosechasUsuario = cosechaRepository.countByUsuarioId(userId);
+        
+        System.out.println("📊 [DashboardService] Estadísticas del usuario:");
+        System.out.println("  - Campos: " + camposUsuario);
+        System.out.println("  - Lotes: " + lotesUsuario);
+        System.out.println("  - Cultivos: " + cultivosUsuario);
+        System.out.println("  - Insumos: " + insumosUsuario);
+        System.out.println("  - Maquinaria: " + maquinariaUsuario);
+        System.out.println("  - Labores: " + laboresUsuario);
+        System.out.println("  - Ingresos: " + ingresosUsuario);
+        System.out.println("  - Egresos: " + egresosUsuario);
+        System.out.println("  - Cosechas: " + cosechasUsuario);
+        
+        // Si es ADMIN, también mostrar estadísticas de usuarios del sistema
+        if (esAdmin(usuario)) {
+            long totalUsuarios = userService.findAll().size();
+            long usuariosActivos = userService.findAll().stream()
+                    .filter(user -> user.getActivo() != null && user.getActivo())
+                    .count();
+            
+            estadisticas.put("totalUsuarios", totalUsuarios);
+            estadisticas.put("usuariosActivos", usuariosActivos);
+        }
+        
+        // Obtener estadísticas de usuarios dependientes (si es técnico o supervisor)
+        long camposDependientes = 0;
+        long lotesDependientes = 0;
+        long cultivosDependientes = 0;
+        long insumosDependientes = 0;
+        long maquinariaDependientes = 0;
+        long laboresDependientes = 0;
+        long ingresosDependientes = 0;
+        long egresosDependientes = 0;
+        long cosechasDependientes = 0;
+        
+        // Buscar usuarios que tienen a este usuario como parentUser
+        List<User> usuariosDependientes = userService.findByParentUserId(userId);
+        if (usuariosDependientes != null && !usuariosDependientes.isEmpty()) {
+            System.out.println("👥 [DashboardService] Usuarios dependientes encontrados: " + usuariosDependientes.size());
+            for (User dependiente : usuariosDependientes) {
+                camposDependientes += fieldRepository.countByUserId(dependiente.getId());
+                lotesDependientes += plotRepository.countByUserId(dependiente.getId());
+                cultivosDependientes += cultivoRepository.countByUsuarioId(dependiente.getId());
+                insumosDependientes += insumoRepository.countByUserId(dependiente.getId());
+                maquinariaDependientes += maquinariaRepository.countByUserId(dependiente.getId());
+                laboresDependientes += laborRepository.countByUsuarioId(dependiente.getId());
+                ingresosDependientes += ingresoRepository.countByUserId(dependiente.getId());
+                egresosDependientes += egresoRepository.countByUserId(dependiente.getId());
+                cosechasDependientes += cosechaRepository.countByUsuarioId(dependiente.getId());
+            }
+            
+            System.out.println("📊 [DashboardService] Estadísticas de dependientes:");
+            System.out.println("  - Campos: " + camposDependientes);
+            System.out.println("  - Lotes: " + lotesDependientes);
+            System.out.println("  - Cultivos: " + cultivosDependientes);
+            System.out.println("  - Insumos: " + insumosDependientes);
+            System.out.println("  - Maquinaria: " + maquinariaDependientes);
+            System.out.println("  - Labores: " + laboresDependientes);
+            System.out.println("  - Ingresos: " + ingresosDependientes);
+            System.out.println("  - Egresos: " + egresosDependientes);
+            System.out.println("  - Cosechas: " + cosechasDependientes);
+        }
+        
+        // Sumar estadísticas totales (usuario + dependientes)
+        estadisticas.put("campos", camposUsuario + camposDependientes);
+        estadisticas.put("lotes", lotesUsuario + lotesDependientes);
+        estadisticas.put("cultivos", cultivosUsuario + cultivosDependientes);
+        estadisticas.put("insumos", insumosUsuario + insumosDependientes);
+        estadisticas.put("maquinaria", maquinariaUsuario + maquinariaDependientes);
+        estadisticas.put("labores", laboresUsuario + laboresDependientes);
+        estadisticas.put("ingresos", ingresosUsuario + ingresosDependientes);
+        estadisticas.put("egresos", egresosUsuario + egresosDependientes);
+        estadisticas.put("cosechas", cosechasUsuario + cosechasDependientes);
+        
+        // ========================================
+        // BALANCE OPERATIVO (Corto plazo)
+        // ========================================
+        BigDecimal totalIngresos = ingresoRepository.sumIngresosByUsuarioId(userId);
+        BigDecimal totalEgresos = egresoRepository.sumEgresosByUsuarioId(userId);
+        
+        // Sumar ingresos y egresos de usuarios dependientes
+        for (User dependiente : usuariosDependientes) {
+            BigDecimal ingresosDep = ingresoRepository.sumIngresosByUsuarioId(dependiente.getId());
+            BigDecimal egresosDep = egresoRepository.sumEgresosByUsuarioId(dependiente.getId());
+            
+            if (ingresosDep != null) totalIngresos = (totalIngresos != null ? totalIngresos : BigDecimal.ZERO).add(ingresosDep);
+            if (egresosDep != null) totalEgresos = (totalEgresos != null ? totalEgresos : BigDecimal.ZERO).add(egresosDep);
+        }
+        
+        // Balance operativo = Ingresos - Egresos (flujo de caja puro)
+        BigDecimal balanceOperativo = (totalIngresos != null ? totalIngresos : BigDecimal.ZERO)
+                    .subtract(totalEgresos != null ? totalEgresos : BigDecimal.ZERO);
+        
+        estadisticas.put("balanceOperativo", balanceOperativo);
+        estadisticas.put("totalIngresos", totalIngresos != null ? totalIngresos : BigDecimal.ZERO);
+        estadisticas.put("totalEgresos", totalEgresos != null ? totalEgresos : BigDecimal.ZERO);
+        
+        // ========================================
+        // BALANCE PATRIMONIAL (Largo plazo)
+        // ========================================
+        // Calcular valor de activos del usuario
+        BigDecimal valorActivosUsuario = calcularValorActivosUsuario(userId);
+        
+        // Calcular valor de activos de usuarios dependientes
+        BigDecimal valorActivosDependientes = BigDecimal.ZERO;
+        for (User dependiente : usuariosDependientes) {
+            valorActivosDependientes = valorActivosDependientes.add(calcularValorActivosUsuario(dependiente.getId()));
+        }
+        
+        BigDecimal valorTotalActivos = valorActivosUsuario.add(valorActivosDependientes);
+        
+        // Balance patrimonial = Ingresos - Egresos + Valor de Activos
+        BigDecimal balancePatrimonial = balanceOperativo.add(valorTotalActivos);
+        
+        estadisticas.put("balancePatrimonial", balancePatrimonial);
+        estadisticas.put("valorActivos", valorTotalActivos);
+        
+        // Mantener compatibilidad con el balance anterior
+        estadisticas.put("balance", balancePatrimonial);
+
+        // Agregar información del usuario
+        estadisticas.put("usuario", usuario.getUsername());
+        estadisticas.put("esAdmin", esAdmin(usuario));
+        estadisticas.put("fechaConsulta", java.time.LocalDateTime.now());
+
+        return estadisticas;
+    }
+
+    /**
+     * Obtener estadísticas del dashboard para un usuario por ID
+     */
+    public Map<String, Object> obtenerEstadisticasDashboardPorUsuarioId(Long userId) {
+        try {
+            User usuario = userService.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + userId));
+            
+            return obtenerEstadisticasDashboard(usuario);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * Verificar si un usuario es ADMIN
+     */
+    private boolean esAdmin(User usuario) {
+        if (usuario == null) {
+            System.out.println("❌ [DashboardService] Usuario es null");
+            return false;
+        }
+        
+        if (usuario.getRoles() == null) {
+            System.out.println("❌ [DashboardService] Roles del usuario son null para: " + usuario.getUsername());
+            return false;
+        }
+        
+        System.out.println("🔍 [DashboardService] Verificando roles para usuario: " + usuario.getUsername());
+        System.out.println("🔍 [DashboardService] Roles encontrados: " + usuario.getRoles().stream().map(role -> role.getNombre()).collect(Collectors.joining(", ")));
+        
+        boolean esAdmin = usuario.getRoles().stream()
+                .anyMatch(role -> "ADMIN".equals(role.getNombre()) || "ADMINISTRADOR".equals(role.getNombre()) || "SUPERADMIN".equals(role.getNombre()));
+        
+        System.out.println("✅ [DashboardService] Usuario " + usuario.getUsername() + " es admin: " + esAdmin);
+        
+        return esAdmin;
+    }
+
+    /**
+     * Obtener estadísticas comparativas entre usuarios
+     */
+    public Map<String, Object> obtenerEstadisticasComparativas() {
+        Map<String, Object> comparativas = new HashMap<>();
+        
+        try {
+            // Estadísticas por tipo de usuario
+            long totalUsuarios = userService.findAll().size();
+            long usuariosActivos = userService.findAll().stream()
+                    .filter(user -> user.getActivo() != null && user.getActivo())
+                    .count();
+            
+            comparativas.put("totalUsuarios", totalUsuarios);
+            comparativas.put("usuariosActivos", usuariosActivos);
+            
+            // Datos por usuario
+            Map<String, Object> datosPorUsuario = new HashMap<>();
+            List<User> todosUsuarios = userService.findAll();
+            
+            for (User user : todosUsuarios) {
+                Map<String, Object> estadisticasUsuario = obtenerEstadisticasDashboard(user);
+                datosPorUsuario.put(user.getUsername(), estadisticasUsuario);
+            }
+            
+            comparativas.put("datosPorUsuario", datosPorUsuario);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            // En caso de error, retornar valores por defecto
+            comparativas.put("totalUsuarios", 0);
+            comparativas.put("usuariosActivos", 0);
+            comparativas.put("datosPorUsuario", new HashMap<>());
+        }
+        
+        return comparativas;
+    }
+    
+    /**
+     * Calcula el valor total de los activos de un usuario
+     */
+    private BigDecimal calcularValorActivosUsuario(Long userId) {
+        BigDecimal valorTotal = BigDecimal.ZERO;
+        
+        try {
+            // 1. Valor de insumos en stock (stock actual × precio unitario)
+            BigDecimal valorInsumos = insumoRepository.findByUserId(userId)
+                    .stream()
+                    .filter(insumo -> insumo.getPrecioUnitario() != null && insumo.getStockActual() != null)
+                    .map(insumo -> {
+                        try {
+                            return insumo.getPrecioUnitario().multiply(BigDecimal.valueOf(insumo.getStockActual().doubleValue()));
+                        } catch (Exception e) {
+                            return BigDecimal.ZERO;
+                        }
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            // 2. Valor de maquinaria (estimado por unidad)
+            BigDecimal valorMaquinaria = maquinariaRepository.findByUserId(userId)
+                    .stream()
+                    .map(maq -> {
+                        // Estimación: $500,000 por maquinaria (ajustable)
+                        return new BigDecimal("500000");
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            // 3. Valor de cultivos en campo (estimado por hectárea)
+            BigDecimal valorCultivos = cultivoRepository.findByUsuarioId(userId)
+                    .stream()
+                    .map(cultivo -> {
+                        // Estimación: $50,000 por hectárea (ajustable según el cultivo)
+                        return new BigDecimal("50000");
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            // 4. Valor de lotes (estimado por hectárea)
+            BigDecimal valorLotes = plotRepository.findByUserId(userId)
+                    .stream()
+                    .map(lote -> {
+                        // Estimación: $100,000 por hectárea (valor de la tierra)
+                        return new BigDecimal("100000");
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            valorTotal = valorInsumos.add(valorMaquinaria).add(valorCultivos).add(valorLotes);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            // En caso de error, retornar 0
+            valorTotal = BigDecimal.ZERO;
+        }
+        
+        return valorTotal;
+    }
+    
+    /**
+     * Obtener estadísticas globales para administradores
+     */
+    private Map<String, Object> obtenerEstadisticasAdmin(User usuario) {
+        Map<String, Object> estadisticas = new HashMap<>();
+        
+        try {
+            System.out.println("🔍 [DashboardService] Obteniendo estadísticas globales para ADMIN");
+            
+            // Obtener estadísticas globales (todos los usuarios)
+            long camposTotal = fieldRepository.count();
+            long lotesTotal = plotRepository.count();
+            long cultivosTotal = cultivoRepository.count();
+            long insumosTotal = insumoRepository.count();
+            long maquinariaTotal = maquinariaRepository.count();
+            long laboresTotal = laborRepository.count();
+            long ingresosTotal = ingresoRepository.count();
+            long egresosTotal = egresoRepository.count();
+            long cosechasTotal = cosechaRepository.count();
+            
+            System.out.println("📊 [DashboardService] Estadísticas globales:");
+            System.out.println("  - Campos: " + camposTotal);
+            System.out.println("  - Lotes: " + lotesTotal);
+            System.out.println("  - Cultivos: " + cultivosTotal);
+            System.out.println("  - Insumos: " + insumosTotal);
+            System.out.println("  - Maquinaria: " + maquinariaTotal);
+            System.out.println("  - Labores: " + laboresTotal);
+            System.out.println("  - Ingresos: " + ingresosTotal);
+            System.out.println("  - Egresos: " + egresosTotal);
+            System.out.println("  - Cosechas: " + cosechasTotal);
+            
+            // Agregar estadísticas globales
+            estadisticas.put("campos", camposTotal);
+            estadisticas.put("lotes", lotesTotal);
+            estadisticas.put("cultivos", cultivosTotal);
+            estadisticas.put("insumos", insumosTotal);
+            estadisticas.put("maquinaria", maquinariaTotal);
+            estadisticas.put("labores", laboresTotal);
+            estadisticas.put("ingresos", ingresosTotal);
+            estadisticas.put("egresos", egresosTotal);
+            estadisticas.put("cosechas", cosechasTotal);
+            
+            // ========================================
+            // BALANCE OPERATIVO (Corto plazo)
+            // ========================================
+            BigDecimal totalIngresos = ingresoRepository.sumAllIngresos();
+            BigDecimal totalEgresos = egresoRepository.sumAllEgresos();
+            
+            // Balance operativo = Ingresos - Egresos (flujo de caja puro)
+            BigDecimal balanceOperativo = (totalIngresos != null ? totalIngresos : BigDecimal.ZERO)
+                        .subtract(totalEgresos != null ? totalEgresos : BigDecimal.ZERO);
+            
+            estadisticas.put("balanceOperativo", balanceOperativo);
+            estadisticas.put("totalIngresos", totalIngresos != null ? totalIngresos : BigDecimal.ZERO);
+            estadisticas.put("totalEgresos", totalEgresos != null ? totalEgresos : BigDecimal.ZERO);
+            
+            // ========================================
+            // BALANCE PATRIMONIAL (Largo plazo)
+            // ========================================
+            // Para administradores, calcular valor total de activos
+            BigDecimal valorTotalActivos = BigDecimal.ZERO;
+            
+            // Calcular valor de todos los insumos
+            List<Insumo> todosInsumos = insumoRepository.findAll();
+            for (Insumo insumo : todosInsumos) {
+                if (insumo.getPrecioUnitario() != null && insumo.getStockActual() != null) {
+                    valorTotalActivos = valorTotalActivos.add(
+                        insumo.getPrecioUnitario().multiply(insumo.getStockActual())
+                    );
+                }
+            }
+            
+            // Balance patrimonial = Ingresos - Egresos + Valor de Activos
+            BigDecimal balancePatrimonial = balanceOperativo.add(valorTotalActivos);
+            
+            estadisticas.put("balancePatrimonial", balancePatrimonial);
+            estadisticas.put("valorActivos", valorTotalActivos);
+            
+            // Mantener compatibilidad con el balance anterior
+            estadisticas.put("balance", balancePatrimonial);
+
+            // Agregar información del usuario
+            estadisticas.put("usuario", usuario.getUsername());
+            estadisticas.put("esAdmin", esAdmin(usuario));
+            estadisticas.put("fechaConsulta", java.time.LocalDateTime.now());
+            
+            System.out.println("✅ [DashboardService] Estadísticas globales calculadas exitosamente");
+            
+        } catch (Exception e) {
+            System.out.println("❌ [DashboardService] Error calculando estadísticas globales: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return estadisticas;
+    }
+}

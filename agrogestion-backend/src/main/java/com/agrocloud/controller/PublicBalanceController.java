@@ -50,7 +50,9 @@ public class PublicBalanceController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
         
         try {
-            BalanceDTO balance = balanceService.calcularBalancePorLote(loteId, fechaInicio, fechaFin);
+            // Usar un usuario por defecto (ID 1) para las pruebas
+            Long usuarioId = 1L;
+            BalanceDTO balance = balanceService.calcularBalancePorLote(loteId, usuarioId, fechaInicio, fechaFin);
             return ResponseEntity.ok(balance);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();

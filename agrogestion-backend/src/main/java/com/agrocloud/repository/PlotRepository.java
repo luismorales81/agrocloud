@@ -2,6 +2,7 @@ package com.agrocloud.repository;
 
 import com.agrocloud.model.entity.Plot;
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.enums.EstadoLote;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,6 +31,13 @@ public interface PlotRepository extends JpaRepository<Plot, Long> {
            "p.user IN (SELECT u FROM User u WHERE u.parentUser = :user) OR " +
            "p.user IN (SELECT u FROM User u WHERE u.parentUser IN (SELECT c FROM User c WHERE c.parentUser = :user))")
     List<Plot> findAccessibleByUser(@Param("user") User user);
+    
+    // Query personalizada para buscar lotes accesibles y activos por un usuario
+    @Query("SELECT p FROM Plot p LEFT JOIN FETCH p.campo WHERE p.activo = true AND (" +
+           "p.user = :user OR " +
+           "p.user IN (SELECT u FROM User u WHERE u.parentUser = :user) OR " +
+           "p.user IN (SELECT u FROM User u WHERE u.parentUser IN (SELECT c FROM User c WHERE c.parentUser = :user)))")
+    List<Plot> findAccessibleByUserAndActivoTrue(@Param("user") User user);
 
     // Query para buscar lotes por nombre (filtrado por usuario)
     @Query("SELECT p FROM Plot p WHERE p.user.id = :userId AND p.nombre LIKE %:nombre%")
@@ -40,4 +48,23 @@ public interface PlotRepository extends JpaRepository<Plot, Long> {
 
     // Contar lotes activos por usuario
     long countByUserIdAndActivoTrue(Long userId);
+
+    // Buscar todos los lotes activos
+    @Query("SELECT p FROM Plot p LEFT JOIN FETCH p.campo WHERE p.activo = true")
+    List<Plot> findByActivoTrue();
+
+    // Métodos para eliminación lógica
+    List<Plot> findByActivoFalse();
+    List<Plot> findByUserIdAndActivoFalse(Long userId);
+    
+    // Métodos para buscar por estado
+    List<Plot> findByEstado(EstadoLote estado);
+    List<Plot> findByEstadoIn(List<EstadoLote> estados);
+    
+    // Método para buscar por usuario o usuario padre
+    @Query("SELECT p FROM Plot p WHERE " +
+           "p.user.id = :userId OR " +
+           "p.user.parentUser.id = :userId OR " +
+           "p.user.parentUser.id IN (SELECT u.id FROM User u WHERE u.parentUser.id = :userId)")
+    List<Plot> findByUserIdOrParentUserId(@Param("userId") Long userId);
 }

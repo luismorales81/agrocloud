@@ -11,6 +11,8 @@ import com.agrocloud.model.entity.Role;
 import com.agrocloud.repository.UserRepository;
 import com.agrocloud.service.JwtService;
 import com.agrocloud.service.AuthService;
+import com.agrocloud.service.UserService;
+import org.springframework.security.core.Authentication;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +37,9 @@ public class TestController {
     
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private UserService userService;
     
     @GetMapping("/hash")
     public Map<String, String> generateHash(@RequestParam String password) {
@@ -66,7 +71,7 @@ public class TestController {
                 response.put("email", user.getEmail());
                 response.put("password", user.getPassword());
                 response.put("active", user.getActivo());
-                response.put("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toList()));
+                response.put("roles", user.getRoles().stream().map(Role::getNombre).collect(Collectors.toList()));
             } else {
                 response.put("found", false);
             }
@@ -475,5 +480,73 @@ public class TestController {
             response.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
+    }
+
+    @GetMapping("/admin-roles")
+    public ResponseEntity<Map<String, Object>> testAdminRoles(Authentication authentication) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            if (authentication == null) {
+                response.put("error", "No hay autenticación");
+                response.put("authentication", "NULL");
+                response.put("debug", "El objeto Authentication es null");
+                return ResponseEntity.ok(response);
+            }
+
+            String username = authentication.getName();
+            response.put("username", username);
+            response.put("authentication", "PRESENTE");
+            response.put("authenticationType", authentication.getClass().getSimpleName());
+            response.put("authorities", authentication.getAuthorities().toString());
+            
+            // Buscar usuario por username
+            User user = userService.findByEmail(username);
+            if (user == null) {
+                response.put("error", "Usuario no encontrado");
+                return ResponseEntity.ok(response);
+            }
+
+            response.put("userId", user.getId());
+            response.put("firstName", user.getFirstName());
+            response.put("lastName", user.getLastName());
+            response.put("email", user.getEmail());
+            response.put("activo", user.getActivo());
+            
+            // Verificar roles
+            if (user.getRoles() == null) {
+                response.put("roles", "NULL - No hay roles cargados");
+                response.put("rolesCount", 0);
+            } else {
+                response.put("roles", user.getRoles().stream()
+                    .map(role -> role.getNombre())
+                    .toList());
+                response.put("rolesCount", user.getRoles().size());
+            }
+
+            // Verificar si es admin
+            boolean esAdmin = user.getRoles() != null && 
+                user.getRoles().stream()
+                    .anyMatch(role -> "ADMIN".equals(role.getNombre()) || "ADMINISTRADOR".equals(role.getNombre()));
+            
+            response.put("esAdmin", esAdmin);
+            response.put("success", true);
+
+        } catch (Exception e) {
+            response.put("error", e.getMessage());
+            response.put("success", false);
+            e.printStackTrace();
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/test-simple")
+    public ResponseEntity<Map<String, Object>> testSimple() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Endpoint de prueba funcionando");
+        response.put("timestamp", java.time.LocalDateTime.now());
+        response.put("success", true);
+        return ResponseEntity.ok(response);
     }
 }

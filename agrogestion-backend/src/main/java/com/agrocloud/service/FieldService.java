@@ -1,5 +1,6 @@
 package com.agrocloud.service;
 
+import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.repository.FieldRepository;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,34 +23,79 @@ public class FieldService {
     @Autowired
     private UserRepository userRepository;
 
-    // Obtener todos los campos (público)
+    // Obtener todos los campos activos (público)
     public List<Field> getAllFields() {
-        return fieldRepository.findAll();
+        return fieldRepository.findAll().stream()
+                .filter(Field::getActivo)
+                .toList();
     }
 
-    // Obtener campo por ID (público)
+    // Obtener campo activo por ID (público)
     public Field getFieldById(Long id) {
-        return fieldRepository.findById(id).orElse(null);
+        Optional<Field> field = fieldRepository.findById(id);
+        return field.isPresent() && field.get().getActivo() ? field.get() : null;
     }
 
-    // Obtener todos los campos accesibles por un usuario
+    // Obtener todos los campos activos accesibles por un usuario
     public List<Field> getFieldsByUser(User user) {
-        if (user.isAdmin()) {
-            // Admin ve todos los campos
-            return fieldRepository.findAll();
-        } else {
-            // Usuario ve sus campos y los de sus sub-usuarios
-            return fieldRepository.findAccessibleByUser(user);
+        try {
+            System.out.println("[FIELD_SERVICE] getFieldsByUser iniciado para usuario: " + (user != null ? user.getEmail() : "null"));
+            
+            if (user == null) {
+                System.err.println("[FIELD_SERVICE] ERROR: Usuario es null");
+                return new ArrayList<>();
+            }
+            
+            if (user.isSuperAdmin()) {
+                // Solo SuperAdmin ve todos los campos activos
+                System.out.println("[FIELD_SERVICE] Usuario es SuperAdmin, mostrando todos los campos");
+                return fieldRepository.findAll().stream()
+                        .filter(field -> {
+                            Boolean activo = field.getActivo();
+                            return activo != null && activo;
+                        })
+                        .toList();
+            } else {
+                // Admin de empresa y otros usuarios ven solo sus campos y los de sus sub-usuarios
+                System.out.println("[FIELD_SERVICE] Usuario es Admin de empresa, mostrando campos accesibles");
+                List<Field> accessibleFields = fieldRepository.findAccessibleByUser(user);
+                System.out.println("[FIELD_SERVICE] Campos accesibles encontrados: " + (accessibleFields != null ? accessibleFields.size() : "null"));
+                
+                if (accessibleFields == null) {
+                    System.err.println("[FIELD_SERVICE] ERROR: fieldRepository.findAccessibleByUser retornó null");
+                    return new ArrayList<>();
+                }
+                
+                return accessibleFields.stream()
+                        .filter(field -> {
+                            if (field == null) {
+                                System.err.println("[FIELD_SERVICE] ERROR: Campo es null en el stream");
+                                return false;
+                            }
+                            // Manejar caso donde activo es null (considerar como inactivo)
+                            Boolean activo = field.getActivo();
+                            boolean isActive = activo != null && activo;
+                            if (activo == null) {
+                                System.out.println("[FIELD_SERVICE] Campo ID " + field.getId() + " tiene activo=null, considerando como inactivo");
+                            }
+                            return isActive;
+                        })
+                        .toList();
+            }
+        } catch (Exception e) {
+            System.err.println("[FIELD_SERVICE] ERROR en getFieldsByUser: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
         }
     }
 
-    // Obtener campo por ID (con validación de acceso)
+    // Obtener campo activo por ID (con validación de acceso)
     public Optional<Field> getFieldById(Long id, User user) {
         Optional<Field> field = fieldRepository.findById(id);
         
         if (field.isPresent()) {
             Field f = field.get();
-            if (user.isAdmin() || user.canAccessUser(f.getUser())) {
+            if (f.getActivo() && (user.isSuperAdmin() || user.canAccessUser(f.getUser()))) {
                 return field;
             }
         }
@@ -58,8 +105,33 @@ public class FieldService {
 
     // Crear nuevo campo
     public Field createField(Field field, User user) {
+        System.out.println("[FIELD_SERVICE] Iniciando creación de campo para usuario: " + user.getEmail());
+        
         field.setUser(user);
-        return fieldRepository.save(field);
+        
+        // Establecer la empresa del usuario
+        Empresa empresa = user.getEmpresa();
+        if (empresa != null) {
+            System.out.println("[FIELD_SERVICE] Asignando empresa: " + empresa.getNombre() + " (ID: " + empresa.getId() + ")");
+            field.setEmpresa(empresa);
+        } else {
+            System.err.println("[FIELD_SERVICE] ERROR: El usuario " + user.getEmail() + " no tiene empresa asignada");
+            throw new RuntimeException("El usuario debe tener una empresa asignada para crear campos");
+        }
+        
+        // Establecer valores por defecto si no están presentes
+        if (field.getEstado() == null || field.getEstado().trim().isEmpty()) {
+            field.setEstado("ACTIVO");
+        }
+        if (field.getActivo() == null) {
+            field.setActivo(true);
+        }
+        
+        System.out.println("[FIELD_SERVICE] Guardando campo: " + field.getNombre());
+        Field savedField = fieldRepository.save(field);
+        System.out.println("[FIELD_SERVICE] Campo creado exitosamente con ID: " + savedField.getId());
+        
+        return savedField;
     }
 
     // Actualizar campo (con validación de acceso)
@@ -70,13 +142,12 @@ public class FieldService {
             Field field = existingField.get();
             
             // Verificar acceso
-            if (user.isAdmin() || user.canAccessUser(field.getUser())) {
+            if (user.isSuperAdmin() || user.canAccessUser(field.getUser())) {
                 // Actualizar campos
                 field.setNombre(fieldData.getNombre());
                 field.setDescripcion(fieldData.getDescripcion());
                 field.setUbicacion(fieldData.getUbicacion());
                 field.setAreaHectareas(fieldData.getAreaHectareas());
-                field.setTipoSuelo(fieldData.getTipoSuelo());
                 field.setEstado(fieldData.getEstado());
                 field.setActivo(fieldData.getActivo());
                 field.setPoligono(fieldData.getPoligono());
@@ -91,14 +162,34 @@ public class FieldService {
 
     // Eliminar campo (con validación de acceso)
     public boolean deleteField(Long id, User user) {
-        Optional<Field> field = fieldRepository.findById(id);
-        
-        if (field.isPresent()) {
-            Field f = field.get();
-            if (user.isAdmin() || user.canAccessUser(f.getUser())) {
-                fieldRepository.delete(f);
-                return true;
+        try {
+            System.out.println("🔍 [FIELD_SERVICE] Buscando campo con ID: " + id);
+            Optional<Field> field = fieldRepository.findById(id);
+            
+            if (field.isPresent()) {
+                Field f = field.get();
+                System.out.println("🔍 [FIELD_SERVICE] Campo encontrado: " + f.getNombre());
+                System.out.println("🔍 [FIELD_SERVICE] Usuario del campo: " + (f.getUser() != null ? f.getUser().getEmail() : "null"));
+                System.out.println("🔍 [FIELD_SERVICE] Usuario actual: " + (user != null ? user.getEmail() : "null"));
+                System.out.println("🔍 [FIELD_SERVICE] Usuario es admin: " + (user != null ? user.isAdmin() : "false"));
+                
+                if (user != null && (user.isSuperAdmin() || user.canAccessUser(f.getUser()))) {
+                    System.out.println("✅ [FIELD_SERVICE] Usuario tiene permisos para eliminar");
+                    // Eliminación lógica: marcar como inactivo
+                    f.setActivo(false);
+                    f.setEstado("ELIMINADO");
+                    fieldRepository.save(f);
+                    System.out.println("✅ [FIELD_SERVICE] Campo marcado como eliminado (eliminación lógica)");
+                    return true;
+                } else {
+                    System.out.println("❌ [FIELD_SERVICE] Usuario no tiene permisos para eliminar este campo");
+                }
+            } else {
+                System.out.println("❌ [FIELD_SERVICE] Campo no encontrado con ID: " + id);
             }
+        } catch (Exception e) {
+            System.err.println("❌ [FIELD_SERVICE] Error eliminando campo: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return false;

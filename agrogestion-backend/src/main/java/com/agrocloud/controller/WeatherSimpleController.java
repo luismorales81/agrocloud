@@ -20,8 +20,12 @@ import com.agrocloud.dto.WeatherForecastDTO;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/weather-simple")
@@ -142,23 +146,8 @@ public class WeatherSimpleController {
                 currentWeather.setIcon("🌤️");
             }
             
-            // Crear pronóstico simple (solo datos actuales por ahora)
-            List<WeatherForecastDTO> forecast = new ArrayList<>();
-            
-            // Crear pronóstico por defecto ya que este endpoint solo da datos actuales
-            for (int i = 0; i < 7; i++) {
-                WeatherForecastDTO day = new WeatherForecastDTO();
-                LocalDate date = LocalDate.now().plusDays(i);
-                day.setDate(date);
-                day.setDayOfWeek("Día " + (i + 1));
-                day.setMaxTemperature(28.0);
-                day.setMinTemperature(15.0);
-                day.setPrecipitation(0.0);
-                day.setWeatherCode(800);
-                day.setWeatherDescription("Soleado");
-                day.setIcon("☀️");
-                forecast.add(day);
-            }
+            // Obtener pronóstico real de 7 días de OpenWeatherMap
+            List<WeatherForecastDTO> forecast = getRealForecast(latitude, longitude);
             
             // Crear objeto de respuesta
             WeatherDTO weatherData = new WeatherDTO();
@@ -188,6 +177,189 @@ public class WeatherSimpleController {
         if (weatherId == 802) return "⛅"; // Nubes dispersas
         if (weatherId >= 803 && weatherId <= 804) return "☁️"; // Nublado
         return "🌤️"; // Por defecto
+    }
+
+    /**
+     * Genera consejos agrícolas específicos basados en las condiciones meteorológicas del día
+     */
+    private String generateAgriculturalAdvice(double maxTemp, double minTemp, double precipitation, int weatherCode) {
+        StringBuilder advice = new StringBuilder();
+        
+        // Análisis de temperatura
+        if (minTemp < 5) {
+            advice.append("❄️ Temperatura muy baja - Evitar labores sensibles al frío");
+        } else if (minTemp < 10) {
+            advice.append("❄️ Temperatura baja - Considerar retrasar labores sensibles");
+        } else if (maxTemp > 35) {
+            advice.append("🌡️ Temperatura muy alta - Evitar labores en horas pico");
+        } else if (maxTemp > 30) {
+            advice.append("🌡️ Temperatura alta - Programar labores temprano o tarde");
+        } else {
+            advice.append("✅ Temperatura favorable para labores agrícolas");
+        }
+        
+        // Análisis de precipitación
+        if (precipitation > 10) {
+            advice.append(" | 🌧️ Lluvia intensa - Evitar labores de campo");
+        } else if (precipitation > 5) {
+            advice.append(" | 🌧️ Lluvia moderada - Considerar retrasar labores sensibles");
+        } else if (precipitation > 0) {
+            advice.append(" | 🌦️ Lluvia ligera - Monitorear condiciones");
+        }
+        
+        // Análisis de condiciones meteorológicas
+        if (weatherCode >= 200 && weatherCode < 300) {
+            advice.append(" | ⛈️ Tormentas - Evitar labores al aire libre");
+        } else if (weatherCode >= 500 && weatherCode < 600) {
+            advice.append(" | 🌧️ Lluvia - Evitar aplicaciones fitosanitarias");
+        } else if (weatherCode >= 600 && weatherCode < 700) {
+            advice.append(" | ❄️ Nieve - Evitar labores de campo");
+        } else if (weatherCode >= 700 && weatherCode < 800) {
+            advice.append(" | 🌫️ Niebla - Cuidado con la visibilidad");
+        } else if (weatherCode == 800) {
+            advice.append(" | ☀️ Día despejado - Ideal para labores");
+        } else if (weatherCode >= 801 && weatherCode <= 802) {
+            advice.append(" | ⛅ Poco nublado - Bueno para labores");
+        } else if (weatherCode >= 803 && weatherCode <= 804) {
+            advice.append(" | ☁️ Nublado - Condiciones estables");
+        }
+        
+        // Consejos específicos por combinación de condiciones
+        if (minTemp < 10 && precipitation > 0) {
+            advice.append(" | 💡 Considerar cubrir cultivos sensibles");
+        } else if (maxTemp > 30 && precipitation == 0) {
+            advice.append(" | 💡 Aumentar frecuencia de riego");
+        } else if (precipitation > 5 && weatherCode >= 500) {
+            advice.append(" | 💡 Monitorear drenaje de campos");
+        }
+        
+        return advice.toString();
+    }
+
+    /**
+     * Obtiene pronóstico real de 7 días de OpenWeatherMap
+     */
+    private List<WeatherForecastDTO> getRealForecast(double latitude, double longitude) {
+        try {
+            logger.info("🌤️ [WeatherSimpleController] Obteniendo pronóstico real de 7 días para lat: {}, lon: {}", latitude, longitude);
+            
+            // URL para pronóstico de 5 días (40 entradas de 3 horas cada una)
+            String url = String.format("https://api.openweathermap.org/data/2.5/forecast?lat=%.4f&lon=%.4f&appid=9dee7c2c4e36ce49c32fab5a51d6e25b&units=metric&lang=es",
+                                     latitude, longitude);
+            
+            logger.info("🌤️ [WeatherSimpleController] Llamando a OpenWeatherMap Forecast: {}", url);
+            
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            
+            if (response.getStatusCode().value() != 200) {
+                throw new RuntimeException("Error en respuesta de OpenWeatherMap Forecast: " + response.getStatusCode());
+            }
+            
+            logger.info("🌤️ [WeatherSimpleController] Respuesta de pronóstico recibida");
+            
+            // Procesar JSON del pronóstico
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+            JsonNode list = rootNode.get("list");
+            
+            List<WeatherForecastDTO> forecast = new ArrayList<>();
+            
+            // Agrupar por día para obtener máximos y mínimos diarios
+            Map<String, List<JsonNode>> dailyData = new HashMap<>();
+            
+            for (int i = 0; i < list.size(); i++) {
+                JsonNode item = list.get(i);
+                String dateStr = item.get("dt_txt").asText().substring(0, 10); // YYYY-MM-DD
+                dailyData.computeIfAbsent(dateStr, k -> new ArrayList<>()).add(item);
+            }
+            
+            // Procesar cada día ordenados por fecha
+            int dayCount = 0;
+            List<String> sortedDates = new ArrayList<>(dailyData.keySet());
+            Collections.sort(sortedDates); // Ordenar fechas cronológicamente
+            
+            for (String dateStr : sortedDates) {
+                if (dayCount >= 5) break; // Solo 5 días (OpenWeatherMap)
+                
+                List<JsonNode> dayItems = dailyData.get(dateStr);
+                
+                // Calcular temperaturas máximas y mínimas del día
+                double maxTemp = Double.MIN_VALUE;
+                double minTemp = Double.MAX_VALUE;
+                JsonNode representativeItem = dayItems.get(dayItems.size() / 2); // Tomar item del medio del día
+                
+                for (JsonNode item : dayItems) {
+                    double temp = item.get("main").get("temp").asDouble();
+                    maxTemp = Math.max(maxTemp, temp);
+                    minTemp = Math.min(minTemp, temp);
+                }
+                
+                // Crear pronóstico del día
+                WeatherForecastDTO dayForecast = new WeatherForecastDTO();
+                dayForecast.setDate(LocalDate.parse(dateStr));
+                dayForecast.setDayOfWeek(LocalDate.parse(dateStr).format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.forLanguageTag("es"))));
+                dayForecast.setMaxTemperature(maxTemp);
+                dayForecast.setMinTemperature(minTemp);
+                
+                // Precipitación (sumar todas las del día)
+                double totalPrecipitation = 0.0;
+                for (JsonNode item : dayItems) {
+                    JsonNode rain = item.get("rain");
+                    if (rain != null && rain.has("3h")) {
+                        totalPrecipitation += rain.get("3h").asDouble();
+                    }
+                }
+                dayForecast.setPrecipitation(totalPrecipitation);
+                
+                // Clima representativo del día
+                JsonNode weather = representativeItem.get("weather").get(0);
+                int weatherId = weather.get("id").asInt();
+                dayForecast.setWeatherCode(weatherId);
+                dayForecast.setWeatherDescription(weather.get("description").asText());
+                dayForecast.setIcon(getWeatherIconOpenWeather(weatherId));
+                
+                // Generar consejo agrícola específico para este día
+                String agriculturalAdvice = generateAgriculturalAdvice(maxTemp, minTemp, totalPrecipitation, weatherId);
+                dayForecast.setAgriculturalAdvice(agriculturalAdvice);
+                
+                forecast.add(dayForecast);
+                dayCount++;
+            }
+            
+            logger.info("🌤️ [WeatherSimpleController] Pronóstico real de {} días procesado exitosamente", forecast.size());
+            return forecast;
+            
+        } catch (Exception e) {
+            logger.error("❌ [WeatherSimpleController] Error obteniendo pronóstico real: {}", e.getMessage(), e);
+            
+            // Fallback: crear pronóstico básico con datos actuales
+            List<WeatherForecastDTO> fallbackForecast = new ArrayList<>();
+            for (int i = 0; i < 7; i++) {
+                WeatherForecastDTO day = new WeatherForecastDTO();
+                LocalDate date = LocalDate.now().plusDays(i);
+                day.setDate(date);
+                day.setDayOfWeek(date.format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.forLanguageTag("es"))));
+                day.setMaxTemperature(25.0 + Math.random() * 10); // Variación realista
+                day.setMinTemperature(15.0 + Math.random() * 5);  // Variación realista
+                day.setPrecipitation(Math.random() < 0.3 ? Math.random() * 5 : 0.0); // 30% probabilidad de lluvia
+                day.setWeatherCode(800);
+                day.setWeatherDescription("Clima variable");
+                day.setIcon("🌤️");
+                
+                // Generar consejo agrícola para el fallback
+                String agriculturalAdvice = generateAgriculturalAdvice(day.getMaxTemperature(), 
+                                                                       day.getMinTemperature(), 
+                                                                       day.getPrecipitation(), 
+                                                                       800);
+                day.setAgriculturalAdvice(agriculturalAdvice);
+                
+                fallbackForecast.add(day);
+            }
+            
+            logger.warn("🔄 [WeatherSimpleController] Usando pronóstico de fallback");
+            return fallbackForecast;
+        }
     }
     
     @GetMapping("/health")

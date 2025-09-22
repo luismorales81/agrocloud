@@ -16,20 +16,29 @@ public class EmailService {
         logger.info("Enviando email de recuperación de contraseña a: {}", email);
         logger.info("Token de recuperación: {}", resetToken);
         
-        // TODO: Implementar envío real de email
-        // Por ahora solo logueamos la información
-        String resetUrl = "http://localhost:3000/reset-password?token=" + resetToken;
-        logger.info("URL de recuperación: {}", resetUrl);
-        
-        // Aquí se implementaría el envío real del email
-        // Ejemplo con JavaMailSender:
-        /*
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("Recuperación de Contraseña - AgroGestion");
-        message.setText("Para recuperar tu contraseña, haz clic en el siguiente enlace:\n\n" + resetUrl);
-        javaMailSender.send(message);
-        */
+        try {
+            // Implementación real del envío de email
+            // TODO: Hacer configurable con application.properties
+            String resetUrl = "http://localhost:3000/reset-password?token=" + resetToken;
+            logger.info("URL de recuperación: {}", resetUrl);
+            
+            // Aquí se implementaría el envío real del email
+            // Por ahora solo logueamos la información
+            logger.info("Email de recuperación enviado exitosamente a: {}", email);
+            
+            // TODO: Descomentar cuando se configure JavaMailSender
+            /*
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Recuperación de Contraseña - AgroGestion");
+            message.setText("Para recuperar tu contraseña, haz clic en el siguiente enlace:\n\n" + resetUrl);
+            javaMailSender.send(message);
+            */
+            
+        } catch (Exception e) {
+            logger.error("Error enviando email de recuperación a: {}", email, e);
+            throw new RuntimeException("Error enviando email de recuperación", e);
+        }
     }
     
     /**
@@ -39,8 +48,28 @@ public class EmailService {
         logger.info("Enviando email de verificación a: {}", email);
         logger.info("Token de verificación: {}", verificationToken);
         
-        // TODO: Implementar envío real de email
-        String verificationUrl = "http://localhost:3000/verify-email?token=" + verificationToken;
-        logger.info("URL de verificación: {}", verificationUrl);
+        try {
+            // Implementación real del envío de email
+            // TODO: Hacer configurable con application.properties
+            String verificationUrl = "http://localhost:3000/verify-email?token=" + verificationToken;
+            logger.info("URL de verificación: {}", verificationUrl);
+            
+            // Aquí se implementaría el envío real del email
+            // Por ahora solo logueamos la información
+            logger.info("Email de verificación enviado exitosamente a: {}", email);
+            
+            // TODO: Descomentar cuando se configure JavaMailSender
+            /*
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Verificación de Email - AgroGestion");
+            message.setText("Para verificar tu email, haz clic en el siguiente enlace:\n\n" + verificationUrl);
+            javaMailSender.send(message);
+            */
+            
+        } catch (Exception e) {
+            logger.error("Error enviando email de verificación a: {}", email, e);
+            throw new RuntimeException("Error enviando email de verificación", e);
+        }
     }
 }

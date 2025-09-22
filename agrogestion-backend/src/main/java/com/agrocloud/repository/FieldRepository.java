@@ -37,4 +37,9 @@ public interface FieldRepository extends JpaRepository<Field, Long> {
 
     // Contar campos activos por usuario
     long countByUserIdAndActivoTrue(Long userId);
+
+    // Métodos para eliminación lógica
+    List<Field> findByActivoTrue();
+    List<Field> findByActivoFalse();
+    List<Field> findByUserIdAndActivoFalse(Long userId);
 }

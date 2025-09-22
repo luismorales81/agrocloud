@@ -67,6 +67,10 @@ public class InsumoService {
     // Crear nuevo insumo
     public Insumo createInsumo(Insumo insumo, User user) {
         insumo.setUser(user);
+        // Asignar la empresa del usuario al insumo
+        if (user.getEmpresa() != null) {
+            insumo.setEmpresa(user.getEmpresa());
+        }
         return insumoRepository.save(insumo);
     }
 
@@ -83,7 +87,7 @@ public class InsumoService {
                 insumo.setNombre(insumoData.getNombre());
                 insumo.setDescripcion(insumoData.getDescripcion());
                 insumo.setTipo(insumoData.getTipo());
-                insumo.setUnidad(insumoData.getUnidad());
+                insumo.setUnidadMedida(insumoData.getUnidadMedida());
                 insumo.setPrecioUnitario(insumoData.getPrecioUnitario());
                 insumo.setStockMinimo(insumoData.getStockMinimo());
                 insumo.setStockActual(insumoData.getStockActual());
@@ -98,16 +102,32 @@ public class InsumoService {
         return Optional.empty();
     }
 
-    // Eliminar insumo (con validación de acceso)
+    // Eliminar insumo lógicamente (con validación de acceso)
     public boolean deleteInsumo(Long id, User user) {
         Optional<Insumo> insumo = insumoRepository.findById(id);
         
         if (insumo.isPresent()) {
             Insumo i = insumo.get();
             if (user.isAdmin() || user.canAccessUser(i.getUser())) {
-                insumoRepository.delete(i);
+                i.setActivo(false);
+                insumoRepository.save(i);
                 return true;
             }
+        }
+        
+        return false;
+    }
+
+    // Eliminar insumo físicamente (solo para administradores)
+    public boolean deleteInsumoFisicamente(Long id, User user) {
+        if (!user.isAdmin()) {
+            return false;
+        }
+        
+        Optional<Insumo> insumo = insumoRepository.findById(id);
+        if (insumo.isPresent()) {
+            insumoRepository.delete(insumo.get());
+            return true;
         }
         
         return false;

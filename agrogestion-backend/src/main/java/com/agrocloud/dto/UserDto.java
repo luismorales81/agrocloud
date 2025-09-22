@@ -6,6 +6,7 @@ import java.util.Set;
 public class UserDto {
     
     private Long id;
+    private String username;
     private String name;
     private String email;
     private String roleName;
@@ -18,9 +19,10 @@ public class UserDto {
     // Constructores
     public UserDto() {}
     
-    public UserDto(Long id, String name, String email, String roleName, Set<String> permissions, 
+    public UserDto(Long id, String username, String name, String email, String roleName, Set<String> permissions, 
                    boolean active, boolean emailVerified, LocalDateTime lastLogin, LocalDateTime createdAt) {
         this.id = id;
+        this.username = username;
         this.name = name;
         this.email = email;
         this.roleName = roleName;
@@ -35,9 +37,17 @@ public class UserDto {
     public Long getId() {
         return id;
     }
-    
+
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
     
     public String getName() {
@@ -129,6 +139,7 @@ public class UserDto {
     public String toString() {
         return "UserDto{" +
                 "id=" + id +
+                ", username='" + username + '\'' +
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", roleName='" + roleName + '\'' +

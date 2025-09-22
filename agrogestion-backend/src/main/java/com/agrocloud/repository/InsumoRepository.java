@@ -46,4 +46,9 @@ public interface InsumoRepository extends JpaRepository<Insumo, Long> {
 
     // Contar insumos activos por usuario
     long countByUserIdAndActivoTrue(Long userId);
+
+    // Métodos para eliminación lógica
+    List<Insumo> findByActivoTrue();
+    List<Insumo> findByActivoFalse();
+    List<Insumo> findByUserIdAndActivoFalse(Long userId);
 }

@@ -39,7 +39,7 @@ public class PublicEgresoController {
         } catch (Exception e) {
             System.err.println("Error en obtenerEgresos: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.ok(List.of());
+            return ResponseEntity.status(500).body(null);
         }
     }
 
@@ -65,17 +65,18 @@ public class PublicEgresoController {
     @PostMapping
     public ResponseEntity<Egreso> crearEgreso(@RequestBody Egreso egreso) {
         try {
-            // Establecer usuario por defecto (ID 1)
-            com.agrocloud.model.entity.User usuario = new com.agrocloud.model.entity.User();
-            usuario.setId(1L);
-            egreso.setUsuario(usuario);
+            // TODO: Implementar autenticación real - por ahora usar usuario admin
+            if (egreso.getUser() == null) {
+                com.agrocloud.model.entity.User usuario = new com.agrocloud.model.entity.User();
+                usuario.setId(1L); // Admin por defecto hasta implementar autenticación
+                egreso.setUser(usuario);
+            }
             
             // Si es un egreso de insumos, actualizar el stock
-            if (egreso.getTipoEgreso() == Egreso.TipoEgreso.INSUMOS && 
-                egreso.getInsumo() != null && 
-                egreso.getInsumo().getId() != null) {
+            if (egreso.getTipo() == Egreso.TipoEgreso.INSUMO && 
+                egreso.getReferenciaId() != null) {
                 
-                insumoRepository.findById(egreso.getInsumo().getId()).ifPresent(insumo -> {
+                insumoRepository.findById(egreso.getReferenciaId()).ifPresent(insumo -> {
                     BigDecimal nuevoStock = insumo.getStockActual().subtract(egreso.getCantidad());
                     if (nuevoStock.compareTo(BigDecimal.ZERO) >= 0) {
                         insumo.setStockActual(nuevoStock);
@@ -101,18 +102,18 @@ public class PublicEgresoController {
         try {
             return egresoRepository.findById(id)
                     .map(egresoExistente -> {
-                        egresoExistente.setConcepto(egreso.getConcepto());
-                        egresoExistente.setDescripcion(egreso.getDescripcion());
-                        egresoExistente.setTipoEgreso(egreso.getTipoEgreso());
-                        egresoExistente.setFechaEgreso(egreso.getFechaEgreso());
-                        egresoExistente.setMonto(egreso.getMonto());
-                        egresoExistente.setUnidadMedida(egreso.getUnidadMedida());
+                        egresoExistente.setTipo(egreso.getTipo());
+                        egresoExistente.setReferenciaId(egreso.getReferenciaId());
+
+                        egresoExistente.setFecha(egreso.getFecha());
+                        egresoExistente.setCostoTotal(egreso.getCostoTotal());
+
                         egresoExistente.setCantidad(egreso.getCantidad());
-                        egresoExistente.setProveedor(egreso.getProveedor());
-                        egresoExistente.setEstado(egreso.getEstado());
+
+
                         egresoExistente.setObservaciones(egreso.getObservaciones());
                         egresoExistente.setLote(egreso.getLote());
-                        egresoExistente.setInsumo(egreso.getInsumo());
+                        egresoExistente.setReferenciaId(egreso.getReferenciaId());
                         
                         return ResponseEntity.ok(egresoRepository.save(egresoExistente));
                     })

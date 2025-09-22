@@ -33,7 +33,7 @@ public class PublicIngresoController {
         } catch (Exception e) {
             System.err.println("Error en obtenerIngresos: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.ok(List.of());
+            return ResponseEntity.status(500).body(null);
         }
     }
 
@@ -59,10 +59,12 @@ public class PublicIngresoController {
     @PostMapping
     public ResponseEntity<Ingreso> crearIngreso(@RequestBody Ingreso ingreso) {
         try {
-            // Establecer usuario por defecto (ID 1)
-            com.agrocloud.model.entity.User usuario = new com.agrocloud.model.entity.User();
-            usuario.setId(1L);
-            ingreso.setUsuario(usuario);
+            // TODO: Implementar autenticación real - por ahora usar usuario admin
+            if (ingreso.getUser() == null) {
+                com.agrocloud.model.entity.User usuario = new com.agrocloud.model.entity.User();
+                usuario.setId(1L); // Admin por defecto hasta implementar autenticación
+                ingreso.setUser(usuario);
+            }
             
             Ingreso ingresoGuardado = ingresoRepository.save(ingreso);
             return ResponseEntity.ok(ingresoGuardado);
@@ -84,12 +86,12 @@ public class PublicIngresoController {
                         ingresoExistente.setConcepto(ingreso.getConcepto());
                         ingresoExistente.setDescripcion(ingreso.getDescripcion());
                         ingresoExistente.setTipoIngreso(ingreso.getTipoIngreso());
-                        ingresoExistente.setFechaIngreso(ingreso.getFechaIngreso());
+                        ingresoExistente.setFecha(ingreso.getFecha());
                         ingresoExistente.setMonto(ingreso.getMonto());
                         ingresoExistente.setUnidadMedida(ingreso.getUnidadMedida());
                         ingresoExistente.setCantidad(ingreso.getCantidad());
                         ingresoExistente.setClienteComprador(ingreso.getClienteComprador());
-                        ingresoExistente.setEstado(ingreso.getEstado());
+
                         ingresoExistente.setObservaciones(ingreso.getObservaciones());
                         ingresoExistente.setLote(ingreso.getLote());
                         

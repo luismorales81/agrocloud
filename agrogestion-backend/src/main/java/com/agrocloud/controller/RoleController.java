@@ -24,7 +24,6 @@ public class RoleController {
     
     @GetMapping
     @Operation(summary = "Obtener roles", description = "Listar todos los roles disponibles")
-    @PreAuthorize("hasAuthority('ROLE_READ')")
     public ResponseEntity<List<Role>> getAllRoles() {
         try {
             List<Role> roles = roleService.getAllRoles();
@@ -36,7 +35,6 @@ public class RoleController {
     
     @GetMapping("/{id}")
     @Operation(summary = "Obtener rol por ID", description = "Obtener información de un rol específico")
-    @PreAuthorize("hasAuthority('ROLE_READ')")
     public ResponseEntity<Role> getRoleById(@PathVariable Long id) {
         try {
             Role role = roleService.getRoleById(id);

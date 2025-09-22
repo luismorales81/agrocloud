@@ -18,7 +18,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.agrocloud.service.AuthService;
+import com.agrocloud.service.MultiTenantService;
+import com.agrocloud.config.JwtAuthenticationFilter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.Arrays;
 
@@ -27,18 +29,35 @@ import java.util.Arrays;
 public class SecurityConfig {
     
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authenticationProvider) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authenticationProvider, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authenticationProvider(authenticationProvider)
             .authorizeHttpRequests(auth -> auth
-                // Permitir todos los endpoints temporalmente
-                .anyRequest().permitAll()
+                // Permitir endpoints públicos
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test", "/api/auth/test-auth", "/api/auth/test-productor", "/api/auth/generate-hash", "/api/health", "/api/public/**", "/api/admin-global/dashboard-test", "/api/admin-global/test-simple", "/api/admin-global/dashboard-simple", "/api/admin-global/empresas-basic", "/api/admin-global/usuarios-basic", "/api/v1/weather-simple/**", "/api/v1/weather/**").permitAll()
+                // Endpoints de administración global (solo SuperAdmin)
+                .requestMatchers("/api/admin-global/**").hasAuthority("ROLE_SUPERADMIN")
+                // Endpoints de administración de empresa
+                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMINISTRADOR", "ROLE_ADMIN")
+                // Endpoints de roles (solo administradores)
+                .requestMatchers("/api/roles/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMINISTRADOR", "ROLE_ADMIN")
+                // Endpoints de gestión de empresas (solo SuperAdmin)
+                .requestMatchers("/api/empresas/**").hasAuthority("ROLE_SUPERADMIN")
+                // Endpoints de gestión de usuarios-empresas (solo SuperAdmin)
+                .requestMatchers("/api/empresa-usuario/**").hasAuthority("ROLE_SUPERADMIN")
+                // Endpoints del dashboard
+                .requestMatchers("/api/dashboard/**").authenticated()
+                // Endpoints de entidades principales (requieren autenticación y pertenencia a empresa)
+                .requestMatchers("/api/fields/**", "/api/campos/**", "/api/plots/**", "/api/cultivos/**", "/api/cosechas/**", "/api/insumos/**", "/api/maquinaria/**", "/api/labores/**", "/api/ingresos/**", "/api/egresos/**", "/api/v1/balance/**").authenticated()
+                // Cualquier otra petición requiere autenticación
+                .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            );
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
     }
@@ -61,8 +80,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173", "null"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

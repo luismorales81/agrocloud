@@ -1,5 +1,7 @@
 package com.agrocloud.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -48,9 +50,6 @@ public class Field {
     @Column(name = "area_hectareas", nullable = false, precision = 10, scale = 2)
     private BigDecimal areaHectareas;
 
-    @Size(max = 100, message = "El tipo de suelo no puede exceder 100 caracteres")
-    @Column(name = "tipo_suelo", length = 100)
-    private String tipoSuelo;
 
     @Size(max = 100, message = "El estado del campo no puede exceder 100 caracteres")
     @Column(name = "estado", length = 100)
@@ -74,12 +73,20 @@ public class Field {
     private LocalDateTime fechaActualizacion;
 
     @OneToMany(mappedBy = "campo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Plot> lotes = new ArrayList<>();
 
     // Relación con el usuario propietario
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
+
+    // Relación con la empresa
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", nullable = false)
+    @JsonIgnore
+    private Empresa empresa;
 
     // Constructors
     public Field() {}
@@ -133,13 +140,6 @@ public class Field {
         this.areaHectareas = areaHectareas;
     }
 
-    public String getTipoSuelo() {
-        return tipoSuelo;
-    }
-
-    public void setTipoSuelo(String tipoSuelo) {
-        this.tipoSuelo = tipoSuelo;
-    }
 
     public String getEstado() {
         return estado;
@@ -203,6 +203,14 @@ public class Field {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Empresa getEmpresa() {
+        return empresa;
+    }
+
+    public void setEmpresa(Empresa empresa) {
+        this.empresa = empresa;
     }
 
     // Helper methods

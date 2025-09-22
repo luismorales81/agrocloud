@@ -1,243 +1,224 @@
 package com.agrocloud.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Entidad que representa los egresos/gastos en el sistema.
- * 
- * @author AgroGestion Team
- * @version 1.0.0
+ * Entidad para gestionar los egresos del sistema agropecuario
  */
 @Entity
 @Table(name = "egresos")
-@EntityListeners(AuditingEntityListener.class)
 public class Egreso {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @NotBlank(message = "El concepto del egreso es obligatorio")
-    @Size(min = 2, max = 200, message = "El concepto debe tener entre 2 y 200 caracteres")
-    @Column(name = "concepto", nullable = false, length = 200)
-    private String concepto;
-
-    @Size(max = 500, message = "La descripción no puede exceder 500 caracteres")
-    @Column(name = "descripcion", length = 500)
-    private String descripcion;
-
-    @NotNull(message = "El tipo de egreso es obligatorio")
+    
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_egreso", nullable = false)
-    private TipoEgreso tipoEgreso;
-
-    @NotNull(message = "La fecha del egreso es obligatoria")
-    @Column(name = "fecha_egreso", nullable = false)
-    private LocalDate fechaEgreso;
-
-    @Positive(message = "El monto debe ser un valor positivo")
-    @Column(name = "monto", nullable = false, precision = 15, scale = 2)
-    private BigDecimal monto;
-
-    @Size(max = 100, message = "La unidad de medida no puede exceder 100 caracteres")
-    @Column(name = "unidad_medida", length = 100)
-    private String unidadMedida;
-
-    @Positive(message = "La cantidad debe ser un valor positivo")
+    @Column(name = "tipo", nullable = false)
+    private TipoEgreso tipo;
+    
+    @Column(name = "referencia_id")
+    private Long referenciaId; // FK opcional hacia insumo o maquinaria
+    
     @Column(name = "cantidad", precision = 10, scale = 2)
     private BigDecimal cantidad;
-
-    @Size(max = 200, message = "El proveedor no puede exceder 200 caracteres")
-    @Column(name = "proveedor", length = 200)
-    private String proveedor;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado")
-    private EstadoEgreso estado = EstadoEgreso.REGISTRADO;
-
-    @Size(max = 1000, message = "Las observaciones no pueden exceder 1000 caracteres")
-    @Column(name = "observaciones", length = 1000)
+    
+    @Column(name = "costo_unitario", precision = 10, scale = 2)
+    private BigDecimal costoUnitario;
+    
+    @Column(name = "costo_total", precision = 10, scale = 2, nullable = false)
+    private BigDecimal costoTotal;
+    
+    @Column(name = "fecha", nullable = false)
+    private LocalDate fecha;
+    
+    @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
-
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoEgreso estado;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lote_id")
+    @JsonIgnore
     private Plot lote;
-
+    
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "insumo_id")
-    private Insumo insumo;
-
-    @NotNull(message = "El usuario es obligatorio")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private User usuario;
-
-    @CreatedDate
-    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    private User user;
+    
+    @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
-
-    @LastModifiedDate
+    
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
-
-    // Enums
+    
+    @Column(name = "activo", nullable = false)
+    private Boolean activo = true;
+    
+    // Enum para tipos de egreso
     public enum TipoEgreso {
-        INSUMOS, COMBUSTIBLE, MANO_OBRA, MAQUINARIA, SERVICIOS, IMPUESTOS, OTROS_EGRESOS
+        INSUMO,
+        MAQUINARIA_COMPRA,
+        MAQUINARIA_ALQUILER,
+        SERVICIO,
+        OTROS
     }
-
+    
+    // Enum para estados de egreso
     public enum EstadoEgreso {
-        REGISTRADO, PAGADO, CANCELADO
+        REGISTRADO,
+        CONFIRMADO,
+        PAGADO,
+        CANCELADO
     }
-
-    // Constructors
-    public Egreso() {}
-
-    public Egreso(String concepto, TipoEgreso tipoEgreso, LocalDate fechaEgreso, BigDecimal monto, User usuario) {
-        this.concepto = concepto;
-        this.tipoEgreso = tipoEgreso;
-        this.fechaEgreso = fechaEgreso;
-        this.monto = monto;
-        this.usuario = usuario;
+    
+    // Constructor por defecto
+    public Egreso() {
+        this.fechaCreacion = LocalDateTime.now();
+        this.fechaActualizacion = LocalDateTime.now();
         this.estado = EstadoEgreso.REGISTRADO;
+        this.activo = true;
     }
-
-    // Getters and Setters
+    
+    // Constructor con campos obligatorios
+    public Egreso(TipoEgreso tipo, BigDecimal costoTotal, LocalDate fecha, User user) {
+        this();
+        this.tipo = tipo;
+        this.costoTotal = costoTotal;
+        this.fecha = fecha;
+        this.user = user;
+    }
+    
+    // Getters y Setters
     public Long getId() {
         return id;
     }
-
+    
     public void setId(Long id) {
         this.id = id;
     }
-
-    public String getConcepto() {
-        return concepto;
+    
+    public TipoEgreso getTipo() {
+        return tipo;
     }
-
-    public void setConcepto(String concepto) {
-        this.concepto = concepto;
+    
+    public void setTipo(TipoEgreso tipo) {
+        this.tipo = tipo;
     }
-
-    public String getDescripcion() {
-        return descripcion;
+    
+    public Long getReferenciaId() {
+        return referenciaId;
     }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
+    
+    public void setReferenciaId(Long referenciaId) {
+        this.referenciaId = referenciaId;
     }
-
-    public TipoEgreso getTipoEgreso() {
-        return tipoEgreso;
-    }
-
-    public void setTipoEgreso(TipoEgreso tipoEgreso) {
-        this.tipoEgreso = tipoEgreso;
-    }
-
-    public LocalDate getFechaEgreso() {
-        return fechaEgreso;
-    }
-
-    public void setFechaEgreso(LocalDate fechaEgreso) {
-        this.fechaEgreso = fechaEgreso;
-    }
-
-    public BigDecimal getMonto() {
-        return monto;
-    }
-
-    public void setMonto(BigDecimal monto) {
-        this.monto = monto;
-    }
-
-    public String getUnidadMedida() {
-        return unidadMedida;
-    }
-
-    public void setUnidadMedida(String unidadMedida) {
-        this.unidadMedida = unidadMedida;
-    }
-
+    
     public BigDecimal getCantidad() {
         return cantidad;
     }
-
+    
     public void setCantidad(BigDecimal cantidad) {
         this.cantidad = cantidad;
     }
-
-    public String getProveedor() {
-        return proveedor;
+    
+    public BigDecimal getCostoUnitario() {
+        return costoUnitario;
     }
-
-    public void setProveedor(String proveedor) {
-        this.proveedor = proveedor;
+    
+    public void setCostoUnitario(BigDecimal costoUnitario) {
+        this.costoUnitario = costoUnitario;
     }
-
-    public EstadoEgreso getEstado() {
-        return estado;
+    
+    public BigDecimal getCostoTotal() {
+        return costoTotal;
     }
-
-    public void setEstado(EstadoEgreso estado) {
-        this.estado = estado;
+    
+    public void setCostoTotal(BigDecimal costoTotal) {
+        this.costoTotal = costoTotal;
     }
-
+    
+    public LocalDate getFecha() {
+        return fecha;
+    }
+    
+    public void setFecha(LocalDate fecha) {
+        this.fecha = fecha;
+    }
+    
     public String getObservaciones() {
         return observaciones;
     }
-
+    
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
     }
-
+    
+    public EstadoEgreso getEstado() {
+        return estado;
+    }
+    
+    public void setEstado(EstadoEgreso estado) {
+        this.estado = estado;
+    }
+    
     public Plot getLote() {
         return lote;
     }
-
+    
     public void setLote(Plot lote) {
         this.lote = lote;
     }
-
-    public Insumo getInsumo() {
-        return insumo;
+    
+    public User getUser() {
+        return user;
     }
-
-    public void setInsumo(Insumo insumo) {
-        this.insumo = insumo;
+    
+    public void setUser(User user) {
+        this.user = user;
     }
-
-    public User getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(User usuario) {
-        this.usuario = usuario;
-    }
-
+    
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
     }
-
+    
     public void setFechaCreacion(LocalDateTime fechaCreacion) {
         this.fechaCreacion = fechaCreacion;
     }
-
+    
     public LocalDateTime getFechaActualizacion() {
         return fechaActualizacion;
     }
-
+    
     public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
         this.fechaActualizacion = fechaActualizacion;
+    }
+    
+    public Boolean getActivo() {
+        return activo;
+    }
+    
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+    
+    // Método para calcular costo total automáticamente
+    public void calcularCostoTotal() {
+        if (this.cantidad != null && this.costoUnitario != null) {
+            this.costoTotal = this.cantidad.multiply(this.costoUnitario);
+        }
+    }
+    
+    // Método para actualizar fecha de modificación
+    @PreUpdate
+    public void preUpdate() {
+        this.fechaActualizacion = LocalDateTime.now();
     }
 }

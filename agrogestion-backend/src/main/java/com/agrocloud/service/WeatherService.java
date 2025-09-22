@@ -160,6 +160,13 @@ public class WeatherService {
                 dayForecast.setWeatherDescription(weather.get("description").asText());
                 dayForecast.setIcon(getWeatherIcon(weatherId));
                 
+                // Generar consejo agrícola específico para este día
+                String agriculturalAdvice = generateAgriculturalAdvice(dayForecast.getMaxTemperature(), 
+                                                                       dayForecast.getMinTemperature(), 
+                                                                       dayForecast.getPrecipitation(), 
+                                                                       weatherId);
+                dayForecast.setAgriculturalAdvice(agriculturalAdvice);
+                
                 forecast.add(dayForecast);
             }
             
@@ -219,5 +226,62 @@ public class WeatherService {
             logger.error("Error obteniendo datos meteorológicos simples: {}", e.getMessage());
             throw new RuntimeException("Error obteniendo datos meteorológicos simples: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Genera consejos agrícolas específicos basados en las condiciones meteorológicas del día
+     */
+    private String generateAgriculturalAdvice(double maxTemp, double minTemp, double precipitation, int weatherCode) {
+        StringBuilder advice = new StringBuilder();
+        
+        // Análisis de temperatura
+        if (minTemp < 5) {
+            advice.append("❄️ Temperatura muy baja - Evitar labores sensibles al frío");
+        } else if (minTemp < 10) {
+            advice.append("❄️ Temperatura baja - Considerar retrasar labores sensibles");
+        } else if (maxTemp > 35) {
+            advice.append("🌡️ Temperatura muy alta - Evitar labores en horas pico");
+        } else if (maxTemp > 30) {
+            advice.append("🌡️ Temperatura alta - Programar labores temprano o tarde");
+        } else {
+            advice.append("✅ Temperatura favorable para labores agrícolas");
+        }
+        
+        // Análisis de precipitación
+        if (precipitation > 10) {
+            advice.append(" | 🌧️ Lluvia intensa - Evitar labores de campo");
+        } else if (precipitation > 5) {
+            advice.append(" | 🌧️ Lluvia moderada - Considerar retrasar labores sensibles");
+        } else if (precipitation > 0) {
+            advice.append(" | 🌦️ Lluvia ligera - Monitorear condiciones");
+        }
+        
+        // Análisis de condiciones meteorológicas
+        if (weatherCode >= 200 && weatherCode < 300) {
+            advice.append(" | ⛈️ Tormentas - Evitar labores al aire libre");
+        } else if (weatherCode >= 500 && weatherCode < 600) {
+            advice.append(" | 🌧️ Lluvia - Evitar aplicaciones fitosanitarias");
+        } else if (weatherCode >= 600 && weatherCode < 700) {
+            advice.append(" | ❄️ Nieve - Evitar labores de campo");
+        } else if (weatherCode >= 700 && weatherCode < 800) {
+            advice.append(" | 🌫️ Niebla - Cuidado con la visibilidad");
+        } else if (weatherCode == 800) {
+            advice.append(" | ☀️ Día despejado - Ideal para labores");
+        } else if (weatherCode >= 801 && weatherCode <= 802) {
+            advice.append(" | ⛅ Poco nublado - Bueno para labores");
+        } else if (weatherCode >= 803 && weatherCode <= 804) {
+            advice.append(" | ☁️ Nublado - Condiciones estables");
+        }
+        
+        // Consejos específicos por combinación de condiciones
+        if (minTemp < 10 && precipitation > 0) {
+            advice.append(" | 💡 Considerar cubrir cultivos sensibles");
+        } else if (maxTemp > 30 && precipitation == 0) {
+            advice.append(" | 💡 Aumentar frecuencia de riego");
+        } else if (precipitation > 5 && weatherCode >= 500) {
+            advice.append(" | 💡 Monitorear drenaje de campos");
+        }
+        
+        return advice.toString();
     }
 }

@@ -33,26 +33,21 @@ public class Labor {
     @Column(name = "tipo_labor", nullable = false)
     private TipoLabor tipoLabor;
 
-    @NotBlank(message = "El nombre de la labor es obligatorio")
-    @Size(min = 2, max = 200, message = "El nombre de la labor debe tener entre 2 y 200 caracteres")
-    @Column(name = "nombre", nullable = false, length = 200)
-    private String nombre;
 
     @Size(max = 500, message = "La descripción no puede exceder 500 caracteres")
     @Column(name = "descripcion", length = 500)
     private String descripcion;
 
-    @NotNull(message = "La fecha de la labor es obligatoria")
-    @Column(name = "fecha_labor", nullable = false)
-    private LocalDate fechaLabor;
+    @NotNull(message = "La fecha de inicio es obligatoria")
+    @Column(name = "fecha_inicio", nullable = false)
+    private LocalDate fechaInicio;
 
-    @Positive(message = "La superficie trabajada debe ser un valor positivo")
-    @Column(name = "area_hectareas", precision = 10, scale = 2)
-    private BigDecimal areaHectareas;
+    @Column(name = "fecha_fin")
+    private LocalDate fechaFin;
 
     @Positive(message = "El costo debe ser un valor positivo")
-    @Column(name = "costo", precision = 15, scale = 2)
-    private BigDecimal costo;
+    @Column(name = "costo_total", precision = 10, scale = 2)
+    private BigDecimal costoTotal;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado")
@@ -62,13 +57,14 @@ public class Labor {
     @Column(name = "observaciones", length = 1000)
     private String observaciones;
 
+    @Size(max = 255, message = "El responsable no puede exceder 255 caracteres")
+    @Column(name = "responsable", length = 255)
+    private String responsable;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lote_id")
     private Plot lote;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "maquinaria_id")
-    private Maquinaria maquinaria;
 
     @NotNull(message = "El usuario es obligatorio")
     @ManyToOne(fetch = FetchType.LAZY)
@@ -83,6 +79,19 @@ public class Labor {
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
 
+    @Column(name = "activo", nullable = false)
+    private Boolean activo = true;
+
+    // Relaciones con entidades relacionadas
+    @OneToMany(mappedBy = "labor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private java.util.List<LaborInsumo> insumosUsados;
+
+    @OneToMany(mappedBy = "labor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private java.util.List<LaborMaquinaria> maquinariaAsignada;
+
+    @OneToMany(mappedBy = "labor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private java.util.List<LaborManoObra> manoObra;
+
     // Enums
     public enum TipoLabor {
         SIEMBRA, FERTILIZACION, RIEGO, COSECHA, MANTENIMIENTO, PODA, CONTROL_PLAGAS, CONTROL_MALEZAS, ANALISIS_SUELO, OTROS
@@ -95,12 +104,12 @@ public class Labor {
     // Constructors
     public Labor() {}
 
-    public Labor(TipoLabor tipoLabor, String nombre, LocalDate fechaLabor, User usuario) {
+    public Labor(TipoLabor tipoLabor, LocalDate fechaInicio, User usuario) {
         this.tipoLabor = tipoLabor;
-        this.nombre = nombre;
-        this.fechaLabor = fechaLabor;
+        this.fechaInicio = fechaInicio;
         this.usuario = usuario;
         this.estado = EstadoLabor.PLANIFICADA;
+        this.activo = true;
     }
 
     // Getters and Setters
@@ -120,13 +129,6 @@ public class Labor {
         this.tipoLabor = tipoLabor;
     }
 
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
 
     public String getDescripcion() {
         return descripcion;
@@ -136,28 +138,28 @@ public class Labor {
         this.descripcion = descripcion;
     }
 
-    public LocalDate getFechaLabor() {
-        return fechaLabor;
+    public LocalDate getFechaInicio() {
+        return fechaInicio;
     }
 
-    public void setFechaLabor(LocalDate fechaLabor) {
-        this.fechaLabor = fechaLabor;
+    public void setFechaInicio(LocalDate fechaInicio) {
+        this.fechaInicio = fechaInicio;
     }
 
-    public BigDecimal getAreaHectareas() {
-        return areaHectareas;
+    public LocalDate getFechaFin() {
+        return fechaFin;
     }
 
-    public void setAreaHectareas(BigDecimal areaHectareas) {
-        this.areaHectareas = areaHectareas;
+    public void setFechaFin(LocalDate fechaFin) {
+        this.fechaFin = fechaFin;
     }
 
-    public BigDecimal getCosto() {
-        return costo;
+    public BigDecimal getCostoTotal() {
+        return costoTotal;
     }
 
-    public void setCosto(BigDecimal costo) {
-        this.costo = costo;
+    public void setCostoTotal(BigDecimal costoTotal) {
+        this.costoTotal = costoTotal;
     }
 
     public EstadoLabor getEstado() {
@@ -176,6 +178,14 @@ public class Labor {
         this.observaciones = observaciones;
     }
 
+    public String getResponsable() {
+        return responsable;
+    }
+
+    public void setResponsable(String responsable) {
+        this.responsable = responsable;
+    }
+
     public Plot getLote() {
         return lote;
     }
@@ -184,13 +194,6 @@ public class Labor {
         this.lote = lote;
     }
 
-    public Maquinaria getMaquinaria() {
-        return maquinaria;
-    }
-
-    public void setMaquinaria(Maquinaria maquinaria) {
-        this.maquinaria = maquinaria;
-    }
 
     public User getUsuario() {
         return usuario;
@@ -216,6 +219,38 @@ public class Labor {
         this.fechaActualizacion = fechaActualizacion;
     }
 
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+
+    public java.util.List<LaborInsumo> getInsumosUsados() {
+        return insumosUsados;
+    }
+
+    public void setInsumosUsados(java.util.List<LaborInsumo> insumosUsados) {
+        this.insumosUsados = insumosUsados;
+    }
+
+    public java.util.List<LaborMaquinaria> getMaquinariaAsignada() {
+        return maquinariaAsignada;
+    }
+
+    public void setMaquinariaAsignada(java.util.List<LaborMaquinaria> maquinariaAsignada) {
+        this.maquinariaAsignada = maquinariaAsignada;
+    }
+
+    public java.util.List<LaborManoObra> getManoObra() {
+        return manoObra;
+    }
+
+    public void setManoObra(java.util.List<LaborManoObra> manoObra) {
+        this.manoObra = manoObra;
+    }
+
     // Helper methods
     public boolean isPlanificada() {
         return EstadoLabor.PLANIFICADA.equals(estado);
@@ -234,24 +269,23 @@ public class Labor {
     }
 
     public boolean isPasada() {
-        return fechaLabor.isBefore(LocalDate.now());
+        return fechaInicio != null && fechaInicio.isBefore(LocalDate.now());
     }
 
     public boolean isHoy() {
-        return fechaLabor.equals(LocalDate.now());
+        return fechaInicio != null && fechaInicio.equals(LocalDate.now());
     }
 
     public boolean isFutura() {
-        return fechaLabor.isAfter(LocalDate.now());
+        return fechaInicio != null && fechaInicio.isAfter(LocalDate.now());
     }
 
     @Override
     public String toString() {
         return "Labor{" +
                 "id=" + id +
-                ", nombre='" + nombre + '\'' +
                 ", tipoLabor=" + tipoLabor +
-                ", fechaLabor=" + fechaLabor +
+                ", fechaInicio=" + fechaInicio +
                 ", estado=" + estado +
                 '}';
     }

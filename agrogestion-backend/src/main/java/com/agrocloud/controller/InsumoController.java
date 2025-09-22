@@ -27,7 +27,7 @@ public class InsumoController {
     // Obtener todos los insumos accesibles por el usuario
     @GetMapping
     public ResponseEntity<List<Insumo>> getAllInsumos(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         List<Insumo> insumos = insumoService.getInsumosByUser(user);
         return ResponseEntity.ok(insumos);
     }
@@ -35,7 +35,7 @@ public class InsumoController {
     // Obtener insumo por ID
     @GetMapping("/{id}")
     public ResponseEntity<Insumo> getInsumoById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         Optional<Insumo> insumo = insumoService.getInsumoById(id, user);
         
         return insumo.map(ResponseEntity::ok)
@@ -45,7 +45,7 @@ public class InsumoController {
     // Crear nuevo insumo
     @PostMapping
     public ResponseEntity<Insumo> createInsumo(@RequestBody Insumo insumo, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         Insumo createdInsumo = insumoService.createInsumo(insumo, user);
         return ResponseEntity.ok(createdInsumo);
     }
@@ -53,7 +53,7 @@ public class InsumoController {
     // Actualizar insumo
     @PutMapping("/{id}")
     public ResponseEntity<Insumo> updateInsumo(@PathVariable Long id, @RequestBody Insumo insumo, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         Optional<Insumo> updatedInsumo = insumoService.updateInsumo(id, insumo, user);
         
         return updatedInsumo.map(ResponseEntity::ok)
@@ -63,7 +63,7 @@ public class InsumoController {
     // Eliminar insumo
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteInsumo(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         boolean deleted = insumoService.deleteInsumo(id, user);
         
         if (deleted) {
@@ -76,7 +76,7 @@ public class InsumoController {
     // Buscar insumo por nombre
     @GetMapping("/search")
     public ResponseEntity<List<Insumo>> searchInsumo(@RequestParam String nombre, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         List<Insumo> insumos = insumoService.searchInsumoByName(nombre, user);
         return ResponseEntity.ok(insumos);
     }
@@ -84,7 +84,7 @@ public class InsumoController {
     // Obtener estadísticas de insumos
     @GetMapping("/stats")
     public ResponseEntity<InsumoService.InsumoStats> getInsumoStats(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         InsumoService.InsumoStats stats = insumoService.getInsumoStats(user);
         return ResponseEntity.ok(stats);
     }
@@ -92,7 +92,7 @@ public class InsumoController {
     // Obtener insumos con stock bajo
     @GetMapping("/stock-bajo")
     public ResponseEntity<List<Insumo>> getInsumosStockBajo(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         List<Insumo> insumos = insumoService.getInsumosStockBajo(user);
         return ResponseEntity.ok(insumos);
     }
@@ -100,7 +100,7 @@ public class InsumoController {
     // Obtener insumos próximos a vencer
     @GetMapping("/proximos-vencer")
     public ResponseEntity<List<Insumo>> getInsumosProximosAVencer(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         List<Insumo> insumos = insumoService.getInsumosProximosAVencer(user);
         return ResponseEntity.ok(insumos);
     }
@@ -108,7 +108,7 @@ public class InsumoController {
     // Obtener insumos por tipo
     @GetMapping("/tipo/{tipo}")
     public ResponseEntity<List<Insumo>> getInsumosByTipo(@PathVariable Insumo.TipoInsumo tipo, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByUsername(userDetails.getUsername());
+        User user = userService.findByEmail(userDetails.getUsername());
         List<Insumo> insumos = insumoService.getInsumosByUser(user).stream()
                 .filter(i -> tipo.equals(i.getTipo()))
                 .toList();

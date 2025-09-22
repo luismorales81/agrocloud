@@ -1,5 +1,8 @@
 package com.agrocloud.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -44,8 +47,8 @@ public class Insumo {
 
     @NotBlank(message = "La unidad de medida es obligatoria")
     @Size(max = 50, message = "La unidad de medida no puede exceder 50 caracteres")
-    @Column(name = "unidad", nullable = false, length = 50)
-    private String unidad;
+    @Column(name = "unidad_medida", nullable = false, length = 50)
+    private String unidadMedida;
 
     @NotNull(message = "El precio unitario es obligatorio")
     @Positive(message = "El precio unitario debe ser un valor positivo")
@@ -82,7 +85,14 @@ public class Insumo {
     // Relación con el usuario propietario
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
+
+    // Relación con la empresa
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", nullable = false)
+    @JsonIgnore
+    private Empresa empresa;
 
     // Enums
     public enum TipoInsumo {
@@ -92,10 +102,10 @@ public class Insumo {
     // Constructors
     public Insumo() {}
 
-    public Insumo(String nombre, TipoInsumo tipo, String unidad, BigDecimal precioUnitario) {
+    public Insumo(String nombre, TipoInsumo tipo, String unidadMedida, BigDecimal precioUnitario) {
         this.nombre = nombre;
         this.tipo = tipo;
-        this.unidad = unidad;
+        this.unidadMedida = unidadMedida;
         this.precioUnitario = precioUnitario;
         this.activo = true;
     }
@@ -133,12 +143,12 @@ public class Insumo {
         this.tipo = tipo;
     }
 
-    public String getUnidad() {
-        return unidad;
+    public String getUnidadMedida() {
+        return unidadMedida;
     }
 
-    public void setUnidad(String unidad) {
-        this.unidad = unidad;
+    public void setUnidadMedida(String unidadMedida) {
+        this.unidadMedida = unidadMedida;
     }
 
     public BigDecimal getPrecioUnitario() {
@@ -211,6 +221,14 @@ public class Insumo {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Empresa getEmpresa() {
+        return empresa;
+    }
+
+    public void setEmpresa(Empresa empresa) {
+        this.empresa = empresa;
     }
 
     // Helper methods

@@ -1,294 +1,319 @@
 package com.agrocloud.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * Entidad que representa la maquinaria agrícola en el sistema.
- * 
- * @author AgroGestion Team
- * @version 1.0.0
+ * Entidad para gestionar la maquinaria del sistema agropecuario
  */
 @Entity
 @Table(name = "maquinaria")
-@EntityListeners(AuditingEntityListener.class)
 public class Maquinaria {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @NotBlank(message = "El nombre de la maquinaria es obligatorio")
-    @Size(min = 2, max = 100, message = "El nombre debe tener entre 2 y 100 caracteres")
-    @Column(name = "nombre", nullable = false, length = 100)
+    
+    @Column(name = "nombre", nullable = false, length = 200)
     private String nombre;
-
-    @Size(max = 255, message = "La descripción no puede exceder 255 caracteres")
-    @Column(name = "descripcion", length = 255)
-    private String descripcion;
-
-    @NotNull(message = "El tipo de maquinaria es obligatorio")
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo", nullable = false)
-    private TipoMaquinaria tipo;
-
-    @Size(max = 100, message = "La marca no puede exceder 100 caracteres")
+    
     @Column(name = "marca", length = 100)
     private String marca;
-
-    @Size(max = 100, message = "El modelo no puede exceder 100 caracteres")
+    
     @Column(name = "modelo", length = 100)
     private String modelo;
-
-    @Column(name = "año_fabricacion")
-    private Integer añoFabricacion;
-
-    @Size(max = 100, message = "El número de serie no puede exceder 100 caracteres")
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoMaquinaria estado;
+    
+    @Column(name = "descripcion", columnDefinition = "TEXT")
+    private String descripcion;
+    
+    @Column(name = "anio_fabricacion")
+    private Integer anioFabricacion;
+    
     @Column(name = "numero_serie", length = 100)
     private String numeroSerie;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado")
-    private EstadoMaquinaria estado = EstadoMaquinaria.OPERATIVA;
-
-    @Positive(message = "Las horas de trabajo deben ser un valor positivo")
-    @Column(name = "horas_trabajo", precision = 10, scale = 2)
-    private BigDecimal horasTrabajo = BigDecimal.ZERO;
-
-    @Positive(message = "El costo de adquisición debe ser un valor positivo")
-    @Column(name = "costo_adquisicion", precision = 15, scale = 2)
-    private BigDecimal costoAdquisicion;
-
-    @Positive(message = "El valor actual debe ser un valor positivo")
-    @Column(name = "valor_actual", precision = 15, scale = 2)
-    private BigDecimal valorActual;
-
-    @Column(name = "activo", nullable = false)
-    private Boolean activo = true;
-
-    @CreatedDate
-    @Column(name = "fecha_creacion", nullable = false, updatable = false)
-    private LocalDateTime fechaCreacion;
-
-    @LastModifiedDate
-    @Column(name = "fecha_actualizacion")
-    private LocalDateTime fechaActualizacion;
-
-    @OneToMany(mappedBy = "maquinaria", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<MantenimientoMaquinaria> mantenimientos = new ArrayList<>();
-
-    @OneToMany(mappedBy = "maquinaria", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Labor> labores = new ArrayList<>();
-
-    // Relación con el usuario propietario
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
-
-    // Enums
-    public enum TipoMaquinaria {
-        TRACTOR, COSECHADORA, SEMBRADORA, PULVERIZADORA, ARADO, RASTRA, OTROS
-    }
-
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", nullable = false)
+    @JsonIgnore
+    private Empresa empresa;
+    
+    @Column(name = "fecha_creacion")
+    private LocalDateTime fechaCreacion;
+    
+    @Column(name = "fecha_actualizacion")
+    private LocalDateTime fechaActualizacion;
+    
+    @Column(name = "activo", nullable = false)
+    private Boolean activo = true;
+    
+    // Campos para reportes de costos
+    @Column(name = "kilometros_uso", precision = 10, scale = 2)
+    private BigDecimal kilometrosUso = BigDecimal.ZERO;
+    
+    @Column(name = "costo_por_hora", precision = 10, scale = 2)
+    private BigDecimal costoPorHora = BigDecimal.ZERO;
+    
+    @Column(name = "kilometros_mantenimiento_intervalo")
+    private Integer kilometrosMantenimientoIntervalo = 5000;
+    
+    @Column(name = "ultimo_mantenimiento_kilometros", precision = 10, scale = 2)
+    private BigDecimal ultimoMantenimientoKilometros = BigDecimal.ZERO;
+    
+    @Column(name = "rendimiento_combustible", precision = 8, scale = 2)
+    private BigDecimal rendimientoCombustible = BigDecimal.ZERO;
+    
+    @Column(name = "unidad_rendimiento", length = 20)
+    private String unidadRendimiento = "km/L";
+    
+    @Column(name = "costo_combustible_por_litro", precision = 8, scale = 2)
+    private BigDecimal costoCombustiblePorLitro = BigDecimal.ZERO;
+    
+    @Column(name = "valor_actual", precision = 12, scale = 2)
+    private BigDecimal valorActual = BigDecimal.ZERO;
+    
+    @Column(name = "fecha_compra")
+    private LocalDate fechaCompra;
+    
+    @Column(name = "tipo", length = 50)
+    private String tipo;
+    
+    // Enum para estados de maquinaria
     public enum EstadoMaquinaria {
-        OPERATIVA, MANTENIMIENTO, REPARACION, FUERA_SERVICIO
+        ACTIVA,
+        OPERATIVA,
+        FUERA_DE_SERVICIO,
+        EN_MANTENIMIENTO,
+        RETIRADA
     }
-
-    // Constructors
-    public Maquinaria() {}
-
-    public Maquinaria(String nombre, TipoMaquinaria tipo) {
-        this.nombre = nombre;
-        this.tipo = tipo;
+    
+    // Constructor por defecto
+    public Maquinaria() {
+        this.fechaCreacion = LocalDateTime.now();
+        this.fechaActualizacion = LocalDateTime.now();
+        this.estado = EstadoMaquinaria.ACTIVA;
         this.activo = true;
-        this.estado = EstadoMaquinaria.OPERATIVA;
     }
-
-    // Getters and Setters
+    
+    // Constructor con campos obligatorios
+    public Maquinaria(String nombre, User user) {
+        this();
+        this.nombre = nombre;
+        this.user = user;
+    }
+    
+    // Getters y Setters
     public Long getId() {
         return id;
     }
-
+    
     public void setId(Long id) {
         this.id = id;
     }
-
+    
     public String getNombre() {
         return nombre;
     }
-
+    
     public void setNombre(String nombre) {
         this.nombre = nombre;
     }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    public TipoMaquinaria getTipo() {
-        return tipo;
-    }
-
-    public void setTipo(TipoMaquinaria tipo) {
-        this.tipo = tipo;
-    }
-
+    
     public String getMarca() {
         return marca;
     }
-
+    
     public void setMarca(String marca) {
         this.marca = marca;
     }
-
+    
     public String getModelo() {
         return modelo;
     }
-
+    
     public void setModelo(String modelo) {
         this.modelo = modelo;
     }
-
-    public Integer getAñoFabricacion() {
-        return añoFabricacion;
-    }
-
-    public void setAñoFabricacion(Integer añoFabricacion) {
-        this.añoFabricacion = añoFabricacion;
-    }
-
-    public String getNumeroSerie() {
-        return numeroSerie;
-    }
-
-    public void setNumeroSerie(String numeroSerie) {
-        this.numeroSerie = numeroSerie;
-    }
-
+    
     public EstadoMaquinaria getEstado() {
         return estado;
     }
-
+    
     public void setEstado(EstadoMaquinaria estado) {
         this.estado = estado;
     }
-
-    public BigDecimal getHorasTrabajo() {
-        return horasTrabajo;
+    
+    public String getDescripcion() {
+        return descripcion;
     }
-
-    public void setHorasTrabajo(BigDecimal horasTrabajo) {
-        this.horasTrabajo = horasTrabajo;
+    
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
-
-    public BigDecimal getCostoAdquisicion() {
-        return costoAdquisicion;
+    
+    public Integer getAnioFabricacion() {
+        return anioFabricacion;
     }
-
-    public void setCostoAdquisicion(BigDecimal costoAdquisicion) {
-        this.costoAdquisicion = costoAdquisicion;
+    
+    public void setAnioFabricacion(Integer anioFabricacion) {
+        this.anioFabricacion = anioFabricacion;
     }
-
-    public BigDecimal getValorActual() {
-        return valorActual;
+    
+    public String getNumeroSerie() {
+        return numeroSerie;
     }
-
-    public void setValorActual(BigDecimal valorActual) {
-        this.valorActual = valorActual;
+    
+    public void setNumeroSerie(String numeroSerie) {
+        this.numeroSerie = numeroSerie;
     }
-
-    public Boolean getActivo() {
-        return activo;
-    }
-
-    public void setActivo(Boolean activo) {
-        this.activo = activo;
-    }
-
-    public LocalDateTime getFechaCreacion() {
-        return fechaCreacion;
-    }
-
-    public void setFechaCreacion(LocalDateTime fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
-    }
-
-    public LocalDateTime getFechaActualizacion() {
-        return fechaActualizacion;
-    }
-
-    public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
-        this.fechaActualizacion = fechaActualizacion;
-    }
-
-    public List<MantenimientoMaquinaria> getMantenimientos() {
-        return mantenimientos;
-    }
-
-    public void setMantenimientos(List<MantenimientoMaquinaria> mantenimientos) {
-        this.mantenimientos = mantenimientos;
-    }
-
-    public List<Labor> getLabores() {
-        return labores;
-    }
-
-    public void setLabores(List<Labor> labores) {
-        this.labores = labores;
-    }
-
+    
     public User getUser() {
         return user;
     }
-
+    
     public void setUser(User user) {
         this.user = user;
     }
-
-    // Helper methods
-    public void addMantenimiento(MantenimientoMaquinaria mantenimiento) {
-        mantenimientos.add(mantenimiento);
-        mantenimiento.setMaquinaria(this);
+    
+    public Empresa getEmpresa() {
+        return empresa;
     }
-
-    public void removeMantenimiento(MantenimientoMaquinaria mantenimiento) {
-        mantenimientos.remove(mantenimiento);
-        mantenimiento.setMaquinaria(null);
+    
+    public void setEmpresa(Empresa empresa) {
+        this.empresa = empresa;
     }
-
-    public void addLabor(Labor labor) {
-        labores.add(labor);
-        labor.setMaquinaria(this);
+    
+    public LocalDateTime getFechaCreacion() {
+        return fechaCreacion;
     }
-
-    public void removeLabor(Labor labor) {
-        labores.remove(labor);
-        labor.setMaquinaria(null);
+    
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
     }
-
-    @Override
-    public String toString() {
-        return "Maquinaria{" +
-                "id=" + id +
-                ", nombre='" + nombre + '\'' +
-                ", tipo=" + tipo +
-                ", estado=" + estado +
-                ", activo=" + activo +
-                '}';
+    
+    public LocalDateTime getFechaActualizacion() {
+        return fechaActualizacion;
+    }
+    
+    public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
+        this.fechaActualizacion = fechaActualizacion;
+    }
+    
+    public Boolean getActivo() {
+        return activo;
+    }
+    
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+    
+    // Getters y Setters para campos de costos
+    public BigDecimal getKilometrosUso() {
+        return kilometrosUso;
+    }
+    
+    public void setKilometrosUso(BigDecimal kilometrosUso) {
+        this.kilometrosUso = kilometrosUso;
+    }
+    
+    public BigDecimal getCostoPorHora() {
+        return costoPorHora;
+    }
+    
+    public void setCostoPorHora(BigDecimal costoPorHora) {
+        this.costoPorHora = costoPorHora;
+    }
+    
+    public Integer getKilometrosMantenimientoIntervalo() {
+        return kilometrosMantenimientoIntervalo;
+    }
+    
+    public void setKilometrosMantenimientoIntervalo(Integer kilometrosMantenimientoIntervalo) {
+        this.kilometrosMantenimientoIntervalo = kilometrosMantenimientoIntervalo;
+    }
+    
+    public BigDecimal getUltimoMantenimientoKilometros() {
+        return ultimoMantenimientoKilometros;
+    }
+    
+    public void setUltimoMantenimientoKilometros(BigDecimal ultimoMantenimientoKilometros) {
+        this.ultimoMantenimientoKilometros = ultimoMantenimientoKilometros;
+    }
+    
+    public BigDecimal getRendimientoCombustible() {
+        return rendimientoCombustible;
+    }
+    
+    public void setRendimientoCombustible(BigDecimal rendimientoCombustible) {
+        this.rendimientoCombustible = rendimientoCombustible;
+    }
+    
+    public String getUnidadRendimiento() {
+        return unidadRendimiento;
+    }
+    
+    public void setUnidadRendimiento(String unidadRendimiento) {
+        this.unidadRendimiento = unidadRendimiento;
+    }
+    
+    public BigDecimal getCostoCombustiblePorLitro() {
+        return costoCombustiblePorLitro;
+    }
+    
+    public void setCostoCombustiblePorLitro(BigDecimal costoCombustiblePorLitro) {
+        this.costoCombustiblePorLitro = costoCombustiblePorLitro;
+    }
+    
+    public BigDecimal getValorActual() {
+        return valorActual;
+    }
+    
+    public void setValorActual(BigDecimal valorActual) {
+        this.valorActual = valorActual;
+    }
+    
+    public LocalDate getFechaCompra() {
+        return fechaCompra;
+    }
+    
+    public void setFechaCompra(LocalDate fechaCompra) {
+        this.fechaCompra = fechaCompra;
+    }
+    
+    public String getTipo() {
+        return tipo;
+    }
+    
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
+    }
+    
+    // Método para obtener nombre completo de la maquinaria
+    public String getNombreCompleto() {
+        StringBuilder nombreCompleto = new StringBuilder(nombre);
+        if (marca != null && !marca.trim().isEmpty()) {
+            nombreCompleto.append(" - ").append(marca);
+        }
+        if (modelo != null && !modelo.trim().isEmpty()) {
+            nombreCompleto.append(" ").append(modelo);
+        }
+        return nombreCompleto.toString();
+    }
+    
+    // Método para actualizar fecha de modificación
+    @PreUpdate
+    public void preUpdate() {
+        this.fechaActualizacion = LocalDateTime.now();
     }
 }

@@ -47,9 +47,11 @@ public class BalanceController {
     public ResponseEntity<BalanceDTO> obtenerBalancePorLote(
             @PathVariable Long loteId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            Authentication authentication) {
         
-        BalanceDTO balance = balanceService.calcularBalancePorLote(loteId, fechaInicio, fechaFin);
+        Long usuarioId = Long.parseLong(authentication.getName());
+        BalanceDTO balance = balanceService.calcularBalancePorLote(loteId, usuarioId, fechaInicio, fechaFin);
         
         return ResponseEntity.ok(balance);
     }

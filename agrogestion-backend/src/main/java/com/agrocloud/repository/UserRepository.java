@@ -1,5 +1,6 @@
 package com.agrocloud.repository;
 
+import com.agrocloud.model.entity.EstadoUsuario;
 import com.agrocloud.model.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,49 +13,75 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     
-    /**
-     * Buscar usuario por email
-     */
-    Optional<User> findByEmail(String email);
-    
-    /**
-     * Buscar usuario por username
-     */
     Optional<User> findByUsername(String username);
     
-    /**
-     * Verificar si existe un usuario con el email dado
-     */
-    boolean existsByEmail(String email);
+    Optional<User> findByEmail(String email);
     
-    /**
-     * Verificar si existe un usuario con el username dado
-     */
-    boolean existsByUsername(String username);
-    
-    /**
-     * Buscar usuarios activos
-     */
     List<User> findByActivoTrue();
     
-    /**
-     * Buscar usuarios con paginación y filtros
-     */
-    @Query("SELECT u FROM User u WHERE " +
-           "(:firstName IS NULL OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :firstName, '%'))) AND " +
-           "(:email IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%'))) AND " +
-           "(:activo IS NULL OR u.activo = :activo)")
-    List<User> findUsersWithFilters(@Param("firstName") String firstName, 
-                                   @Param("email") String email, 
-                                   @Param("activo") Boolean activo);
+    List<User> findByActivoFalse();
     
-    /**
-     * Buscar usuario por token de reset de contraseña
-     */
+    @Query("SELECT u FROM User u WHERE u.username LIKE %:username%")
+    List<User> findByUsernameContaining(@Param("username") String username);
+    
+    @Query("SELECT u FROM User u WHERE u.email LIKE %:email%")
+    List<User> findByEmailContaining(@Param("email") String email);
+    
+    boolean existsByUsername(String username);
+    
+    boolean existsByEmail(String email);
+    
+    // Métodos adicionales requeridos por el código existente
+    List<User> findByEstado(EstadoUsuario estado);
+    
+    long countByEstado(EstadoUsuario estado);
+    
+    long countByActivoTrue();
+    
+    Optional<User> findByVerificationToken(String verificationToken);
+    
     Optional<User> findByResetPasswordToken(String resetPasswordToken);
     
-    /**
-     * Buscar usuario por token de verificación
-     */
-    Optional<User> findByVerificationToken(String verificationToken);
+    List<User> findByParentUserId(Long parentUserId);
+    
+    List<User> findByCreadoPorOrderByFechaCreacionDesc(User creadoPor);
+    
+    @Query("SELECT u FROM User u WHERE " +
+           "(:firstName IS NULL OR u.firstName LIKE %:firstName%) AND " +
+           "(:lastName IS NULL OR u.lastName LIKE %:lastName%) AND " +
+           "(:activo IS NULL OR u.activo = :activo)")
+    List<User> findUsersWithFilters(@Param("firstName") String firstName, 
+                                   @Param("lastName") String lastName, 
+                                   @Param("activo") Boolean activo);
+    
+    @Query("SELECT u FROM User u WHERE " +
+           "(:estado IS NULL OR u.estado = :estado) AND " +
+           "(:searchTerm IS NULL OR u.firstName LIKE %:searchTerm% OR u.lastName LIKE %:searchTerm% OR u.email LIKE %:searchTerm%) AND " +
+           "(:creadoPor IS NULL OR u.creadoPor = :creadoPor) AND " +
+           "(:activo IS NULL OR u.activo = :activo) AND " +
+           "(:roleName IS NULL OR EXISTS (SELECT 1 FROM u.userCompanyRoles ucr WHERE ucr.rol.nombre = :roleName))")
+    List<User> findUsersWithAdvancedFilters(@Param("estado") EstadoUsuario estado,
+                                           @Param("searchTerm") String searchTerm,
+                                           @Param("creadoPor") User creadoPor,
+                                           @Param("activo") Boolean activo,
+                                           @Param("roleName") String roleName);
+    
+    @Query("SELECT u FROM User u JOIN u.userCompanyRoles ucr JOIN ucr.rol r WHERE r.nombre = :roleName")
+    List<User> findByRoleName(@Param("roleName") String roleName);
+    
+    // Métodos para estadísticas de uso del sistema
+    @Query("SELECT COUNT(DISTINCT u) FROM User u JOIN u.userCompanyRoles ucr JOIN ucr.rol r WHERE r.nombre = :roleName")
+    long countByRoleName(@Param("roleName") String roleName);
+    
+    // Método alternativo más robusto para contar usuarios por rol
+    @Query("SELECT COUNT(DISTINCT u) FROM User u WHERE EXISTS (SELECT 1 FROM u.userCompanyRoles ucr WHERE ucr.rol.nombre = :roleName)")
+    long countByRoleNameRobust(@Param("roleName") String roleName);
+    
+    long countByFechaCreacionAfter(java.time.LocalDateTime fecha);
+    
+    @Query("SELECT u, COUNT(*) as actividad FROM User u " +
+           "WHERE u.fechaActualizacion >= :fechaInicio " +
+           "GROUP BY u " +
+           "ORDER BY actividad DESC")
+    List<Object[]> findUsuariosMasActivos(@Param("fechaInicio") java.time.LocalDateTime fechaInicio);
 }

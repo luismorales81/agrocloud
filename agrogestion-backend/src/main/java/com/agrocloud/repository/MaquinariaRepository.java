@@ -16,13 +16,9 @@ public interface MaquinariaRepository extends JpaRepository<Maquinaria, Long> {
     List<Maquinaria> findByUserId(Long userId);
 
     // Buscar maquinaria por usuario y estado activo
-    List<Maquinaria> findByUserIdAndActivoTrue(Long userId);
-
-    // Buscar maquinaria por usuario y tipo
-    List<Maquinaria> findByUserIdAndTipo(Long userId, Maquinaria.TipoMaquinaria tipo);
-
-    // Buscar maquinaria por usuario y estado
     List<Maquinaria> findByUserIdAndEstado(Long userId, Maquinaria.EstadoMaquinaria estado);
+
+
 
     // Query personalizada para buscar maquinaria accesible por un usuario
     @Query("SELECT m FROM Maquinaria m WHERE " +
@@ -39,5 +35,12 @@ public interface MaquinariaRepository extends JpaRepository<Maquinaria, Long> {
     long countByUserId(Long userId);
 
     // Contar maquinaria activa por usuario
+    long countByUserIdAndEstado(Long userId, Maquinaria.EstadoMaquinaria estado);
+
+    // Métodos para eliminación lógica
+    List<Maquinaria> findByUserIdAndActivoTrue(Long userId);
     long countByUserIdAndActivoTrue(Long userId);
+    List<Maquinaria> findByActivoTrue();
+    List<Maquinaria> findByActivoFalse();
+    List<Maquinaria> findByUserIdAndActivoFalse(Long userId);
 }

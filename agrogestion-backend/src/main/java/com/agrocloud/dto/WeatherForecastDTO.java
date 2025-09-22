@@ -11,13 +11,14 @@ public class WeatherForecastDTO {
     private int weatherCode;
     private String weatherDescription;
     private String icon;
+    private String agriculturalAdvice;
     
     // Constructores
     public WeatherForecastDTO() {}
     
     public WeatherForecastDTO(LocalDate date, String dayOfWeek, double maxTemperature, 
                             double minTemperature, double precipitation, int weatherCode, 
-                            String weatherDescription, String icon) {
+                            String weatherDescription, String icon, String agriculturalAdvice) {
         this.date = date;
         this.dayOfWeek = dayOfWeek;
         this.maxTemperature = maxTemperature;
@@ -26,6 +27,7 @@ public class WeatherForecastDTO {
         this.weatherCode = weatherCode;
         this.weatherDescription = weatherDescription;
         this.icon = icon;
+        this.agriculturalAdvice = agriculturalAdvice;
     }
     
     // Getters y Setters
@@ -91,5 +93,13 @@ public class WeatherForecastDTO {
     
     public void setIcon(String icon) {
         this.icon = icon;
+    }
+    
+    public String getAgriculturalAdvice() {
+        return agriculturalAdvice;
+    }
+    
+    public void setAgriculturalAdvice(String agriculturalAdvice) {
+        this.agriculturalAdvice = agriculturalAdvice;
     }
 }
