@@ -1,15 +1,18 @@
 package com.agrocloud.entity;
 
 import com.agrocloud.BaseTest;
+import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.Insumo;
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.enums.EstadoEmpresa;
+import com.agrocloud.repository.EmpresaRepository;
 import com.agrocloud.repository.InsumoRepository;
 import com.agrocloud.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest(classes = com.agrocloud.AgroCloudApplication.class)
+@DataJpaTest
 class InsumosTest extends BaseTest {
 
     @Autowired
@@ -36,10 +39,23 @@ class InsumosTest extends BaseTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmpresaRepository empresaRepository;
+
     private User usuarioTest;
+    private Empresa empresaTest;
 
     @BeforeEach
     void setUp() {
+        // Crear empresa de prueba
+        empresaTest = new Empresa();
+        empresaTest.setNombre("Empresa Test");
+        empresaTest.setCuit("20-12345678-9");
+        empresaTest.setEmailContacto("test@empresa.com");
+        empresaTest.setEstado(EstadoEmpresa.ACTIVO);
+        empresaTest.setActivo(true);
+        entityManager.persistAndFlush(empresaTest);
+
         // Crear usuario de prueba
         usuarioTest = new User();
         usuarioTest.setNombreUsuario("testuser");
@@ -64,6 +80,7 @@ class InsumosTest extends BaseTest {
         insumo.setStockMinimo(new BigDecimal("100.00"));
         insumo.setProveedor("Semillas del Norte");
         insumo.setUsuario(usuarioTest);
+        insumo.setEmpresa(empresaTest);
         insumo.setActivo(true);
 
         // Act
@@ -73,7 +90,7 @@ class InsumosTest extends BaseTest {
         // Assert
         assertNotNull(insumoGuardado.getId());
         assertEquals("Semilla Soja DM 53i53", insumoGuardado.getNombre());
-        assertEquals("Semilla", insumoGuardado.getTipo());
+        assertEquals(Insumo.TipoInsumo.SEMILLA, insumoGuardado.getTipo());
         assertEquals("Semilla de soja de primera calidad", insumoGuardado.getDescripcion());
         assertEquals("kg", insumoGuardado.getUnidadMedida());
         assertEquals(new BigDecimal("15.50"), insumoGuardado.getPrecioUnitario());
@@ -110,7 +127,7 @@ class InsumosTest extends BaseTest {
     @Test
     void testConsultarInsumoPorId() {
         // Arrange
-        Insumo insumo = crearInsumo("Herbicida Glifosato", "Agroquímico", "litro", 
+        Insumo insumo = crearInsumo("Herbicida Glifosato", "Herbicida", "litro", 
                 new BigDecimal("8.50"), new BigDecimal("200.00"), new BigDecimal("50.00"));
         Insumo insumoGuardado = insumoRepository.save(insumo);
         entityManager.flush();
@@ -131,7 +148,7 @@ class InsumosTest extends BaseTest {
                 new BigDecimal("12.00"), new BigDecimal("500.00"), new BigDecimal("50.00"));
         Insumo fertilizante = crearInsumo("Fertilizante NPK", "Fertilizante", "kg", 
                 new BigDecimal("1.20"), new BigDecimal("1000.00"), new BigDecimal("100.00"));
-        Insumo herbicida = crearInsumo("Herbicida 2,4-D", "Agroquímico", "litro", 
+        Insumo herbicida = crearInsumo("Herbicida 2,4-D", "Herbicida", "litro", 
                 new BigDecimal("6.50"), new BigDecimal("150.00"), new BigDecimal("25.00"));
 
         insumoRepository.save(semilla);
@@ -140,9 +157,9 @@ class InsumosTest extends BaseTest {
         entityManager.flush();
 
         // Act
-        List<Insumo> semillas = insumoRepository.findByTipo("Semilla");
-        List<Insumo> fertilizantes = insumoRepository.findByTipo("Fertilizante");
-        List<Insumo> agroquimicos = insumoRepository.findByTipo("Agroquímico");
+        List<Insumo> semillas = insumoRepository.findByTipo(Insumo.TipoInsumo.SEMILLA);
+        List<Insumo> fertilizantes = insumoRepository.findByTipo(Insumo.TipoInsumo.FERTILIZANTE);
+        List<Insumo> herbicidas = insumoRepository.findByTipo(Insumo.TipoInsumo.HERBICIDA);
 
         // Assert
         assertEquals(1, semillas.size());
@@ -151,8 +168,8 @@ class InsumosTest extends BaseTest {
         assertEquals(1, fertilizantes.size());
         assertEquals("Fertilizante NPK", fertilizantes.get(0).getNombre());
 
-        assertEquals(1, agroquimicos.size());
-        assertEquals("Herbicida 2,4-D", agroquimicos.get(0).getNombre());
+        assertEquals(1, herbicidas.size());
+        assertEquals("Herbicida 2,4-D", herbicidas.get(0).getNombre());
     }
 
     @Test
@@ -201,12 +218,12 @@ class InsumosTest extends BaseTest {
         entityManager.flush();
 
         // Act
-        List<Insumo> insumosStockBajo = insumoRepository.findByUsuarioIdAndActivoTrue(usuarioTest.getId())
+        List<Insumo> insumosStockBajo = insumoRepository.findByUserIdAndActivoTrue(usuarioTest.getId())
                 .stream()
                 .filter(insumo -> insumo.getStockDisponible().compareTo(insumo.getStockMinimo()) < 0)
                 .toList();
 
-        List<Insumo> insumosStockNormal = insumoRepository.findByUsuarioIdAndActivoTrue(usuarioTest.getId())
+        List<Insumo> insumosStockNormal = insumoRepository.findByUserIdAndActivoTrue(usuarioTest.getId())
                 .stream()
                 .filter(insumo -> insumo.getStockDisponible().compareTo(insumo.getStockMinimo()) >= 0)
                 .toList();
@@ -268,7 +285,7 @@ class InsumosTest extends BaseTest {
         entityManager.flush();
 
         // Act
-        List<Insumo> insumos = insumoRepository.findByUsuarioIdAndActivoTrue(usuarioTest.getId());
+        List<Insumo> insumos = insumoRepository.findByUserIdAndActivoTrue(usuarioTest.getId());
         BigDecimal valorTotal = insumos.stream()
                 .map(insumo -> insumo.getPrecioUnitario().multiply(insumo.getStockDisponible()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -323,7 +340,7 @@ class InsumosTest extends BaseTest {
         entityManager.flush();
 
         // Act
-        List<Insumo> insumosActivos = insumoRepository.findByUsuarioIdAndActivoTrue(usuarioTest.getId());
+        List<Insumo> insumosActivos = insumoRepository.findByUserIdAndActivoTrue(usuarioTest.getId());
 
         // Assert
         assertEquals(1, insumosActivos.size());
@@ -360,6 +377,7 @@ class InsumosTest extends BaseTest {
         insumo.setStockMinimo(stockMinimo);
         insumo.setProveedor("Proveedor Test");
         insumo.setUsuario(usuarioTest);
+        insumo.setEmpresa(empresaTest);
         insumo.setActivo(true);
         return insumo;
     }

@@ -71,5 +71,4 @@ public interface PlotRepository extends JpaRepository<Plot, Long> {
     // Métodos faltantes para los tests
     List<Plot> findByCampoId(Long campoId);
     List<Plot> findByNombreContainingIgnoreCase(String nombre);
-    List<Plot> findByUsuarioIdAndActivoTrue(Long usuarioId);
 }

@@ -44,8 +44,6 @@ public interface FieldRepository extends JpaRepository<Field, Long> {
     List<Field> findByUserIdAndActivoFalse(Long userId);
     
     // Métodos faltantes para los tests
-    List<Field> findByUsuarioId(Long usuarioId);
-    List<Field> findByUsuarioIdAndActivoTrue(Long usuarioId);
     List<Field> findByNombreContainingIgnoreCase(String nombre);
     List<Field> findByTipoSuelo(String tipoSuelo);
 }

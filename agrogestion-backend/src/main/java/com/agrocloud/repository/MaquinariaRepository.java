@@ -44,6 +44,4 @@ public interface MaquinariaRepository extends JpaRepository<Maquinaria, Long> {
     List<Maquinaria> findByActivoFalse();
     List<Maquinaria> findByUserIdAndActivoFalse(Long userId);
     
-    // Método faltante para los tests
-    List<Maquinaria> findByUsuarioIdAndActivoTrue(Long usuarioId);
 }

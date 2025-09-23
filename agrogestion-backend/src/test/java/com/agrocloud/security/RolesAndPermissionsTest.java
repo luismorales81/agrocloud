@@ -7,6 +7,7 @@ import com.agrocloud.model.entity.User;
 import com.agrocloud.model.entity.UsuarioEmpresa;
 import com.agrocloud.model.enums.EstadoEmpresa;
 import com.agrocloud.model.enums.EstadoUsuarioEmpresa;
+import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.repository.EmpresaRepository;
 import com.agrocloud.repository.RoleRepository;
 import com.agrocloud.repository.UserRepository;
@@ -14,8 +15,8 @@ import com.agrocloud.repository.UsuarioEmpresaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest(classes = com.agrocloud.AgroCloudApplication.class)
+@DataJpaTest
 class RolesAndPermissionsTest extends BaseTest {
 
     @Autowired
@@ -86,6 +87,7 @@ class RolesAndPermissionsTest extends BaseTest {
         // Arrange
         Empresa nuevaEmpresa = new Empresa();
         nuevaEmpresa.setNombre("Nueva Empresa");
+        nuevaEmpresa.setCuit("20-" + (System.nanoTime() % 100000000) + "-9");
         nuevaEmpresa.setDescripcion("Empresa creada por superadmin");
         nuevaEmpresa.setEstado(EstadoEmpresa.ACTIVO);
         nuevaEmpresa.setActivo(true);
@@ -223,7 +225,7 @@ class RolesAndPermissionsTest extends BaseTest {
         UsuarioEmpresa usuarioEmpresa = new UsuarioEmpresa();
         usuarioEmpresa.setUsuario(mantenimiento);
         usuarioEmpresa.setEmpresa(empresa1);
-        usuarioEmpresa.setRolNombre("MANTENIMIENTO");
+        usuarioEmpresa.setRolNombre("TECNICO");
         usuarioEmpresa.setEstado(EstadoUsuarioEmpresa.ACTIVO);
         usuarioEmpresaRepository.save(usuarioEmpresa);
         entityManager.flush();
@@ -233,7 +235,7 @@ class RolesAndPermissionsTest extends BaseTest {
 
         // Assert
         assertEquals(1, rolesUsuario.size());
-        assertEquals("MANTENIMIENTO", rolesUsuario.get(0).getRolNombre());
+        assertEquals("TECNICO", rolesUsuario.get(0).getRolNombre());
         assertEquals(empresa1.getId(), rolesUsuario.get(0).getEmpresa().getId());
     }
 
@@ -333,8 +335,8 @@ class RolesAndPermissionsTest extends BaseTest {
         entityManager.flush();
 
         // Act
-        List<UsuarioEmpresa> administradores = usuarioEmpresaRepository.findByRolNombre("ADMINISTRADOR");
-        List<UsuarioEmpresa> operarios = usuarioEmpresaRepository.findByRolNombre("OPERARIO");
+        List<UsuarioEmpresa> administradores = usuarioEmpresaRepository.findByRolNombre(RolEmpresa.ADMINISTRADOR);
+        List<UsuarioEmpresa> operarios = usuarioEmpresaRepository.findByRolNombre(RolEmpresa.OPERARIO);
 
         // Assert
         assertEquals(2, administradores.size());
@@ -407,6 +409,7 @@ class RolesAndPermissionsTest extends BaseTest {
     private Empresa crearEmpresa(String nombre, String descripcion) {
         Empresa empresa = new Empresa();
         empresa.setNombre(nombre);
+        empresa.setCuit("20-" + (System.nanoTime() % 100000000) + "-9"); // CUIT único más corto
         empresa.setDescripcion(descripcion);
         empresa.setEstado(EstadoEmpresa.ACTIVO);
         empresa.setActivo(true);

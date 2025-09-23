@@ -1,15 +1,12 @@
 package com.agrocloud.entity;
 
-import com.agrocloud.BaseTest;
-import com.agrocloud.model.entity.Field;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.repository.FieldRepository;
-import com.agrocloud.repository.UserRepository;
+import com.agrocloud.BaseEntityTest;
+import com.agrocloud.model.entity.*;
+import com.agrocloud.model.enums.EstadoEmpresa;
+import com.agrocloud.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,17 +15,13 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests para la entidad Field (Campos).
+ * Tests optimizados para la entidad Field (Campos).
  * Prueba la creación, edición y consulta de campos con validación de coordenadas y superficies.
  * 
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest(classes = com.agrocloud.AgroCloudApplication.class)
-class FieldTest extends BaseTest {
-
-    @Autowired
-    private TestEntityManager entityManager;
+class FieldTest extends BaseEntityTest {
 
     @Autowired
     private FieldRepository fieldRepository;
@@ -36,7 +29,11 @@ class FieldTest extends BaseTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmpresaRepository empresaRepository;
+
     private User usuarioTest;
+    private Empresa empresaTest;
     private Field campoTest;
 
     @BeforeEach
@@ -49,7 +46,17 @@ class FieldTest extends BaseTest {
         usuarioTest.setNombre("Usuario");
         usuarioTest.setApellido("Test");
         usuarioTest.setActivo(true);
-        entityManager.persistAndFlush(usuarioTest);
+        userRepository.save(usuarioTest);
+
+        // Crear empresa de prueba
+        empresaTest = new Empresa();
+        empresaTest.setNombre("Empresa Test");
+        empresaTest.setCuit("20-12345678-9");
+        empresaTest.setEmailContacto("test@empresa.com");
+        empresaTest.setEstado(EstadoEmpresa.ACTIVO);
+        empresaTest.setActivo(true);
+        empresaTest.setCreadoPor(usuarioTest);
+        empresaRepository.save(empresaTest);
 
         // Crear campo de prueba
         campoTest = new Field();
@@ -59,6 +66,7 @@ class FieldTest extends BaseTest {
         campoTest.setTipoSuelo("Franco");
         campoTest.setDescripcion("Campo de prueba para tests");
         campoTest.setUsuario(usuarioTest);
+        campoTest.setEmpresa(empresaTest);
         campoTest.setActivo(true);
     }
 
@@ -66,7 +74,6 @@ class FieldTest extends BaseTest {
     void testCrearCampo() {
         // Act
         Field campoGuardado = fieldRepository.save(campoTest);
-        entityManager.flush();
 
         // Assert
         assertNotNull(campoGuardado.getId());
@@ -83,14 +90,12 @@ class FieldTest extends BaseTest {
     void testEditarCampo() {
         // Arrange
         Field campoGuardado = fieldRepository.save(campoTest);
-        entityManager.flush();
 
         // Act
         campoGuardado.setNombre("Campo Test Modificado");
         campoGuardado.setAreaHectareas(new BigDecimal("120.75"));
         campoGuardado.setTipoSuelo("Franco-arcilloso");
         Field campoModificado = fieldRepository.save(campoGuardado);
-        entityManager.flush();
 
         // Assert
         assertEquals("Campo Test Modificado", campoModificado.getNombre());
@@ -102,7 +107,6 @@ class FieldTest extends BaseTest {
     void testConsultarCampoPorId() {
         // Arrange
         Field campoGuardado = fieldRepository.save(campoTest);
-        entityManager.flush();
 
         // Act
         Optional<Field> campoEncontrado = fieldRepository.findById(campoGuardado.getId());
@@ -126,12 +130,12 @@ class FieldTest extends BaseTest {
         campo2.setTipoSuelo("Arcilloso");
         campo2.setDescripcion("Segundo campo de prueba");
         campo2.setUsuario(usuarioTest);
+        campo2.setEmpresa(empresaTest);
         campo2.setActivo(true);
         fieldRepository.save(campo2);
-        entityManager.flush();
 
         // Act
-        List<Field> camposUsuario = fieldRepository.findByUsuarioId(usuarioTest.getId());
+        List<Field> camposUsuario = fieldRepository.findByUserId(usuarioTest.getId());
 
         // Assert
         assertEquals(2, camposUsuario.size());
@@ -152,12 +156,12 @@ class FieldTest extends BaseTest {
         campoInactivo.setTipoSuelo("Franco");
         campoInactivo.setDescripcion("Campo inactivo");
         campoInactivo.setUsuario(usuarioTest);
+        campoInactivo.setEmpresa(empresaTest);
         campoInactivo.setActivo(false);
         fieldRepository.save(campoInactivo);
-        entityManager.flush();
 
         // Act
-        List<Field> camposActivos = fieldRepository.findByUsuarioIdAndActivoTrue(usuarioTest.getId());
+        List<Field> camposActivos = fieldRepository.findByUserIdAndActivoTrue(usuarioTest.getId());
 
         // Assert
         assertEquals(1, camposActivos.size());
@@ -173,7 +177,6 @@ class FieldTest extends BaseTest {
         // Act & Assert
         assertThrows(Exception.class, () -> {
             fieldRepository.save(campoTest);
-            entityManager.flush();
         });
     }
 
@@ -185,7 +188,6 @@ class FieldTest extends BaseTest {
         // Act & Assert
         assertThrows(Exception.class, () -> {
             fieldRepository.save(campoTest);
-            entityManager.flush();
         });
     }
 
@@ -193,7 +195,6 @@ class FieldTest extends BaseTest {
     void testBuscarCamposPorNombre() {
         // Arrange
         fieldRepository.save(campoTest);
-        entityManager.flush();
 
         // Act
         List<Field> camposEncontrados = fieldRepository.findByNombreContainingIgnoreCase("Test");
@@ -207,7 +208,6 @@ class FieldTest extends BaseTest {
     void testBuscarCamposPorTipoSuelo() {
         // Arrange
         fieldRepository.save(campoTest);
-        entityManager.flush();
 
         // Act
         List<Field> camposFranco = fieldRepository.findByTipoSuelo("Franco");
@@ -229,12 +229,12 @@ class FieldTest extends BaseTest {
         campo2.setTipoSuelo("Franco");
         campo2.setDescripcion("Segundo campo");
         campo2.setUsuario(usuarioTest);
+        campo2.setEmpresa(empresaTest);
         campo2.setActivo(true);
         fieldRepository.save(campo2);
-        entityManager.flush();
 
         // Act
-        List<Field> camposUsuario = fieldRepository.findByUsuarioId(usuarioTest.getId());
+        List<Field> camposUsuario = fieldRepository.findByUserId(usuarioTest.getId());
         BigDecimal areaTotal = camposUsuario.stream()
                 .map(Field::getAreaHectareas)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

@@ -77,6 +77,13 @@ public class RoleService {
     }
     
     /**
+     * Verificar si un rol existe por nombre
+     */
+    public boolean roleExists(String name) {
+        return roleRepository.existsByNombre(name);
+    }
+    
+    /**
      * Crear nuevo rol
      */
     public Role createRole(String name, String description) {
@@ -141,5 +148,27 @@ public class RoleService {
         stats.put("usersPerRole", roleUserCount);
         
         return stats;
+    }
+    
+    /**
+     * Obtener permisos de un rol
+     */
+    public List<String> getRolePermissions(Long roleId) {
+        Role role = getRoleById(roleId);
+        // Por ahora retornamos una lista vacía ya que el modelo actual no tiene permisos implementados
+        // En el futuro esto debería consultar la tabla de permisos del rol
+        return new ArrayList<>();
+    }
+    
+    /**
+     * Asignar permisos a un rol
+     */
+    public void assignPermissions(Long roleId, List<String> permissions) {
+        Role role = getRoleById(roleId);
+        // Por ahora no hacemos nada ya que el modelo actual no tiene permisos implementados
+        // En el futuro esto debería guardar los permisos en la tabla correspondiente
+        // rolePermissionRepository.saveAll(permissions.stream()
+        //     .map(permission -> new RolePermission(role, permission))
+        //     .collect(Collectors.toList()));
     }
 }

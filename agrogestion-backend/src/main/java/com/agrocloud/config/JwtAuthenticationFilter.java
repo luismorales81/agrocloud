@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,6 +26,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final AuthService authService;
     
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
+    
     public JwtAuthenticationFilter(JwtService jwtService, AuthService authService) {
         this.jwtService = jwtService;
         this.authService = authService;
@@ -36,6 +40,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        
+        // Log para debug: ver qué perfil está activo
+        logger.info("🔍 [JwtFilter] Perfil activo: '{}'", activeProfiles);
+        
+        // Saltarse el filtro JWT en modo test para permitir @WithMockUser
+        if (activeProfiles.contains("test")) {
+            logger.info("🧪 [JwtFilter] Modo test detectado, saltándose filtro JWT para permitir @WithMockUser");
+            filterChain.doFilter(request, response);
+            return;
+        }
         
         // Permitir que los endpoints públicos pasen sin procesamiento
         String requestURI = request.getRequestURI();

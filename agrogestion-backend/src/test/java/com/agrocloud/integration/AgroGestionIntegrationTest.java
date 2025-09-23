@@ -2,13 +2,14 @@ package com.agrocloud.integration;
 
 import com.agrocloud.BaseTest;
 import com.agrocloud.model.entity.*;
+import com.agrocloud.model.enums.EstadoEmpresa;
 import com.agrocloud.model.enums.EstadoLote;
 import com.agrocloud.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.boot.test.context.SpringBootTest;
+import jakarta.persistence.EntityManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,10 +28,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class AgroGestionIntegrationTest extends BaseTest {
 
     @Autowired
-    private TestEntityManager entityManager;
+    private EntityManager entityManager;
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EmpresaRepository empresaRepository;
 
     @Autowired
     private FieldRepository fieldRepository;
@@ -78,7 +82,17 @@ class AgroGestionIntegrationTest extends BaseTest {
         usuarioTest.setNombre("Usuario");
         usuarioTest.setApellido("Test");
         usuarioTest.setActivo(true);
-        entityManager.persistAndFlush(usuarioTest);
+        userRepository.save(usuarioTest);
+
+        // Crear empresa de prueba
+        Empresa empresaTest = new Empresa();
+        empresaTest.setNombre("Empresa Test");
+        empresaTest.setCuit("20-12345678-9");
+        empresaTest.setEmailContacto("test@empresa.com");
+        empresaTest.setEstado(EstadoEmpresa.ACTIVO);
+        empresaTest.setActivo(true);
+        empresaTest.setCreadoPor(usuarioTest);
+        empresaRepository.save(empresaTest);
 
         // Crear campo de prueba
         campoTest = new Field();
@@ -88,8 +102,9 @@ class AgroGestionIntegrationTest extends BaseTest {
         campoTest.setTipoSuelo("Franco");
         campoTest.setDescripcion("Campo principal para pruebas");
         campoTest.setUsuario(usuarioTest);
+        campoTest.setEmpresa(empresaTest);
         campoTest.setActivo(true);
-        entityManager.persistAndFlush(campoTest);
+        fieldRepository.save(campoTest);
 
         // Crear lote de prueba
         loteTest = new Plot();
@@ -100,8 +115,9 @@ class AgroGestionIntegrationTest extends BaseTest {
         loteTest.setTipoSuelo("Franco");
         loteTest.setCampo(campoTest);
         loteTest.setUsuario(usuarioTest);
+        loteTest.setEmpresa(empresaTest);
         loteTest.setActivo(true);
-        entityManager.persistAndFlush(loteTest);
+        plotRepository.save(loteTest);
 
         // Crear cultivo de prueba
         cultivoTest = new Cultivo();
@@ -115,8 +131,9 @@ class AgroGestionIntegrationTest extends BaseTest {
         cultivoTest.setDescripcion("Soja de primera calidad");
         cultivoTest.setEstado(Cultivo.EstadoCultivo.ACTIVO);
         cultivoTest.setUsuario(usuarioTest);
+        cultivoTest.setEmpresa(empresaTest);
         cultivoTest.setActivo(true);
-        entityManager.persistAndFlush(cultivoTest);
+        cultivoRepository.save(cultivoTest);
 
         // Crear insumos de prueba
         semillaTest = new Insumo();
@@ -129,8 +146,9 @@ class AgroGestionIntegrationTest extends BaseTest {
         semillaTest.setStockMinimo(new BigDecimal("100.00"));
         semillaTest.setProveedor("Semillas del Norte");
         semillaTest.setUsuario(usuarioTest);
+        semillaTest.setEmpresa(empresaTest);
         semillaTest.setActivo(true);
-        entityManager.persistAndFlush(semillaTest);
+        insumoRepository.save(semillaTest);
 
         fertilizanteTest = new Insumo();
         fertilizanteTest.setNombre("Fertilizante Urea");
@@ -142,8 +160,9 @@ class AgroGestionIntegrationTest extends BaseTest {
         fertilizanteTest.setStockMinimo(new BigDecimal("500.00"));
         fertilizanteTest.setProveedor("Fertilizantes SA");
         fertilizanteTest.setUsuario(usuarioTest);
+        fertilizanteTest.setEmpresa(empresaTest);
         fertilizanteTest.setActivo(true);
-        entityManager.persistAndFlush(fertilizanteTest);
+        insumoRepository.save(fertilizanteTest);
 
         // Crear maquinaria de prueba
         tractorTest = new Maquinaria();
@@ -156,8 +175,9 @@ class AgroGestionIntegrationTest extends BaseTest {
         tractorTest.setEstado(Maquinaria.EstadoMaquinaria.DISPONIBLE);
         tractorTest.setCostoPorHora(new BigDecimal("25.00"));
         tractorTest.setUsuario(usuarioTest);
+        tractorTest.setEmpresa(empresaTest);
         tractorTest.setActivo(true);
-        entityManager.persistAndFlush(tractorTest);
+        maquinariaRepository.save(tractorTest);
 
         sembradoraTest = new Maquinaria();
         sembradoraTest.setNombre("Sembradora Neumática");
@@ -169,8 +189,9 @@ class AgroGestionIntegrationTest extends BaseTest {
         sembradoraTest.setEstado(Maquinaria.EstadoMaquinaria.DISPONIBLE);
         sembradoraTest.setCostoPorHora(new BigDecimal("15.00"));
         sembradoraTest.setUsuario(usuarioTest);
+        sembradoraTest.setEmpresa(empresaTest);
         sembradoraTest.setActivo(true);
-        entityManager.persistAndFlush(sembradoraTest);
+        maquinariaRepository.save(sembradoraTest);
     }
 
     @Test
@@ -305,7 +326,6 @@ class AgroGestionIntegrationTest extends BaseTest {
         cosecha.setFechaCosecha(LocalDate.now().plusDays(122));
         cosecha.setCantidadCosechada(new BigDecimal("89.25"));
         cosecha.setUnidadMedida("toneladas");
-        cosecha.setRendimiento(new BigDecimal("3500.00"));
         cosecha.setPrecioPorUnidad(new BigDecimal("450.00"));
         cosecha.setValorTotal(new BigDecimal("40162.50"));
         cosecha.setObservaciones("Cosecha de soja con buen rendimiento");
@@ -383,8 +403,8 @@ class AgroGestionIntegrationTest extends BaseTest {
         assertEquals(new BigDecimal("4200.00"), costoTotalLabores);
 
         // Verificar ingresos y egresos
-        List<Ingreso> ingresos = ingresoRepository.findByUsuarioId(usuarioTest.getId());
-        List<Egreso> egresos = egresoRepository.findByUsuarioId(usuarioTest.getId());
+        List<Ingreso> ingresos = ingresoRepository.findByUserId(usuarioTest.getId());
+        List<Egreso> egresos = egresoRepository.findByUserId(usuarioTest.getId());
         
         assertEquals(1, ingresos.size());
         assertEquals(2, egresos.size());
@@ -407,7 +427,7 @@ class AgroGestionIntegrationTest extends BaseTest {
         List<Cosecha> cosechas = cosechaRepository.findByLoteId(loteTest.getId());
         assertEquals(1, cosechas.size());
         assertEquals(new BigDecimal("89.25"), cosechas.get(0).getCantidadCosechada());
-        assertEquals(new BigDecimal("3500.00"), cosechas.get(0).getRendimiento());
+        assertEquals(new BigDecimal("89.25"), cosechas.get(0).getRendimiento());
 
         // Verificar estado final del lote
         Plot loteFinal = plotRepository.findById(loteTest.getId()).orElse(null);

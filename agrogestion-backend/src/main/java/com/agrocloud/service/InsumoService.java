@@ -56,7 +56,7 @@ public class InsumoService {
         
         if (insumo.isPresent()) {
             Insumo i = insumo.get();
-            if (user.isAdmin() || user.canAccessUser(i.getUser())) {
+            if ((user.isAdmin() || user.canAccessUser(i.getUser())) && i.getActivo()) {
                 return insumo;
             }
         }

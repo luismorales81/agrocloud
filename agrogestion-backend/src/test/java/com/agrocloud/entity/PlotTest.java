@@ -1,18 +1,13 @@
 package com.agrocloud.entity;
 
-import com.agrocloud.BaseTest;
-import com.agrocloud.model.entity.Field;
-import com.agrocloud.model.entity.Plot;
-import com.agrocloud.model.entity.User;
+import com.agrocloud.BaseEntityTest;
+import com.agrocloud.model.entity.*;
+import com.agrocloud.model.enums.EstadoEmpresa;
 import com.agrocloud.model.enums.EstadoLote;
-import com.agrocloud.repository.FieldRepository;
-import com.agrocloud.repository.PlotRepository;
-import com.agrocloud.repository.UserRepository;
+import com.agrocloud.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,11 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest(classes = com.agrocloud.AgroCloudApplication.class)
-class PlotTest extends BaseTest {
-
-    @Autowired
-    private TestEntityManager entityManager;
+class PlotTest extends BaseEntityTest {
 
     @Autowired
     private PlotRepository plotRepository;
@@ -43,7 +34,11 @@ class PlotTest extends BaseTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmpresaRepository empresaRepository;
+
     private User usuarioTest;
+    private Empresa empresaTest;
     private Field campoTest;
     private Plot loteTest;
 
@@ -57,7 +52,17 @@ class PlotTest extends BaseTest {
         usuarioTest.setNombre("Usuario");
         usuarioTest.setApellido("Test");
         usuarioTest.setActivo(true);
-        entityManager.persistAndFlush(usuarioTest);
+        userRepository.save(usuarioTest);
+
+        // Crear empresa de prueba
+        empresaTest = new Empresa();
+        empresaTest.setNombre("Empresa Test");
+        empresaTest.setCuit("20-12345678-9");
+        empresaTest.setEmailContacto("test@empresa.com");
+        empresaTest.setEstado(EstadoEmpresa.ACTIVO);
+        empresaTest.setActivo(true);
+        empresaTest.setCreadoPor(usuarioTest);
+        empresaRepository.save(empresaTest);
 
         // Crear campo de prueba
         campoTest = new Field();
@@ -67,8 +72,9 @@ class PlotTest extends BaseTest {
         campoTest.setTipoSuelo("Franco");
         campoTest.setDescripcion("Campo de prueba");
         campoTest.setUsuario(usuarioTest);
+        campoTest.setEmpresa(empresaTest);
         campoTest.setActivo(true);
-        entityManager.persistAndFlush(campoTest);
+        fieldRepository.save(campoTest);
 
         // Crear lote de prueba
         loteTest = new Plot();
@@ -79,6 +85,7 @@ class PlotTest extends BaseTest {
         loteTest.setTipoSuelo("Franco");
         loteTest.setCampo(campoTest);
         loteTest.setUsuario(usuarioTest);
+        loteTest.setEmpresa(empresaTest);
         loteTest.setActivo(true);
     }
 
@@ -86,7 +93,6 @@ class PlotTest extends BaseTest {
     void testCrearLote() {
         // Act
         Plot loteGuardado = plotRepository.save(loteTest);
-        entityManager.flush();
 
         // Assert
         assertNotNull(loteGuardado.getId());
@@ -104,7 +110,6 @@ class PlotTest extends BaseTest {
     void testEditarLote() {
         // Arrange
         Plot loteGuardado = plotRepository.save(loteTest);
-        entityManager.flush();
 
         // Act
         loteGuardado.setNombre("Lote Test Modificado");
@@ -112,7 +117,6 @@ class PlotTest extends BaseTest {
         loteGuardado.setEstado(EstadoLote.PREPARADO);
         loteGuardado.setTipoSuelo("Franco-arcilloso");
         Plot loteModificado = plotRepository.save(loteGuardado);
-        entityManager.flush();
 
         // Assert
         assertEquals("Lote Test Modificado", loteModificado.getNombre());
@@ -125,7 +129,6 @@ class PlotTest extends BaseTest {
     void testConsultarLotePorId() {
         // Arrange
         Plot loteGuardado = plotRepository.save(loteTest);
-        entityManager.flush();
 
         // Act
         Optional<Plot> loteEncontrado = plotRepository.findById(loteGuardado.getId());
@@ -152,7 +155,6 @@ class PlotTest extends BaseTest {
         lote2.setUsuario(usuarioTest);
         lote2.setActivo(true);
         plotRepository.save(lote2);
-        entityManager.flush();
 
         // Act
         List<Plot> lotesCampo = plotRepository.findByCampoId(campoTest.getId());
@@ -179,7 +181,6 @@ class PlotTest extends BaseTest {
         loteSembrado.setUsuario(usuarioTest);
         loteSembrado.setActivo(true);
         plotRepository.save(loteSembrado);
-        entityManager.flush();
 
         // Act
         List<Plot> lotesDisponibles = plotRepository.findByEstado(EstadoLote.DISPONIBLE);
@@ -197,14 +198,12 @@ class PlotTest extends BaseTest {
     void testCambiarEstadoLote() {
         // Arrange
         Plot loteGuardado = plotRepository.save(loteTest);
-        entityManager.flush();
 
         // Act
         loteGuardado.setEstado(EstadoLote.PREPARADO);
         loteGuardado.setFechaUltimoCambioEstado(LocalDateTime.now());
         loteGuardado.setMotivoCambioEstado("Preparación para siembra");
         Plot loteModificado = plotRepository.save(loteGuardado);
-        entityManager.flush();
 
         // Assert
         assertEquals(EstadoLote.PREPARADO, loteModificado.getEstado());
@@ -220,7 +219,6 @@ class PlotTest extends BaseTest {
         // Act & Assert
         assertThrows(Exception.class, () -> {
             plotRepository.save(loteTest);
-            entityManager.flush();
         });
     }
 
@@ -232,7 +230,6 @@ class PlotTest extends BaseTest {
         // Act & Assert
         assertThrows(Exception.class, () -> {
             plotRepository.save(loteTest);
-            entityManager.flush();
         });
     }
 
@@ -240,7 +237,6 @@ class PlotTest extends BaseTest {
     void testBuscarLotesPorNombre() {
         // Arrange
         plotRepository.save(loteTest);
-        entityManager.flush();
 
         // Act
         List<Plot> lotesEncontrados = plotRepository.findByNombreContainingIgnoreCase("Test");
@@ -265,7 +261,6 @@ class PlotTest extends BaseTest {
         lote2.setUsuario(usuarioTest);
         lote2.setActivo(true);
         plotRepository.save(lote2);
-        entityManager.flush();
 
         // Act
         List<Plot> lotesCampo = plotRepository.findByCampoId(campoTest.getId());
@@ -293,10 +288,9 @@ class PlotTest extends BaseTest {
         loteInactivo.setUsuario(usuarioTest);
         loteInactivo.setActivo(false);
         plotRepository.save(loteInactivo);
-        entityManager.flush();
 
         // Act
-        List<Plot> lotesActivos = plotRepository.findByUsuarioIdAndActivoTrue(usuarioTest.getId());
+        List<Plot> lotesActivos = plotRepository.findByUserIdAndActivoTrue(usuarioTest.getId());
 
         // Assert
         assertEquals(1, lotesActivos.size());

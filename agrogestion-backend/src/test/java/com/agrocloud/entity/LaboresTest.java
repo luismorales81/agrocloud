@@ -2,13 +2,14 @@ package com.agrocloud.entity;
 
 import com.agrocloud.BaseTest;
 import com.agrocloud.model.entity.*;
+import com.agrocloud.model.enums.EstadoEmpresa;
 import com.agrocloud.model.enums.EstadoLote;
 import com.agrocloud.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest(classes = com.agrocloud.AgroCloudApplication.class)
+@DataJpaTest
 class LaboresTest extends BaseTest {
 
     @Autowired
@@ -49,14 +50,27 @@ class LaboresTest extends BaseTest {
     @Autowired
     private MaquinariaRepository maquinariaRepository;
 
+    @Autowired
+    private EmpresaRepository empresaRepository;
+
     private User usuarioTest;
     private Field campoTest;
     private Plot loteTest;
     private Insumo insumoTest;
     private Maquinaria maquinariaTest;
+    private Empresa empresaTest;
 
     @BeforeEach
     void setUp() {
+        // Crear empresa de prueba
+        empresaTest = new Empresa();
+        empresaTest.setNombre("Empresa Test");
+        empresaTest.setCuit("20-12345678-9");
+        empresaTest.setEmailContacto("test@empresa.com");
+        empresaTest.setEstado(EstadoEmpresa.ACTIVO);
+        empresaTest.setActivo(true);
+        entityManager.persistAndFlush(empresaTest);
+
         // Crear usuario de prueba
         usuarioTest = new User();
         usuarioTest.setNombreUsuario("testuser");
@@ -75,6 +89,7 @@ class LaboresTest extends BaseTest {
         campoTest.setTipoSuelo("Franco");
         campoTest.setDescripcion("Campo de prueba");
         campoTest.setUsuario(usuarioTest);
+        campoTest.setEmpresa(empresaTest);
         campoTest.setActivo(true);
         entityManager.persistAndFlush(campoTest);
 
@@ -101,6 +116,7 @@ class LaboresTest extends BaseTest {
         insumoTest.setStockMinimo(new BigDecimal("100.00"));
         insumoTest.setProveedor("Semillas del Norte");
         insumoTest.setUsuario(usuarioTest);
+        insumoTest.setEmpresa(empresaTest);
         insumoTest.setActivo(true);
         entityManager.persistAndFlush(insumoTest);
 
@@ -115,6 +131,7 @@ class LaboresTest extends BaseTest {
         maquinariaTest.setEstado(Maquinaria.EstadoMaquinaria.DISPONIBLE);
         maquinariaTest.setCostoPorHora(new BigDecimal("25.00"));
         maquinariaTest.setUsuario(usuarioTest);
+        maquinariaTest.setEmpresa(empresaTest);
         maquinariaTest.setActivo(true);
         entityManager.persistAndFlush(maquinariaTest);
     }

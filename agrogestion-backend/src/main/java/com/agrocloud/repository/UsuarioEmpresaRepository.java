@@ -202,6 +202,7 @@ public interface UsuarioEmpresaRepository extends JpaRepository<UsuarioEmpresa, 
     @Query("SELECT ue FROM UsuarioEmpresa ue WHERE ue.empresa.id = :empresaId AND ue.rol = 'ADMINISTRADOR' AND ue.estado = 'ACTIVO' ORDER BY ue.fechaCreacion ASC")
     Optional<UsuarioEmpresa> findPrimerAdministradorByEmpresaId(@Param("empresaId") Long empresaId);
     
-    // Método faltante para los tests
-    List<UsuarioEmpresa> findByRolNombre(String rolNombre);
+    // Método faltante para los tests - busca por el nombre del rol
+    @Query("SELECT ue FROM UsuarioEmpresa ue WHERE ue.rol = :rol")
+    List<UsuarioEmpresa> findByRolNombre(@Param("rol") RolEmpresa rol);
 }

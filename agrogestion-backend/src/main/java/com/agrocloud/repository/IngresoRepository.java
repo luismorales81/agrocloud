@@ -105,5 +105,6 @@ public interface IngresoRepository extends JpaRepository<Ingreso, Long> {
     List<Ingreso> findByActivoTrue();
     
     // Método faltante para los tests
-    List<Ingreso> findByUsuarioId(Long usuarioId);
+    List<Ingreso> findByUserId(Long userId);
+    
 }

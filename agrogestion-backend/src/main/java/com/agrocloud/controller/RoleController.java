@@ -1,5 +1,7 @@
 package com.agrocloud.controller;
 
+import com.agrocloud.exception.ResourceNotFoundException;
+import com.agrocloud.exception.ResourceConflictException;
 import com.agrocloud.model.entity.Role;
 import com.agrocloud.service.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,11 +38,15 @@ public class RoleController {
     @GetMapping("/{id}")
     @Operation(summary = "Obtener rol por ID", description = "Obtener información de un rol específico")
     public ResponseEntity<Role> getRoleById(@PathVariable Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("ID del rol no puede ser nulo");
+        }
+        
         try {
             Role role = roleService.getRoleById(id);
             return ResponseEntity.ok(role);
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+        } catch (RuntimeException e) {
+            throw new ResourceNotFoundException("Rol no encontrado con ID: " + id);
         }
     }
     
@@ -48,11 +54,15 @@ public class RoleController {
     @Operation(summary = "Obtener rol por nombre", description = "Obtener rol por su nombre")
     @PreAuthorize("hasAuthority('ROLE_READ')")
     public ResponseEntity<Role> getRoleByName(@PathVariable String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Nombre del rol no puede ser nulo o vacío");
+        }
+        
         try {
             Role role = roleService.getRoleByName(name);
             return ResponseEntity.ok(role);
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+        } catch (RuntimeException e) {
+            throw new ResourceNotFoundException("Rol no encontrado con nombre: " + name);
         }
     }
     
@@ -60,15 +70,24 @@ public class RoleController {
     @Operation(summary = "Crear rol", description = "Crear un nuevo rol")
     @PreAuthorize("hasAuthority('ROLE_CREATE')")
     public ResponseEntity<Role> createRole(@RequestBody Map<String, Object> request) {
-        try {
-            String name = (String) request.get("name");
-            String description = (String) request.get("description");
-            
-            Role role = roleService.createRole(name, description);
-            return ResponseEntity.status(HttpStatus.CREATED).body(role);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+        if (request == null) {
+            throw new IllegalArgumentException("Datos del rol no pueden ser nulos");
         }
+        
+        String name = (String) request.get("name");
+        String description = (String) request.get("description");
+        
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Nombre del rol es obligatorio");
+        }
+        
+        // Verificar si el rol ya existe
+        if (roleService.roleExists(name)) {
+            throw new ResourceConflictException("Ya existe un rol con el nombre: " + name);
+        }
+        
+        Role role = roleService.createRole(name, description);
+        return ResponseEntity.status(HttpStatus.CREATED).body(role);
     }
     
     @PutMapping("/{id}")
@@ -77,27 +96,49 @@ public class RoleController {
     public ResponseEntity<Role> updateRole(
             @PathVariable Long id,
             @RequestBody Map<String, Object> request) {
-        try {
-            String name = (String) request.get("name");
-            String description = (String) request.get("description");
-            
-            Role role = roleService.updateRole(id, name, description);
-            return ResponseEntity.ok(role);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+        if (id == null) {
+            throw new IllegalArgumentException("ID del rol no puede ser nulo");
         }
+        
+        if (request == null) {
+            throw new IllegalArgumentException("Datos del rol no pueden ser nulos");
+        }
+        
+        // Verificar si el rol existe
+        try {
+            roleService.getRoleById(id);
+        } catch (RuntimeException e) {
+            throw new ResourceNotFoundException("Rol no encontrado con ID: " + id);
+        }
+        
+        String name = (String) request.get("name");
+        String description = (String) request.get("description");
+        
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Nombre del rol es obligatorio");
+        }
+        
+        Role role = roleService.updateRole(id, name, description);
+        return ResponseEntity.ok(role);
     }
     
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar rol", description = "Eliminar un rol del sistema")
     @PreAuthorize("hasAuthority('ROLE_DELETE')")
     public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
-        try {
-            roleService.deleteRole(id);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+        if (id == null) {
+            throw new IllegalArgumentException("ID del rol no puede ser nulo");
         }
+        
+        // Verificar si el rol existe
+        try {
+            roleService.getRoleById(id);
+        } catch (RuntimeException e) {
+            throw new ResourceNotFoundException("Rol no encontrado con ID: " + id);
+        }
+        
+        roleService.deleteRole(id);
+        return ResponseEntity.noContent().build();
     }
     
 
@@ -111,6 +152,55 @@ public class RoleController {
             return ResponseEntity.ok(permissions);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    @GetMapping("/{id}/permissions")
+    @Operation(summary = "Obtener permisos de rol", description = "Obtener los permisos asignados a un rol específico")
+    @PreAuthorize("hasAuthority('ROLE_READ')")
+    public ResponseEntity<List<String>> getRolePermissions(@PathVariable Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("ID del rol no puede ser nulo");
+        }
+        
+        try {
+            // Verificar si el rol existe
+            roleService.getRoleById(id);
+            List<String> permissions = roleService.getRolePermissions(id);
+            return ResponseEntity.ok(permissions);
+        } catch (RuntimeException e) {
+            throw new ResourceNotFoundException("Rol no encontrado con ID: " + id);
+        }
+    }
+    
+    @PutMapping("/{id}/permissions")
+    @Operation(summary = "Asignar permisos a rol", description = "Asignar permisos a un rol específico")
+    @PreAuthorize("hasAuthority('ROLE_UPDATE')")
+    public ResponseEntity<Map<String, String>> assignPermissions(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> request) {
+        if (id == null) {
+            throw new IllegalArgumentException("ID del rol no puede ser nulo");
+        }
+        
+        if (request == null) {
+            throw new IllegalArgumentException("Datos de permisos no pueden ser nulos");
+        }
+        
+        try {
+            // Verificar si el rol existe
+            roleService.getRoleById(id);
+            
+            @SuppressWarnings("unchecked")
+            List<String> permissions = (List<String>) request.get("permissions");
+            if (permissions == null) {
+                throw new IllegalArgumentException("Lista de permisos es obligatoria");
+            }
+            
+            roleService.assignPermissions(id, permissions);
+            return ResponseEntity.ok(Map.of("message", "Permisos asignados correctamente"));
+        } catch (RuntimeException e) {
+            throw new ResourceNotFoundException("Rol no encontrado con ID: " + id);
         }
     }
     

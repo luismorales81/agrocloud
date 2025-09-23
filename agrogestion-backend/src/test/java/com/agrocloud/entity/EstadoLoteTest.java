@@ -1,18 +1,21 @@
 package com.agrocloud.entity;
 
 import com.agrocloud.BaseTest;
+import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.Plot;
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.enums.EstadoEmpresa;
 import com.agrocloud.model.enums.EstadoLote;
+import com.agrocloud.repository.EmpresaRepository;
 import com.agrocloud.repository.FieldRepository;
 import com.agrocloud.repository.PlotRepository;
 import com.agrocloud.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author AgroGestion Team
  * @version 1.0.0
  */
-@SpringBootTest(classes = com.agrocloud.AgroCloudApplication.class)
+@DataJpaTest
 class EstadoLoteTest extends BaseTest {
 
     @Autowired
@@ -42,11 +45,24 @@ class EstadoLoteTest extends BaseTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmpresaRepository empresaRepository;
+
     private User usuarioTest;
     private Field campoTest;
+    private Empresa empresaTest;
 
     @BeforeEach
     void setUp() {
+        // Crear empresa de prueba
+        empresaTest = new Empresa();
+        empresaTest.setNombre("Empresa Test");
+        empresaTest.setCuit("20-12345678-9");
+        empresaTest.setEmailContacto("test@empresa.com");
+        empresaTest.setEstado(EstadoEmpresa.ACTIVO);
+        empresaTest.setActivo(true);
+        entityManager.persistAndFlush(empresaTest);
+
         // Crear usuario de prueba
         usuarioTest = new User();
         usuarioTest.setNombreUsuario("testuser");
@@ -65,6 +81,7 @@ class EstadoLoteTest extends BaseTest {
         campoTest.setTipoSuelo("Franco");
         campoTest.setDescripcion("Campo de prueba");
         campoTest.setUsuario(usuarioTest);
+        campoTest.setEmpresa(empresaTest);
         campoTest.setActivo(true);
         entityManager.persistAndFlush(campoTest);
     }
