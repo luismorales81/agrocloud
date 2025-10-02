@@ -2,22 +2,15 @@ package com.agrocloud.service;
 
 import com.agrocloud.dto.ReporteRendimientoDTO;
 import com.agrocloud.dto.ReporteCosechasDTO;
-import com.agrocloud.model.entity.Cosecha;
 import com.agrocloud.model.entity.HistorialCosecha;
-import com.agrocloud.model.entity.Plot;
-import com.agrocloud.model.entity.Cultivo;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.repository.CosechaRepository;
 import com.agrocloud.repository.HistorialCosechaRepository;
-import com.agrocloud.repository.PlotRepository;
-import com.agrocloud.repository.CultivoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,29 +22,24 @@ import java.util.stream.Collectors;
  * @version 1.0.0
  */
 @Service
+@Transactional(readOnly = true)
 public class ReporteService {
-
-    @Autowired
-    private CosechaRepository cosechaRepository;
 
     @Autowired
     private HistorialCosechaRepository historialCosechaRepository;
 
-    @Autowired
-    private PlotRepository plotRepository;
-
-    @Autowired
-    private CultivoRepository cultivoRepository;
-
-    @Autowired
-    private UserService userService;
 
     /**
      * Genera reporte de rendimiento por cultivo y lote.
      */
     public List<ReporteRendimientoDTO> obtenerReporteRendimiento(Long usuarioId, LocalDate fechaInicio, 
                                                                 LocalDate fechaFin, Long cultivoId, Long loteId) {
-        List<HistorialCosecha> historiales = historialCosechaRepository.findByUsuarioIdOrderByFechaCosechaDesc(usuarioId);
+        try {
+            System.out.println("[REPORTE_SERVICE] Iniciando obtenerReporteRendimiento para usuarioId: " + usuarioId);
+            System.out.println("[REPORTE_SERVICE] Parámetros: fechaInicio=" + fechaInicio + ", fechaFin=" + fechaFin + ", cultivoId=" + cultivoId + ", loteId=" + loteId);
+            
+            List<HistorialCosecha> historiales = historialCosechaRepository.findByUsuarioIdOrderByFechaCosechaDesc(usuarioId);
+            System.out.println("[REPORTE_SERVICE] Historiales encontrados: " + historiales.size());
         
         // Aplicar filtros
         if (fechaInicio != null) {
@@ -75,27 +63,37 @@ public class ReporteService {
                 .collect(Collectors.toList());
         }
 
-        return historiales.stream()
-            .map(this::mapearARendimientoDTO)
-            .collect(Collectors.toList());
+            List<ReporteRendimientoDTO> resultado = historiales.stream()
+                .map(this::mapearARendimientoDTO)
+                .collect(Collectors.toList());
+            
+            System.out.println("[REPORTE_SERVICE] Reporte generado con " + resultado.size() + " registros");
+            return resultado;
+            
+        } catch (Exception e) {
+            System.err.println("[REPORTE_SERVICE] ERROR en obtenerReporteRendimiento: " + e.getMessage());
+            System.err.println("[REPORTE_SERVICE] Stack trace completo:");
+            e.printStackTrace();
+            throw new RuntimeException("Error al generar reporte de rendimiento: " + e.getMessage(), e);
+        }
     }
 
     /**
-     * Genera reporte de cosechas.
+     * Genera reporte de cosechas usando historial_cosechas (tabla unificada).
      */
     public List<ReporteCosechasDTO> obtenerReporteCosechas(Long usuarioId, LocalDate fechaInicio, 
                                                           LocalDate fechaFin, Long cultivoId, Long loteId) {
-        List<Cosecha> cosechas = cosechaRepository.findByUsuarioIdOrderByFechaDesc(usuarioId);
+        List<HistorialCosecha> cosechas = historialCosechaRepository.findByUsuarioIdOrderByFechaCosechaDesc(usuarioId);
         
         // Aplicar filtros
         if (fechaInicio != null) {
             cosechas = cosechas.stream()
-                .filter(c -> !c.getFecha().isBefore(fechaInicio))
+                .filter(c -> !c.getFechaCosecha().isBefore(fechaInicio))
                 .collect(Collectors.toList());
         }
         if (fechaFin != null) {
             cosechas = cosechas.stream()
-                .filter(c -> !c.getFecha().isAfter(fechaFin))
+                .filter(c -> !c.getFechaCosecha().isAfter(fechaFin))
                 .collect(Collectors.toList());
         }
         if (cultivoId != null) {
@@ -110,7 +108,7 @@ public class ReporteService {
         }
 
         return cosechas.stream()
-            .map(this::mapearACosechasDTO)
+            .map(this::mapearHistorialACosechasDTO)
             .collect(Collectors.toList());
     }
 
@@ -138,6 +136,7 @@ public class ReporteService {
         estadisticas.put("totalCosechas", historiales.size());
         estadisticas.put("superficieTotal", historiales.stream()
             .map(HistorialCosecha::getSuperficieHectareas)
+            .filter(s -> s != null)
             .reduce(BigDecimal.ZERO, BigDecimal::add));
         
         // Por cultivo
@@ -150,11 +149,22 @@ public class ReporteService {
             stats.put("cantidadCosechas", cosechas.size());
             stats.put("superficieTotal", cosechas.stream()
                 .map(HistorialCosecha::getSuperficieHectareas)
+                .filter(s -> s != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
-            stats.put("rendimientoPromedio", cosechas.stream()
+            
+            // Calcular rendimiento promedio filtrando nulls
+            List<BigDecimal> rendimientos = cosechas.stream()
                 .map(HistorialCosecha::getRendimientoReal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(cosechas.size()), 2, RoundingMode.HALF_UP));
+                .filter(r -> r != null)
+                .collect(Collectors.toList());
+            
+            BigDecimal rendimientoPromedio = rendimientos.isEmpty() 
+                ? BigDecimal.ZERO 
+                : rendimientos.stream()
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(rendimientos.size()), 2, RoundingMode.HALF_UP);
+            
+            stats.put("rendimientoPromedio", rendimientoPromedio);
             porCultivoStats.put(cultivo, stats);
         });
         
@@ -178,6 +188,17 @@ public class ReporteService {
     // Métodos privados auxiliares
 
     private ReporteRendimientoDTO mapearARendimientoDTO(HistorialCosecha historial) {
+        // Manejar valores null en rendimientos
+        BigDecimal rendimientoReal = historial.getRendimientoReal() != null 
+            ? historial.getRendimientoReal() 
+            : BigDecimal.ZERO;
+        BigDecimal rendimientoEsperado = historial.getRendimientoEsperado() != null 
+            ? historial.getRendimientoEsperado() 
+            : BigDecimal.ZERO;
+        
+        // Calcular diferencia solo si ambos valores existen
+        BigDecimal diferencia = rendimientoReal.subtract(rendimientoEsperado);
+        
         return new ReporteRendimientoDTO(
             historial.getLote().getId(),
             historial.getLote().getNombre(),
@@ -187,65 +208,80 @@ public class ReporteService {
             historial.getSuperficieHectareas(),
             historial.getFechaSiembra(),
             historial.getFechaCosecha(),
-            historial.getRendimientoEsperado(),
-            historial.getRendimientoReal(),
-            historial.getRendimientoReal(), // Usar rendimiento real como corregido
+            rendimientoEsperado,
+            rendimientoReal,
+            rendimientoReal, // Usar rendimiento real como corregido
             historial.getPorcentajeCumplimiento(),
-            historial.getRendimientoReal().subtract(historial.getRendimientoEsperado()), // Diferencia
+            diferencia,
             historial.getCultivo().getUnidadRendimiento(),
             historial.getObservaciones()
         );
     }
 
-    private ReporteCosechasDTO mapearACosechasDTO(Cosecha cosecha) {
-        BigDecimal ingresoTotal = calcularIngresoTotal(cosecha);
-        BigDecimal rentabilidad = BigDecimal.ZERO; // Se calculará en el método de rentabilidad
+    /**
+     * Mapea HistorialCosecha a ReporteCosechasDTO.
+     * Usa la nueva tabla unificada historial_cosechas.
+     */
+    private ReporteCosechasDTO mapearHistorialACosechasDTO(HistorialCosecha historial) {
+        // Manejar valores null
+        BigDecimal cantidadCosechada = historial.getCantidadCosechada() != null 
+            ? historial.getCantidadCosechada() 
+            : BigDecimal.ZERO;
+        BigDecimal rendimientoReal = historial.getRendimientoReal() != null 
+            ? historial.getRendimientoReal() 
+            : BigDecimal.ZERO;
+        BigDecimal rendimientoEsperado = historial.getRendimientoEsperado() != null 
+            ? historial.getRendimientoEsperado() 
+            : BigDecimal.ZERO;
+        BigDecimal superficieHectareas = historial.getSuperficieHectareas() != null 
+            ? historial.getSuperficieHectareas() 
+            : BigDecimal.ZERO;
+        BigDecimal porcentajeCumplimiento = historial.getPorcentajeCumplimiento() != null 
+            ? historial.getPorcentajeCumplimiento() 
+            : BigDecimal.ZERO;
         
-        // Calcular rendimiento real basado en cantidad y superficie
-        BigDecimal rendimientoReal = BigDecimal.ZERO;
-        if (cosecha.getCantidadToneladas() != null && cosecha.getLote().getAreaHectareas() != null) {
-            rendimientoReal = cosecha.getCantidadToneladas().divide(cosecha.getLote().getAreaHectareas(), 2, RoundingMode.HALF_UP);
-        }
+        // Usar los nuevos campos de rentabilidad
+        BigDecimal precioUnitario = historial.getPrecioVentaUnitario() != null 
+            ? historial.getPrecioVentaUnitario() 
+            : BigDecimal.ZERO;
+        BigDecimal ingresoTotal = historial.getIngresoTotal() != null 
+            ? historial.getIngresoTotal() 
+            : BigDecimal.ZERO;
+        BigDecimal costoTotal = historial.getCostoTotalProduccion() != null 
+            ? historial.getCostoTotalProduccion() 
+            : BigDecimal.ZERO;
         
-        // Calcular porcentaje de cumplimiento
-        BigDecimal porcentajeCumplimiento = BigDecimal.ZERO;
-        if (cosecha.getCultivo().getRendimientoEsperado() != null && cosecha.getCultivo().getRendimientoEsperado().compareTo(BigDecimal.ZERO) > 0) {
-            porcentajeCumplimiento = rendimientoReal.divide(cosecha.getCultivo().getRendimientoEsperado(), 4, RoundingMode.HALF_UP)
-                .multiply(new BigDecimal("100"));
-        }
+        // Calcular rentabilidad
+        BigDecimal rentabilidad = costoTotal.compareTo(BigDecimal.ZERO) > 0
+            ? ingresoTotal.subtract(costoTotal).divide(costoTotal, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"))
+            : BigDecimal.ZERO;
         
         return new ReporteCosechasDTO(
-            cosecha.getId(),
-            cosecha.getLote().getId(),
-            cosecha.getLote().getNombre(),
-            cosecha.getCultivo().getId(),
-            cosecha.getCultivo().getNombre(),
-            cosecha.getCultivo().getVariedad(),
-            cosecha.getLote().getAreaHectareas(),
-            cosecha.getLote().getFechaSiembra(),
-            cosecha.getFecha(),
-            cosecha.getCantidadToneladas(),
-            "tn", // Unidad por defecto
+            historial.getId(),
+            historial.getLote().getId(),
+            historial.getLote().getNombre(),
+            historial.getCultivo().getId(),
+            historial.getCultivo().getNombre(),
+            historial.getVariedadSemilla(),
+            superficieHectareas,
+            historial.getFechaSiembra(),
+            historial.getFechaCosecha(),
+            cantidadCosechada,
+            historial.getUnidadCosecha(),
             rendimientoReal,
-            cosecha.getCultivo().getRendimientoEsperado(),
+            rendimientoEsperado,
             porcentajeCumplimiento,
-            cosecha.getPrecioPorTonelada(),
-            cosecha.getCostoTotal(),
+            precioUnitario,
+            costoTotal,
             ingresoTotal,
             rentabilidad,
-            cosecha.getLote().getCampo() != null ? cosecha.getLote().getCampo().getUbicacion() : null,
-            cosecha.getObservaciones()
+            historial.getLote().getCampo() != null ? historial.getLote().getCampo().getUbicacion() : null,
+            historial.getObservaciones()
         );
     }
-
-
-
-    private BigDecimal calcularIngresoTotal(Cosecha cosecha) {
-        if (cosecha.getPrecioPorTonelada() != null && cosecha.getCantidadToneladas() != null) {
-            return cosecha.getPrecioPorTonelada().multiply(cosecha.getCantidadToneladas());
-        }
-        return BigDecimal.ZERO;
-    }
+    
+    // MÉTODOS ELIMINADOS - La entidad Cosecha y tabla cosechas fueron eliminadas en V1_12
+    // Todos los reportes ahora usan historial_cosechas únicamente
 
     private Object calcularRentabilidad(ReporteCosechasDTO cosecha) {
         Map<String, Object> rentabilidad = new java.util.HashMap<>();

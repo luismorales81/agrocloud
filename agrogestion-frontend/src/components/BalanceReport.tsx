@@ -256,6 +256,103 @@ const BalanceReport: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Gráficos de Distribución por Tipo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Gráfico de Ingresos por Tipo */}
+            <Card>
+              <CardHeader>
+                <CardTitle>📊 Ingresos por Tipo</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const ingresos = balance.detalles.filter(d => d.tipo === 'INGRESO');
+                  const ingresosPorCategoria = ingresos.reduce((acc, detalle) => {
+                    const categoria = detalle.categoria || 'OTROS';
+                    acc[categoria] = (acc[categoria] || 0) + detalle.monto;
+                    return acc;
+                  }, {} as Record<string, number>);
+                  
+                  const totalIngresos = Object.values(ingresosPorCategoria).reduce((sum, val) => sum + val, 0);
+                  
+                  return (
+                    <div className="space-y-3">
+                      {Object.entries(ingresosPorCategoria).map(([categoria, monto]) => {
+                        const porcentaje = totalIngresos > 0 ? (monto / totalIngresos) * 100 : 0;
+                        return (
+                          <div key={categoria} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">{categoria.replace('_', ' ')}</span>
+                              <span className="font-medium">{formatCurrency(monto)}</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-green-600 h-2 rounded-full transition-all" 
+                                style={{width: `${porcentaje}%`}}
+                              />
+                            </div>
+                            <div className="text-xs text-gray-500 text-right">
+                              {porcentaje.toFixed(1)}%
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {Object.keys(ingresosPorCategoria).length === 0 && (
+                        <p className="text-gray-500 text-sm text-center py-4">No hay ingresos en este período</p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Gráfico de Costos por Tipo */}
+            <Card>
+              <CardHeader>
+                <CardTitle>📊 Costos por Tipo</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const costos = balance.detalles.filter(d => d.tipo === 'COSTO' || d.tipo === 'EGRESO');
+                  const costosPorCategoria = costos.reduce((acc, detalle) => {
+                    const categoria = detalle.categoria || 'OTROS';
+                    acc[categoria] = (acc[categoria] || 0) + detalle.monto;
+                    return acc;
+                  }, {} as Record<string, number>);
+                  
+                  const totalCostos = Object.values(costosPorCategoria).reduce((sum, val) => sum + val, 0);
+                  
+                  return (
+                    <div className="space-y-3">
+                      {Object.entries(costosPorCategoria).map(([categoria, monto]) => {
+                        const porcentaje = totalCostos > 0 ? (monto / totalCostos) * 100 : 0;
+                        return (
+                          <div key={categoria} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">{categoria.replace('LABOR - ', '').replace('_', ' ')}</span>
+                              <span className="font-medium">{formatCurrency(monto)}</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-red-600 h-2 rounded-full transition-all" 
+                                style={{width: `${porcentaje}%`}}
+                              />
+                            </div>
+                            <div className="text-xs text-gray-500 text-right">
+                              {porcentaje.toFixed(1)}%
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {Object.keys(costosPorCategoria).length === 0 && (
+                        <p className="text-gray-500 text-sm text-center py-4">No hay costos en este período</p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Detalles del Balance */}
           <Card>
             <CardHeader>

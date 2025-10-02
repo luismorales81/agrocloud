@@ -154,7 +154,7 @@ public class RoleService {
      * Obtener permisos de un rol
      */
     public List<String> getRolePermissions(Long roleId) {
-        Role role = getRoleById(roleId);
+        getRoleById(roleId); // Validar que el rol existe
         // Por ahora retornamos una lista vacía ya que el modelo actual no tiene permisos implementados
         // En el futuro esto debería consultar la tabla de permisos del rol
         return new ArrayList<>();
@@ -164,7 +164,7 @@ public class RoleService {
      * Asignar permisos a un rol
      */
     public void assignPermissions(Long roleId, List<String> permissions) {
-        Role role = getRoleById(roleId);
+        getRoleById(roleId); // Validar que el rol existe
         // Por ahora no hacemos nada ya que el modelo actual no tiene permisos implementados
         // En el futuro esto debería guardar los permisos en la tabla correspondiente
         // rolePermissionRepository.saveAll(permissions.stream()

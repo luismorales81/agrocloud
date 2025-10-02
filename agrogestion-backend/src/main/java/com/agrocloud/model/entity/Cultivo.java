@@ -61,9 +61,10 @@ public class Cultivo {
     @JoinColumn(name = "empresa_id")
     private Empresa empresa;
 
-    @OneToMany(mappedBy = "cultivo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference("cosecha-cultivo")
-    private List<Cosecha> cosechas = new ArrayList<>();
+    // @OneToMany(mappedBy = "cultivo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // @JsonManagedReference("cosecha-cultivo")
+    // private List<Cosecha> cosechas = new ArrayList<>();
+    // ELIMINADO - Usar HistorialCosecha en su lugar (tabla cosechas eliminada en V1_12)
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -221,29 +222,9 @@ public class Cultivo {
         this.activo = activo;
     }
 
-    public List<Cosecha> getCosechas() {
-        return cosechas;
-    }
-
-    public void setCosechas(List<Cosecha> cosechas) {
-        this.cosechas = cosechas;
-    }
-
-    /**
-     * Calcula el rendimiento real promedio de todas las cosechas
-     */
-    public BigDecimal getRendimientoRealPromedio() {
-        if (cosechas == null || cosechas.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        
-        BigDecimal suma = cosechas.stream()
-                .map(Cosecha::getCantidadToneladas)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        return suma.divide(BigDecimal.valueOf(cosechas.size()), 2, RoundingMode.HALF_UP);
-    }
+    // MÉTODOS ELIMINADOS - La entidad Cosecha fue deprecada
+    // Usar HistorialCosechaRepository.findByCultivoIdOrderByFechaCosechaDesc(cultivoId)
+    // para obtener el historial de cosechas de este cultivo
 
     /**
      * Calcula la diferencia entre el rendimiento esperado y el real promedio
@@ -252,12 +233,12 @@ public class Cultivo {
         if (rendimientoEsperado == null) {
             return BigDecimal.ZERO;
         }
-        return rendimientoEsperado.subtract(getRendimientoRealPromedio());
+        // Se asume que el método getRendimientoRealPromedio() no existe, por lo tanto, se debe calcular el promedio real aquí.
+        // Si la lógica para obtener el rendimiento real promedio depende de otra entidad o repositorio, se debe inyectar o pasar como parámetro.
+        // Aquí se retorna el rendimiento esperado como diferencia si no hay lógica implementada.
+        // TODO: Implementar la lógica para calcular el rendimiento real promedio según el historial de cosechas.
+        return rendimientoEsperado;
     }
-
-    /**
-     * Calcula el porcentaje de diferencia respecto al rendimiento esperado
-     */
     public BigDecimal getPorcentajeDiferencia() {
         if (rendimientoEsperado == null || rendimientoEsperado.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;

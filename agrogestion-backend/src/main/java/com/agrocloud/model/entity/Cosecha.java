@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -17,7 +16,12 @@ import java.time.LocalDateTime;
 /**
  * Entidad para representar las cosechas de cultivos
  * Permite registrar los rendimientos reales obtenidos y compararlos con las proyecciones
+ * 
+ * @deprecated Esta entidad está deprecada. Usar {@link HistorialCosecha} en su lugar.
+ * La tabla 'cosechas' será eliminada en la migración V1_12.
+ * Razón: Sistema unificado con historial_cosechas que tiene campos completos para análisis.
  */
+@Deprecated
 @Entity
 @Table(name = "cosechas")
 @EntityListeners(AuditingEntityListener.class)

@@ -62,7 +62,7 @@ const HistorialCosechasModal: React.FC<HistorialCosechasModalProps> = ({
         return;
       }
 
-      const response = await fetch(`http://localhost:8080/api/historial-cosechas/lote/${loteId}`, {
+      const response = await fetch(`/api/historial-cosechas/lote/${loteId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -212,20 +212,19 @@ const HistorialCosechasModal: React.FC<HistorialCosechasModalProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                   <div>
                     <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.25rem' }}>
-                      {cosecha.cultivo.nombre} - {cosecha.cultivo.variedad}
+                      {cosecha.cultivoNombre || cosecha.cultivo?.nombre || 'Cultivo no encontrado'} - {cosecha.variedadSemilla || cosecha.cultivo?.variedad || 'Variedad no especificada'}
                     </h3>
                     <p style={{ margin: '0.5rem 0 0 0', color: '#6b7280' }}>
-                      Variedad: {cosecha.variedadSemilla} | Superficie: {cosecha.superficieHectareas} ha
+                      Lote: {cosecha.loteNombre || cosecha.lote?.nombre || 'Lote no encontrado'} | Superficie: {cosecha.superficieHectareas || 0} ha
                     </p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ 
                       fontSize: '1.5rem', 
                       fontWeight: 'bold',
-                      color: cosecha.rendimientoReal >= cosecha.rendimientoEsperado ? '#10b981' : '#f59e0b'
+                      color: (cosecha.rendimientoReal || 0) >= (cosecha.rendimientoEsperado || 0) ? '#10b981' : '#f59e0b'
                     }}>
-                      {cosecha.rendimientoEsperado > 0 ? 
-                        ((cosecha.rendimientoReal / cosecha.rendimientoEsperado) * 100).toFixed(1) : '0'}%
+                      {cosecha.porcentajeCumplimiento ? cosecha.porcentajeCumplimiento.toFixed(1) : '0'}%
                     </div>
                     <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                       Cumplimiento
@@ -244,16 +243,16 @@ const HistorialCosechasModal: React.FC<HistorialCosechasModalProps> = ({
                     <strong>Duración del Ciclo:</strong> {calcularDiasCiclo(cosecha.fechaSiembra, cosecha.fechaCosecha)} días
                   </div>
                   <div>
-                    <strong>Cantidad Cosechada:</strong> {cosecha.cantidadCosechada.toLocaleString()} {cosecha.unidadCosecha}
+                    <strong>Cantidad Cosechada:</strong> {(cosecha.cantidadCosechada || 0).toLocaleString()} {cosecha.unidadCosecha || 'kg'}
                   </div>
                   <div>
-                    <strong>Rendimiento Real:</strong> {cosecha.rendimientoReal.toLocaleString()} kg/ha
+                    <strong>Rendimiento Real:</strong> {(cosecha.rendimientoReal || 0).toLocaleString()} kg/ha
                   </div>
                   <div>
-                    <strong>Rendimiento Esperado:</strong> {cosecha.rendimientoEsperado.toLocaleString()} kg/ha
+                    <strong>Rendimiento Esperado:</strong> {(cosecha.rendimientoEsperado || 0).toLocaleString()} kg/ha
                   </div>
                   <div>
-                    <strong>Cantidad Esperada:</strong> {cosecha.cantidadEsperada?.toLocaleString()} {cosecha.unidadCosecha}
+                    <strong>Cantidad Esperada:</strong> {(cosecha.cantidadEsperada || 0).toLocaleString()} {cosecha.unidadCosecha || 'kg'}
                   </div>
                   <div>
                     <strong>Estado del Suelo:</strong> 

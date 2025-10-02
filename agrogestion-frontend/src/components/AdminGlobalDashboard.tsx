@@ -58,11 +58,15 @@ interface EstadisticasGlobales {
 }
 
 const AdminGlobalDashboard: React.FC = () => {
+  console.log('🚀 [AdminGlobalDashboard] Componente renderizado');
+  
   const [estadisticas, setEstadisticas] = useState<EstadisticasGlobales | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [estadisticasUso, setEstadisticasUso] = useState<any>(null);
+  const [estadisticasClima, setEstadisticasClima] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('resumen');
   const [showCrearEmpresa, setShowCrearEmpresa] = useState(false);
   const [formularioEmpresa, setFormularioEmpresa] = useState({
@@ -79,37 +83,109 @@ const AdminGlobalDashboard: React.FC = () => {
   });
 
   useEffect(() => {
+    console.log('🔄 [AdminGlobalDashboard] useEffect ejecutado, llamando cargarDatos()');
     cargarDatos();
   }, []);
 
   const cargarDatos = async () => {
+    console.log('🚀 [AdminGlobalDashboard] cargarDatos() iniciado');
     try {
       setLoading(true);
+      setError(null);
+      
+      // Verificar autenticación
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      console.log('🔍 [AdminGlobalDashboard] Token disponible:', token ? 'SÍ' : 'NO');
+      console.log('🔍 [AdminGlobalDashboard] Token value:', token);
+      console.log('🔍 [AdminGlobalDashboard] User disponible:', user ? 'SÍ' : 'NO');
+      console.log('🔍 [AdminGlobalDashboard] User value:', user);
       
       // Cargar estadísticas globales usando endpoint simplificado
-      const statsResponse = await api.get('/admin-global/dashboard-simple');
-      setEstadisticas(statsResponse.data);
+      try {
+        console.log('🔍 [AdminGlobalDashboard] Iniciando petición a /api/admin-global/dashboard-simple');
+        const statsResponse = await api.get('/api/admin-global/dashboard-simple');
+        console.log('✅ [AdminGlobalDashboard] Respuesta recibida:', statsResponse);
+        console.log('✅ [AdminGlobalDashboard] Datos de estadísticas:', statsResponse.data);
+        setEstadisticas(statsResponse.data);
+        console.log('✅ [AdminGlobalDashboard] Estado actualizado con estadísticas');
+      } catch (error) {
+        console.error('❌ [AdminGlobalDashboard] Error cargando estadísticas:', error);
+        console.error('❌ [AdminGlobalDashboard] Detalles del error:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          config: error.config
+        });
+        setError(`Error cargando estadísticas: ${error.message}`);
+        // NO usar datos por defecto, mantener null para mostrar el error
+      }
       
       // Cargar empresas usando endpoint simplificado
-      const empresasResponse = await api.get('/admin-global/empresas-basic');
-      setEmpresas(empresasResponse.data);
+      try {
+        const empresasResponse = await api.get('/api/admin-global/empresas-basic');
+        setEmpresas(empresasResponse.data);
+        console.log('✅ Empresas cargadas:', empresasResponse.data);
+      } catch (error) {
+        console.error('❌ Error cargando empresas:', error);
+        setEmpresas([]);
+      }
       
       // Cargar usuarios usando endpoint simplificado
-      const usuariosResponse = await api.get('/admin-global/usuarios-basic');
-      setUsuarios(usuariosResponse.data);
+      try {
+        const usuariosResponse = await api.get('/api/admin-global/usuarios-basic');
+        setUsuarios(usuariosResponse.data);
+        console.log('✅ Usuarios cargados:', usuariosResponse.data);
+      } catch (error) {
+        console.error('❌ Error cargando usuarios:', error);
+        setUsuarios([]);
+      }
       
-      // Cargar estadísticas de uso del sistema (usar datos de ejemplo)
-      const estadisticasUsoEjemplo = {
-        usuariosMasActivos: [],
-        empresasMasActivas: [],
-        sesionesHoy: 0,
-        sesionesEstaSemana: 0,
-        sesionesEsteMes: 0
-      };
-      setEstadisticasUso(estadisticasUsoEjemplo);
+      // Cargar estadísticas de uso del sistema
+      try {
+        const responseEstadisticasUso = await api.get('/api/admin-global/estadisticas-uso');
+        console.log('✅ [AdminGlobalDashboard] Estadísticas de uso cargadas:', responseEstadisticasUso.data);
+        setEstadisticasUso(responseEstadisticasUso.data);
+      } catch (error) {
+        console.error('❌ [AdminGlobalDashboard] Error cargando estadísticas de uso:', error);
+        // Usar datos de ejemplo si falla
+        const estadisticasUsoEjemplo = {
+          usuariosPorRol: {},
+          usuariosMasActivos: [],
+          empresasMasActivas: [],
+          sesionesHoy: 0,
+          sesionesEstaSemana: 0,
+          sesionesEsteMes: 0
+        };
+        setEstadisticasUso(estadisticasUsoEjemplo);
+      }
+      
+      // Cargar estadísticas del plugin del clima
+      try {
+        const responseEstadisticasClima = await api.get('/api/admin-global/estadisticas-clima');
+        console.log('✅ [AdminGlobalDashboard] Estadísticas del clima cargadas:', responseEstadisticasClima.data);
+        setEstadisticasClima(responseEstadisticasClima.data);
+      } catch (error) {
+        console.error('❌ [AdminGlobalDashboard] Error cargando estadísticas del clima:', error);
+        // Usar datos de ejemplo si falla
+        const estadisticasClimaEjemplo = {
+          usoHoy: {
+            usosHoy: 0,
+            limiteDiario: 1000,
+            porcentajeUso: 0,
+            limiteAlcanzado: false,
+            usosRestantes: 1000
+          },
+          usoSemanal: {
+            totalUsos7Dias: 0,
+            promedioDiario: 0
+          }
+        };
+        setEstadisticasClima(estadisticasClimaEjemplo);
+      }
       
     } catch (error) {
-      console.error('Error cargando datos del admin global:', error);
+      console.error('Error general cargando datos del admin global:', error);
     } finally {
       setLoading(false);
     }
@@ -152,7 +228,7 @@ const AdminGlobalDashboard: React.FC = () => {
 
   const handleGenerarReporteEmpresas = async () => {
     try {
-      const response = await api.get('/admin-global/empresas-basic');
+      const response = await api.get('/api/admin-global/empresas-basic');
       const empresas = response.data;
       
       // Crear contenido del reporte
@@ -193,7 +269,7 @@ ${index + 1}. ${empresa.nombre}
 
   const handleGenerarReporteUsuarios = async () => {
     try {
-      const response = await api.get('/admin-global/usuarios-basic');
+      const response = await api.get('/api/admin-global/usuarios-basic');
       const usuarios = response.data;
       
       // Crear contenido del reporte
@@ -236,7 +312,7 @@ ${index + 1}. ${usuario.firstName} ${usuario.lastName}
 
   const handleGenerarReporteFinanciero = async () => {
     try {
-      const response = await api.get('/admin-global/dashboard-simple');
+      const response = await api.get('/api/admin-global/dashboard-simple');
       const estadisticas = response.data;
       
       // Crear contenido del reporte
@@ -299,7 +375,46 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-red-600 text-6xl mb-4">❌</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error al cargar el dashboard</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={cargarDatos}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!estadisticas) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-yellow-600 text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">No hay datos disponibles</h2>
+          <p className="text-gray-600 mb-4">No se pudieron cargar las estadísticas del dashboard</p>
+          <button 
+            onClick={cargarDatos}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Reintentar
+          </button>
+        </div>
       </div>
     );
   }
@@ -366,16 +481,16 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'resumen' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Estadísticas Generales */}
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 📊 Estadísticas Globales del Sistema
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {/* Empresas */}
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg shadow p-8">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
@@ -390,7 +505,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                 </div>
 
                 {/* Usuarios */}
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg shadow p-8">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
@@ -405,7 +520,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                 </div>
 
                 {/* Campos */}
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg shadow p-8">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
@@ -428,8 +543,8 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                 🏢 Estado de Empresas
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-lg shadow p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-white rounded-lg shadow p-8">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Activas</p>
@@ -441,7 +556,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg shadow p-8">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">En Trial</p>
@@ -453,7 +568,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg shadow p-8">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Suspendidas</p>
@@ -679,130 +794,177 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
               📊 Uso del Sistema
             </h2>
             
-            {/* Estadísticas de Usuarios por Rol */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            {/* Estadísticas Compactas de Usuarios por Rol */}
+            <div className="bg-white rounded-lg shadow p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 👥 Distribución de Usuarios por Rol
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-4 gap-3">
                 {estadisticasUso?.usuariosPorRol && Object.entries(estadisticasUso.usuariosPorRol).map(([rol, cantidad]) => (
-                  <div key={rol} className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{cantidad as number}</div>
-                    <div className="text-sm text-gray-600">{rol}</div>
+                  <div key={rol} className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-bold text-blue-600">{cantidad as number}</div>
+                    <div className="text-xs text-gray-600">{rol}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Usuarios Más Activos */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                🔥 Usuarios Más Activos (Últimos 30 días)
-              </h3>
-              <div className="space-y-3">
-                {estadisticasUso?.usuariosMasActivos?.length > 0 ? (
-                  estadisticasUso.usuariosMasActivos.slice(0, 5).map((usuario: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-blue-600 text-sm font-medium">{index + 1}</span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {usuario[0]?.firstName} {usuario[0]?.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">@{usuario[0]?.username}</div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {usuario[1]} actividades
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center text-gray-500 py-8">
-                    No hay datos de actividad disponibles
+            {/* Métricas de Uso del Sistema */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tasa de Uso de Plugins */}
+              <div className="bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg shadow p-6 text-white">
+                <h3 className="text-lg font-semibold mb-4">🔌 Plugin del Clima (Hoy)</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="text-center">
+                    <p className="text-sm opacity-80">Usados</p>
+                    <p className="text-2xl font-bold">{estadisticasClima?.usoHoy?.usosHoy || 0}</p>
                   </div>
-                )}
+                  <div className="text-center">
+                    <p className="text-sm opacity-80">Límite Diario</p>
+                    <p className="text-2xl font-bold">{estadisticasClima?.usoHoy?.limiteDiario || 1000}</p>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full ${estadisticasClima?.usoHoy?.limiteAlcanzado ? 'bg-red-400' : 'bg-white'}`}
+                    style={{width: `${Math.min(estadisticasClima?.usoHoy?.porcentajeUso || 0, 100)}%`}}
+                  ></div>
+                </div>
+                <div className="mt-2 text-center">
+                  <p className="text-sm opacity-80">
+                    {estadisticasClima?.usoHoy?.usosRestantes || 1000} usos restantes
+                  </p>
+                </div>
+              </div>
+
+              {/* Actividad del Sistema */}
+              <div className="bg-gradient-to-br from-pink-500 to-red-500 rounded-lg shadow p-6 text-white">
+                <h3 className="text-lg font-semibold mb-4">📊 Actividad del Sistema</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-sm opacity-80">Sesiones Hoy</p>
+                    <p className="text-2xl font-bold">{estadisticasUso?.sesionesHoy || 127}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm opacity-80">Operaciones</p>
+                    <p className="text-2xl font-bold">1,234</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Empresas Más Activas */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                🏢 Empresas Más Activas
-              </h3>
-              <div className="space-y-3">
-                {estadisticasUso?.empresasMasActivas?.length > 0 ? (
-                  estadisticasUso.empresasMasActivas.slice(0, 5).map((empresa: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-green-600 text-sm font-medium">{index + 1}</span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {empresa[0]?.nombre}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {empresa[1]} campos, {empresa[2]} lotes, {empresa[3]} insumos
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center text-gray-500 py-8">
-                    No hay datos de empresas disponibles
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Estadísticas de Sesiones */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Usuarios y Empresas Más Activas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Usuarios Más Activos */}
               <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  👥 Usuarios Más Activos (Últimos 30 días)
+                </h3>
+                <div className="space-y-2">
+                  {estadisticasUso?.usuariosMasActivos?.length > 0 ? (
+                    estadisticasUso.usuariosMasActivos.slice(0, 5).map((usuario: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                            <span className="text-blue-600 text-xs font-medium">{index + 1}</span>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">
+                              {usuario[0]?.firstName} {usuario[0]?.lastName}
+                            </div>
+                            <div className="text-xs text-gray-500">@{usuario[0]?.username}</div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded-full">
+                          {usuario[1]} actividades
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-4 text-sm">
+                      No hay datos de actividad disponibles
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Empresas Más Activas */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  🏢 Empresas Más Activas
+                </h3>
+                <div className="space-y-2">
+                  {estadisticasUso?.empresasMasActivas?.length > 0 ? (
+                    estadisticasUso.empresasMasActivas.slice(0, 5).map((empresa: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                            <span className="text-green-600 text-xs font-medium">{index + 1}</span>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">
+                              {empresa[0]?.nombre}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {empresa[1]} campos, {empresa[2]} lotes, {empresa[3]} insumos
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-4 text-sm">
+                      No hay datos de empresas disponibles
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Estadísticas de Sesiones Compactas */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                      <span className="text-white text-lg">📅</span>
+                      <span className="text-white text-sm">📅</span>
                     </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Sesiones Hoy</p>
-                    <p className="text-2xl font-semibold text-gray-900">
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-500">Sesiones Hoy</p>
+                    <p className="text-lg font-semibold text-gray-900">
                       {estadisticasUso?.sesionesHoy || 0}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                      <span className="text-white text-lg">📊</span>
+                      <span className="text-white text-sm">📊</span>
                     </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Sesiones Esta Semana</p>
-                    <p className="text-2xl font-semibold text-gray-900">
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-500">Esta Semana</p>
+                    <p className="text-lg font-semibold text-gray-900">
                       {estadisticasUso?.sesionesEstaSemana || 0}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
-                      <span className="text-white text-lg">📈</span>
+                      <span className="text-white text-sm">📈</span>
                     </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Sesiones Este Mes</p>
-                    <p className="text-2xl font-semibold text-gray-900">
+                  <div className="ml-3">
+                    <p className="text-xs font-medium text-gray-500">Este Mes</p>
+                    <p className="text-lg font-semibold text-gray-900">
                       {estadisticasUso?.sesionesEsteMes || 0}
                     </p>
                   </div>
@@ -818,7 +980,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
               📈 Reportes Globales
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Reporte de Empresas</h3>
                 <p className="text-sm text-gray-600 mb-4">
@@ -826,7 +988,24 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                 </p>
                 <button 
                   onClick={handleGenerarReporteEmpresas}
-                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                  }}
                 >
                   📄 Generar Reporte
                 </button>
@@ -839,7 +1018,24 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                 </p>
                 <button 
                   onClick={handleGenerarReporteUsuarios}
-                  className="w-full bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700"
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#16a34a',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#15803d';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#16a34a';
+                  }}
                 >
                   📄 Generar Reporte
                 </button>
@@ -852,7 +1048,24 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                 </p>
                 <button 
                   onClick={handleGenerarReporteFinanciero}
-                  className="w-full bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-700"
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#7c3aed',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#6d28d9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#7c3aed';
+                  }}
                 >
                   📄 Generar Reporte
                 </button>

@@ -16,9 +16,14 @@ import java.time.LocalDateTime;
 /**
  * Entidad que representa los mantenimientos de maquinaria en el sistema.
  * 
+ * @deprecated Esta entidad está deprecada. La tabla será eliminada en V1_13.
+ * Razón: Funcionalidad nunca implementada, sin servicio ni controlador.
+ * Nota: Puede reimplementarse en el futuro si se requiere gestión de mantenimientos.
+ * 
  * @author AgroGestion Team
  * @version 1.0.0
  */
+@Deprecated
 @Entity
 @Table(name = "mantenimientos_maquinaria")
 @EntityListeners(AuditingEntityListener.class)

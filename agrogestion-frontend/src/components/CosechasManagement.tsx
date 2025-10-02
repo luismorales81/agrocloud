@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HistorialCosechasModal from './HistorialCosechasModal';
 import api from '../services/api';
-import humidityService from '../services/humidityService';
+// import humidityService from '../services/humidityService';
 
 interface Cosecha {
   id?: number;
@@ -198,24 +198,26 @@ const CosechasManagement: React.FC = () => {
       const lotesData = lotesResponse.data;
         const lotesMapeados: Lote[] = lotesData
           .filter((lote: any) => {
-            // Solo incluir lotes que tienen cultivos sembrados (no disponibles)
-            return lote.cultivoActual && lote.cultivoActual.trim() !== '' && 
-                   lote.estado && lote.estado.toLowerCase() !== 'disponible';
+            // Incluir todos los lotes activos (no solo los que tienen cultivo actual)
+            return lote.activo !== false;
           })
-          .map((lote: any) => ({
-          id: lote.id,
-          nombre: lote.nombre,
-          superficie: lote.areaHectareas || 0,
-          cultivo: lote.cultivoActual || '',
-            campo_id: lote.campoId || 0,
-            fechaSiembra: lote.fechaSiembra || '',
-            cultivoActual: lote.cultivoActual || '',
-            campo: lote.campo ? {
-              id: lote.campo.id,
-              nombre: lote.campo.nombre,
-              ubicacion: lote.campo.ubicacion
-            } : undefined
-        }));
+          .map((lote: any) => {
+            console.log('🔍 Lote recibido:', lote);
+            return {
+              id: lote.id,
+              nombre: lote.nombre,
+              superficie: lote.areaHectareas || 0,
+              cultivo: lote.cultivoActual || '',
+              campo_id: lote.campoId || 0,
+              fechaSiembra: lote.fechaSiembra || '',
+              cultivoActual: lote.cultivoActual || '',
+              campo: lote.campo ? {
+                id: lote.campo.id,
+                nombre: lote.campo.nombre,
+                ubicacion: lote.campo.ubicacion
+              } : undefined
+            };
+          });
         setLotes(lotesMapeados);
 
       // Cargar cultivos
@@ -235,56 +237,47 @@ const CosechasManagement: React.FC = () => {
       const cosechasData = cosechasResponse.data;
         console.log('Cosechas recibidas del backend:', cosechasData);
         
-        const cosechasMapeadas: Cosecha[] = cosechasData.map((cosecha: any) => ({
-          id: cosecha.id,
-          lote_id: cosecha.loteId || 0,
-          cultivo_id: cosecha.cultivoId || 0,
-          superficie_ha: 0, // Se calculará desde el lote
-          fecha_siembra: '', // Se obtendrá del lote
-          densidad_siembra: 0,
-          variedad_semilla: '', // Se obtendrá del cultivo
-          fertilizante_nitrogeno: 0,
-          fertilizante_fosforo: 0,
-          fertilizante_potasio: 0,
-          otros_insumos: '',
-          fecha_cosecha: cosecha.fecha || '',
-          cantidad_cosechada: cosecha.cantidadToneladas ? cosecha.cantidadToneladas * 1000 : 0, // Convertir de tn a kg
-          unidad_cosecha: 'kg',
-          rinde_real: 0, // Se calculará
-          rinde_esperado: 0, // Se obtendrá del cultivo
-          diferencia_rinde: 0,
-          porcentaje_cumplimiento: 0,
-          clima_favorable: true,
-          plagas_enfermedades: cosecha.plagasEnfermedades || false,
-          riego_suficiente: cosecha.riegoSuficiente || true,
-          observaciones: cosecha.observaciones || ''
-        }));
+        const cosechasMapeadas: Cosecha[] = cosechasData.map((cosecha: any) => {
+          console.log('🔍 Cosecha recibida:', cosecha);
+          return {
+            id: cosecha.id,
+            lote_id: cosecha.loteId || 0,
+            cultivo_id: cosecha.cultivoId || 0,
+            superficie_ha: cosecha.superficieHectareas || 0,
+            fecha_siembra: cosecha.fechaSiembra || '',
+            densidad_siembra: 0,
+            variedad_semilla: cosecha.variedadSemilla || '',
+            fertilizante_nitrogeno: 0,
+            fertilizante_fosforo: 0,
+            fertilizante_potasio: 0,
+            otros_insumos: '',
+            fecha_cosecha: cosecha.fechaCosecha || '',
+            cantidad_cosechada: cosecha.cantidadCosechada || 0,
+            unidad_cosecha: cosecha.unidadCosecha || 'kg',
+            rinde_real: cosecha.rendimientoReal || 0,
+            rinde_esperado: cosecha.rendimientoEsperado || 0,
+            diferencia_rinde: cosecha.diferenciaRendimiento || 0,
+            porcentaje_cumplimiento: cosecha.porcentajeCumplimiento || 0,
+            clima_favorable: true,
+            plagas_enfermedades: false,
+            riego_suficiente: true,
+            observaciones: cosecha.observaciones || ''
+          };
+        });
         
-        // Enriquecer los datos con información de lotes y cultivos
+        // Los datos ya vienen completos del DTO, solo agregamos información adicional si es necesario
         const cosechasEnriquecidas = cosechasMapeadas.map(cosecha => {
-          const lote = lotesMapeados.find(l => l.id === cosecha.lote_id);
-          const cultivo = cultivosMapeados.find(c => c.id === cosecha.cultivo_id);
-          
-          const superficie = lote?.superficie || 0;
-          const rindeEsperado = cultivo?.rendimiento_esperado || 0;
-          
-          // Calcular rendimiento real en la unidad del cultivo
-          const rindeReal = calcularRendimientoReal(
-            cosecha.cantidad_cosechada, 
-            cosecha.unidad_cosecha, 
-            superficie, 
-            cultivo?.unidad_rendimiento || 'kg/ha'
-          );
+          console.log(`🔍 Procesando cosecha ${cosecha.id}:`, {
+            lote_id: cosecha.lote_id,
+            cultivo_id: cosecha.cultivo_id,
+            superficie: cosecha.superficie_ha,
+            variedad: cosecha.variedad_semilla,
+            rendimiento_real: cosecha.rinde_real,
+            rendimiento_esperado: cosecha.rinde_esperado
+          });
           
           return {
-            ...cosecha,
-            superficie_ha: superficie,
-            fecha_siembra: lote?.fechaSiembra || '',
-            variedad_semilla: cultivo?.variedad || '',
-            rinde_esperado: rindeEsperado,
-            rinde_real: rindeReal,
-            diferencia_rinde: rindeReal - rindeEsperado,
-            porcentaje_cumplimiento: rindeEsperado > 0 ? (rindeReal / rindeEsperado) * 100 : 0
+            ...cosecha
           };
         });
         
@@ -1094,12 +1087,12 @@ const CosechasManagement: React.FC = () => {
                               }
                             }
                             
-                            return rendimientoCorregido >= rindeEsperadoEnKg ? '#10b981' : '#f59e0b';
+                            return formData.rinde_real >= rindeEsperadoEnKg ? '#10b981' : '#f59e0b';
                           })()
                         }}>
                           {(() => {
                             // Usar las mismas unidades para la comparación
-                            return formData.rinde_esperado > 0 ? ((rendimientoCorregido / formData.rinde_esperado) * 100).toFixed(1) : '0';
+                            return formData.rinde_esperado > 0 ? ((formData.rinde_real / formData.rinde_esperado) * 100).toFixed(1) : '0';
                           })()}%
                       </div>
                       <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Cumplimiento</div>
@@ -1125,12 +1118,12 @@ const CosechasManagement: React.FC = () => {
                               }
                             }
                             
-                            return (rendimientoCorregido - formData.rinde_esperado) >= 0 ? '#10b981' : '#ef4444';
+                            return (formData.rinde_real - formData.rinde_esperado) >= 0 ? '#10b981' : '#ef4444';
                           })()
                         }}>
                           {(() => {
                             // Calcular diferencia en las mismas unidades
-                            const diferencia = rendimientoCorregido - formData.rinde_esperado;
+                            const diferencia = formData.rinde_real - formData.rinde_esperado;
                             return (diferencia >= 0 ? '+' : '') + diferencia.toFixed(3);
                           })()} {(() => {
                             const cultivo = cultivos.find(c => c.id === formData.cultivo_id);

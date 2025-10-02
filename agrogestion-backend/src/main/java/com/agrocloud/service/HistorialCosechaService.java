@@ -30,55 +30,39 @@ public class HistorialCosechaService {
     @Autowired
     private PlotRepository plotRepository;
 
-    @Autowired
-    private UserService userService;
 
     /**
-     * Crear un nuevo registro en el historial de cosechas
+     * Crear un nuevo registro en el historial de cosechas directamente
+     * (sin pasar por la entidad Cosecha deprecada)
      */
-    public HistorialCosecha crearHistorialCosecha(Cosecha cosecha, User usuario) {
+    public HistorialCosecha crearHistorialCosecha(Plot lote, Cultivo cultivo, LocalDate fechaCosecha,
+                                                 BigDecimal cantidadCosechada, String unidadCosecha,
+                                                 String variedadSemilla, String estadoSuelo,
+                                                 Boolean requiereDescanso, Integer diasDescanso,
+                                                 String observaciones, User usuario) {
         HistorialCosecha historial = new HistorialCosecha();
         
-        // Mapear datos de la cosecha al historial
-        historial.setLote(cosecha.getLote());
-        historial.setCultivo(cosecha.getCultivo());
+        historial.setLote(lote);
+        historial.setCultivo(cultivo);
+        historial.setFechaSiembra(lote.getFechaSiembra());
+        historial.setFechaCosecha(fechaCosecha);
+        historial.setSuperficieHectareas(lote.getAreaHectareas());
+        historial.setCantidadCosechada(cantidadCosechada);
+        historial.setUnidadCosecha(unidadCosecha);
         
-        // Obtener datos del lote para fechas y superficie
-        Plot lote = cosecha.getLote();
-        if (lote != null) {
-            historial.setFechaSiembra(lote.getFechaSiembra());
-            historial.setSuperficieHectareas(lote.getAreaHectareas());
-        }
-        
-        // Usar la fecha de la cosecha
-        historial.setFechaCosecha(cosecha.getFecha());
-        
-        // Mapear cantidad cosechada (convertir de toneladas a kg)
-        if (cosecha.getCantidadToneladas() != null) {
-            historial.setCantidadCosechada(cosecha.getCantidadToneladas().multiply(new BigDecimal("1000")));
-            historial.setUnidadCosecha("kg");
-        }
-        
-        // Calcular rendimiento real si tenemos superficie
-        if (lote != null && lote.getAreaHectareas() != null && lote.getAreaHectareas().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal rendimientoReal = cosecha.getCantidadToneladas() != null ? 
-                cosecha.getCantidadToneladas().multiply(new BigDecimal("1000")).divide(lote.getAreaHectareas(), 2, java.math.RoundingMode.HALF_UP) : 
-                BigDecimal.ZERO;
+        // Calcular rendimiento real
+        if (lote.getAreaHectareas() != null && lote.getAreaHectareas().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal rendimientoReal = cantidadCosechada.divide(lote.getAreaHectareas(), 2, java.math.RoundingMode.HALF_UP);
             historial.setRendimientoReal(rendimientoReal);
         }
         
-        // Obtener rendimiento esperado del cultivo
-        if (cosecha.getCultivo() != null && cosecha.getCultivo().getRendimientoEsperado() != null) {
-            historial.setRendimientoEsperado(cosecha.getCultivo().getRendimientoEsperado());
-        }
-        
-        // Valores por defecto para campos no disponibles en la entidad Cosecha actual
-        historial.setVariedadSemilla(cosecha.getCultivo() != null ? cosecha.getCultivo().getVariedad() : "");
-        historial.setObservaciones(cosecha.getObservaciones());
+        historial.setRendimientoEsperado(cultivo.getRendimientoEsperado());
+        historial.setVariedadSemilla(variedadSemilla);
+        historial.setEstadoSuelo(estadoSuelo != null ? estadoSuelo : "BUENO");
+        historial.setRequiereDescanso(requiereDescanso != null ? requiereDescanso : false);
+        historial.setDiasDescansoRecomendados(diasDescanso != null ? diasDescanso : 0);
+        historial.setObservaciones(observaciones);
         historial.setUsuario(usuario);
-
-        // Determinar si requiere descanso basado en el cultivo y rendimiento
-        determinarRequerimientoDescanso(historial);
 
         return historialCosechaRepository.save(historial);
     }

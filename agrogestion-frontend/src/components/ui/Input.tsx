@@ -10,6 +10,7 @@ interface InputProps {
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  'data-testid'?: string;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -22,6 +23,7 @@ const Input: React.FC<InputProps> = ({
   required = false,
   disabled = false,
   className = '',
+  'data-testid': dataTestId,
 }) => {
   return (
     <div className={`mb-4 ${className}`}>
@@ -42,6 +44,7 @@ const Input: React.FC<InputProps> = ({
         }}
         disabled={disabled}
         className={`input ${error ? 'input-error' : ''}`}
+        data-testid={dataTestId}
       />
       {error && (
         <p className="mt-1 text-sm text-danger-500">{error}</p>

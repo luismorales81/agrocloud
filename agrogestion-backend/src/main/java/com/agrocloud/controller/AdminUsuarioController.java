@@ -13,12 +13,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -73,30 +74,86 @@ public class AdminUsuarioController {
     }
 
     /**
-     * Obtener todos los usuarios
+     * Obtener usuarios según permisos del usuario autenticado
      */
     @GetMapping
-    @Operation(summary = "Listar usuarios", description = "Obtener lista de todos los usuarios del sistema")
-    public ResponseEntity<List<AdminUsuarioDTO>> obtenerTodosLosUsuarios() {
+    @Operation(summary = "Listar usuarios", description = "Obtener lista de usuarios según permisos del usuario autenticado")
+    public ResponseEntity<List<AdminUsuarioDTO>> obtenerUsuariosSegunPermisos(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            List<AdminUsuarioDTO> usuarios = adminUsuarioService.obtenerTodosLosUsuarios();
+            System.out.println("🔍 [AdminUsuarioController] Iniciando obtención de usuarios para: " + (userDetails != null ? userDetails.getUsername() : "null"));
+            
+            if (userDetails == null) {
+                System.err.println("❌ [AdminUsuarioController] ERROR: UserDetails es null");
+                return ResponseEntity.status(401).build();
+            }
+            
+            // Obtener el usuario autenticado
+            User usuarioAutenticado = userService.findByEmail(userDetails.getUsername());
+            if (usuarioAutenticado == null) {
+                System.err.println("❌ [AdminUsuarioController] ERROR: Usuario no encontrado: " + userDetails.getUsername());
+                return ResponseEntity.status(404).build();
+            }
+            
+            System.out.println("🔍 [AdminUsuarioController] Usuario autenticado: " + usuarioAutenticado.getEmail() + ", esAdmin: " + usuarioAutenticado.isAdmin() + ", esSuperAdmin: " + usuarioAutenticado.isSuperAdmin());
+            System.out.println("🔍 [AdminUsuarioController] Roles del usuario: " + usuarioAutenticado.getRoles().stream().map(r -> r.getNombre()).toList());
+            
+            List<AdminUsuarioDTO> usuarios;
+            
+            // Verificar si es SUPERADMIN (puede ver todos los usuarios)
+            if (usuarioAutenticado.isSuperAdmin()) {
+                System.out.println("🔍 [AdminUsuarioController] Usuario es SUPERADMIN, mostrando todos los usuarios");
+                usuarios = adminUsuarioService.obtenerTodosLosUsuarios();
+            } else if (usuarioAutenticado.isAdmin()) {
+                // ADMINISTRADOR solo puede ver sus usuarios subordinados
+                System.out.println("🔍 [AdminUsuarioController] Usuario es ADMINISTRADOR, mostrando solo usuarios subordinados");
+                usuarios = adminUsuarioService.obtenerUsuariosSubordinados(usuarioAutenticado.getId());
+            } else {
+                // Otros usuarios no pueden acceder a la administración de usuarios
+                System.out.println("❌ [AdminUsuarioController] Usuario no tiene permisos para administrar usuarios");
+                return ResponseEntity.status(403).build();
+            }
+            
+            System.out.println("🔍 [AdminUsuarioController] Usuarios obtenidos: " + usuarios.size());
             return ResponseEntity.ok(usuarios);
         } catch (Exception e) {
+            System.err.println("❌ [AdminUsuarioController] Error obteniendo usuarios: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
         }
     }
 
     /**
-     * Obtener usuario por ID
+     * Obtener usuario por ID (con validación de permisos)
      */
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener usuario", description = "Obtener usuario específico por ID")
-    public ResponseEntity<AdminUsuarioDTO> obtenerUsuarioPorId(@PathVariable Long id) {
+    @Operation(summary = "Obtener usuario", description = "Obtener usuario específico por ID según permisos")
+    public ResponseEntity<AdminUsuarioDTO> obtenerUsuarioPorId(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
+            System.out.println("🔍 [AdminUsuarioController] Obteniendo usuario ID: " + id + " para: " + (userDetails != null ? userDetails.getUsername() : "null"));
+            
+            if (userDetails == null) {
+                System.err.println("❌ [AdminUsuarioController] ERROR: UserDetails es null");
+                return ResponseEntity.status(401).build();
+            }
+            
+            // Obtener el usuario autenticado
+            User usuarioAutenticado = userService.findByEmail(userDetails.getUsername());
+            if (usuarioAutenticado == null) {
+                System.err.println("❌ [AdminUsuarioController] ERROR: Usuario no encontrado: " + userDetails.getUsername());
+                return ResponseEntity.status(404).build();
+            }
+            
+            // Verificar si el usuario autenticado puede gestionar este usuario
+            if (!adminUsuarioService.puedeGestionarUsuario(usuarioAutenticado, id)) {
+                System.err.println("❌ [AdminUsuarioController] ERROR: Usuario " + usuarioAutenticado.getEmail() + " no tiene permisos para ver usuario ID: " + id);
+                return ResponseEntity.status(403).build();
+            }
+            
             AdminUsuarioDTO usuario = adminUsuarioService.obtenerUsuarioPorId(id);
+            System.out.println("✅ [AdminUsuarioController] Usuario obtenido exitosamente: " + usuario.getUsername());
             return ResponseEntity.ok(usuario);
         } catch (Exception e) {
+            System.err.println("❌ [AdminUsuarioController] Error obteniendo usuario ID " + id + ": " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(404).body(null);
         }
@@ -205,15 +262,48 @@ public class AdminUsuarioController {
     }
 
     /**
-     * Obtener estadísticas de usuarios
+     * Obtener estadísticas de usuarios según permisos del usuario autenticado
      */
     @GetMapping("/estadisticas")
-    @Operation(summary = "Estadísticas", description = "Obtener estadísticas generales de usuarios")
-    public ResponseEntity<Map<String, Object>> obtenerEstadisticasUsuarios() {
+    @Operation(summary = "Estadísticas", description = "Obtener estadísticas de usuarios según permisos del usuario autenticado")
+    public ResponseEntity<Map<String, Object>> obtenerEstadisticasUsuarios(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Map<String, Object> estadisticas = adminUsuarioService.obtenerEstadisticasUsuarios();
+            System.out.println("🔍 [AdminUsuarioController] Obteniendo estadísticas para: " + (userDetails != null ? userDetails.getUsername() : "null"));
+            
+            if (userDetails == null) {
+                System.err.println("❌ [AdminUsuarioController] ERROR: UserDetails es null");
+                return ResponseEntity.status(401).build();
+            }
+            
+            // Obtener el usuario autenticado
+            User usuarioAutenticado = userService.findByEmail(userDetails.getUsername());
+            if (usuarioAutenticado == null) {
+                System.err.println("❌ [AdminUsuarioController] ERROR: Usuario no encontrado: " + userDetails.getUsername());
+                return ResponseEntity.status(404).build();
+            }
+            
+            System.out.println("🔍 [AdminUsuarioController] Usuario autenticado para estadísticas: " + usuarioAutenticado.getEmail() + ", esSuperAdmin: " + usuarioAutenticado.isSuperAdmin());
+            
+            Map<String, Object> estadisticas;
+            
+            // Verificar si es SUPERADMIN (puede ver estadísticas de todos los usuarios)
+            if (usuarioAutenticado.isSuperAdmin()) {
+                System.out.println("🔍 [AdminUsuarioController] Usuario es SUPERADMIN, mostrando estadísticas de todos los usuarios");
+                estadisticas = adminUsuarioService.obtenerEstadisticasUsuarios();
+            } else if (usuarioAutenticado.isAdmin()) {
+                // ADMINISTRADOR solo puede ver estadísticas de sus usuarios subordinados
+                System.out.println("🔍 [AdminUsuarioController] Usuario es ADMINISTRADOR, mostrando estadísticas de usuarios subordinados");
+                estadisticas = adminUsuarioService.obtenerEstadisticasUsuariosSubordinados(usuarioAutenticado.getId());
+            } else {
+                // Otros usuarios no pueden acceder a las estadísticas
+                System.out.println("❌ [AdminUsuarioController] Usuario no tiene permisos para ver estadísticas");
+                return ResponseEntity.status(403).build();
+            }
+            
+            System.out.println("🔍 [AdminUsuarioController] Estadísticas obtenidas: " + estadisticas);
             return ResponseEntity.ok(estadisticas);
         } catch (Exception e) {
+            System.err.println("❌ [AdminUsuarioController] Error obteniendo estadísticas: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
         }

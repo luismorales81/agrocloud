@@ -1,7 +1,6 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.exception.ResourceNotFoundException;
-import com.agrocloud.exception.ResourceConflictException;
 import com.agrocloud.model.entity.Insumo;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.service.InsumoService;

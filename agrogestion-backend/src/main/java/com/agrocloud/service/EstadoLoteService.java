@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -200,12 +199,7 @@ public class EstadoLoteService {
      * Obtener la empresa asociada al lote
      */
     private Long obtenerEmpresaDelLote(Plot lote) {
-        // Si el lote tiene empresa directa, usarla
-        if (lote.getEmpresa() != null) {
-            return lote.getEmpresa().getId();
-        }
-        
-        // Si no, usar la empresa del usuario propietario
+        // Como la tabla lotes no tiene empresa_id, usar la empresa del usuario propietario
         if (lote.getUser() != null && !lote.getUser().getUserCompanyRoles().isEmpty()) {
             return lote.getUser().getUserCompanyRoles().iterator().next().getEmpresa().getId();
         }
@@ -299,10 +293,34 @@ public class EstadoLoteService {
                 mensaje.append("• Se podrán programar labores de mantenimiento\n");
                 break;
                 
+            case EN_CRECIMIENTO:
+                mensaje.append("🌿 **Al cambiar a EN CRECIMIENTO:**\n");
+                mensaje.append("• Se monitoreará el desarrollo del cultivo\n");
+                mensaje.append("• Se podrán programar labores de fertilización\n");
+                break;
+                
+            case EN_FLORACION:
+                mensaje.append("🌸 **Al cambiar a EN FLORACIÓN:**\n");
+                mensaje.append("• Se monitoreará la floración\n");
+                mensaje.append("• Se podrán programar labores de polinización\n");
+                break;
+                
+            case EN_FRUTIFICACION:
+                mensaje.append("🍅 **Al cambiar a EN FRUTIFICACIÓN:**\n");
+                mensaje.append("• Se monitoreará el desarrollo de frutos\n");
+                mensaje.append("• Se podrán programar labores de protección\n");
+                break;
+                
             case LISTO_PARA_COSECHA:
                 mensaje.append("🌾 **Al cambiar a LISTO PARA COSECHA:**\n");
                 mensaje.append("• Se podrá programar la labor de cosecha\n");
                 mensaje.append("• Se calculará el rendimiento esperado\n");
+                break;
+                
+            case EN_COSECHA:
+                mensaje.append("🚜 **Al cambiar a EN COSECHA:**\n");
+                mensaje.append("• Se registrarán las labores de cosecha\n");
+                mensaje.append("• Se calculará el rendimiento real\n");
                 break;
                 
             case COSECHADO:
@@ -310,6 +328,30 @@ public class EstadoLoteService {
                 mensaje.append("• Se registrará la fecha de cosecha real\n");
                 mensaje.append("• Se calculará el rendimiento obtenido\n");
                 mensaje.append("• El lote pasará a descanso\n");
+                break;
+                
+            case PREPARADO:
+                mensaje.append("🔧 **Al cambiar a PREPARADO:**\n");
+                mensaje.append("• El lote está listo para la siembra\n");
+                mensaje.append("• Se pueden programar labores de preparación\n");
+                break;
+                
+            case EN_PREPARACION:
+                mensaje.append("⚙️ **Al cambiar a EN PREPARACIÓN:**\n");
+                mensaje.append("• Se están realizando labores de preparación\n");
+                mensaje.append("• Se preparará el suelo para la siembra\n");
+                break;
+                
+            case DISPONIBLE:
+                mensaje.append("✅ **Al cambiar a DISPONIBLE:**\n");
+                mensaje.append("• El lote está disponible para uso\n");
+                mensaje.append("• Se puede asignar a nuevos cultivos\n");
+                break;
+                
+            case ABANDONADO:
+                mensaje.append("❌ **Al cambiar a ABANDONADO:**\n");
+                mensaje.append("• El lote no se utilizará temporalmente\n");
+                mensaje.append("• Se requiere revisión antes de reutilizar\n");
                 break;
                 
             case EN_DESCANSO:
@@ -338,10 +380,55 @@ public class EstadoLoteService {
                 consecuencias.add("Se calculará la fecha estimada de cosecha");
                 break;
                 
+            case EN_CRECIMIENTO:
+                consecuencias.add("Se monitoreará el desarrollo del cultivo");
+                consecuencias.add("Se podrán programar labores de fertilización");
+                break;
+                
+            case EN_FLORACION:
+                consecuencias.add("Se monitoreará la floración");
+                consecuencias.add("Se podrán programar labores de polinización");
+                break;
+                
+            case EN_FRUTIFICACION:
+                consecuencias.add("Se monitoreará el desarrollo de frutos");
+                consecuencias.add("Se podrán programar labores de protección");
+                break;
+                
+            case LISTO_PARA_COSECHA:
+                consecuencias.add("Se podrá programar la labor de cosecha");
+                consecuencias.add("Se calculará el rendimiento esperado");
+                break;
+                
+            case EN_COSECHA:
+                consecuencias.add("Se registrarán las labores de cosecha");
+                consecuencias.add("Se calculará el rendimiento real");
+                break;
+                
             case COSECHADO:
                 consecuencias.add("Se finalizará el ciclo de cultivo actual");
                 consecuencias.add("El lote pasará a descanso");
                 consecuencias.add("Se podrá planificar el próximo ciclo");
+                break;
+                
+            case PREPARADO:
+                consecuencias.add("El lote está listo para la siembra");
+                consecuencias.add("Se pueden programar labores de preparación");
+                break;
+                
+            case EN_PREPARACION:
+                consecuencias.add("Se están realizando labores de preparación");
+                consecuencias.add("Se preparará el suelo para la siembra");
+                break;
+                
+            case DISPONIBLE:
+                consecuencias.add("El lote está disponible para uso");
+                consecuencias.add("Se puede asignar a nuevos cultivos");
+                break;
+                
+            case ABANDONADO:
+                consecuencias.add("El lote no se utilizará temporalmente");
+                consecuencias.add("Se requiere revisión antes de reutilizar");
                 break;
                 
             case EN_DESCANSO:

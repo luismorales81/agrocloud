@@ -1,7 +1,6 @@
 package com.agrocloud.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.agrocloud.model.enums.EstadoLote;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -105,11 +104,11 @@ public class Plot {
     @JsonIgnore
     private User user;
 
-    // Relación con la empresa (para sistema multitenant)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id")
-    @JsonIgnore
-    private Empresa empresa;
+    // Relación con la empresa (para sistema multitenant) - REMOVIDO porque la tabla no tiene empresa_id
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @JoinColumn(name = "empresa_id")
+    // @JsonIgnore
+    // private Empresa empresa;
 
 
     // Constructors
@@ -313,7 +312,11 @@ public class Plot {
     }
     
     public boolean puedeCosechar() {
-        return estado == EstadoLote.LISTO_PARA_COSECHA;
+        return estado == EstadoLote.SEMBRADO || 
+               estado == EstadoLote.EN_CRECIMIENTO || 
+               estado == EstadoLote.EN_FLORACION || 
+               estado == EstadoLote.EN_FRUTIFICACION || 
+               estado == EstadoLote.LISTO_PARA_COSECHA;
     }
     
     public void cambiarEstado(EstadoLote nuevoEstado, String motivo) {
@@ -337,13 +340,14 @@ public class Plot {
     }
 
     // Getters y Setters para empresa
-    public Empresa getEmpresa() {
-        return empresa;
-    }
+    // Comentado porque la tabla no tiene empresa_id
+    // public Empresa getEmpresa() {
+    //     return empresa;
+    // }
 
-    public void setEmpresa(Empresa empresa) {
-        this.empresa = empresa;
-    }
+    // public void setEmpresa(Empresa empresa) {
+    //     this.empresa = empresa;
+    // }
 
     @Override
     public String toString() {

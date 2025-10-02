@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/cultivos")
+@RequestMapping("/api/v1/cultivos")
 @CrossOrigin(origins = "*")
 public class CultivoController {
 
@@ -28,11 +28,31 @@ public class CultivoController {
     @GetMapping
     public ResponseEntity<List<Cultivo>> getAllCultivos(@AuthenticationPrincipal UserDetails userDetails) {
         try {
+            System.out.println("[CULTIVO_CONTROLLER] Iniciando getAllCultivos para usuario: " + (userDetails != null ? userDetails.getUsername() : "null"));
+            
+            if (userDetails == null) {
+                System.err.println("[CULTIVO_CONTROLLER] ERROR: UserDetails es null");
+                return ResponseEntity.status(401).build();
+            }
+            
             User user = userService.findByEmail(userDetails.getUsername());
+            if (user == null) {
+                System.err.println("[CULTIVO_CONTROLLER] ERROR: Usuario no encontrado: " + userDetails.getUsername());
+                return ResponseEntity.status(404).build();
+            }
+            
+            System.out.println("[CULTIVO_CONTROLLER] Usuario encontrado: " + user.getEmail() + ", esAdmin: " + user.isAdmin());
+            System.out.println("[CULTIVO_CONTROLLER] Roles del usuario: " + user.getRoles().stream().map(r -> r.getNombre()).toList());
+            
             List<Cultivo> cultivos = cultivoService.getCultivosByUser(user);
+            System.out.println("[CULTIVO_CONTROLLER] Cultivos encontrados: " + cultivos.size());
+            
             return ResponseEntity.ok(cultivos);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            System.err.println("[CULTIVO_CONTROLLER] ERROR en getAllCultivos: " + e.getMessage());
+            System.err.println("[CULTIVO_CONTROLLER] Stack trace completo:");
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -76,17 +96,15 @@ public class CultivoController {
     public ResponseEntity<Cultivo> updateCultivo(@PathVariable Long id, @RequestBody Cultivo cultivo, @AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = userService.findByEmail(userDetails.getUsername());
-            Optional<Cultivo> existingCultivo = cultivoService.getCultivoById(id, user);
+            Optional<Cultivo> updatedCultivo = cultivoService.updateCultivo(id, cultivo, user);
             
-            if (existingCultivo.isPresent()) {
-                cultivo.setId(id);
-                cultivo.setUsuario(user);
-                Cultivo updatedCultivo = cultivoService.saveCultivo(cultivo);
-                return ResponseEntity.ok(updatedCultivo);
+            if (updatedCultivo.isPresent()) {
+                return ResponseEntity.ok(updatedCultivo.get());
             } else {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
+            e.printStackTrace(); // Agregar logging para debug
             return ResponseEntity.internalServerError().build();
         }
     }

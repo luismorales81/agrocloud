@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.agrocloud.service.WeatherService;
+import com.agrocloud.service.WeatherApiUsageService;
 import com.agrocloud.dto.WeatherDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,8 +34,9 @@ public class WeatherSimpleController {
     
     private static final Logger logger = LoggerFactory.getLogger(WeatherSimpleController.class);
     
+    
     @Autowired
-    private WeatherService weatherService;
+    private WeatherApiUsageService weatherApiUsageService;
     
     @GetMapping("/test")
     public ResponseEntity<String> test() {
@@ -66,6 +67,16 @@ public class WeatherSimpleController {
     public ResponseEntity<WeatherDTO> coordinates(@RequestParam double latitude, @RequestParam double longitude) {
         try {
             logger.info("🌤️ [WeatherSimpleController] Obteniendo clima real para lat: {}, lon: {}", latitude, longitude);
+            
+            // Verificar si se puede hacer la llamada (no se ha alcanzado el límite)
+            if (!weatherApiUsageService.puedeHacerLlamada()) {
+                logger.warn("⚠️ [WeatherSimpleController] Límite diario de uso de la API del clima alcanzado");
+                return ResponseEntity.status(429).build();
+            }
+            
+            // Registrar el uso de la API
+            weatherApiUsageService.registrarUso();
+            logger.info("📊 [WeatherSimpleController] Uso de API del clima registrado");
             
             // Usar el método simple en lugar del servicio con caché
             WeatherDTO weatherData = getWeatherDataSimple(latitude, longitude);

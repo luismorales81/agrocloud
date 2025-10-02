@@ -1,5 +1,6 @@
 package com.agrocloud.controller;
 
+import com.agrocloud.dto.CosechaDTO;
 import com.agrocloud.model.entity.HistorialCosecha;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.service.HistorialCosechaService;
@@ -13,12 +14,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Controlador para gestionar el historial de cosechas
  */
 @RestController
-@RequestMapping("/api/historial-cosechas")
+@RequestMapping({"/api/historial-cosechas", "/api/v1/cosechas"})
 @CrossOrigin(origins = "*")
 public class HistorialCosechaController {
 
@@ -32,14 +34,22 @@ public class HistorialCosechaController {
      * Obtener historial de cosechas por lote
      */
     @GetMapping("/lote/{loteId}")
-    public ResponseEntity<List<HistorialCosecha>> getHistorialPorLote(
+    public ResponseEntity<List<CosechaDTO>> getHistorialPorLote(
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = userService.findByEmail(userDetails.getUsername());
             List<HistorialCosecha> historial = historialCosechaService.getHistorialPorLote(loteId, user);
-            return ResponseEntity.ok(historial);
+            
+            // Convertir a DTOs para evitar problemas de lazy loading
+            List<CosechaDTO> cosechasDTO = historial.stream()
+                    .map(CosechaDTO::new)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(cosechasDTO);
         } catch (Exception e) {
+            System.err.println("Error en getHistorialPorLote: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -48,13 +58,21 @@ public class HistorialCosechaController {
      * Obtener historial de cosechas del usuario
      */
     @GetMapping
-    public ResponseEntity<List<HistorialCosecha>> getHistorialPorUsuario(
+    public ResponseEntity<List<CosechaDTO>> getHistorialPorUsuario(
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = userService.findByEmail(userDetails.getUsername());
             List<HistorialCosecha> historial = historialCosechaService.getHistorialPorUsuario(user);
-            return ResponseEntity.ok(historial);
+            
+            // Convertir a DTOs para evitar problemas de lazy loading
+            List<CosechaDTO> cosechasDTO = historial.stream()
+                    .map(CosechaDTO::new)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(cosechasDTO);
         } catch (Exception e) {
+            System.err.println("Error en getHistorialPorUsuario: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -152,7 +170,6 @@ public class HistorialCosechaController {
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmail(userDetails.getUsername());
             boolean puedeLiberar = historialCosechaService.puedeLiberarLote(loteId);
             return ResponseEntity.ok(puedeLiberar);
         } catch (Exception e) {
@@ -168,7 +185,6 @@ public class HistorialCosechaController {
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmail(userDetails.getUsername());
             int diasDescanso = historialCosechaService.getDiasDescansoRecomendados(loteId);
             return ResponseEntity.ok(diasDescanso);
         } catch (Exception e) {

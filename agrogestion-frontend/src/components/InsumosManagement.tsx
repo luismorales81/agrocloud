@@ -109,7 +109,7 @@ const InsumosManagement: React.FC = () => {
     const loadInsumos = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/api/v1/insumos');
+        const response = await api.get('/api/insumos');
         
         
         // Mapear datos del backend al frontend con valores por defecto

@@ -81,16 +81,67 @@ const AdminUsuarios: React.FC = () => {
     try {
       setLoading(true);
       
+      // Verificar autenticación
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      console.log('🔍 [AdminUsuarios] Token disponible:', token ? 'SÍ' : 'NO');
+      console.log('🔍 [AdminUsuarios] Token value:', token);
+      console.log('🔍 [AdminUsuarios] User disponible:', user ? 'SÍ' : 'NO');
+      if (user) {
+        const userData = JSON.parse(user);
+        console.log('🔍 [AdminUsuarios] Usuario logueado:', userData);
+        console.log('🔍 [AdminUsuarios] Rol del usuario:', userData.roleName);
+        console.log('🔍 [AdminUsuarios] ID del usuario:', userData.id);
+        console.log('🔍 [AdminUsuarios] Email del usuario:', userData.email);
+      }
+      
       // Cargar usuarios usando el servicio de API
-      const responseUsuarios = await api.get('/admin/usuarios');
-      setUsuarios(responseUsuarios.data);
+      try {
+        console.log('🔍 [AdminUsuarios] Iniciando petición a /api/admin/usuarios');
+        const responseUsuarios = await api.get('/api/admin/usuarios');
+        console.log('🔍 [AdminUsuarios] Respuesta completa:', responseUsuarios);
+        console.log('🔍 [AdminUsuarios] Status:', responseUsuarios.status);
+        console.log('🔍 [AdminUsuarios] Headers:', responseUsuarios.headers);
+        console.log('🔍 [AdminUsuarios] Respuesta de usuarios:', responseUsuarios.data);
+        console.log('🔍 [AdminUsuarios] Tipo de datos:', typeof responseUsuarios.data);
+        console.log('🔍 [AdminUsuarios] Es array:', Array.isArray(responseUsuarios.data));
+        console.log('🔍 [AdminUsuarios] Es null:', responseUsuarios.data === null);
+        console.log('🔍 [AdminUsuarios] Es undefined:', responseUsuarios.data === undefined);
+        console.log('🔍 [AdminUsuarios] Longitud del array:', responseUsuarios.data?.length);
+        
+        // Asegurar que sea un array
+        const usuariosData = Array.isArray(responseUsuarios.data) ? responseUsuarios.data : [];
+        console.log('🔍 [AdminUsuarios] Datos finales para setUsuarios:', usuariosData);
+        setUsuarios(usuariosData);
+      } catch (error) {
+        console.error('❌ [AdminUsuarios] Error cargando usuarios:', error);
+        console.error('❌ [AdminUsuarios] Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          config: error.config
+        });
+        setUsuarios([]);
+      }
 
       // Cargar roles usando el servicio de API
-      const responseRoles = await api.get('/admin/usuarios/roles');
-      setRoles(responseRoles.data);
+      try {
+        const responseRoles = await api.get('/api/admin/usuarios/roles');
+        console.log('🔍 [AdminUsuarios] Respuesta de roles:', responseRoles.data);
+        console.log('🔍 [AdminUsuarios] Tipo de roles:', typeof responseRoles.data);
+        console.log('🔍 [AdminUsuarios] Roles es array:', Array.isArray(responseRoles.data));
+        
+        // Asegurar que sea un array
+        const rolesData = Array.isArray(responseRoles.data) ? responseRoles.data : [];
+        console.log('🔍 [AdminUsuarios] Datos finales para setRoles:', rolesData);
+        setRoles(rolesData);
+      } catch (error) {
+        console.error('❌ [AdminUsuarios] Error cargando roles:', error);
+        setRoles([]);
+      }
 
       // Cargar estadísticas usando el servicio de API
-      const responseEstadisticas = await api.get('/admin/usuarios/estadisticas');
+      const responseEstadisticas = await api.get('/api/admin/usuarios/estadisticas');
       setEstadisticas(responseEstadisticas.data);
 
     } catch (error) {
@@ -114,7 +165,7 @@ const AdminUsuarios: React.FC = () => {
       };
 
       // Usar el servicio de API
-      await api.post('/admin/usuarios', usuarioData);
+      await api.post('/api/admin/usuarios', usuarioData);
 
       showNotification('Usuario creado exitosamente', 'success');
       setDialogCrear(false);
@@ -209,9 +260,19 @@ const AdminUsuarios: React.FC = () => {
   };
 
   const filtrarUsuarios = () => {
+    console.log('🔍 [AdminUsuarios] filtrarUsuarios llamado con usuarios:', usuarios);
+    console.log('🔍 [AdminUsuarios] Tipo de usuarios:', typeof usuarios);
+    console.log('🔍 [AdminUsuarios] Es array:', Array.isArray(usuarios));
+    
+    // Verificar que usuarios sea un array
+    if (!Array.isArray(usuarios)) {
+      console.error('❌ [AdminUsuarios] usuarios no es un array:', usuarios);
+      return [];
+    }
+    
     return usuarios.filter(usuario => {
       const cumpleEstado = !filtroEstado || usuario.estado === filtroEstado;
-      const cumpleRol = !filtroRol || usuario.roles.some(rol => rol.name === filtroRol);
+      const cumpleRol = !filtroRol || (Array.isArray(usuario.roles) && usuario.roles.some(rol => rol.name === filtroRol));
       const cumpleActivo = filtroActivo === null || usuario.activo === filtroActivo;
       const cumpleBusqueda = !busqueda || 
         usuario.firstName.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -249,22 +310,87 @@ const AdminUsuarios: React.FC = () => {
         
         {/* Estadísticas */}
         {estadisticas && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-100 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-blue-800">Total Usuarios</h3>
-              <p className="text-2xl font-bold text-blue-600">{estadisticas.totalUsuarios}</p>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '16px', 
+            marginBottom: '24px' 
+          }}>
+            <div style={{ 
+              background: '#dbeafe', 
+              padding: '16px', 
+              borderRadius: '8px',
+              border: '1px solid #93c5fd'
+            }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: '600', 
+                color: '#1e40af', 
+                margin: '0 0 8px 0' 
+              }}>Total Usuarios</h3>
+              <p style={{ 
+                fontSize: '24px', 
+                fontWeight: 'bold', 
+                color: '#2563eb', 
+                margin: '0' 
+              }}>{estadisticas.totalUsuarios}</p>
             </div>
-            <div className="bg-green-100 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-green-800">Activos</h3>
-              <p className="text-2xl font-bold text-green-600">{estadisticas.usuariosActivos}</p>
+            <div style={{ 
+              background: '#dcfce7', 
+              padding: '16px', 
+              borderRadius: '8px',
+              border: '1px solid #86efac'
+            }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: '600', 
+                color: '#166534', 
+                margin: '0 0 8px 0' 
+              }}>Activos</h3>
+              <p style={{ 
+                fontSize: '24px', 
+                fontWeight: 'bold', 
+                color: '#16a34a', 
+                margin: '0' 
+              }}>{estadisticas.usuariosActivos}</p>
             </div>
-            <div className="bg-yellow-100 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-yellow-800">Pendientes</h3>
-              <p className="text-2xl font-bold text-yellow-600">{estadisticas.usuariosPendientes}</p>
+            <div style={{ 
+              background: '#fef3c7', 
+              padding: '16px', 
+              borderRadius: '8px',
+              border: '1px solid #fcd34d'
+            }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: '600', 
+                color: '#92400e', 
+                margin: '0 0 8px 0' 
+              }}>Pendientes</h3>
+              <p style={{ 
+                fontSize: '24px', 
+                fontWeight: 'bold', 
+                color: '#d97706', 
+                margin: '0' 
+              }}>{estadisticas.usuariosPendientes}</p>
             </div>
-            <div className="bg-red-100 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-red-800">Suspendidos</h3>
-              <p className="text-2xl font-bold text-red-600">{estadisticas.usuariosSuspendidos}</p>
+            <div style={{ 
+              background: '#fee2e2', 
+              padding: '16px', 
+              borderRadius: '8px',
+              border: '1px solid #fca5a5'
+            }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: '600', 
+                color: '#991b1b', 
+                margin: '0 0 8px 0' 
+              }}>Suspendidos</h3>
+              <p style={{ 
+                fontSize: '24px', 
+                fontWeight: 'bold', 
+                color: '#dc2626', 
+                margin: '0' 
+              }}>{estadisticas.usuariosSuspendidos}</p>
             </div>
           </div>
         )}
@@ -295,7 +421,7 @@ const AdminUsuarios: React.FC = () => {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Todos los roles</option>
-              {roles.map(rol => (
+              {Array.isArray(roles) && roles.map(rol => (
                 <option key={rol.id} value={rol.name}>{rol.name}</option>
               ))}
             </select>
@@ -346,7 +472,7 @@ const AdminUsuarios: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-wrap gap-1">
-                      {usuario.roles.map((rol) => (
+                      {Array.isArray(usuario.roles) && usuario.roles.map((rol) => (
                         <span
                           key={rol.id}
                           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"

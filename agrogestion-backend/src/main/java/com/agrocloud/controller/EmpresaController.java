@@ -12,8 +12,6 @@ import com.agrocloud.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -150,6 +148,7 @@ public class EmpresaController {
     /**
      * Convierte una entidad Empresa a EmpresaDTO
      */
+    @SuppressWarnings("unused")
     private EmpresaDTO convertirAEmpresaDTO(Empresa empresa) {
         return new EmpresaDTO(
             empresa.getId(),
@@ -170,6 +169,7 @@ public class EmpresaController {
     /**
      * Convierte una entidad UsuarioEmpresa a UsuarioEmpresaDTO
      */
+    @SuppressWarnings("unused")
     private UsuarioEmpresaDTO convertirAUsuarioEmpresaDTO(UsuarioEmpresa usuarioEmpresa) {
         UsuarioEmpresaDTO dto = new UsuarioEmpresaDTO();
         dto.setId(usuarioEmpresa.getId());

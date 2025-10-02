@@ -1,10 +1,8 @@
 package com.agrocloud.dto;
 
-import com.agrocloud.model.entity.Labor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 

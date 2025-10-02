@@ -11,12 +11,16 @@ import java.time.LocalDateTime;
  */
 public class EgresoDTO {
     private Long id;
+    private String concepto;
+    private String descripcion;
     private TipoEgreso tipo;
     private Long referenciaId;
     private BigDecimal cantidad;
+    private String unidadMedida;
     private BigDecimal costoUnitario;
     private BigDecimal costoTotal;
     private LocalDate fecha;
+    private String proveedor;
     private String observaciones;
     private String estado;
     private Long loteId;
@@ -32,12 +36,16 @@ public class EgresoDTO {
     // Constructor desde entidad
     public EgresoDTO(Egreso egreso) {
         this.id = egreso.getId();
+        this.concepto = egreso.getConcepto();
+        this.descripcion = egreso.getDescripcion();
         this.tipo = egreso.getTipo();
         this.referenciaId = egreso.getReferenciaId();
         this.cantidad = egreso.getCantidad();
+        this.unidadMedida = egreso.getUnidadMedida();
         this.costoUnitario = egreso.getCostoUnitario();
         this.costoTotal = egreso.getCostoTotal();
         this.fecha = egreso.getFecha();
+        this.proveedor = egreso.getProveedor();
         this.observaciones = egreso.getObservaciones();
         this.estado = egreso.getEstado() != null ? egreso.getEstado().name() : null;
         this.fechaCreacion = egreso.getFechaCreacion();
@@ -65,6 +73,22 @@ public class EgresoDTO {
         this.id = id;
     }
     
+    public String getConcepto() {
+        return concepto;
+    }
+    
+    public void setConcepto(String concepto) {
+        this.concepto = concepto;
+    }
+    
+    public String getDescripcion() {
+        return descripcion;
+    }
+    
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
+    
     public TipoEgreso getTipo() {
         return tipo;
     }
@@ -89,6 +113,14 @@ public class EgresoDTO {
         this.cantidad = cantidad;
     }
     
+    public String getUnidadMedida() {
+        return unidadMedida;
+    }
+    
+    public void setUnidadMedida(String unidadMedida) {
+        this.unidadMedida = unidadMedida;
+    }
+    
     public BigDecimal getCostoUnitario() {
         return costoUnitario;
     }
@@ -111,6 +143,14 @@ public class EgresoDTO {
     
     public void setFecha(LocalDate fecha) {
         this.fecha = fecha;
+    }
+    
+    public String getProveedor() {
+        return proveedor;
+    }
+    
+    public void setProveedor(String proveedor) {
+        this.proveedor = proveedor;
     }
     
     public String getObservaciones() {

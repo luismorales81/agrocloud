@@ -13,6 +13,11 @@ import java.util.List;
  * @author AgroGestion Team
  * @version 1.0.0
  */
+/**
+ * @deprecated Repositorio deprecado. La tabla mantenimiento_maquinaria será eliminada en V1_13.
+ * Funcionalidad no implementada. Puede reimplementarse después si se necesita.
+ */
+@Deprecated
 @Repository
 public interface MantenimientoMaquinariaRepository extends JpaRepository<MantenimientoMaquinaria, Long> {
 

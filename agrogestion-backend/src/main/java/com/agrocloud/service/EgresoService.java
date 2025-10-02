@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Servicio para la gestión de egresos con integración automática
@@ -28,8 +27,8 @@ public class EgresoService {
     @Autowired
     private MaquinariaRepository maquinariaRepository;
 
-    @Autowired
-    private AlquilerMaquinariaRepository alquilerRepository;
+    // @Autowired
+    // private AlquilerMaquinariaRepository alquilerRepository;  // DEPRECADO - No se usa
 
     @Autowired
     private PlotRepository plotRepository;
@@ -62,7 +61,11 @@ public class EgresoService {
             case MAQUINARIA_COMPRA:
                 return crearEgresoMaquinariaCompra(egreso, request);
             case MAQUINARIA_ALQUILER:
-                return crearEgresoMaquinariaAlquiler(egreso, request);
+                throw new UnsupportedOperationException(
+                    "El tipo MAQUINARIA_ALQUILER está deprecado. " +
+                    "Por favor, registre la maquinaria alquilada como parte de una labor " +
+                    "usando tipoMaquinaria=ALQUILADA en el formulario de la labor correspondiente."
+                );
             default:
                 return crearEgresoGeneral(egreso, request);
         }
@@ -132,43 +135,9 @@ public class EgresoService {
         return egresoRepository.save(egreso);
     }
 
-    /**
-     * Crea egreso de tipo MAQUINARIA_ALQUILER y registra el alquiler
-     */
-    private Egreso crearEgresoMaquinariaAlquiler(Egreso egreso, CrearEgresoRequest request) {
-        // Buscar la maquinaria
-        Maquinaria maquinaria = maquinariaRepository.findById(request.getMaquinariaId())
-            .orElseThrow(() -> new RuntimeException("Maquinaria no encontrada"));
-
-        // Crear registro de alquiler
-        AlquilerMaquinaria alquiler = new AlquilerMaquinaria();
-        alquiler.setMaquinaria(maquinaria);
-        alquiler.setFechaInicio(request.getFechaInicio());
-        alquiler.setFechaFin(request.getFechaFin());
-        alquiler.setCostoDia(request.getCostoDia());
-        alquiler.setCostoTotal(request.getMonto());
-        alquiler.setObservaciones(request.getObservaciones());
-        alquiler.setUser(egreso.getUser());
-        alquiler.setFechaCreacion(LocalDateTime.now());
-        alquiler.setFechaActualizacion(LocalDateTime.now());
-
-        // Asociar con lote si se especifica
-        if (request.getLoteId() != null) {
-            Plot lote = plotRepository.findById(request.getLoteId())
-                .orElseThrow(() -> new RuntimeException("Lote no encontrado"));
-            alquiler.setLote(lote);
-            egreso.setLote(lote);
-        }
-
-        // Guardar alquiler
-        alquiler = alquilerRepository.save(alquiler);
-
-        // Establecer referencia al alquiler
-        egreso.setReferenciaId(alquiler.getId());
-        egreso.setCostoTotal(request.getMonto());
-
-        return egresoRepository.save(egreso);
-    }
+    // MÉTODO ELIMINADO - Funcionalidad deprecada
+    // La tabla alquiler_maquinaria fue eliminada en V1_13
+    // Alternativa: Registrar maquinaria alquilada en labor_maquinaria con tipoMaquinaria=ALQUILADA
 
     /**
      * Crea egreso general (SERVICIO, OTROS)

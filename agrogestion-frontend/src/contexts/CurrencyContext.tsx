@@ -10,6 +10,7 @@ interface CurrencyContextType {
   changeExchangeType: (type: 'oficial' | 'blue') => void;
   updateRates: () => Promise<void>;
   rateInfo: any;
+  realRates: { oficial: number; blue: number } | null;
   loading: boolean;
 }
 
@@ -37,6 +38,7 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
   );
   
   const [rateInfo, setRateInfo] = useState<any>(null);
+  const [realRates, setRealRates] = useState<{ oficial: number; blue: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Cargar configuración inicial
@@ -50,7 +52,9 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
       setLoading(true);
       await currencyService.updateCurrencyRates();
       const info = currencyService.getDefaultRateInfo();
+      const rates = currencyService.getRealDolarRates();
       setRateInfo(info);
+      setRealRates(rates);
     } catch (error) {
       console.error('Error cargando tasas iniciales:', error);
     } finally {
@@ -117,7 +121,9 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
       setLoading(true);
       await currencyService.updateCurrencyRates();
       const info = currencyService.getDefaultRateInfo();
+      const rates = currencyService.getRealDolarRates();
       setRateInfo(info);
+      setRealRates(rates);
       
       // Disparar evento para notificar actualización de tasas
       window.dispatchEvent(new Event('ratesUpdated'));
@@ -138,6 +144,7 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
     changeExchangeType,
     updateRates,
     rateInfo,
+    realRates,
     loading
   };
 

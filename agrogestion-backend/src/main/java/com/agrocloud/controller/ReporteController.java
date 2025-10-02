@@ -2,7 +2,9 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.ReporteRendimientoDTO;
 import com.agrocloud.dto.ReporteCosechasDTO;
+import com.agrocloud.model.entity.User;
 import com.agrocloud.service.ReporteService;
+import com.agrocloud.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,9 @@ public class ReporteController {
     @Autowired
     private ReporteService reporteService;
 
+    @Autowired
+    private UserService userService;
+
     /**
      * Obtiene reporte de rendimiento por cultivo y lote.
      */
@@ -37,11 +42,36 @@ public class ReporteController {
             @RequestParam(required = false) Long loteId,
             Authentication authentication) {
         
-        Long usuarioId = Long.parseLong(authentication.getName());
-        List<ReporteRendimientoDTO> reporte = reporteService.obtenerReporteRendimiento(
-            usuarioId, fechaInicio, fechaFin, cultivoId, loteId);
-        
-        return ResponseEntity.ok(reporte);
+        try {
+            System.out.println("[REPORTE_CONTROLLER] Iniciando obtenerReporteRendimiento");
+            System.out.println("[REPORTE_CONTROLLER] Parámetros recibidos:");
+            System.out.println("[REPORTE_CONTROLLER] - fechaInicio: " + fechaInicio);
+            System.out.println("[REPORTE_CONTROLLER] - fechaFin: " + fechaFin);
+            System.out.println("[REPORTE_CONTROLLER] - cultivoId: " + cultivoId);
+            System.out.println("[REPORTE_CONTROLLER] - loteId: " + loteId);
+            System.out.println("[REPORTE_CONTROLLER] - usuarioEmail: " + authentication.getName());
+            
+            // Obtener el usuario por email y luego su ID
+            User user = userService.findByEmail(authentication.getName());
+            if (user == null) {
+                System.err.println("[REPORTE_CONTROLLER] ERROR: Usuario no encontrado: " + authentication.getName());
+                return ResponseEntity.status(404).build();
+            }
+            Long usuarioId = user.getId();
+            System.out.println("[REPORTE_CONTROLLER] Usuario encontrado - ID: " + usuarioId + ", Email: " + user.getEmail());
+            
+            List<ReporteRendimientoDTO> reporte = reporteService.obtenerReporteRendimiento(
+                usuarioId, fechaInicio, fechaFin, cultivoId, loteId);
+            
+            System.out.println("[REPORTE_CONTROLLER] Reporte generado con " + reporte.size() + " registros");
+            return ResponseEntity.ok(reporte);
+            
+        } catch (Exception e) {
+            System.err.println("[REPORTE_CONTROLLER] ERROR en obtenerReporteRendimiento: " + e.getMessage());
+            System.err.println("[REPORTE_CONTROLLER] Stack trace completo:");
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 
     /**
@@ -55,11 +85,41 @@ public class ReporteController {
             @RequestParam(required = false) Long loteId,
             Authentication authentication) {
         
-        Long usuarioId = Long.parseLong(authentication.getName());
-        List<ReporteCosechasDTO> reporte = reporteService.obtenerReporteCosechas(
-            usuarioId, fechaInicio, fechaFin, cultivoId, loteId);
-        
-        return ResponseEntity.ok(reporte);
+        try {
+            System.out.println("[REPORTE_CONTROLLER] Iniciando obtenerReporteCosechas");
+            System.out.println("[REPORTE_CONTROLLER] Parámetros recibidos:");
+            System.out.println("[REPORTE_CONTROLLER] - fechaInicio: " + fechaInicio);
+            System.out.println("[REPORTE_CONTROLLER] - fechaFin: " + fechaFin);
+            System.out.println("[REPORTE_CONTROLLER] - cultivoId: " + cultivoId);
+            System.out.println("[REPORTE_CONTROLLER] - loteId: " + loteId);
+            System.out.println("[REPORTE_CONTROLLER] - usuarioEmail: " + authentication.getName());
+            
+            // Obtener el usuario por email y luego su ID
+            User user = userService.findByEmail(authentication.getName());
+            if (user == null) {
+                System.err.println("[REPORTE_CONTROLLER] ERROR: Usuario no encontrado: " + authentication.getName());
+                return ResponseEntity.status(404).build();
+            }
+            Long usuarioId = user.getId();
+            System.out.println("[REPORTE_CONTROLLER] Usuario encontrado - ID: " + usuarioId + ", Email: " + user.getEmail());
+            
+            List<ReporteCosechasDTO> reporte = reporteService.obtenerReporteCosechas(
+                usuarioId, fechaInicio, fechaFin, cultivoId, loteId);
+            
+            System.out.println("[REPORTE_CONTROLLER] Reporte de cosechas generado con " + reporte.size() + " registros");
+            if (reporte.size() > 0) {
+                System.out.println("[REPORTE_CONTROLLER] Primer registro de cosechas: " + reporte.get(0));
+            } else {
+                System.out.println("[REPORTE_CONTROLLER] No se encontraron registros de cosechas para el usuario " + usuarioId);
+            }
+            return ResponseEntity.ok(reporte);
+            
+        } catch (Exception e) {
+            System.err.println("[REPORTE_CONTROLLER] ERROR en obtenerReporteCosechas: " + e.getMessage());
+            System.err.println("[REPORTE_CONTROLLER] Stack trace completo:");
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 
 
@@ -72,10 +132,33 @@ public class ReporteController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             Authentication authentication) {
         
-        Long usuarioId = Long.parseLong(authentication.getName());
-        Object estadisticas = reporteService.obtenerEstadisticasProduccion(usuarioId, fechaInicio, fechaFin);
-        
-        return ResponseEntity.ok(estadisticas);
+        try {
+            System.out.println("[REPORTE_CONTROLLER] Iniciando obtenerEstadisticasProduccion");
+            System.out.println("[REPORTE_CONTROLLER] Parámetros recibidos:");
+            System.out.println("[REPORTE_CONTROLLER] - fechaInicio: " + fechaInicio);
+            System.out.println("[REPORTE_CONTROLLER] - fechaFin: " + fechaFin);
+            System.out.println("[REPORTE_CONTROLLER] - usuarioEmail: " + authentication.getName());
+            
+            // Obtener el usuario por email y luego su ID
+            User user = userService.findByEmail(authentication.getName());
+            if (user == null) {
+                System.err.println("[REPORTE_CONTROLLER] ERROR: Usuario no encontrado: " + authentication.getName());
+                return ResponseEntity.status(404).build();
+            }
+            Long usuarioId = user.getId();
+            System.out.println("[REPORTE_CONTROLLER] Usuario encontrado - ID: " + usuarioId + ", Email: " + user.getEmail());
+            
+            Object estadisticas = reporteService.obtenerEstadisticasProduccion(usuarioId, fechaInicio, fechaFin);
+            
+            System.out.println("[REPORTE_CONTROLLER] Estadísticas de producción generadas exitosamente");
+            return ResponseEntity.ok(estadisticas);
+            
+        } catch (Exception e) {
+            System.err.println("[REPORTE_CONTROLLER] ERROR en obtenerEstadisticasProduccion: " + e.getMessage());
+            System.err.println("[REPORTE_CONTROLLER] Stack trace completo:");
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 
     /**
@@ -88,10 +171,39 @@ public class ReporteController {
             @RequestParam(required = false) Long cultivoId,
             Authentication authentication) {
         
-        Long usuarioId = Long.parseLong(authentication.getName());
-        List<Object> reporte = reporteService.obtenerReporteRentabilidad(
-            usuarioId, fechaInicio, fechaFin, cultivoId);
-        
-        return ResponseEntity.ok(reporte);
+        try {
+            System.out.println("[REPORTE_CONTROLLER] Iniciando obtenerReporteRentabilidad");
+            System.out.println("[REPORTE_CONTROLLER] Parámetros recibidos:");
+            System.out.println("[REPORTE_CONTROLLER] - fechaInicio: " + fechaInicio);
+            System.out.println("[REPORTE_CONTROLLER] - fechaFin: " + fechaFin);
+            System.out.println("[REPORTE_CONTROLLER] - cultivoId: " + cultivoId);
+            System.out.println("[REPORTE_CONTROLLER] - usuarioEmail: " + authentication.getName());
+            
+            // Obtener el usuario por email y luego su ID
+            User user = userService.findByEmail(authentication.getName());
+            if (user == null) {
+                System.err.println("[REPORTE_CONTROLLER] ERROR: Usuario no encontrado: " + authentication.getName());
+                return ResponseEntity.status(404).build();
+            }
+            Long usuarioId = user.getId();
+            System.out.println("[REPORTE_CONTROLLER] Usuario encontrado - ID: " + usuarioId + ", Email: " + user.getEmail());
+            
+            List<Object> reporte = reporteService.obtenerReporteRentabilidad(
+                usuarioId, fechaInicio, fechaFin, cultivoId);
+            
+            System.out.println("[REPORTE_CONTROLLER] Reporte de rentabilidad generado con " + reporte.size() + " registros");
+            if (reporte.size() > 0) {
+                System.out.println("[REPORTE_CONTROLLER] Primer registro de rentabilidad: " + reporte.get(0));
+            } else {
+                System.out.println("[REPORTE_CONTROLLER] No se encontraron registros de rentabilidad para el usuario " + usuarioId);
+            }
+            return ResponseEntity.ok(reporte);
+            
+        } catch (Exception e) {
+            System.err.println("[REPORTE_CONTROLLER] ERROR en obtenerReporteRentabilidad: " + e.getMessage());
+            System.err.println("[REPORTE_CONTROLLER] Stack trace completo:");
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 }

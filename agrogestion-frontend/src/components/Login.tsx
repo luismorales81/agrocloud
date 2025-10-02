@@ -156,6 +156,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               value={formData.email}
               onChange={handleInputChange}
               required
+              data-testid="email-input"
               style={{
                 width: '100%',
                 padding: '12px 16px',
@@ -188,6 +189,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 value={formData.password}
                 onChange={handleInputChange}
                 required
+                data-testid="password-input"
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -225,6 +227,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading || !formData.email || !formData.password}
+            data-testid="login-button"
             style={{
               width: '100%',
               padding: '14px',

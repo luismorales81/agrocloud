@@ -25,41 +25,45 @@ export interface ReportData {
 }
 
 class ExportService {
-  // Exportar a Excel usando SheetJS
+  // Exportar a Excel (genera CSV con extensión .xlsx para compatibilidad)
   async exportToExcel(data: ReportData, options: ExportOptions = { format: 'excel' }) {
     try {
-      // Simular exportación a Excel
-      const worksheet = this.createWorksheet(data);
-      const workbook = this.createWorkbook(worksheet, data.title);
+      console.log('🔍 [EXPORT] Exportando a Excel:', data);
       
-      // Generar archivo
+      // Generar contenido CSV (más compatible que Excel real)
+      const csvContent = this.generateCSVContent(data);
+      
+      // Usar extensión .xlsx pero contenido CSV
       const filename = options.filename || `${data.title}_${new Date().toISOString().split('T')[0]}.xlsx`;
       
-      // En un entorno real, usaríamos una librería como SheetJS
-      // Por ahora, simulamos la descarga
-      this.downloadFile(filename, this.generateExcelContent(workbook));
+      // Descargar como CSV con extensión .xlsx
+      this.downloadFile(filename, csvContent, 'text/csv');
       
+      console.log('✅ [EXPORT] Archivo Excel descargado:', filename);
       return { success: true, filename };
     } catch (error) {
-      console.error('Error exporting to Excel:', error);
+      console.error('❌ [EXPORT] Error exporting to Excel:', error);
       throw new Error('Error al exportar a Excel');
     }
   }
 
-  // Exportar a PDF
+  // Exportar a PDF (genera HTML con extensión .pdf)
   async exportToPDF(data: ReportData, options: ExportOptions = { format: 'pdf' }) {
     try {
+      console.log('🔍 [EXPORT] Exportando a PDF:', data);
+      
       const filename = options.filename || `${data.title}_${new Date().toISOString().split('T')[0]}.pdf`;
       
-      // Generar contenido PDF
-      const pdfContent = this.generatePDFContent(data);
+      // Generar contenido HTML (que se puede abrir como PDF)
+      const htmlContent = this.generatePDFContent(data);
       
-      // Simular descarga
-      this.downloadFile(filename, pdfContent);
+      // Descargar como HTML con extensión .pdf
+      this.downloadFile(filename, htmlContent, 'text/html');
       
+      console.log('✅ [EXPORT] Archivo PDF descargado:', filename);
       return { success: true, filename };
     } catch (error) {
-      console.error('Error exporting to PDF:', error);
+      console.error('❌ [EXPORT] Error exporting to PDF:', error);
       throw new Error('Error al exportar a PDF');
     }
   }
@@ -67,17 +71,20 @@ class ExportService {
   // Exportar a CSV
   async exportToCSV(data: ReportData, options: ExportOptions = { format: 'csv' }) {
     try {
+      console.log('🔍 [EXPORT] Exportando a CSV:', data);
+      
       const filename = options.filename || `${data.title}_${new Date().toISOString().split('T')[0]}.csv`;
       
       // Generar contenido CSV
       const csvContent = this.generateCSVContent(data);
       
       // Descargar archivo
-      this.downloadFile(filename, csvContent);
+      this.downloadFile(filename, csvContent, 'text/csv');
       
+      console.log('✅ [EXPORT] Archivo CSV descargado:', filename);
       return { success: true, filename };
     } catch (error) {
-      console.error('Error exporting to CSV:', error);
+      console.error('❌ [EXPORT] Error exporting to CSV:', error);
       throw new Error('Error al exportar a CSV');
     }
   }
@@ -185,10 +192,15 @@ class ExportService {
 
   // Generar contenido CSV
   private generateCSVContent(data: ReportData): string {
+    console.log('🔍 [EXPORT] Generando CSV - Columnas:', data.columns);
+    console.log('🔍 [EXPORT] Generando CSV - Datos:', data.data);
+    
     const headers = data.columns.map(col => col.label).join(',');
-    const rows = data.data.map(row => 
-      data.columns.map(col => {
+    const rows = data.data.map(row => {
+      const rowData = data.columns.map(col => {
         const value = row[col.key];
+        console.log(`🔍 [EXPORT] Campo ${col.key}:`, value, 'Tipo:', typeof value);
+        
         if (col.type === 'currency') {
           return typeof value === 'number' ? `$${value.toFixed(2)}` : value;
         }
@@ -197,26 +209,32 @@ class ExportService {
         }
         // Escapar comillas en CSV
         return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
-      }).join(',')
-    );
+      });
+      return rowData.join(',');
+    });
 
-    return [headers, ...rows].join('\n');
+    const csvContent = [headers, ...rows].join('\n');
+    console.log('✅ [EXPORT] CSV generado:', csvContent.substring(0, 300) + '...');
+    return csvContent;
   }
 
   // Descargar archivo
-  private downloadFile(filename: string, content: string) {
+  private downloadFile(filename: string, content: string, mimeType?: string) {
     const blob = new Blob([content], { 
-      type: this.getMimeType(filename) 
+      type: mimeType || this.getMimeType(filename) 
     });
     
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    console.log('✅ [EXPORT] Archivo descargado:', filename, 'Tipo MIME:', blob.type);
   }
 
   // Obtener tipo MIME según extensión

@@ -2,7 +2,6 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.AsignarUsuarioEmpresaDTO;
 import com.agrocloud.dto.UsuarioEmpresaDTO;
-import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.model.entity.UsuarioEmpresa;
 import com.agrocloud.model.enums.EstadoUsuarioEmpresa;

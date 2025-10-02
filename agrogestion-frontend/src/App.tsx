@@ -32,8 +32,20 @@ import api, { authService } from './services/api';
 // Dashboard con menú lateral
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const { empresaActiva, esAdministrador, esAsesor, esOperario, esContador, esTecnico, esSoloLectura } = useEmpresa();
-  const { formatCurrency, selectedCurrency, exchangeType, rateInfo, changeCurrency, changeExchangeType } = useCurrencyContext();
+  
+  // Verificar que el contexto de empresa esté disponible
+  const empresaContext = useEmpresa();
+  if (!empresaContext) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando contexto de empresa...</p>
+      </div>
+    </div>;
+  }
+  
+  const { empresaActiva, esAdministrador, esAsesor, esOperario, esContador, esTecnico, esSoloLectura } = empresaContext;
+  const { formatCurrency, selectedCurrency, exchangeType, rateInfo, realRates, changeCurrency, changeExchangeType } = useCurrencyContext();
   useCurrencyUpdate(); // Forzar actualización cuando cambie la moneda
 
   const [activePage, setActivePage] = useState('dashboard');
@@ -80,6 +92,19 @@ const Dashboard: React.FC = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Actualizar tasas de cotización cada 30 segundos
+  useEffect(() => {
+    const updateRatesInterval = setInterval(async () => {
+      try {
+        await changeCurrency(selectedCurrency); // Esto disparará la actualización
+      } catch (error) {
+        console.error('Error actualizando tasas:', error);
+      }
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(updateRatesInterval);
+  }, [selectedCurrency, changeCurrency]);
 
 
 
@@ -146,11 +171,18 @@ const Dashboard: React.FC = () => {
   };
 
   const renderPage = () => {
+    console.log('🔍 [App] Renderizando página. Usuario:', user);
+    console.log('🔍 [App] Rol del usuario:', user?.roleName);
+    console.log('🔍 [App] Página activa:', activePage);
+    
     // Solo SUPERADMIN puede ver AdminGlobalDashboard como dashboard principal
     if (user?.roleName === 'SUPERADMIN') {
+      console.log('✅ [App] Usuario es SUPERADMIN, renderizando AdminGlobalDashboard');
       if (activePage === 'dashboard' || activePage === 'admin-global') {
         return <AdminGlobalDashboard />;
       }
+    } else {
+      console.log('❌ [App] Usuario NO es SUPERADMIN, rol:', user?.roleName);
     }
     
     // Los usuarios ADMINISTRADOR deben ver el dashboard normal, no el AdminDashboard
@@ -296,15 +328,15 @@ const Dashboard: React.FC = () => {
                   color: '#374151',
                   backgroundColor: 'transparent',
                   cursor: 'pointer',
-                  minWidth: '140px'
+                  minWidth: '180px'
                 }}
               >
-                <option value="ARS">ARS (Pesos)</option>
+                <option value="ARS">💰 ARS (Pesos Argentinos)</option>
                 <option value="oficial">
-                  USD Oficial {rateInfo?.oficial ? `(${rateInfo.oficial.toFixed(2)})` : ''}
+                  💵 USD Oficial {realRates?.oficial ? `($${realRates.oficial.toFixed(2)})` : ''}
                 </option>
                 <option value="blue">
-                  USD Blue {rateInfo?.blue ? `(${rateInfo.blue.toFixed(2)})` : ''}
+                  💙 USD Blue {realRates?.blue ? `($${realRates.blue.toFixed(2)})` : ''}
                 </option>
               </select>
             </div>
@@ -800,6 +832,7 @@ const Dashboard: React.FC = () => {
                   onPageChange(item.id);
                   if (isMobile) onToggleSidebar();
                 }}
+                data-testid={`nav-${item.id}`}
             style={{
                   width: '100%',
                   padding: '0.75rem 1rem',

@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
+import SiembraModal from './SiembraModalHibrido';
+import CosechaModal from './CosechaModal';
+import AccionLoteModal from './AccionLoteModal';
+import EstadosLoteAyuda from './EstadosLoteAyuda';
 
 interface Campo {
   id: number;
@@ -39,6 +43,7 @@ interface Labor {
 }
 
 const LotesManagement: React.FC = () => {
+  // Versión actualizada con modales simplificados - v2.0
   const { formatCurrency } = useCurrencyContext();
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [campos, setCampos] = useState<Campo[]>([]);
@@ -54,6 +59,21 @@ const LotesManagement: React.FC = () => {
   const [labores, setLabores] = useState<Labor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estados para modales de Siembra y Cosecha
+  const [showSiembraModal, setShowSiembraModal] = useState(false);
+  const [showCosechaModal, setShowCosechaModal] = useState(false);
+  const [loteParaSiembra, setLoteParaSiembra] = useState<Lote | null>(null);
+  const [loteParaCosecha, setLoteParaCosecha] = useState<Lote | null>(null);
+  
+  // Estados para acciones especiales
+  const [showAccionModal, setShowAccionModal] = useState(false);
+  const [loteParaAccion, setLoteParaAccion] = useState<Lote | null>(null);
+  
+  // Estado para modal de ayuda de estados
+  const [showEstadosAyuda, setShowEstadosAyuda] = useState(false);
+  const [tipoAccion, setTipoAccion] = useState<'abandonar' | 'limpiar' | 'forraje'>('abandonar');
+  const [menuAbierto, setMenuAbierto] = useState<number | null>(null);
 
   // Función para calcular fecha de cosecha esperada según el cultivo
   const calcularFechaCosecha = (fechaSiembra: string, cultivo: string): string => {
@@ -90,7 +110,7 @@ const LotesManagement: React.FC = () => {
       nombre: 'Campo Norte',
       superficie: 150.5,
       ubicacion: 'Ruta 9, Km 45',
-      estado: 'activo',
+      estado: 'disponible',
       coordenadas: [
         { lat: -34.6118, lng: -58.3960 },
         { lat: -34.6118, lng: -58.3950 },
@@ -103,7 +123,7 @@ const LotesManagement: React.FC = () => {
       nombre: 'Campo Sur',
       superficie: 89.3,
       ubicacion: 'Ruta 2, Km 78',
-      estado: 'activo',
+      estado: 'disponible',
       coordenadas: [
         { lat: -34.6138, lng: -58.3970 },
         { lat: -34.6138, lng: -58.3960 },
@@ -134,7 +154,7 @@ const LotesManagement: React.FC = () => {
       superficie: 25.5,
       cultivo: 'Soja',
       campo_id: 1,
-      estado: 'activo',
+      estado: 'disponible',
       descripcion: 'Lote de soja de primera',
       tipoSuelo: 'Franco Limoso'
     },
@@ -144,7 +164,7 @@ const LotesManagement: React.FC = () => {
       superficie: 30.25,
       cultivo: 'Maíz',
       campo_id: 1,
-      estado: 'activo',
+      estado: 'disponible',
       descripcion: 'Lote de maíz tardío',
       tipoSuelo: 'Franco Arenoso'
     },
@@ -154,7 +174,7 @@ const LotesManagement: React.FC = () => {
       superficie: 40.0,
       cultivo: 'Trigo',
       campo_id: 2,
-      estado: 'activo',
+      estado: 'disponible',
       descripcion: 'Lote de trigo de invierno',
       tipoSuelo: 'Arcilloso'
     }
@@ -163,13 +183,11 @@ const LotesManagement: React.FC = () => {
   const [formData, setFormData] = useState<Lote>({
     nombre: '',
     superficie: '',
-    cultivo: '',
+    cultivo: '', // Se asigna al sembrar, no al crear
     campo_id: 0,
-    estado: 'activo',
+    estado: 'disponible', // Se enviará como DISPONIBLE al backend
     descripcion: '',
-    tipoSuelo: 'Franco Limoso',
-    fechaSiembra: '',
-    fechaCosechaEsperada: ''
+    tipoSuelo: 'Franco Limoso'
   });
 
   // Datos simulados de labores
@@ -282,6 +300,25 @@ const LotesManagement: React.FC = () => {
   useEffect(() => {
     cargarDatos();
   }, []);
+  
+  // Cerrar menú dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      // Solo cerrar si el click NO fue en un botón del dropdown
+      if (menuAbierto !== null && !target.closest('[data-testid*="cosechar-button"]')) {
+        setMenuAbierto(null);
+      }
+    };
+    
+    if (menuAbierto !== null) {
+      // Agregar con un pequeño delay para evitar que se cierre inmediatamente
+      setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 10);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [menuAbierto]);
 
   // Función para cargar datos del backend
   const cargarDatos = async () => {
@@ -392,7 +429,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:8080/api/lotes', {
+      const response = await fetch('http://localhost:8080/api/v1/lotes', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -413,11 +450,9 @@ const LotesManagement: React.FC = () => {
         superficie: lote.areaHectareas || 0,
         cultivo: lote.cultivoActual || '',
         campo_id: lote.campo?.id || lote.campoId || 0,
-        estado: lote.estado?.toLowerCase() || 'activo',
+        estado: lote.estado || 'DISPONIBLE', // Mantener en MAYÚSCULAS como viene del backend
         descripcion: lote.descripcion || '',
-        tipoSuelo: lote.tipoSuelo || 'Franco Limoso',
-        fechaSiembra: lote.fechaSiembra || '',
-        fechaCosechaEsperada: lote.fechaCosechaEsperada || ''
+        tipoSuelo: lote.tipoSuelo || 'Franco Limoso'
       }));
 
       setLotes(lotesMapeados);
@@ -490,7 +525,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:8080/api/cultivos', {
+      const response = await fetch('http://localhost:8080/api/v1/cultivos', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -546,11 +581,9 @@ const LotesManagement: React.FC = () => {
       superficie: '',
       cultivo: '',
       campo_id: 0,
-      estado: 'activo',
+      estado: 'disponible',
       descripcion: '',
       tipoSuelo: 'Franco Limoso',
-      fechaSiembra: '',
-      fechaCosechaEsperada: ''
     });
     setIsEditing(false);
     setShowAddModal(true);
@@ -584,8 +617,8 @@ const LotesManagement: React.FC = () => {
   };
 
   const handleSaveLote = async () => {
-    if (!formData.nombre || !formData.cultivo || formData.campo_id === 0) {
-      alert('Por favor complete todos los campos obligatorios');
+    if (!formData.nombre || formData.campo_id === 0) {
+      alert('Por favor complete todos los campos obligatorios (Nombre y Campo)');
       return;
     }
 
@@ -622,11 +655,11 @@ const LotesManagement: React.FC = () => {
         nombre: formData.nombre,
         descripcion: formData.descripcion,
         areaHectareas: formData.superficie as number,
-        estado: formData.estado.toUpperCase(),
+        estado: 'DISPONIBLE', // Los lotes nuevos siempre se crean como DISPONIBLE
         tipoSuelo: formData.tipoSuelo,
-        cultivoActual: formData.cultivo,
-        fechaSiembra: formData.fechaSiembra || null,
-        fechaCosechaEsperada: formData.fechaCosechaEsperada || null,
+        cultivoActual: null, // Se asigna automáticamente al sembrar el lote
+        fechaSiembra: null, // Se asigna automáticamente al sembrar el lote
+        fechaCosechaEsperada: null, // Se calcula automáticamente al sembrar
         activo: true,
         campo: { id: formData.campo_id }
       };
@@ -634,7 +667,7 @@ const LotesManagement: React.FC = () => {
       let response;
       if (isEditing && selectedLote) {
         // Editar lote existente
-        response = await fetch(`http://localhost:8080/api/lotes/${selectedLote.id}`, {
+        response = await fetch(`http://localhost:8080/api/v1/lotes/${selectedLote.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -644,7 +677,7 @@ const LotesManagement: React.FC = () => {
         });
       } else {
         // Crear nuevo lote
-        response = await fetch('http://localhost:8080/api/lotes', {
+        response = await fetch('http://localhost:8080/api/v1/lotes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -682,7 +715,7 @@ const LotesManagement: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`http://localhost:8080/api/lotes/${id}`, {
+        const response = await fetch(`http://localhost:8080/api/v1/lotes/${id}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -711,6 +744,44 @@ const LotesManagement: React.FC = () => {
     setSelectedLoteForHistorial(lote);
     setShowHistorialModal(true);
   };
+  
+  // Funciones para manejar Siembra y Cosecha
+  const handleSembrar = (lote: Lote) => {
+    setLoteParaSiembra(lote);
+    setShowSiembraModal(true);
+  };
+  
+  const handleCosechar = (lote: Lote) => {
+    console.log('🌾 handleCosechar llamado para lote:', lote);
+    setLoteParaCosecha(lote);
+    setShowCosechaModal(true);
+    console.log('✅ Modal de cosecha activado');
+  };
+  
+  const puedeSembrar = (estado: string): boolean => {
+    const estadoUpper = estado?.toUpperCase() || '';
+    return estadoUpper === 'DISPONIBLE' || estadoUpper === 'PREPARADO' || estadoUpper === 'EN_PREPARACION';
+  };
+  
+  const puedeCosechar = (estado: string): boolean => {
+    const estadoUpper = estado?.toUpperCase() || '';
+    return estadoUpper === 'SEMBRADO' || estadoUpper === 'LISTO_PARA_COSECHA' || 
+           estadoUpper === 'EN_CRECIMIENTO' || estadoUpper === 'EN_FLORACION' || 
+           estadoUpper === 'EN_FRUTIFICACION';
+  };
+  
+  const tieneAccionesEspeciales = (estado: string): boolean => {
+    const estadoUpper = estado?.toUpperCase() || '';
+    return estadoUpper === 'SEMBRADO' || estadoUpper === 'EN_CRECIMIENTO' || 
+           estadoUpper === 'EN_FLORACION' || estadoUpper === 'EN_FRUTIFICACION';
+  };
+  
+  const handleAccionEspecial = (lote: Lote, accion: 'abandonar' | 'limpiar' | 'forraje') => {
+    setLoteParaAccion(lote);
+    setTipoAccion(accion);
+    setShowAccionModal(true);
+    setMenuAbierto(null);
+  };
 
   const getLaboresPorLote = (loteId: number): Labor[] => {
     return labores.filter(labor => labor.lote_id === loteId);
@@ -736,11 +807,9 @@ const LotesManagement: React.FC = () => {
       superficie: '',
       cultivo: '',
       campo_id: 0,
-      estado: 'activo',
+      estado: 'disponible',
       descripcion: '',
       tipoSuelo: 'Franco Limoso',
-      fechaSiembra: '',
-      fechaCosechaEsperada: ''
     });
     setValidationError('');
   };
@@ -751,13 +820,23 @@ const LotesManagement: React.FC = () => {
   };
 
   const getEstadoTraducido = (estado: string) => {
+    const estadoUpper = estado?.toUpperCase() || '';
     const traducciones: { [key: string]: string } = {
-      'en_cultivo': 'En Cultivo',
-      'disponible': 'Disponible',
-      'activo': 'Activo',
-      'inactivo': 'Inactivo'
+      'DISPONIBLE': '🟢 Disponible',
+      'PREPARADO': '🟢 Preparado',
+      'EN_PREPARACION': '🔧 En Preparación',
+      'SEMBRADO': '🌱 Sembrado',
+      'EN_CRECIMIENTO': '🌿 En Crecimiento',
+      'EN_FLORACION': '🌸 En Floración',
+      'EN_FRUTIFICACION': '🍎 En Fructificación',
+      'LISTO_PARA_COSECHA': '🌾 Listo para Cosecha',
+      'EN_COSECHA': '🚜 En Cosecha',
+      'COSECHADO': '✅ Cosechado',
+      'EN_DESCANSO': '💤 En Descanso',
+      'ENFERMO': '🚨 Enfermo',
+      'ABANDONADO': '⚠️ Abandonado'
     };
-    return traducciones[estado] || estado;
+    return traducciones[estadoUpper] || estado;
   };
 
   const getSuperficieDisponible = (campoId: number) => {
@@ -794,16 +873,52 @@ const LotesManagement: React.FC = () => {
         borderRadius: '10px', 
         marginBottom: '20px' 
       }}>
-        <h1 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>🏞️ Gestión de Lotes</h1>
-        <p style={{ margin: '0', opacity: '0.9' }}>
-          Divide campos en lotes y asigna cultivos específicos
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div>
+            <h1 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>🏞️ Gestión de Lotes</h1>
+            <p style={{ margin: '0', opacity: '0.9' }}>
+              Divide campos en lotes y asigna cultivos específicos
+            </p>
+          </div>
+          
+          {/* Botón de Ayuda de Estados */}
+          <button
+            onClick={() => setShowEstadosAyuda(true)}
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: 'white',
+              border: 'none',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 8px -1px rgba(0,0,0,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>📊</span>
+            <span>Flujo de Estados</span>
+          </button>
+        </div>
       </div>
 
       {/* Botones de acción */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button
           onClick={handleAgregarLote}
+          data-testid="add-lote-button"
           style={{
             background: '#4CAF50',
             color: 'white',
@@ -994,9 +1109,156 @@ const LotesManagement: React.FC = () => {
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', position: 'relative' }}>
+                        {/* Botones contextuales según el estado del lote */}
+                        {puedeSembrar(lote.estado) && (
+                          <button
+                            onClick={() => handleSembrar(lote)}
+                            data-testid={`lote-${lote.id}-sembrar-button`}
+                            style={{
+                              background: '#4CAF50',
+                              color: 'white',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            🌱 Sembrar
+                          </button>
+                        )}
+                        
+                        {/* Botón de Cosechar con dropdown para acciones especiales */}
+                        {puedeCosechar(lote.estado) && (
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuAbierto(menuAbierto === lote.id ? null : lote.id!);
+                              }}
+                              data-testid={`lote-${lote.id}-cosechar-button`}
+                              style={{
+                                background: '#FF9800',
+                                color: 'white',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              🌾 Cosechar ▾
+                            </button>
+                            
+                            {/* Dropdown menu */}
+                            {menuAbierto === lote.id && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                marginTop: '4px',
+                                background: 'white',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                zIndex: 1000,
+                                minWidth: '200px'
+                              }}>
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); // Prevenir que el click cierre el menú antes de ejecutar
+                                    handleCosechar(lote); 
+                                    setMenuAbierto(null); 
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '10px 16px',
+                                    border: 'none',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    fontSize: '13px',
+                                    borderBottom: '1px solid #f0f0f0'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                >
+                                  🌾 Cosechar Normal
+                                </button>
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); // Prevenir que el click cierre el menú antes de ejecutar
+                                    handleAccionEspecial(lote, 'forraje'); 
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '10px 16px',
+                                    border: 'none',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    fontSize: '13px',
+                                    borderBottom: '1px solid #f0f0f0'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                >
+                                  🐄 Convertir a Forraje
+                                </button>
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation();
+                                    handleAccionEspecial(lote, 'limpiar'); 
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '10px 16px',
+                                    border: 'none',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    fontSize: '13px',
+                                    borderBottom: '1px solid #f0f0f0'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                >
+                                  🚜 Limpiar Cultivo
+                                </button>
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation();
+                                    handleAccionEspecial(lote, 'abandonar'); 
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '10px 16px',
+                                    border: 'none',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    fontSize: '13px',
+                                    color: '#f44336'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = '#ffebee'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                >
+                                  ⚠️ Abandonar Cultivo
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
                         <button
                           onClick={() => handleVerHistorial(lote)}
+                          data-testid={`lote-${lote.id}-historial-button`}
                           style={{
                             background: '#9c27b0',
                             color: 'white',
@@ -1011,6 +1273,7 @@ const LotesManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleEditar(lote)}
+                          data-testid={`lote-${lote.id}-editar-button`}
                           style={{
                             background: '#2196F3',
                             color: 'white',
@@ -1025,6 +1288,7 @@ const LotesManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleEliminar(lote.id!)}
+                          data-testid={`lote-${lote.id}-eliminar-button`}
                           style={{
                             background: '#f44336',
                             color: 'white',
@@ -1178,42 +1442,6 @@ const LotesManagement: React.FC = () => {
                   />
                 </div>
 
-                {/* Cultivo */}
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem',
-                    fontWeight: '500',
-                    color: '#374151'
-                  }}>
-                    Cultivo *
-                  </label>
-                  <select
-                    value={formData.cultivo}
-                    onChange={(e) => {
-                      handleInputChange('cultivo', e.target.value);
-                      // Recalcular fecha de cosecha si ya hay fecha de siembra
-                      if (formData.fechaSiembra && e.target.value) {
-                        const fechaCosecha = calcularFechaCosecha(formData.fechaSiembra, e.target.value);
-                        handleInputChange('fechaCosechaEsperada', fechaCosecha);
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '1rem'
-                    }}
-                    required
-                  >
-                    <option value="">Seleccionar cultivo</option>
-                    {cultivos.map(cultivo => (
-                      <option key={cultivo} value={cultivo}>{cultivo}</option>
-                    ))}
-                  </select>
-                </div>
-
                 {/* Superficie */}
                 <div>
                   <label style={{ 
@@ -1248,32 +1476,17 @@ const LotesManagement: React.FC = () => {
                   )}
                 </div>
 
-                {/* Estado */}
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem',
-                    fontWeight: '500',
-                    color: '#374151'
-                  }}>
-                    Estado *
-                  </label>
-                  <select
-                    value={formData.estado}
-                    onChange={(e) => handleInputChange('estado', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '1rem'
-                    }}
-                    required
-                  >
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                    <option value="en_mantenimiento">En Mantenimiento</option>
-                  </select>
+                {/* Nota informativa */}
+                <div style={{
+                  background: '#e8f5e9',
+                  border: '1px solid #4caf50',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  fontSize: '13px',
+                  color: '#1b5e20'
+                }}>
+                  💡 <strong>Nota:</strong> El lote se creará en estado <strong>DISPONIBLE</strong> para siembra. 
+                  El cultivo se asignará cuando hagas clic en <strong>🌱 Sembrar</strong>.
                 </div>
 
                 {/* Descripción */}
@@ -1284,7 +1497,7 @@ const LotesManagement: React.FC = () => {
                     fontWeight: '500',
                     color: '#374151'
                   }}>
-                    Descripción
+                    Descripción (Opcional)
                   </label>
                   <textarea
                     value={formData.descripcion}
@@ -1331,66 +1544,6 @@ const LotesManagement: React.FC = () => {
                     <option value="Limoso">Limoso</option>
                     <option value="Franco Arcilloso">Franco Arcilloso</option>
                   </select>
-                </div>
-
-                {/* Fecha de Siembra */}
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem',
-                    fontWeight: '500',
-                    color: '#374151'
-                  }}>
-                    Fecha de Siembra
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.fechaSiembra}
-                    onChange={(e) => {
-                      handleInputChange('fechaSiembra', e.target.value);
-                      // Calcular fecha de cosecha esperada automáticamente
-                      if (e.target.value && formData.cultivo) {
-                        const fechaCosecha = calcularFechaCosecha(e.target.value, formData.cultivo);
-                        handleInputChange('fechaCosechaEsperada', fechaCosecha);
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-
-                {/* Fecha de Cosecha Esperada */}
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem',
-                    fontWeight: '500',
-                    color: '#374151'
-                  }}>
-                    Fecha de Cosecha Esperada
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.fechaCosechaEsperada}
-                    onChange={(e) => handleInputChange('fechaCosechaEsperada', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '1rem',
-                      backgroundColor: '#f9fafb'
-                    }}
-                    readOnly
-                  />
-                  <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                    Se calcula automáticamente según el cultivo seleccionado
-                  </small>
                 </div>
 
                 {/* Error de validación */}
@@ -1669,6 +1822,56 @@ const LotesManagement: React.FC = () => {
             })()}
           </div>
         </div>
+      )}
+      
+      {/* Modal de Siembra */}
+      {showSiembraModal && loteParaSiembra && (
+        <SiembraModal
+          lote={loteParaSiembra}
+          onClose={() => {
+            setShowSiembraModal(false);
+            setLoteParaSiembra(null);
+          }}
+          onSuccess={() => {
+            loadData(); // Recargar datos después de sembrar
+          }}
+        />
+      )}
+      
+      {/* Modal de Cosecha */}
+      {showCosechaModal && loteParaCosecha && (
+        <CosechaModal
+          lote={loteParaCosecha}
+          onClose={() => {
+            setShowCosechaModal(false);
+            setLoteParaCosecha(null);
+          }}
+          onSuccess={() => {
+            cargarLotes(); // Recargar datos después de cosechar
+          }}
+        />
+      )}
+      
+      {/* Modal de Acciones Especiales */}
+      {showAccionModal && loteParaAccion && (
+        <AccionLoteModal
+          lote={loteParaAccion}
+          accion={tipoAccion}
+          onClose={() => {
+            setShowAccionModal(false);
+            setLoteParaAccion(null);
+          }}
+          onSuccess={() => {
+            loadData(); // Recargar datos después de la acción
+          }}
+        />
+      )}
+      
+      {/* Modal de Ayuda de Estados */}
+      {showEstadosAyuda && (
+        <EstadosLoteAyuda
+          onClose={() => setShowEstadosAyuda(false)}
+        />
       )}
     </div>
   );

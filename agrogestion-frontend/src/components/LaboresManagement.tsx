@@ -85,6 +85,7 @@ interface Lote {
   nombre: string;
   superficie: number;
   cultivo: string;
+  estado?: string;  // Estado del lote (DISPONIBLE, SEMBRADO, etc.)
 }
 
 const LaboresManagement: React.FC = () => {
@@ -226,7 +227,12 @@ const LaboresManagement: React.FC = () => {
   const [maquinariaHoras, setMaquinariaHoras] = useState<number>(0);
   const [maquinariaKilometros, setMaquinariaKilometros] = useState<number>(0);
 
-  const tiposLabor = [
+  // Tipos de labor disponibles (se filtrarán según el estado del lote)
+  const [tiposLaborDisponibles, setTiposLaborDisponibles] = useState<string[]>([]);
+  const [loteEstado, setLoteEstado] = useState<string>('');
+  
+  // Todos los tipos de labor posibles
+  const todosLosTiposLabor = [
     'siembra', 'fertilizacion', 'cosecha', 'riego', 'pulverizacion',
     'arado', 'rastra', 'desmalezado', 'aplicacion_herbicida',
     'aplicacion_insecticida', 'monitoreo', 'otro'
@@ -254,7 +260,7 @@ const LaboresManagement: React.FC = () => {
       }
 
       // Cargar lotes
-      const lotesResponse = await fetch('http://localhost:8080/api/lotes', {
+      const lotesResponse = await fetch('http://localhost:8080/api/v1/lotes', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -268,7 +274,8 @@ const LaboresManagement: React.FC = () => {
           id: lote.id,
           nombre: lote.nombre,
           superficie: lote.areaHectareas || 0,
-          cultivo: lote.cultivoActual || ''
+          cultivo: lote.cultivoActual || '',
+          estado: lote.estado // ← AGREGADO: campo estado del lote
         }));
         setLotes(lotesMapeados);
       }
@@ -358,8 +365,49 @@ const LaboresManagement: React.FC = () => {
     }
   };
 
+  // Función para cargar tareas disponibles según el estado del lote
+  const cargarTareasDisponibles = async (estadoLote: string) => {
+    if (!estadoLote) {
+      console.log('❌ No hay estado de lote, usando todas las tareas');
+      setTiposLaborDisponibles(todosLosTiposLabor);
+      return;
+    }
+
+    try {
+      console.log('🔍 Cargando tareas disponibles para estado:', estadoLote);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/labores/tareas-disponibles/${estadoLote}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('📡 Response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Tareas recibidas del backend:', data.tareas);
+        setTiposLaborDisponibles(data.tareas || []);
+      } else {
+        console.error('❌ Error del servidor:', response.status);
+        const errorText = await response.text();
+        console.error('Error details:', errorText);
+        // Si falla, usar todas las tareas
+        setTiposLaborDisponibles(todosLosTiposLabor);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando tareas disponibles:', error);
+      // Si falla, usar todas las tareas
+      setTiposLaborDisponibles(todosLosTiposLabor);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    // Inicializar con todas las tareas disponibles
+    setTiposLaborDisponibles(todosLosTiposLabor);
   }, []);
 
   // Detectar si es móvil
@@ -434,7 +482,7 @@ const LaboresManagement: React.FC = () => {
     setShowMaquinariaModal(true);
   };
 
-  const handleOpenEditModal = (labor: Labor) => {
+  const handleOpenEditModal = async (labor: Labor) => {
     // Mapear el tipo de labor del backend al frontend
     const laborMapeada = {
       ...labor,
@@ -442,6 +490,18 @@ const LaboresManagement: React.FC = () => {
     };
     
     setFormData(laborMapeada);
+    
+    // Cargar el estado del lote y las tareas disponibles
+    const lote = lotes.find(l => l.id === labor.lote_id);
+    if (lote && lote.estado) {
+      console.log('🔄 [handleOpenEditModal] Cargando tareas para lote en estado:', lote.estado);
+      setLoteEstado(lote.estado);
+      await cargarTareasDisponibles(lote.estado);
+    } else {
+      console.log('⚠️ [handleOpenEditModal] Lote sin estado, limpiando tareas');
+      setLoteEstado('');
+      setTiposLaborDisponibles([]);
+    }
     
     // Mapear insumos del formato del backend al formato del frontend
     const insumosMapeados = (labor.insumos_usados || []).map((insumo: any) => ({
@@ -633,13 +693,29 @@ const LaboresManagement: React.FC = () => {
     }));
   };
 
-  const handleLoteChange = (loteId: number) => {
+  const handleLoteChange = async (loteId: number) => {
+    console.log('🔄 handleLoteChange llamado con loteId:', loteId);
     const lote = lotes.find(l => l.id === loteId);
+    console.log('📦 Lote encontrado:', lote);
+    console.log('📍 Estado del lote:', lote?.estado);
+    
     setFormData(prev => ({
       ...prev,
       lote_id: loteId,
-      lote_nombre: lote?.nombre || ''
+      lote_nombre: lote?.nombre || '',
+      tipo: '' // Resetear tipo de labor cuando cambia el lote
     }));
+    
+    // Cargar tareas disponibles según el estado del lote
+    if (lote && lote.estado) {
+      console.log('✅ Lote tiene estado, cargando tareas para:', lote.estado);
+      setLoteEstado(lote.estado);
+      await cargarTareasDisponibles(lote.estado);
+    } else {
+      console.log('❌ Lote NO tiene estado, usando todas las tareas');
+      setLoteEstado('');
+      setTiposLaborDisponibles(todosLosTiposLabor);
+    }
   };
 
   const saveLabor = async () => {
@@ -731,6 +807,8 @@ const LaboresManagement: React.FC = () => {
 
       if (response.ok) {
         alert(editingLabor ? 'Labor actualizada exitosamente' : 'Labor creada exitosamente');
+        // Invalidar caché de labores para forzar recarga fresca
+        offlineService.remove('labores');
         handleCloseModal();
         loadData(); // Recargar datos desde el backend
       } else {
@@ -781,6 +859,8 @@ const LaboresManagement: React.FC = () => {
         });
 
         if (response.ok || response.status === 204) {
+          // Invalidar caché de labores para forzar recarga fresca
+          offlineService.remove('labores');
           // Eliminar del estado local solo si la API confirma la eliminación
           setLabores(prev => prev.filter(l => l.id !== id));
           alert('Labor eliminada exitosamente');
@@ -1300,36 +1380,10 @@ const LaboresManagement: React.FC = () => {
 
             <form onSubmit={(e) => { e.preventDefault(); saveLabor(); }}>
               <div style={{ display: 'grid', gap: '15px' }}>
-                {/* Tipo de labor */}
+                {/* Lote - PRIMERO para determinar las labores disponibles */}
                 <div>
                   <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
-                    Tipo de Labor *
-                  </label>
-                  <select
-                    value={formData.tipo}
-                    onChange={(e) => handleInputChange('tipo', e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px'
-                    }}
-                  >
-                    <option value="">Seleccionar tipo de labor</option>
-                    {tiposLabor.map(tipo => (
-                      <option key={tipo} value={tipo}>
-                        {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Lote */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
-                    Lote *
+                    Lote * <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 'normal' }}>(Seleccione primero el lote)</span>
                   </label>
                   <select
                     value={formData.lote_id}
@@ -1350,6 +1404,71 @@ const LaboresManagement: React.FC = () => {
                       </option>
                     ))}
                   </select>
+                  {loteEstado && (
+                    <div style={{ 
+                      marginTop: '8px', 
+                      padding: '8px', 
+                      background: '#f0f9ff', 
+                      border: '1px solid #bfdbfe', 
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: '#1e40af'
+                    }}>
+                      <strong>📍 Estado del lote:</strong> {loteEstado.replace(/_/g, ' ')}
+                      <br />
+                      <em>✅ Solo se mostrarán las labores apropiadas para este estado</em>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tipo de labor - SEGUNDO, filtrado por el estado del lote */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                    Tipo de Labor *
+                  </label>
+                  <select
+                    value={formData.tipo}
+                    onChange={(e) => handleInputChange('tipo', e.target.value)}
+                    required
+                    disabled={!formData.lote_id || editingLabor !== null}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      opacity: (!formData.lote_id || editingLabor !== null) ? 0.5 : 1,
+                      cursor: (!formData.lote_id || editingLabor !== null) ? 'not-allowed' : 'pointer',
+                      backgroundColor: editingLabor !== null ? '#f3f4f6' : 'white'
+                    }}
+                  >
+                    <option value="">{!formData.lote_id ? 'Primero seleccione un lote' : 'Seleccionar tipo de labor'}</option>
+                    {tiposLaborDisponibles.map(tipo => (
+                      <option key={tipo} value={tipo}>
+                        {tipo.charAt(0).toUpperCase() + tipo.slice(1).replace(/_/g, ' ')}
+                      </option>
+                    ))}
+                  </select>
+                  {editingLabor !== null && (
+                    <div style={{
+                      marginTop: '6px',
+                      fontSize: '11px',
+                      color: '#6b7280',
+                      fontWeight: 'bold'
+                    }}>
+                      🔒 El tipo de labor no se puede cambiar al editar
+                    </div>
+                  )}
+                  {tiposLaborDisponibles.length > 0 && formData.lote_id && editingLabor === null && (
+                    <div style={{
+                      marginTop: '6px',
+                      fontSize: '11px',
+                      color: '#059669',
+                      fontWeight: 'bold'
+                    }}>
+                      ✓ {tiposLaborDisponibles.length} labor(es) disponible(s) para este lote
+                    </div>
+                  )}
                 </div>
 
                 {/* Fecha */}
@@ -2285,20 +2404,32 @@ const LaboresManagement: React.FC = () => {
                       borderRadius: '8px',
                       border: '1px solid #e2e8f0'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: 'bold', color: '#374151' }}>{mo.descripcion}</div>
-                          <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                            {mo.cantidad_personas} persona(s) {mo.proveedor && `- ${mo.proveedor}`}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 'bold', color: '#374151', marginBottom: '4px' }}>
+                            {mo.descripcion}
                           </div>
+                          <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '2px' }}>
+                            👥 Personas: <strong>{mo.cantidad_personas || 0}</strong>
+                          </div>
+                          {mo.proveedor && (
+                            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '2px' }}>
+                              🏢 Proveedor: {mo.proveedor}
+                            </div>
+                          )}
                           {mo.horas_trabajo && (
                             <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                              Horas de trabajo: {mo.horas_trabajo}
+                              ⏱️ Horas: {mo.horas_trabajo}
+                            </div>
+                          )}
+                          {mo.observaciones && (
+                            <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', fontStyle: 'italic' }}>
+                              {mo.observaciones}
                             </div>
                           )}
                         </div>
-                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#d97706' }}>
-                          {formatCurrency(mo.costo_total)}
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#d97706', textAlign: 'right', minWidth: '120px' }}>
+                          {formatCurrency(mo.costo_total || 0)}
                         </div>
                       </div>
                     </div>

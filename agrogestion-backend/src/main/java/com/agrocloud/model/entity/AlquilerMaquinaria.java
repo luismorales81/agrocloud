@@ -7,7 +7,12 @@ import java.time.LocalDateTime;
 
 /**
  * Entidad para gestionar el alquiler de maquinaria
+ * 
+ * @deprecated Esta entidad está deprecada. La tabla será eliminada en V1_13.
+ * Razón: Funcionalidad redundante - usar labor_maquinaria con tipoMaquinaria=ALQUILADA
+ * Alternativa: Registrar alquileres como LaborMaquinaria en las labores correspondientes.
  */
+@Deprecated
 @Entity
 @Table(name = "alquiler_maquinaria")
 public class AlquilerMaquinaria {

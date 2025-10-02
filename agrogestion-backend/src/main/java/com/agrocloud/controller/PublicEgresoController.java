@@ -1,7 +1,6 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.model.entity.Egreso;
-import com.agrocloud.model.entity.Insumo;
 import com.agrocloud.repository.EgresoRepository;
 import com.agrocloud.repository.InsumoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,18 +101,18 @@ public class PublicEgresoController {
         try {
             return egresoRepository.findById(id)
                     .map(egresoExistente -> {
+                        egresoExistente.setConcepto(egreso.getConcepto());
+                        egresoExistente.setDescripcion(egreso.getDescripcion());
                         egresoExistente.setTipo(egreso.getTipo());
                         egresoExistente.setReferenciaId(egreso.getReferenciaId());
-
                         egresoExistente.setFecha(egreso.getFecha());
                         egresoExistente.setCostoTotal(egreso.getCostoTotal());
-
                         egresoExistente.setCantidad(egreso.getCantidad());
-
-
+                        egresoExistente.setUnidadMedida(egreso.getUnidadMedida());
+                        egresoExistente.setProveedor(egreso.getProveedor());
+                        egresoExistente.setEstado(egreso.getEstado());
                         egresoExistente.setObservaciones(egreso.getObservaciones());
                         egresoExistente.setLote(egreso.getLote());
-                        egresoExistente.setReferenciaId(egreso.getReferenciaId());
                         
                         return ResponseEntity.ok(egresoRepository.save(egresoExistente));
                     })

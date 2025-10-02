@@ -426,6 +426,7 @@ public class AuthService implements UserDetailsService {
     /**
      * Generar token de verificación
      */
+    @SuppressWarnings("unused")
     private String generateVerificationToken() {
         return UUID.randomUUID().toString();
     }

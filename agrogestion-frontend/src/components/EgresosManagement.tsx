@@ -105,7 +105,7 @@ const EgresosManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/api/v1/campos');
+      const response = await api.get('/api/campos');
       setLotes(response.data);
     } catch (error) {
       console.error('Error cargando lotes:', error);
@@ -114,7 +114,7 @@ const EgresosManagement: React.FC = () => {
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/api/v1/insumos');
+      const response = await api.get('/api/insumos');
       setInsumos(response.data);
     } catch (error) {
       console.error('Error cargando insumos:', error);

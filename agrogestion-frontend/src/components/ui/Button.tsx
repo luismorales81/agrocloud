@@ -8,6 +8,7 @@ interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
   className?: string;
+  'data-testid'?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -18,6 +19,7 @@ const Button: React.FC<ButtonProps> = ({
   type = 'button',
   disabled = false,
   className = '',
+  'data-testid': dataTestId,
 }) => {
   const baseClasses = 'btn font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
   
@@ -44,6 +46,7 @@ const Button: React.FC<ButtonProps> = ({
       className={classes}
       onClick={onClick}
       disabled={disabled}
+      data-testid={dataTestId}
     >
       {children}
     </button>

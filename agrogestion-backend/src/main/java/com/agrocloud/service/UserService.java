@@ -2,7 +2,6 @@ package com.agrocloud.service;
 
 import com.agrocloud.dto.UsuarioDTO;
 import com.agrocloud.model.entity.EstadoUsuario;
-import com.agrocloud.model.entity.Role;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -21,8 +18,6 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private RoleService roleService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;

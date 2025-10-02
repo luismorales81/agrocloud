@@ -11,15 +11,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.agrocloud.service.MultiTenantService;
-import com.agrocloud.config.JwtAuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.Arrays;
@@ -36,7 +33,7 @@ public class SecurityConfig {
             .authenticationProvider(authenticationProvider)
             .authorizeHttpRequests(auth -> auth
                 // Permitir endpoints públicos
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test", "/api/auth/test-auth", "/api/auth/test-productor", "/api/auth/generate-hash", "/api/health", "/api/public/**", "/api/admin-global/dashboard-test", "/api/admin-global/test-simple", "/api/admin-global/dashboard-simple", "/api/admin-global/empresas-basic", "/api/admin-global/usuarios-basic", "/api/v1/weather-simple/**", "/api/v1/weather/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test", "/api/auth/test-auth", "/api/auth/test-productor", "/api/auth/generate-hash", "/api/health", "/api/public/**", "/api/admin-global/dashboard-test", "/api/admin-global/test-simple", "/api/admin-global/dashboard-simple", "/api/admin-global/test-connectivity", "/api/admin-global/empresas-basic", "/api/admin-global/usuarios-basic", "/api/admin-global/estadisticas-uso", "/api/v1/weather-simple/**", "/api/v1/weather/**").permitAll()
                 // Endpoints de administración global (solo SuperAdmin)
                 .requestMatchers("/api/admin-global/**").hasAuthority("ROLE_SUPERADMIN")
                 // Endpoints de administración de empresa
@@ -50,7 +47,7 @@ public class SecurityConfig {
                 // Endpoints del dashboard
                 .requestMatchers("/api/dashboard/**").authenticated()
                 // Endpoints de entidades principales (requieren autenticación y pertenencia a empresa)
-                .requestMatchers("/api/fields/**", "/api/campos/**", "/api/plots/**", "/api/cultivos/**", "/api/cosechas/**", "/api/insumos/**", "/api/maquinaria/**", "/api/labores/**", "/api/ingresos/**", "/api/egresos/**", "/api/v1/balance/**").authenticated()
+                .requestMatchers("/api/fields/**", "/api/campos/**", "/api/plots/**", "/api/cultivos/**", "/api/v1/cultivos/**", "/api/cosechas/**", "/api/v1/cosechas/**", "/api/insumos/**", "/api/maquinaria/**", "/api/labores/**", "/api/ingresos/**", "/api/egresos/**", "/api/v1/balance/**", "/api/lotes/**", "/api/v1/lotes/**").authenticated()
                 // Cualquier otra petición requiere autenticación
                 .anyRequest().authenticated()
             )

@@ -3,7 +3,6 @@ package com.agrocloud.service;
 import com.agrocloud.model.entity.Maquinaria;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.repository.MaquinariaRepository;
-import com.agrocloud.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +17,6 @@ public class MaquinariaService {
     @Autowired
     private MaquinariaRepository maquinariaRepository;
 
-    @Autowired
-    private UserRepository userRepository;
 
     // Obtener todas las maquinarias (para administración global)
     public List<Maquinaria> getAllMaquinaria() {
@@ -28,12 +25,29 @@ public class MaquinariaService {
 
     // Obtener todas las maquinarias accesibles por un usuario
     public List<Maquinaria> getMaquinariasByUser(User user) {
-        if (user.isAdmin()) {
-            // Admin ve todas las maquinarias
-            return maquinariaRepository.findAll();
-        } else {
-            // Usuario ve sus maquinarias y las de sus sub-usuarios
-            return maquinariaRepository.findAccessibleByUser(user);
+        try {
+            System.out.println("[MAQUINARIA_SERVICE] Iniciando getMaquinariasByUser para usuario: " + user.getEmail());
+            System.out.println("[MAQUINARIA_SERVICE] Usuario esAdmin: " + user.isAdmin());
+            System.out.println("[MAQUINARIA_SERVICE] Roles del usuario: " + user.getRoles().stream().map(r -> r.getNombre()).toList());
+            
+            if (user.isAdmin()) {
+                // Admin ve todas las maquinarias
+                System.out.println("[MAQUINARIA_SERVICE] Usuario es admin, obteniendo todas las maquinarias");
+                List<Maquinaria> allMaquinarias = maquinariaRepository.findAll();
+                System.out.println("[MAQUINARIA_SERVICE] Total de maquinarias encontradas: " + allMaquinarias.size());
+                return allMaquinarias;
+            } else {
+                // Usuario ve sus maquinarias y las de sus sub-usuarios
+                System.out.println("[MAQUINARIA_SERVICE] Usuario no es admin, obteniendo maquinarias accesibles");
+                List<Maquinaria> accessibleMaquinarias = maquinariaRepository.findAccessibleByUser(user);
+                System.out.println("[MAQUINARIA_SERVICE] Maquinarias accesibles encontradas: " + accessibleMaquinarias.size());
+                return accessibleMaquinarias;
+            }
+        } catch (Exception e) {
+            System.err.println("[MAQUINARIA_SERVICE] ERROR en getMaquinariasByUser: " + e.getMessage());
+            System.err.println("[MAQUINARIA_SERVICE] Stack trace completo:");
+            e.printStackTrace();
+            throw new RuntimeException("Error al obtener maquinarias del usuario: " + e.getMessage(), e);
         }
     }
 

@@ -2,7 +2,6 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.FieldDTO;
 import com.agrocloud.exception.ResourceNotFoundException;
-import com.agrocloud.exception.ResourceConflictException;
 import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.service.FieldService;

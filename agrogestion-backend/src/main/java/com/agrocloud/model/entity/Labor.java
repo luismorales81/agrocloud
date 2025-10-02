@@ -1,9 +1,9 @@
 package com.agrocloud.model.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -45,7 +45,7 @@ public class Labor {
     @Column(name = "fecha_fin")
     private LocalDate fechaFin;
 
-    @Positive(message = "El costo debe ser un valor positivo")
+    @PositiveOrZero(message = "El costo debe ser un valor positivo o cero")
     @Column(name = "costo_total", precision = 10, scale = 2)
     private BigDecimal costoTotal;
 
@@ -82,6 +82,18 @@ public class Labor {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    // Campos de auditoría para anulación
+    @Size(max = 1000, message = "El motivo de anulación no puede exceder 1000 caracteres")
+    @Column(name = "motivo_anulacion", length = 1000)
+    private String motivoAnulacion;
+
+    @Column(name = "fecha_anulacion")
+    private LocalDateTime fechaAnulacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_anulacion_id")
+    private User usuarioAnulacion;
+
     // Relaciones con entidades relacionadas
     @OneToMany(mappedBy = "labor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private java.util.List<LaborInsumo> insumosUsados;
@@ -98,7 +110,11 @@ public class Labor {
     }
 
     public enum EstadoLabor {
-        PLANIFICADA, EN_PROGRESO, COMPLETADA, CANCELADA
+        PLANIFICADA,    // Labor planificada, aún no ejecutada
+        EN_PROGRESO,    // Labor en ejecución
+        COMPLETADA,     // Labor finalizada exitosamente
+        CANCELADA,      // Labor cancelada antes de ejecutar (insumos restaurados)
+        ANULADA         // Labor anulada después de ejecutar (requiere justificación)
     }
 
     // Constructors
@@ -251,6 +267,30 @@ public class Labor {
         this.manoObra = manoObra;
     }
 
+    public String getMotivoAnulacion() {
+        return motivoAnulacion;
+    }
+
+    public void setMotivoAnulacion(String motivoAnulacion) {
+        this.motivoAnulacion = motivoAnulacion;
+    }
+
+    public LocalDateTime getFechaAnulacion() {
+        return fechaAnulacion;
+    }
+
+    public void setFechaAnulacion(LocalDateTime fechaAnulacion) {
+        this.fechaAnulacion = fechaAnulacion;
+    }
+
+    public User getUsuarioAnulacion() {
+        return usuarioAnulacion;
+    }
+
+    public void setUsuarioAnulacion(User usuarioAnulacion) {
+        this.usuarioAnulacion = usuarioAnulacion;
+    }
+
     // Helper methods
     public boolean isPlanificada() {
         return EstadoLabor.PLANIFICADA.equals(estado);
@@ -266,6 +306,19 @@ public class Labor {
 
     public boolean isCancelada() {
         return EstadoLabor.CANCELADA.equals(estado);
+    }
+
+    public boolean isAnulada() {
+        return EstadoLabor.ANULADA.equals(estado);
+    }
+
+    public boolean puedeEliminarseDirectamente() {
+        return EstadoLabor.PLANIFICADA.equals(estado);
+    }
+
+    public boolean requiereAnulacionFormal() {
+        return EstadoLabor.EN_PROGRESO.equals(estado) || 
+               EstadoLabor.COMPLETADA.equals(estado);
     }
 
     public boolean isPasada() {

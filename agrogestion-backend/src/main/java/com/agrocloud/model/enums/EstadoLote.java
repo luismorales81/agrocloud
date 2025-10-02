@@ -57,9 +57,17 @@ public enum EstadoLote {
     
     /**
      * Verifica si el lote puede ser cosechado desde este estado
+     * Permite cosecha desde múltiples estados para casos de:
+     * - Cosecha normal (LISTO_PARA_COSECHA)
+     * - Cosecha anticipada por problemas (SEMBRADO, EN_CRECIMIENTO)
+     * - Conversión a forraje (EN_FLORACION, EN_FRUTIFICACION)
      */
     public boolean puedeCosechar() {
-        return this == LISTO_PARA_COSECHA;
+        return this == SEMBRADO || 
+               this == EN_CRECIMIENTO || 
+               this == EN_FLORACION || 
+               this == EN_FRUTIFICACION || 
+               this == LISTO_PARA_COSECHA;
     }
     
     /**

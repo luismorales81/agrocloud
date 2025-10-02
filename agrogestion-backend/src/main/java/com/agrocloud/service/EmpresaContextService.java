@@ -1,7 +1,6 @@
 package com.agrocloud.service;
 
 import com.agrocloud.model.entity.Empresa;
-import com.agrocloud.model.entity.User;
 import com.agrocloud.model.entity.UsuarioEmpresa;
 import com.agrocloud.repository.UsuarioEmpresaRepository;
 import org.springframework.beans.factory.annotation.Autowired;

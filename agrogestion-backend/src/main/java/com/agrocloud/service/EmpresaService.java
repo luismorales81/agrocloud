@@ -281,8 +281,8 @@ public class EmpresaService {
      * Obtiene empresas con más actividad
      */
     @Transactional(readOnly = true)
-    public List<Object[]> obtenerEmpresasConMasActividad(Pageable pageable) {
-        return empresaRepository.findEmpresasConMasActividad(pageable);
+    public List<Object[]> obtenerEmpresasConMasActividad() {
+        return empresaRepository.findEmpresasConMasActividad();
     }
 
     /**

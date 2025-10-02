@@ -4,7 +4,6 @@ import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.repository.FieldRepository;
-import com.agrocloud.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -20,8 +20,9 @@ public class FieldService {
     @Autowired
     private FieldRepository fieldRepository;
 
+
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     // Obtener todos los campos activos (público)
     public List<Field> getAllFields() {
@@ -55,19 +56,62 @@ public class FieldService {
                             return activo != null && activo;
                         })
                         .toList();
-            } else {
-                // Admin de empresa y otros usuarios ven solo sus campos y los de sus sub-usuarios
-                System.out.println("[FIELD_SERVICE] Usuario es Admin de empresa, mostrando campos accesibles");
+            } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null)) {
+                // Admin de empresa ve TODOS los campos de su empresa
+                System.out.println("[FIELD_SERVICE] Usuario es Admin de empresa, mostrando TODOS los campos de la empresa");
                 
-                // Para tests, usar una consulta más simple que busque campos del usuario
+                Empresa empresa = user.getEmpresa();
+                if (empresa == null) {
+                    System.out.println("[FIELD_SERVICE] Usuario ADMIN no tiene empresa asignada");
+                    return new ArrayList<>();
+                }
+                
+                // Obtener todos los usuarios de la empresa
+                List<User> todosUsuarios = userService.findAll();
+                List<User> usuariosEmpresa = todosUsuarios.stream()
+                        .filter(u -> u.perteneceAEmpresa(empresa.getId()))
+                        .collect(Collectors.toList());
+                
+                System.out.println("[FIELD_SERVICE] Empresa ID: " + empresa.getId() + ", Usuarios: " + usuariosEmpresa.size());
+                
+                // Obtener campos de TODOS los usuarios de la empresa
+                List<Field> todosLosCampos = new ArrayList<>();
+                for (User userEmpresa : usuariosEmpresa) {
+                    List<Field> camposUsuario = fieldRepository.findByUserIdAndActivoTrue(userEmpresa.getId());
+                    if (camposUsuario != null) {
+                        todosLosCampos.addAll(camposUsuario);
+                        System.out.println("[FIELD_SERVICE] Campos del usuario " + userEmpresa.getUsername() + ": " + camposUsuario.size());
+                    }
+                }
+                
+                System.out.println("[FIELD_SERVICE] Total campos de la empresa: " + todosLosCampos.size());
+                return todosLosCampos;
+            } else {
+                // Otros usuarios ven solo sus campos y los de sus sub-usuarios
+                System.out.println("[FIELD_SERVICE] Usuario normal, mostrando campos accesibles");
+                
+                // Obtener campos del usuario actual
                 List<Field> userFields = fieldRepository.findByUserIdAndActivoTrue(user.getId());
                 System.out.println("[FIELD_SERVICE] Campos del usuario encontrados: " + (userFields != null ? userFields.size() : "null"));
                 
                 if (userFields == null) {
-                    System.err.println("[FIELD_SERVICE] ERROR: fieldRepository.findByUserIdAndActivoTrue retornó null");
-                    return new ArrayList<>();
+                    userFields = new ArrayList<>();
                 }
                 
+                // Obtener campos de usuarios dependientes
+                List<User> usuariosDependientes = userService.findByParentUserId(user.getId());
+                if (usuariosDependientes != null && !usuariosDependientes.isEmpty()) {
+                    System.out.println("[FIELD_SERVICE] Usuarios dependientes encontrados: " + usuariosDependientes.size());
+                    for (User dependiente : usuariosDependientes) {
+                        List<Field> camposDependiente = fieldRepository.findByUserIdAndActivoTrue(dependiente.getId());
+                        if (camposDependiente != null) {
+                            userFields.addAll(camposDependiente);
+                            System.out.println("[FIELD_SERVICE] Campos del dependiente " + dependiente.getUsername() + ": " + camposDependiente.size());
+                        }
+                    }
+                }
+                
+                System.out.println("[FIELD_SERVICE] Total campos accesibles: " + userFields.size());
                 return userFields;
             }
         } catch (Exception e) {

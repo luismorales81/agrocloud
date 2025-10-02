@@ -1,6 +1,7 @@
 package com.agrocloud.dto;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -39,7 +40,7 @@ public class BalanceDTO {
 
     private void calcularMargenBeneficio() {
         if (this.totalIngresos.compareTo(BigDecimal.ZERO) > 0) {
-            this.margenBeneficio = this.balanceNeto.divide(this.totalIngresos, 4, BigDecimal.ROUND_HALF_UP)
+            this.margenBeneficio = this.balanceNeto.divide(this.totalIngresos, 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100"));
         } else {
             this.margenBeneficio = BigDecimal.ZERO;

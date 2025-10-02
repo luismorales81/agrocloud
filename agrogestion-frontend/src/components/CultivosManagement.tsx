@@ -66,7 +66,7 @@ const CultivosManagement: React.FC = () => {
       }
 
       // Llamada real a la API
-      const response = await fetch('http://localhost:8080/api/cultivos', {
+      const response = await fetch('http://localhost:8080/api/v1/cultivos', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -108,8 +108,8 @@ const CultivosManagement: React.FC = () => {
       }
 
       const url = editingCultivo 
-        ? `http://localhost:8080/api/cultivos/${editingCultivo.id}`
-        : 'http://localhost:8080/api/cultivos';
+        ? `http://localhost:8080/api/v1/cultivos/${editingCultivo.id}`
+        : 'http://localhost:8080/api/v1/cultivos';
       
       const method = editingCultivo ? 'PUT' : 'POST';
 
@@ -166,7 +166,7 @@ const CultivosManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:8080/api/cultivos/${cultivoId}`, {
+      const response = await fetch(`http://localhost:8080/api/v1/cultivos/${cultivoId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

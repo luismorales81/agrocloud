@@ -70,6 +70,7 @@ public class DataInitializer implements CommandLineRunner {
         logger.info("Inicialización de datos completada");
     }
     
+    @SuppressWarnings("unused")
     private User createDefaultAdminUser() {
         try {
             // Verificar si ya existe un usuario administrador
@@ -104,6 +105,7 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
     
+    @SuppressWarnings("unused")
     private Empresa createDefaultEmpresa() {
         try {
             // Verificar si ya existe una empresa por defecto
@@ -158,6 +160,7 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
     
+    @SuppressWarnings("unused")
     private void assignExistingUsersToDefaultEmpresa(Empresa empresa) {
         try {
             if (empresa == null) {

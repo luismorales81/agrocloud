@@ -84,7 +84,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
       {/* Botón selector */}
       <button
         onClick={() => setMostrarSelector(!mostrarSelector)}
-        className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[200px]"
       >
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">

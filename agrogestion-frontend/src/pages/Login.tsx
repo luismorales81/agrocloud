@@ -5,6 +5,8 @@ import { useEmpresa } from '../contexts/EmpresaContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import EmpresaSelector from '../components/EmpresaSelector';
+import TestUsersSection from '../components/TestUsersSection';
+import { type TestUser } from '../data/testUsers';
 import './Login.css';
 
 const Login: React.FC = () => {
@@ -63,6 +65,12 @@ const Login: React.FC = () => {
     navigate('/dashboard');
   };
 
+  const handleTestUserSelect = (user: TestUser) => {
+    console.log('🧪 [Login] Usuario de prueba seleccionado:', user);
+    setUsername(user.email);
+    setPassword(user.password);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 login-background">
       {/* Overlay oscuro para mejorar legibilidad */}
@@ -93,6 +101,7 @@ const Login: React.FC = () => {
                 console.log('🔧 [Login] Email cambiado:', value);
                 setUsername(value);
               }}
+              data-testid="email-input"
               required
             />
             
@@ -105,6 +114,7 @@ const Login: React.FC = () => {
                 console.log('🔧 [Login] Contraseña cambiada:', value ? '***' : '');
                 setPassword(value);
               }}
+              data-testid="password-input"
               required
             />
             
@@ -134,6 +144,7 @@ const Login: React.FC = () => {
               size="lg"
               disabled={loading}
               className="w-full mt-6"
+              data-testid="login-button"
             >
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
@@ -141,10 +152,7 @@ const Login: React.FC = () => {
         </form>
         
         <div className="text-center text-sm text-white login-users-info rounded-lg p-4">
-          <p className="font-semibold mb-2">Usuarios de prueba:</p>
-          <p className="text-gray-200">admin@agrocloud.com / admin123</p>
-          <p className="text-gray-200">tecnico@agrocloud.com / tecnico123</p>
-          <p className="text-gray-200">productor@agrocloud.com / productor123</p>
+          <TestUsersSection onUserSelect={handleTestUserSelect} />
         </div>
       </div>
 
@@ -170,12 +178,12 @@ const Login: React.FC = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-blue-600 text-sm font-medium">
-                          {usuarioEmpresa.nombre.charAt(0).toUpperCase()}
+                          {usuarioEmpresa.empresaNombre?.charAt(0)?.toUpperCase() || 'E'}
                         </span>
                       </div>
                       <div className="flex-1">
                         <h4 className="text-sm font-medium text-gray-900">
-                          {usuarioEmpresa.nombre}
+                          {usuarioEmpresa.empresaNombre || 'Empresa'}
                         </h4>
                         <p className="text-xs text-gray-500">
                           Rol: {usuarioEmpresa.rol} • Estado: {usuarioEmpresa.estado}

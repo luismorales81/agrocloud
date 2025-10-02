@@ -84,4 +84,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "GROUP BY u " +
            "ORDER BY actividad DESC")
     List<Object[]> findUsuariosMasActivos(@Param("fechaInicio") java.time.LocalDateTime fechaInicio);
+    
+    @Query(value = "SELECT u.first_name, u.last_name, u.email, COUNT(c.id) as campos_creados " +
+           "FROM usuarios u LEFT JOIN campos c ON u.id = c.user_id " +
+           "GROUP BY u.id, u.first_name, u.last_name, u.email " +
+           "ORDER BY campos_creados DESC", nativeQuery = true)
+    List<Object[]> findUsuariosConMasCampos();
 }

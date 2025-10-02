@@ -3,7 +3,6 @@ package com.agrocloud.service;
 import com.agrocloud.model.entity.Insumo;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.repository.InsumoRepository;
-import com.agrocloud.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +18,6 @@ public class InsumoService {
     @Autowired
     private InsumoRepository insumoRepository;
 
-    @Autowired
-    private UserRepository userRepository;
 
     // Obtener todos los insumos (público)
     public List<Insumo> getAllInsumos() {

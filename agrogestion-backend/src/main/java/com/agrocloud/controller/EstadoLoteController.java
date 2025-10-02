@@ -110,8 +110,6 @@ public class EstadoLoteController {
     @GetMapping("/resumen")
     public ResponseEntity<Map<String, Object>> getResumenEstados(Authentication authentication) {
         try {
-            User usuario = (User) authentication.getPrincipal();
-            
             Map<String, Object> resumen = new HashMap<>();
             
             // Contar lotes por estado

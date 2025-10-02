@@ -8,6 +8,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -74,6 +75,16 @@ public class HistorialCosecha {
 
     @Column(name = "dias_descanso_recomendados")
     private Integer diasDescansoRecomendados = 0;
+
+    // Campos para análisis de rentabilidad
+    @Column(name = "precio_venta_unitario", precision = 10, scale = 2)
+    private BigDecimal precioVentaUnitario = BigDecimal.ZERO;
+
+    @Column(name = "ingreso_total", precision = 15, scale = 2)
+    private BigDecimal ingresoTotal = BigDecimal.ZERO;
+
+    @Column(name = "costo_total_produccion", precision = 15, scale = 2)
+    private BigDecimal costoTotalProduccion = BigDecimal.ZERO;
 
     @CreatedDate
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
@@ -234,6 +245,30 @@ public class HistorialCosecha {
         this.diasDescansoRecomendados = diasDescansoRecomendados;
     }
 
+    public BigDecimal getPrecioVentaUnitario() {
+        return precioVentaUnitario;
+    }
+
+    public void setPrecioVentaUnitario(BigDecimal precioVentaUnitario) {
+        this.precioVentaUnitario = precioVentaUnitario;
+    }
+
+    public BigDecimal getIngresoTotal() {
+        return ingresoTotal;
+    }
+
+    public void setIngresoTotal(BigDecimal ingresoTotal) {
+        this.ingresoTotal = ingresoTotal;
+    }
+
+    public BigDecimal getCostoTotalProduccion() {
+        return costoTotalProduccion;
+    }
+
+    public void setCostoTotalProduccion(BigDecimal costoTotalProduccion) {
+        this.costoTotalProduccion = costoTotalProduccion;
+    }
+
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
     }
@@ -268,7 +303,7 @@ public class HistorialCosecha {
 
     public BigDecimal getPorcentajeCumplimiento() {
         if (rendimientoEsperado != null && rendimientoEsperado.compareTo(BigDecimal.ZERO) > 0) {
-            return rendimientoReal.divide(rendimientoEsperado, 4, BigDecimal.ROUND_HALF_UP)
+            return rendimientoReal.divide(rendimientoEsperado, 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100"));
         }
         return BigDecimal.ZERO;

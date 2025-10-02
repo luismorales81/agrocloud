@@ -131,13 +131,13 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
     /**
      * Obtiene empresas con más actividad (más campos, lotes, etc.)
      */
-    @Query("SELECT e, " +
-           "(SELECT COUNT(c) FROM Field c WHERE c.empresa = e) as totalCampos, " +
-           "(SELECT COUNT(l) FROM Plot l WHERE l.campo.empresa = e) as totalLotes, " +
-           "(SELECT COUNT(i) FROM Insumo i WHERE i.empresa = e) as totalInsumos " +
-           "FROM Empresa e " +
-           "ORDER BY totalCampos DESC, totalLotes DESC, totalInsumos DESC")
-    List<Object[]> findEmpresasConMasActividad(Pageable pageable);
+    @Query(value = "SELECT e.nombre, e.cuit, " +
+           "(SELECT COUNT(*) FROM campos c WHERE c.empresa_id = e.id) as total_campos, " +
+           "(SELECT COUNT(*) FROM lotes l JOIN campos c ON l.campo_id = c.id WHERE c.empresa_id = e.id) as total_lotes, " +
+           "(SELECT COUNT(*) FROM labores lab JOIN lotes l ON lab.lote_id = l.id JOIN campos c ON l.campo_id = c.id WHERE c.empresa_id = e.id) as total_labores " +
+           "FROM empresas e " +
+           "ORDER BY total_campos DESC, total_lotes DESC, total_labores DESC", nativeQuery = true)
+    List<Object[]> findEmpresasConMasActividad();
     
     /**
      * Cuenta empresas creadas después de una fecha específica

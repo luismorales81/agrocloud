@@ -27,9 +27,33 @@ public class MaquinariaController {
     // Obtener todas las maquinarias accesibles por el usuario
     @GetMapping
     public ResponseEntity<List<Maquinaria>> getAllMaquinarias(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByEmail(userDetails.getUsername());
-        List<Maquinaria> maquinarias = maquinariaService.getMaquinariasByUser(user);
-        return ResponseEntity.ok(maquinarias);
+        try {
+            System.out.println("[MAQUINARIA_CONTROLLER] Iniciando getAllMaquinarias para usuario: " + (userDetails != null ? userDetails.getUsername() : "null"));
+            
+            if (userDetails == null) {
+                System.err.println("[MAQUINARIA_CONTROLLER] ERROR: UserDetails es null");
+                return ResponseEntity.status(401).build();
+            }
+            
+            User user = userService.findByEmail(userDetails.getUsername());
+            if (user == null) {
+                System.err.println("[MAQUINARIA_CONTROLLER] ERROR: Usuario no encontrado: " + userDetails.getUsername());
+                return ResponseEntity.status(404).build();
+            }
+            
+            System.out.println("[MAQUINARIA_CONTROLLER] Usuario encontrado: " + user.getEmail() + ", esAdmin: " + user.isAdmin());
+            System.out.println("[MAQUINARIA_CONTROLLER] Roles del usuario: " + user.getRoles().stream().map(r -> r.getNombre()).toList());
+            
+            List<Maquinaria> maquinarias = maquinariaService.getMaquinariasByUser(user);
+            System.out.println("[MAQUINARIA_CONTROLLER] Maquinarias encontradas: " + maquinarias.size());
+            
+            return ResponseEntity.ok(maquinarias);
+        } catch (Exception e) {
+            System.err.println("[MAQUINARIA_CONTROLLER] ERROR en getAllMaquinarias: " + e.getMessage());
+            System.err.println("[MAQUINARIA_CONTROLLER] Stack trace completo:");
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 
     // Obtener maquinaria por ID

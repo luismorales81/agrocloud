@@ -9,7 +9,7 @@ import com.agrocloud.service.UserService;
 import com.agrocloud.service.FieldService;
 import com.agrocloud.service.InsumoService;
 import com.agrocloud.service.MaquinariaService;
-import com.agrocloud.service.EgresoService;
+import com.agrocloud.service.WeatherApiUsageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,24 +36,25 @@ public class AdminGlobalController {
 
     @Autowired
     private AdminGlobalService adminGlobalService;
-
+    
     @Autowired
     private EmpresaService empresaService;
-
+    
     @Autowired
     private UserService userService;
-
+    
     @Autowired
     private FieldService fieldService;
-
+    
     @Autowired
     private InsumoService insumoService;
-
+    
     @Autowired
     private MaquinariaService maquinariaService;
-
+    
     @Autowired
-    private EgresoService egresoService;
+    private WeatherApiUsageService weatherApiUsageService;
+
 
     /**
      * Obtiene el dashboard del administrador global
@@ -94,6 +94,53 @@ public class AdminGlobalController {
         response.put("message", "AdminGlobalController funcionando");
         response.put("timestamp", java.time.LocalDateTime.now());
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Endpoint de prueba para verificar conectividad
+     */
+    @GetMapping("/test-connectivity")
+    public ResponseEntity<Map<String, Object>> testConnectivity() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "ok");
+        response.put("message", "Conectividad funcionando");
+        response.put("timestamp", java.time.LocalDateTime.now());
+        response.put("empresas", empresaService.obtenerTodasLasEmpresas().size());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Obtener estadísticas de uso del sistema
+     */
+    @GetMapping("/estadisticas-uso")
+    public ResponseEntity<Map<String, Object>> obtenerEstadisticasUso() {
+        try {
+            Map<String, Object> estadisticas = adminGlobalService.obtenerEstadisticasUso();
+            return ResponseEntity.ok(estadisticas);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+    
+    /**
+     * Obtener estadísticas de uso del plugin del clima
+     */
+    @GetMapping("/estadisticas-clima")
+    public ResponseEntity<Map<String, Object>> obtenerEstadisticasClima() {
+        try {
+            Map<String, Object> estadisticasHoy = weatherApiUsageService.obtenerEstadisticasUsoHoy();
+            Map<String, Object> estadisticasSemanal = weatherApiUsageService.obtenerEstadisticasUsoSemanal();
+            
+            Map<String, Object> respuesta = new HashMap<>();
+            respuesta.put("usoHoy", estadisticasHoy);
+            respuesta.put("usoSemanal", estadisticasSemanal);
+            
+            return ResponseEntity.ok(respuesta);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(null);
+        }
     }
 
     /**
@@ -286,24 +333,27 @@ public class AdminGlobalController {
      * Crea una nueva empresa desde el panel de administración global
      */
     @PostMapping("/empresas")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<Empresa> crearEmpresa(@RequestBody CrearEmpresaRequest request) {
         try {
+            System.out.println("🏢 [AdminGlobalController] Recibida solicitud de creación de empresa");
+            System.out.println("🏢 [AdminGlobalController] Nombre: " + request.getNombre());
+            System.out.println("🏢 [AdminGlobalController] CUIT: " + request.getCuit());
+            
             Empresa empresa = adminGlobalService.crearEmpresaDesdeAdmin(
                     request.getNombre(),
                     request.getCuit(),
                     request.getEmailContacto(),
                     request.getTelefonoContacto(),
-                    request.getDireccion(),
-                    request.getAdminUsername(),
-                    request.getAdminEmail(),
-                    request.getAdminPassword(),
-                    request.getAdminFirstName(),
-                    request.getAdminLastName()
+                    request.getDireccion()
             );
+            System.out.println("✅ [AdminGlobalController] Empresa creada exitosamente con ID: " + empresa.getId());
+            
             return ResponseEntity.ok(empresa);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            System.err.println("❌ [AdminGlobalController] Error creando empresa: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -334,7 +384,7 @@ public class AdminGlobalController {
      * Activa una empresa
      */
     @PostMapping("/empresas/{id}/activar")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<Empresa> activarEmpresa(@PathVariable Long id) {
         try {
             Empresa empresa = adminGlobalService.activarEmpresa(id);
@@ -348,7 +398,7 @@ public class AdminGlobalController {
      * Suspende una empresa
      */
     @PostMapping("/empresas/{id}/suspender")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<Empresa> suspenderEmpresa(@PathVariable Long id) {
         try {
             Empresa empresa = adminGlobalService.suspenderEmpresa(id);
@@ -363,7 +413,7 @@ public class AdminGlobalController {
      * Extiende el trial de una empresa
      */
     @PostMapping("/empresas/{id}/extender-trial")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<Empresa> extenderTrialEmpresa(@PathVariable Long id, @RequestBody ExtenderTrialRequest request) {
         try {
             Empresa empresa = adminGlobalService.extenderTrialEmpresa(id, request.getDiasAdicionales());
@@ -499,19 +549,6 @@ public class AdminGlobalController {
         }
     }
 
-    /**
-     * Obtiene estadísticas de uso del sistema
-     */
-    @GetMapping("/estadisticas-uso")
-    @PreAuthorize("hasRole('SUPERADMIN')")
-    public ResponseEntity<Map<String, Object>> obtenerEstadisticasUsoSistema() {
-        try {
-            Map<String, Object> estadisticas = adminGlobalService.obtenerEstadisticasUsoSistema();
-            return ResponseEntity.ok(estadisticas);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
 
     // Clases DTO para las requests
     public static class CrearEmpresaRequest {
@@ -520,11 +557,6 @@ public class AdminGlobalController {
         private String emailContacto;
         private String telefonoContacto;
         private String direccion;
-        private String adminUsername;
-        private String adminEmail;
-        private String adminPassword;
-        private String adminFirstName;
-        private String adminLastName;
 
         // Getters and Setters
         public String getNombre() { return nombre; }
@@ -537,16 +569,6 @@ public class AdminGlobalController {
         public void setTelefonoContacto(String telefonoContacto) { this.telefonoContacto = telefonoContacto; }
         public String getDireccion() { return direccion; }
         public void setDireccion(String direccion) { this.direccion = direccion; }
-        public String getAdminUsername() { return adminUsername; }
-        public void setAdminUsername(String adminUsername) { this.adminUsername = adminUsername; }
-        public String getAdminEmail() { return adminEmail; }
-        public void setAdminEmail(String adminEmail) { this.adminEmail = adminEmail; }
-        public String getAdminPassword() { return adminPassword; }
-        public void setAdminPassword(String adminPassword) { this.adminPassword = adminPassword; }
-        public String getAdminFirstName() { return adminFirstName; }
-        public void setAdminFirstName(String adminFirstName) { this.adminFirstName = adminFirstName; }
-        public String getAdminLastName() { return adminLastName; }
-        public void setAdminLastName(String adminLastName) { this.adminLastName = adminLastName; }
     }
 
     public static class ActualizarEmpresaRequest {

@@ -26,8 +26,6 @@ public class InventarioService {
     @Autowired
     private MovimientoInventarioRepository movimientoInventarioRepository;
     
-    @Autowired
-    private LaborInsumoRepository laborInsumoRepository;
     
     /**
      * Actualiza el inventario cuando se crea o edita una labor.
@@ -85,6 +83,22 @@ public class InventarioService {
                           usuario);
     }
     
+    /**
+     * Restaura el inventario de una labor eliminada o cancelada.
+     * Método público para ser usado por LaborService.
+     * 
+     * @param insumosLabor Lista de insumos de la labor
+     * @param usuario Usuario que realiza la operación
+     * @param motivo Motivo de la restauración
+     */
+    public void restaurarInventarioLabor(List<LaborInsumo> insumosLabor, User usuario, String motivo) {
+        if (insumosLabor != null && !insumosLabor.isEmpty()) {
+            for (LaborInsumo laborInsumo : insumosLabor) {
+                restaurarInventario(laborInsumo, usuario, motivo);
+            }
+        }
+    }
+
     /**
      * Restaura cantidad al inventario de un insumo.
      * 

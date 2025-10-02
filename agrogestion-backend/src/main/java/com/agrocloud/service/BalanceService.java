@@ -2,8 +2,6 @@ package com.agrocloud.service;
 
 import com.agrocloud.dto.BalanceDTO;
 import com.agrocloud.dto.DetalleBalanceDTO;
-import com.agrocloud.model.entity.Ingreso;
-import com.agrocloud.model.entity.Egreso;
 import com.agrocloud.model.entity.Labor;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.repository.IngresoRepository;
@@ -243,15 +241,22 @@ public class BalanceService {
         laborRepository.findByUsuarioIdAndFechaInicioBetween(usuarioId, fechaInicio, fechaFin)
                 .stream()
                 .filter(labor -> labor.getCostoTotal() != null)
-                .forEach(labor -> detalles.add(new DetalleBalanceDTO(
+                .forEach(labor -> {
+                    String concepto = labor.getDescripcion();
+                    if (concepto == null || concepto.trim().isEmpty()) {
+                        concepto = labor.getTipoLabor().toString() + " en lote " + 
+                                   (labor.getLote() != null ? labor.getLote().getNombre() : "sin lote");
+                    }
+                    detalles.add(new DetalleBalanceDTO(
                         "COSTO",
-                        labor.getDescripcion(),
+                        concepto,
                         labor.getFechaInicio(),
                         labor.getCostoTotal(),
                         "LABOR - " + labor.getTipoLabor().toString(),
                         labor.getLote() != null ? labor.getLote().getNombre() : null,
                         labor.getDescripcion()
-                )));
+                    ));
+                });
 
         // Costos de mantenimiento - No implementado en el sistema actual
 
@@ -265,15 +270,22 @@ public class BalanceService {
         return laborRepository.findByLoteIdAndFechaInicioBetween(loteId, fechaInicio, fechaFin)
                 .stream()
                 .filter(labor -> labor.getCostoTotal() != null)
-                .map(labor -> new DetalleBalanceDTO(
+                .map(labor -> {
+                    String concepto = labor.getDescripcion();
+                    if (concepto == null || concepto.trim().isEmpty()) {
+                        concepto = labor.getTipoLabor().toString() + " en lote " + 
+                                   (labor.getLote() != null ? labor.getLote().getNombre() : "sin lote");
+                    }
+                    return new DetalleBalanceDTO(
                         "COSTO",
-                        labor.getDescripcion(),
+                        concepto,
                         labor.getFechaInicio(),
                         labor.getCostoTotal(),
                         "LABOR - " + labor.getTipoLabor().toString(),
                         labor.getLote() != null ? labor.getLote().getNombre() : null,
                         labor.getDescripcion()
-                ))
+                    );
+                })
                 .collect(Collectors.toList());
     }
 

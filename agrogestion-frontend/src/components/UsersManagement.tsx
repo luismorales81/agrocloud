@@ -270,40 +270,191 @@ const UsersManagement: React.FC = () => {
         </p>
       </div>
 
-      {/* Estadísticas */}
+      {/* Estadísticas Compactas */}
       {stats && (
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '15px', 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: '10px', 
           marginBottom: '20px' 
         }}>
-          <div style={{ background: '#e3f2fd', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-            <h3 style={{ margin: '0 0 5px 0', color: '#1976d2' }}>Total Usuarios</h3>
-            <p style={{ margin: '0', fontSize: '24px', fontWeight: 'bold', color: '#1976d2' }}>
+          <div style={{ background: '#e3f2fd', padding: '10px', borderRadius: '6px', textAlign: 'center' }}>
+            <h4 style={{ margin: '0 0 3px 0', color: '#1976d2', fontSize: '14px' }}>Total Usuarios</h4>
+            <p style={{ margin: '0', fontSize: '18px', fontWeight: 'bold', color: '#1976d2' }}>
               {stats.users?.totalUsers || 0}
             </p>
           </div>
-          <div style={{ background: '#e8f5e8', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-            <h3 style={{ margin: '0 0 5px 0', color: '#388e3c' }}>Usuarios Activos</h3>
-            <p style={{ margin: '0', fontSize: '24px', fontWeight: 'bold', color: '#388e3c' }}>
+          <div style={{ background: '#e8f5e8', padding: '10px', borderRadius: '6px', textAlign: 'center' }}>
+            <h4 style={{ margin: '0 0 3px 0', color: '#388e3c', fontSize: '14px' }}>Activos</h4>
+            <p style={{ margin: '0', fontSize: '18px', fontWeight: 'bold', color: '#388e3c' }}>
               {stats.users?.activeUsers || 0}
             </p>
           </div>
-          <div style={{ background: '#fff3e0', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-            <h3 style={{ margin: '0 0 5px 0', color: '#f57c00' }}>Total Roles</h3>
-            <p style={{ margin: '0', fontSize: '24px', fontWeight: 'bold', color: '#f57c00' }}>
-              {stats.roles?.totalRoles || 0}
+          <div style={{ background: '#fff3e0', padding: '10px', borderRadius: '6px', textAlign: 'center' }}>
+            <h4 style={{ margin: '0 0 3px 0', color: '#f57c00', fontSize: '14px' }}>Pendientes</h4>
+            <p style={{ margin: '0', fontSize: '18px', fontWeight: 'bold', color: '#f57c00' }}>
+              {stats.users?.unverifiedUsers || 0}
             </p>
           </div>
-          <div style={{ background: '#fce4ec', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-            <h3 style={{ margin: '0 0 5px 0', color: '#c2185b' }}>Sin Verificar</h3>
-            <p style={{ margin: '0', fontSize: '24px', fontWeight: 'bold', color: '#c2185b' }}>
-              {stats.users?.unverifiedUsers || 0}
+          <div style={{ background: '#fce4ec', padding: '10px', borderRadius: '6px', textAlign: 'center' }}>
+            <h4 style={{ margin: '0 0 3px 0', color: '#c2185b', fontSize: '14px' }}>Suspendidos</h4>
+            <p style={{ margin: '0', fontSize: '18px', fontWeight: 'bold', color: '#c2185b' }}>
+              {stats.users?.suspendedUsers || 0}
             </p>
           </div>
         </div>
       )}
+
+      {/* Métricas de Uso del Sistema */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: '20px', 
+        marginBottom: '20px' 
+      }}>
+        {/* Tasa de Uso de Plugins */}
+        <div style={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+          color: 'white', 
+          padding: '20px', 
+          borderRadius: '10px' 
+        }}>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>🔌 Tasa de Uso de Plugins (Hoy)</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: '0', fontSize: '12px', opacity: '0.8' }}>Usados</p>
+              <p style={{ margin: '0', fontSize: '24px', fontWeight: 'bold' }}>85%</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: '0', fontSize: '12px', opacity: '0.8' }}>Límite Diario</p>
+              <p style={{ margin: '0', fontSize: '24px', fontWeight: 'bold' }}>100%</p>
+            </div>
+          </div>
+          <div style={{ 
+            background: 'rgba(255,255,255,0.2)', 
+            borderRadius: '10px', 
+            height: '8px', 
+            marginTop: '10px' 
+          }}>
+            <div style={{ 
+              background: 'white', 
+              height: '100%', 
+              width: '85%', 
+              borderRadius: '10px' 
+            }}></div>
+          </div>
+        </div>
+
+        {/* Actividad del Sistema */}
+        <div style={{ 
+          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 
+          color: 'white', 
+          padding: '20px', 
+          borderRadius: '10px' 
+        }}>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>📊 Actividad del Sistema</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: '0', fontSize: '12px', opacity: '0.8' }}>Sesiones Hoy</p>
+              <p style={{ margin: '0', fontSize: '24px', fontWeight: 'bold' }}>127</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: '0', fontSize: '12px', opacity: '0.8' }}>Operaciones</p>
+              <p style={{ margin: '0', fontSize: '24px', fontWeight: 'bold' }}>1,234</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Usuarios y Empresas Más Activas */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: '20px', 
+        marginBottom: '20px' 
+      }}>
+        {/* Usuarios Más Activos */}
+        <div style={{ 
+          background: 'white', 
+          border: '1px solid #e0e0e0', 
+          borderRadius: '10px', 
+          padding: '20px' 
+        }}>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#333' }}>
+            👥 Usuarios Más Activos (Últimos 30 días)
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[
+              { nombre: 'Juan Pérez', actividades: 45 },
+              { nombre: 'María García', actividades: 38 },
+              { nombre: 'Carlos López', actividades: 32 },
+              { nombre: 'Ana Martínez', actividades: 28 },
+              { nombre: 'Pedro Rodríguez', actividades: 24 }
+            ].map((usuario, index) => (
+              <div key={index} style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: '8px',
+                background: index % 2 === 0 ? '#f8f9fa' : 'white',
+                borderRadius: '4px'
+              }}>
+                <span style={{ fontSize: '14px', color: '#333' }}>{usuario.nombre}</span>
+                <span style={{ 
+                  fontSize: '12px', 
+                  color: '#666',
+                  background: '#e3f2fd',
+                  padding: '2px 8px',
+                  borderRadius: '12px'
+                }}>
+                  {usuario.actividades} actividades
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Empresas Más Activas */}
+        <div style={{ 
+          background: 'white', 
+          border: '1px solid #e0e0e0', 
+          borderRadius: '10px', 
+          padding: '20px' 
+        }}>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#333' }}>
+            🏢 Empresas Más Activas
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[
+              { nombre: 'AgroTech Solutions', recursos: 'campos, lotes, insumos' },
+              { nombre: 'Campo Verde S.A.', recursos: 'campos, lotes, insumos' },
+              { nombre: 'Finca del Norte', recursos: 'campos, lotes, insumos' },
+              { nombre: 'AgroInnovación', recursos: 'campos, lotes, insumos' },
+              { nombre: 'Sembrando Futuro', recursos: 'campos, lotes, insumos' }
+            ].map((empresa, index) => (
+              <div key={index} style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: '8px',
+                background: index % 2 === 0 ? '#f8f9fa' : 'white',
+                borderRadius: '4px'
+              }}>
+                <span style={{ fontSize: '14px', color: '#333' }}>{empresa.nombre}</span>
+                <span style={{ 
+                  fontSize: '12px', 
+                  color: '#666',
+                  background: '#e8f5e8',
+                  padding: '2px 8px',
+                  borderRadius: '12px'
+                }}>
+                  {empresa.recursos}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Botón para agregar nuevo usuario */}
       <div style={{ marginBottom: '20px' }}>

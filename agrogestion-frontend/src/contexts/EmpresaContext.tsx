@@ -81,6 +81,8 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
       const response = await api.get('/api/v1/empresas/mis-empresas');
       const empresas = response.data;
       
+      console.log('🔍 [EmpresaContext] Datos recibidos de mis-empresas:', empresas);
+      
       setEmpresasUsuario(empresas);
       
       // Si hay empresas y no hay empresa activa, seleccionar la primera
@@ -107,11 +109,20 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
       
       
       // Actualizar empresa activa y rol
-      setEmpresaActiva(empresaData);
+      // Crear objeto Empresa desde UsuarioEmpresa
+      const empresa: Empresa = {
+        id: empresaData.empresaId,
+        nombre: empresaData.empresaNombre,
+        estado: empresaData.estado,
+        activo: empresaData.estado === 'ACTIVO',
+        fechaCreacion: empresaData.fechaInicio,
+        fechaActualizacion: empresaData.fechaInicio
+      };
+      setEmpresaActiva(empresa);
       setRolUsuario(empresaData.rol);
       
       // Guardar en localStorage para persistencia
-      localStorage.setItem('empresaActiva', JSON.stringify(empresaData));
+      localStorage.setItem('empresaActiva', JSON.stringify(empresa));
       localStorage.setItem('rolUsuario', empresaData.rol);
       
       // Actualizar el token con el contexto de empresa
@@ -158,8 +169,8 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
   const esSoloLectura = () => rolUsuario === 'LECTURA';
   const esProductor = () => rolUsuario === 'PRODUCTOR';
 
-  const tienePermisoEscritura = () => {
-    return rolUsuario && !esSoloLectura() && rolUsuario !== 'LECTURA';
+  const tienePermisoEscritura = (): boolean => {
+    return Boolean(rolUsuario && !esSoloLectura() && rolUsuario !== 'LECTURA');
   };
 
   const tienePermisoAdministracion = () => {
@@ -213,11 +224,8 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
   );
 };
 
-export const useEmpresa = (): EmpresaContextType => {
+export const useEmpresa = (): EmpresaContextType | undefined => {
   const context = useContext(EmpresaContext);
-  if (context === undefined) {
-    throw new Error('useEmpresa debe ser usado dentro de un EmpresaProvider');
-  }
   return context;
 };
 

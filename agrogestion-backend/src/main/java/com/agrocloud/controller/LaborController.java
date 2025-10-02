@@ -9,6 +9,7 @@ import com.agrocloud.model.entity.Labor;
 import com.agrocloud.model.entity.LaborMaquinaria;
 import com.agrocloud.model.entity.LaborManoObra;
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.enums.EstadoLote;
 import com.agrocloud.service.LaborService;
 import com.agrocloud.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,14 +100,44 @@ public class LaborController {
     }
 
     /**
-     * Eliminar labor
+     * Eliminar labor (cancela si está PLANIFICADA, requiere anulación si está ejecutada)
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteLabor(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = userService.findByEmail(userDetails.getUsername());
             laborService.eliminarLabor(id, user);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(Map.of("mensaje", "Labor eliminada exitosamente"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    /**
+     * Anular una labor ejecutada (solo ADMINISTRADOR)
+     * 
+     * @param id ID de la labor
+     * @param request Request con justificación y opción de restaurar insumos
+     */
+    @PostMapping("/{id}/anular")
+    public ResponseEntity<?> anularLabor(
+            @PathVariable Long id, 
+            @RequestBody Map<String, Object> request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            
+            String justificacion = (String) request.get("justificacion");
+            Boolean restaurarInsumos = request.get("restaurarInsumos") != null 
+                ? (Boolean) request.get("restaurarInsumos") 
+                : false;
+            
+            laborService.anularLabor(id, justificacion, restaurarInsumos, user);
+            
+            return ResponseEntity.ok(Map.of(
+                "mensaje", "Labor anulada exitosamente",
+                "insumosRestaurados", restaurarInsumos
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -271,6 +302,50 @@ public class LaborController {
             return ResponseEntity.ok(estadisticas);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    /**
+     * Obtiene las tareas disponibles según el estado del lote
+     */
+    @GetMapping("/tareas-disponibles/{estado}")
+    public ResponseEntity<Map<String, Object>> getTareasDisponiblesPorEstado(@PathVariable String estado) {
+        try {
+            EstadoLote estadoLote = EstadoLote.valueOf(estado.toUpperCase());
+            Map<String, Object> infoTareas = laborService.getInfoTareasDisponibles(estadoLote);
+            return ResponseEntity.ok(infoTareas);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    /**
+     * Valida si una tarea es apropiada para un estado específico
+     */
+    @GetMapping("/validar-tarea/{estado}/{tipoTarea}")
+    public ResponseEntity<Map<String, Object>> validarTareaParaEstado(
+            @PathVariable String estado, 
+            @PathVariable String tipoTarea) {
+        try {
+            EstadoLote estadoLote = EstadoLote.valueOf(estado.toUpperCase());
+            boolean esValida = laborService.validarTareaParaEstado(estadoLote, tipoTarea);
+            
+            Map<String, Object> respuesta = Map.of(
+                "estado", estado,
+                "tipoTarea", tipoTarea,
+                "esValida", esValida,
+                "mensaje", esValida ? 
+                    "✅ Tarea apropiada para este estado" : 
+                    "⚠️ Esta tarea no es recomendada para el estado " + estado
+            );
+            
+            return ResponseEntity.ok(respuesta);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

@@ -45,5 +45,4 @@ public interface FieldRepository extends JpaRepository<Field, Long> {
     
     // Métodos faltantes para los tests
     List<Field> findByNombreContainingIgnoreCase(String nombre);
-    List<Field> findByTipoSuelo(String tipoSuelo);
 }

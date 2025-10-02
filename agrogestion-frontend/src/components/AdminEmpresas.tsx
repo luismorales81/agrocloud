@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/admin-forms.css';
 
 interface Empresa {
@@ -34,6 +35,7 @@ interface UsuarioEmpresa {
 }
 
 const AdminEmpresas: React.FC = () => {
+  const { user } = useAuth();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [usuariosEmpresas, setUsuariosEmpresas] = useState<UsuarioEmpresa[]>([]);
@@ -58,6 +60,14 @@ const AdminEmpresas: React.FC = () => {
     rol: 'OPERARIO'
   });
 
+  // Estados para la nueva interfaz de asignación
+  const [busquedaUsuario, setBusquedaUsuario] = useState('');
+  const [busquedaEmpresa, setBusquedaEmpresa] = useState('');
+  const [usuariosFiltrados, setUsuariosFiltrados] = useState<Usuario[]>([]);
+  const [empresasFiltradas, setEmpresasFiltradas] = useState<Empresa[]>([]);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<Usuario | null>(null);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState<Empresa | null>(null);
+
   const [showCambiarRolForm, setShowCambiarRolForm] = useState(false);
   const [cambioRolForm, setCambioRolForm] = useState({
     usuarioId: 0,
@@ -81,6 +91,34 @@ const AdminEmpresas: React.FC = () => {
     cargarDatos();
   }, []);
 
+  // Efectos para filtrado
+  useEffect(() => {
+    if (busquedaUsuario.trim() === '') {
+      setUsuariosFiltrados(usuarios);
+    } else {
+      const filtrados = usuarios.filter(usuario => 
+        usuario.firstName.toLowerCase().includes(busquedaUsuario.toLowerCase()) ||
+        usuario.lastName.toLowerCase().includes(busquedaUsuario.toLowerCase()) ||
+        usuario.email.toLowerCase().includes(busquedaUsuario.toLowerCase()) ||
+        usuario.username.toLowerCase().includes(busquedaUsuario.toLowerCase())
+      );
+      setUsuariosFiltrados(filtrados);
+    }
+  }, [busquedaUsuario, usuarios]);
+
+  useEffect(() => {
+    if (busquedaEmpresa.trim() === '') {
+      setEmpresasFiltradas(empresas);
+    } else {
+      const filtrados = empresas.filter(empresa => 
+        empresa.nombre.toLowerCase().includes(busquedaEmpresa.toLowerCase()) ||
+        empresa.cuit.toLowerCase().includes(busquedaEmpresa.toLowerCase()) ||
+        empresa.emailContacto.toLowerCase().includes(busquedaEmpresa.toLowerCase())
+      );
+      setEmpresasFiltradas(filtrados);
+    }
+  }, [busquedaEmpresa, empresas]);
+
   const cargarDatos = async () => {
     try {
       setLoading(true);
@@ -98,7 +136,7 @@ const AdminEmpresas: React.FC = () => {
       setEmpresas(empresasTransformadas);
 
       // Cargar usuarios - usar endpoint básico
-      const responseUsuarios = await api.get('/admin/usuarios/basic');
+      const responseUsuarios = await api.get('/api/admin/usuarios/basic');
       setUsuarios(responseUsuarios.data);
 
       // Cargar roles de empresa dinámicamente
@@ -117,7 +155,7 @@ const AdminEmpresas: React.FC = () => {
 
   const cargarRolesEmpresa = async () => {
     try {
-      const response = await api.get('/roles-empresa');
+      const response = await api.get('/api/roles-empresa');
       setRolesEmpresa(response.data);
     } catch (error) {
       console.error('Error cargando roles de empresa:', error);
@@ -128,7 +166,7 @@ const AdminEmpresas: React.FC = () => {
   const cargarUsuariosEmpresas = async () => {
     try {
       // Cargar todas las relaciones usuario-empresa
-      const response = await api.get('/empresa-usuario/todas-relaciones');
+      const response = await api.get('/api/empresa-usuario/todas-relaciones');
       if (response.data.success) {
         setUsuariosEmpresas(response.data.data);
       }
@@ -136,7 +174,7 @@ const AdminEmpresas: React.FC = () => {
       console.error('Error cargando usuarios de empresas:', error);
       // Si no existe el endpoint, intentar con la empresa por defecto
       try {
-        const response = await api.get('/empresa-usuario/empresa/1/usuarios');
+        const response = await api.get('/api/empresa-usuario/empresa/1/usuarios');
         if (response.data.success) {
           setUsuariosEmpresas(response.data.data);
         }
@@ -152,15 +190,13 @@ const AdminEmpresas: React.FC = () => {
         nombre: nuevaEmpresaForm.nombre,
         cuit: nuevaEmpresaForm.cuit,
         emailContacto: nuevaEmpresaForm.emailContacto,
-        telefono: nuevaEmpresaForm.telefono,
-        direccion: nuevaEmpresaForm.direccion,
-        descripcion: nuevaEmpresaForm.descripcion,
-        activo: true
+        telefonoContacto: nuevaEmpresaForm.telefono,
+        direccion: nuevaEmpresaForm.direccion
       };
 
-      const response = await api.post('/empresas', empresaData);
+      const response = await api.post('/api/admin-global/empresas', empresaData);
       
-      if (response.data.success) {
+      if (response.data) {
         alert('Empresa creada exitosamente');
         setShowCrearEmpresaForm(false);
         setNuevaEmpresaForm({
@@ -173,7 +209,7 @@ const AdminEmpresas: React.FC = () => {
         });
         await cargarDatos(); // Recargar la lista de empresas
       } else {
-        alert('Error: ' + response.data.message);
+        alert('Error al crear la empresa');
       }
     } catch (error) {
       console.error('Error creando empresa:', error);
@@ -183,13 +219,14 @@ const AdminEmpresas: React.FC = () => {
 
   const asignarUsuarioAEmpresa = async () => {
     try {
-      const response = await api.post('/empresa-usuario/asignar', asignacionForm);
+      const response = await api.post('/api/empresa-usuario/asignar', asignacionForm);
       
       if (response.data.success) {
         alert('Usuario asignado a empresa correctamente');
         setShowAsignarForm(false);
         setAsignacionForm({ usuarioId: 0, empresaId: 0, rol: 'OPERARIO' });
         await cargarUsuariosEmpresas();
+        limpiarSeleccion();
       } else {
         alert('Error: ' + response.data.message);
       }
@@ -199,9 +236,17 @@ const AdminEmpresas: React.FC = () => {
     }
   };
 
+  const limpiarSeleccion = () => {
+    setUsuarioSeleccionado(null);
+    setEmpresaSeleccionada(null);
+    setBusquedaUsuario('');
+    setBusquedaEmpresa('');
+    setAsignacionForm({ usuarioId: 0, empresaId: 0, rol: 'OPERARIO' });
+  };
+
   const cambiarRolUsuario = async () => {
     try {
-      const response = await api.put('/empresa-usuario/cambiar-rol', {
+      const response = await api.put('/api/empresa-usuario/cambiar-rol', {
         usuarioId: cambioRolForm.usuarioId,
         empresaId: cambioRolForm.empresaId,
         rol: cambioRolForm.nuevoRol
@@ -294,12 +339,14 @@ const AdminEmpresas: React.FC = () => {
 
       {/* Botones de acción */}
       <div className="mb-6 flex space-x-4">
-        <button
-          onClick={() => setShowCrearEmpresaForm(true)}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          🏢 Crear Nueva Empresa
-        </button>
+        {user?.roleName === 'SUPERADMIN' && (
+          <button
+            onClick={() => setShowCrearEmpresaForm(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            🏢 Crear Nueva Empresa
+          </button>
+        )}
         <button
           onClick={() => setShowAsignarForm(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -547,6 +594,7 @@ const AdminEmpresas: React.FC = () => {
               </div>
             </div>
 
+
             <div className="admin-btn-group">
               <button
                 onClick={() => setShowCrearEmpresaForm(false)}
@@ -565,82 +613,211 @@ const AdminEmpresas: React.FC = () => {
         </div>
       )}
 
-      {/* Modal para asignar usuario */}
+      {/* Modal para asignar usuario - Nueva interfaz mejorada */}
       {showAsignarForm && (
         <div className="admin-modal">
-          <div className="admin-modal-content">
+          <div className="admin-modal-content" style={{ width: '90vw', maxWidth: '1200px' }}>
             <div className="admin-modal-header">
               <h3 className="admin-modal-title">➕ Asignar Usuario a Empresa</h3>
               <button
-                onClick={() => setShowAsignarForm(false)}
+                onClick={() => {
+                  setShowAsignarForm(false);
+                  limpiarSeleccion();
+                }}
                 className="admin-modal-close"
               >
                 ✕
               </button>
             </div>
             
-            <div className="admin-field-group">
-              <label className="admin-label">Usuario</label>
-              <select
-                value={asignacionForm.usuarioId}
-                onChange={(e) => setAsignacionForm({...asignacionForm, usuarioId: parseInt(e.target.value)})}
-                className="admin-select"
-              >
-                <option value={0}>Seleccionar usuario</option>
-                {usuarios.map(usuario => (
-                  <option key={usuario.id} value={usuario.id}>
-                    {usuario.firstName} {usuario.lastName} ({usuario.email})
-                  </option>
-                ))}
-              </select>
-              <div className="admin-help-text">Selecciona el usuario a asignar</div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              {/* Panel de Selección de Usuario */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  👤 Seleccionar Usuario
+                </h4>
+                
+                {/* Búsqueda de Usuario */}
+                <div className="admin-field-group">
+                  <label className="admin-label">🔍 Buscar Usuario</label>
+                  <input
+                    type="text"
+                    value={busquedaUsuario}
+                    onChange={(e) => setBusquedaUsuario(e.target.value)}
+                    className="admin-input"
+                    placeholder="Buscar por nombre, apellido, email o username..."
+                  />
+                  <div className="admin-help-text">
+                    Escribe para filtrar usuarios ({usuariosFiltrados.length} encontrados)
+                  </div>
+                </div>
+
+                {/* Lista de Usuarios */}
+                <div className="max-h-80 overflow-y-auto border rounded-lg">
+                  {usuariosFiltrados.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      {busquedaUsuario ? 'No se encontraron usuarios' : 'No hay usuarios disponibles'}
+                    </div>
+                  ) : (
+                    usuariosFiltrados.map(usuario => (
+                      <div
+                        key={usuario.id}
+                        onClick={() => {
+                          setUsuarioSeleccionado(usuario);
+                          setAsignacionForm({...asignacionForm, usuarioId: usuario.id});
+                        }}
+                        className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
+                          usuarioSeleccionado?.id === usuario.id ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {usuario.firstName} {usuario.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500">{usuario.email}</div>
+                            <div className="text-xs text-gray-400">@{usuario.username}</div>
+                          </div>
+                          {usuarioSeleccionado?.id === usuario.id && (
+                            <div className="text-blue-600">✓</div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Panel de Selección de Empresa */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  🏢 Seleccionar Empresa
+                </h4>
+                
+                {/* Búsqueda de Empresa */}
+                <div className="admin-field-group">
+                  <label className="admin-label">🔍 Buscar Empresa</label>
+                  <input
+                    type="text"
+                    value={busquedaEmpresa}
+                    onChange={(e) => setBusquedaEmpresa(e.target.value)}
+                    className="admin-input"
+                    placeholder="Buscar por nombre, CUIT o email..."
+                  />
+                  <div className="admin-help-text">
+                    Escribe para filtrar empresas ({empresasFiltradas.length} encontradas)
+                  </div>
+                </div>
+
+                {/* Lista de Empresas */}
+                <div className="max-h-80 overflow-y-auto border rounded-lg">
+                  {empresasFiltradas.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      {busquedaEmpresa ? 'No se encontraron empresas' : 'No hay empresas disponibles'}
+                    </div>
+                  ) : (
+                    empresasFiltradas.map(empresa => (
+                      <div
+                        key={empresa.id}
+                        onClick={() => {
+                          setEmpresaSeleccionada(empresa);
+                          setAsignacionForm({...asignacionForm, empresaId: empresa.id});
+                        }}
+                        className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
+                          empresaSeleccionada?.id === empresa.id ? 'bg-green-50 border-green-200' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-900">{empresa.nombre}</div>
+                            <div className="text-sm text-gray-500">CUIT: {empresa.cuit}</div>
+                            <div className="text-xs text-gray-400">{empresa.emailContacto}</div>
+                          </div>
+                          {empresaSeleccionada?.id === empresa.id && (
+                            <div className="text-green-600">✓</div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="admin-field-group">
-              <label className="admin-label">Empresa</label>
-              <select
-                value={asignacionForm.empresaId}
-                onChange={(e) => setAsignacionForm({...asignacionForm, empresaId: parseInt(e.target.value)})}
-                className="admin-select"
-              >
-                <option value={0}>Seleccionar empresa</option>
-                {empresas.map(empresa => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nombre}
-                  </option>
-                ))}
-              </select>
-              <div className="admin-help-text">Selecciona la empresa destino</div>
-            </div>
+            {/* Panel de Configuración */}
+            {(usuarioSeleccionado || empresaSeleccionada) && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  ⚙️ Configuración de Asignación
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Usuario Seleccionado */}
+                  {usuarioSeleccionado && (
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <div className="text-sm font-medium text-blue-900">Usuario Seleccionado:</div>
+                      <div className="text-blue-800">
+                        {usuarioSeleccionado.firstName} {usuarioSeleccionado.lastName}
+                      </div>
+                      <div className="text-xs text-blue-600">{usuarioSeleccionado.email}</div>
+                    </div>
+                  )}
 
-            <div className="admin-field-group">
-              <label className="admin-label">Rol en la Empresa</label>
-              <select
-                value={asignacionForm.rol}
-                onChange={(e) => setAsignacionForm({...asignacionForm, rol: e.target.value})}
-                className="admin-select"
-              >
-                {rolesEmpresa.map(rol => (
-                  <option key={rol.value} value={rol.value}>
-                    {rol.label}
-                  </option>
-                ))}
-              </select>
-              <div className="admin-help-text">Define el rol y permisos del usuario</div>
-            </div>
+                  {/* Empresa Seleccionada */}
+                  {empresaSeleccionada && (
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <div className="text-sm font-medium text-green-900">Empresa Seleccionada:</div>
+                      <div className="text-green-800">{empresaSeleccionada.nombre}</div>
+                      <div className="text-xs text-green-600">CUIT: {empresaSeleccionada.cuit}</div>
+                    </div>
+                  )}
+                </div>
 
-            <div className="admin-btn-group">
+                {/* Selección de Rol */}
+                <div className="mt-4">
+                  <div className="admin-field-group">
+                    <label className="admin-label">🎭 Rol en la Empresa</label>
+                    <select
+                      value={asignacionForm.rol}
+                      onChange={(e) => setAsignacionForm({...asignacionForm, rol: e.target.value})}
+                      className="admin-select"
+                    >
+                      {rolesEmpresa.map(rol => (
+                        <option key={rol.value} value={rol.value}>
+                          {rol.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="admin-help-text">Define el rol y permisos del usuario en la empresa</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Botones de Acción */}
+            <div className="admin-btn-group mt-6">
               <button
-                onClick={() => setShowAsignarForm(false)}
+                onClick={() => {
+                  setShowAsignarForm(false);
+                  limpiarSeleccion();
+                }}
                 className="admin-btn admin-btn-cancel"
               >
                 Cancelar
               </button>
               <button
                 onClick={asignarUsuarioAEmpresa}
-                className="admin-btn admin-btn-primary"
+                disabled={!usuarioSeleccionado || !empresaSeleccionada}
+                className={`admin-btn ${
+                  usuarioSeleccionado && empresaSeleccionada 
+                    ? 'admin-btn-primary' 
+                    : 'admin-btn-disabled'
+                }`}
               >
-                Asignar Usuario
+                {usuarioSeleccionado && empresaSeleccionada 
+                  ? '✅ Asignar Usuario' 
+                  : '⚠️ Selecciona Usuario y Empresa'
+                }
               </button>
             </div>
           </div>

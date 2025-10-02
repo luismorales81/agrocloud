@@ -1,7 +1,6 @@
 package com.agrocloud.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -58,9 +57,6 @@ public class Field {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
     
-    @Size(max = 50, message = "El tipo de suelo no puede exceder 50 caracteres")
-    @Column(name = "tipo_suelo", length = 50)
-    private String tipoSuelo;
 
     @Column(name = "poligono", columnDefinition = "TEXT")
     private String poligono;
@@ -217,13 +213,6 @@ public class Field {
         this.empresa = empresa;
     }
     
-    public String getTipoSuelo() {
-        return tipoSuelo;
-    }
-    
-    public void setTipoSuelo(String tipoSuelo) {
-        this.tipoSuelo = tipoSuelo;
-    }
     
     // Métodos de compatibilidad para los tests
     public void setUsuario(User usuario) {

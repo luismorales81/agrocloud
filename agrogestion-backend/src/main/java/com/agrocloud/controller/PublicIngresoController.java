@@ -91,7 +91,7 @@ public class PublicIngresoController {
                         ingresoExistente.setUnidadMedida(ingreso.getUnidadMedida());
                         ingresoExistente.setCantidad(ingreso.getCantidad());
                         ingresoExistente.setClienteComprador(ingreso.getClienteComprador());
-
+                        ingresoExistente.setEstado(ingreso.getEstado());
                         ingresoExistente.setObservaciones(ingreso.getObservaciones());
                         ingresoExistente.setLote(ingreso.getLote());
                         

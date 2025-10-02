@@ -1,7 +1,9 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.dto.BalanceDTO;
+import com.agrocloud.model.entity.User;
 import com.agrocloud.service.BalanceService;
+import com.agrocloud.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,9 @@ public class BalanceController {
     @Autowired
     private BalanceService balanceService;
 
+    @Autowired
+    private UserService userService;
+
     /**
      * Obtiene el balance general para un rango de fechas.
      */
@@ -34,10 +39,21 @@ public class BalanceController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             Authentication authentication) {
         
-        Long usuarioId = Long.parseLong(authentication.getName());
-        BalanceDTO balance = balanceService.calcularBalance(usuarioId, fechaInicio, fechaFin);
-        
-        return ResponseEntity.ok(balance);
+        try {
+            // Obtener el usuario por email desde la autenticación
+            String email = authentication.getName();
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            BalanceDTO balance = balanceService.calcularBalance(user.getId(), fechaInicio, fechaFin);
+            return ResponseEntity.ok(balance);
+        } catch (Exception e) {
+            System.err.println("Error en obtenerBalanceGeneral: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**
@@ -50,10 +66,19 @@ public class BalanceController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             Authentication authentication) {
         
-        Long usuarioId = Long.parseLong(authentication.getName());
-        BalanceDTO balance = balanceService.calcularBalancePorLote(loteId, usuarioId, fechaInicio, fechaFin);
-        
-        return ResponseEntity.ok(balance);
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            BalanceDTO balance = balanceService.calcularBalancePorLote(loteId, user.getId(), fechaInicio, fechaFin);
+            return ResponseEntity.ok(balance);
+        } catch (Exception e) {
+            System.err.println("Error en obtenerBalancePorLote: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**
@@ -64,10 +89,19 @@ public class BalanceController {
             @PathVariable int año,
             Authentication authentication) {
         
-        Long usuarioId = Long.parseLong(authentication.getName());
-        List<BalanceDTO> estadisticas = balanceService.obtenerEstadisticasPorMes(usuarioId, año);
-        
-        return ResponseEntity.ok(estadisticas);
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            List<BalanceDTO> estadisticas = balanceService.obtenerEstadisticasPorMes(user.getId(), año);
+            return ResponseEntity.ok(estadisticas);
+        } catch (Exception e) {
+            System.err.println("Error en obtenerEstadisticasPorMes: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**
@@ -75,14 +109,22 @@ public class BalanceController {
      */
     @GetMapping("/mes-actual")
     public ResponseEntity<BalanceDTO> obtenerBalanceMesActual(Authentication authentication) {
-        Long usuarioId = Long.parseLong(authentication.getName());
-        
-        LocalDate fechaInicio = LocalDate.now().withDayOfMonth(1);
-        LocalDate fechaFin = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
-        
-        BalanceDTO balance = balanceService.calcularBalance(usuarioId, fechaInicio, fechaFin);
-        
-        return ResponseEntity.ok(balance);
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            LocalDate fechaInicio = LocalDate.now().withDayOfMonth(1);
+            LocalDate fechaFin = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+            
+            BalanceDTO balance = balanceService.calcularBalance(user.getId(), fechaInicio, fechaFin);
+            return ResponseEntity.ok(balance);
+        } catch (Exception e) {
+            System.err.println("Error en obtenerBalanceMesActual: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**
@@ -90,14 +132,23 @@ public class BalanceController {
      */
     @GetMapping("/año-actual")
     public ResponseEntity<BalanceDTO> obtenerBalanceAñoActual(Authentication authentication) {
-        Long usuarioId = Long.parseLong(authentication.getName());
-        
-        LocalDate fechaInicio = LocalDate.now().withDayOfYear(1);
-        LocalDate fechaFin = LocalDate.now().withDayOfYear(LocalDate.now().lengthOfYear());
-        
-        BalanceDTO balance = balanceService.calcularBalance(usuarioId, fechaInicio, fechaFin);
-        
-        return ResponseEntity.ok(balance);
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            LocalDate fechaInicio = LocalDate.now().withDayOfYear(1);
+            LocalDate fechaFin = LocalDate.now().withDayOfYear(LocalDate.now().lengthOfYear());
+            
+            BalanceDTO balance = balanceService.calcularBalance(user.getId(), fechaInicio, fechaFin);
+            return ResponseEntity.ok(balance);
+        } catch (Exception e) {
+            System.err.println("Error en obtenerBalanceAñoActual: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**
@@ -143,14 +194,20 @@ public class BalanceController {
     @GetMapping("/ultimo-año")
     public ResponseEntity<BalanceDTO> obtenerBalanceUltimoAño(Authentication authentication) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
+            String email = authentication.getName();
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.badRequest().build();
+            }
             
             LocalDate fechaInicio = LocalDate.now().minusYears(1);
             LocalDate fechaFin = LocalDate.now();
             
-            BalanceDTO balance = balanceService.calcularBalance(usuarioId, fechaInicio, fechaFin);
+            BalanceDTO balance = balanceService.calcularBalance(user.getId(), fechaInicio, fechaFin);
             return ResponseEntity.ok(balance);
         } catch (Exception e) {
+            System.err.println("Error en obtenerBalanceUltimoAño: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
     }

@@ -17,6 +17,12 @@ public class Egreso {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Column(name = "concepto", length = 200)
+    private String concepto;
+    
+    @Column(name = "descripcion", columnDefinition = "TEXT")
+    private String descripcion;
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo", nullable = false)
     private TipoEgreso tipo;
@@ -27,6 +33,9 @@ public class Egreso {
     @Column(name = "cantidad", precision = 10, scale = 2)
     private BigDecimal cantidad;
     
+    @Column(name = "unidad_medida", length = 50)
+    private String unidadMedida;
+    
     @Column(name = "costo_unitario", precision = 10, scale = 2)
     private BigDecimal costoUnitario;
     
@@ -35,6 +44,9 @@ public class Egreso {
     
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;
+    
+    @Column(name = "proveedor", length = 200)
+    private String proveedor;
     
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
@@ -106,6 +118,22 @@ public class Egreso {
         this.id = id;
     }
     
+    public String getConcepto() {
+        return concepto;
+    }
+    
+    public void setConcepto(String concepto) {
+        this.concepto = concepto;
+    }
+    
+    public String getDescripcion() {
+        return descripcion;
+    }
+    
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
+    
     public TipoEgreso getTipo() {
         return tipo;
     }
@@ -130,6 +158,14 @@ public class Egreso {
         this.cantidad = cantidad;
     }
     
+    public String getUnidadMedida() {
+        return unidadMedida;
+    }
+    
+    public void setUnidadMedida(String unidadMedida) {
+        this.unidadMedida = unidadMedida;
+    }
+    
     public BigDecimal getCostoUnitario() {
         return costoUnitario;
     }
@@ -152,6 +188,14 @@ public class Egreso {
     
     public void setFecha(LocalDate fecha) {
         this.fecha = fecha;
+    }
+    
+    public String getProveedor() {
+        return proveedor;
+    }
+    
+    public void setProveedor(String proveedor) {
+        this.proveedor = proveedor;
     }
     
     public String getObservaciones() {
@@ -223,15 +267,7 @@ public class Egreso {
         this.fechaActualizacion = LocalDateTime.now();
     }
     
-    // Métodos faltantes para los tests
-    public void setConcepto(String concepto) {
-        this.observaciones = concepto;
-    }
-    
-    public void setDescripcion(String descripcion) {
-        this.observaciones = descripcion;
-    }
-    
+    // Métodos de compatibilidad
     public void setFechaEgreso(LocalDate fechaEgreso) {
         this.fecha = fechaEgreso;
     }
@@ -242,10 +278,6 @@ public class Egreso {
     
     public BigDecimal getMonto() {
         return this.costoTotal;
-    }
-    
-    public void setProveedor(String proveedor) {
-        this.observaciones = proveedor;
     }
     
     public void setUsuario(User usuario) {

@@ -32,17 +32,53 @@ public class AdminUsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private LogAccesoService logAccesoService;
 
     /**
      * Obtener todos los usuarios para administración
      */
     public List<AdminUsuarioDTO> obtenerTodosLosUsuarios() {
+        System.out.println("🔍 [AdminUsuarioService] Iniciando obtención de usuarios desde BD");
         List<User> usuarios = userRepository.findAll();
-        return usuarios.stream()
+        System.out.println("🔍 [AdminUsuarioService] Usuarios encontrados en BD: " + usuarios.size());
+        
+        List<AdminUsuarioDTO> usuariosDTO = usuarios.stream()
                 .map(this::convertirAAdminDTO)
                 .collect(Collectors.toList());
+        
+        System.out.println("🔍 [AdminUsuarioService] Usuarios convertidos a DTO: " + usuariosDTO.size());
+        return usuariosDTO;
+    }
+
+    /**
+     * Obtener usuarios subordinados de un usuario específico
+     */
+    public List<AdminUsuarioDTO> obtenerUsuariosSubordinados(Long usuarioId) {
+        System.out.println("🔍 [AdminUsuarioService] Obteniendo usuarios subordinados para usuario ID: " + usuarioId);
+        
+        // Obtener usuarios donde el usuario actual es el padre (parentUser)
+        List<User> usuariosSubordinados = userRepository.findByParentUserId(usuarioId);
+        System.out.println("🔍 [AdminUsuarioService] Usuarios subordinados encontrados: " + usuariosSubordinados.size());
+        
+        // También obtener usuarios creados por este usuario
+        User usuarioPadre = userRepository.findById(usuarioId).orElse(null);
+        if (usuarioPadre != null) {
+            List<User> usuariosCreados = userRepository.findByCreadoPorOrderByFechaCreacionDesc(usuarioPadre);
+            System.out.println("🔍 [AdminUsuarioService] Usuarios creados encontrados: " + usuariosCreados.size());
+            
+            // Combinar ambas listas sin duplicados
+            Set<User> usuariosUnicos = new HashSet<>();
+            usuariosUnicos.addAll(usuariosSubordinados);
+            usuariosUnicos.addAll(usuariosCreados);
+            
+            usuariosSubordinados = new ArrayList<>(usuariosUnicos);
+        }
+        
+        List<AdminUsuarioDTO> usuariosDTO = usuariosSubordinados.stream()
+                .map(this::convertirAAdminDTO)
+                .collect(Collectors.toList());
+        
+        System.out.println("🔍 [AdminUsuarioService] Total usuarios subordinados convertidos a DTO: " + usuariosDTO.size());
+        return usuariosDTO;
     }
 
     /**
@@ -201,6 +237,64 @@ public class AdminUsuarioService {
             estadisticas.put("porcentajeEliminados", (double) userRepository.countByEstado(EstadoUsuario.ELIMINADO) / total * 100);
         }
         
+        return estadisticas;
+    }
+
+    /**
+     * Obtener estadísticas de usuarios subordinados
+     */
+    public Map<String, Object> obtenerEstadisticasUsuariosSubordinados(Long usuarioId) {
+        System.out.println("🔍 [AdminUsuarioService] Obteniendo estadísticas de usuarios subordinados para usuario ID: " + usuarioId);
+        
+        // Obtener usuarios subordinados
+        List<User> usuariosSubordinados = new ArrayList<>();
+        
+        // Obtener usuarios donde el usuario actual es el padre (parentUser)
+        List<User> usuariosHijos = userRepository.findByParentUserId(usuarioId);
+        usuariosSubordinados.addAll(usuariosHijos);
+        
+        // También obtener usuarios creados por este usuario
+        User usuarioPadre = userRepository.findById(usuarioId).orElse(null);
+        if (usuarioPadre != null) {
+            List<User> usuariosCreados = userRepository.findByCreadoPorOrderByFechaCreacionDesc(usuarioPadre);
+            usuariosSubordinados.addAll(usuariosCreados);
+        }
+        
+        // Eliminar duplicados
+        Set<User> usuariosUnicos = new HashSet<>(usuariosSubordinados);
+        usuariosSubordinados = new ArrayList<>(usuariosUnicos);
+        
+        System.out.println("🔍 [AdminUsuarioService] Total usuarios subordinados para estadísticas: " + usuariosSubordinados.size());
+        
+        Map<String, Object> estadisticas = new HashMap<>();
+        
+        // Calcular estadísticas de los usuarios subordinados
+        long total = usuariosSubordinados.size();
+        long activos = usuariosSubordinados.stream().mapToLong(u -> u.getEstado() == EstadoUsuario.ACTIVO ? 1 : 0).sum();
+        long pendientes = usuariosSubordinados.stream().mapToLong(u -> u.getEstado() == EstadoUsuario.PENDIENTE ? 1 : 0).sum();
+        long suspendidos = usuariosSubordinados.stream().mapToLong(u -> u.getEstado() == EstadoUsuario.SUSPENDIDO ? 1 : 0).sum();
+        long eliminados = usuariosSubordinados.stream().mapToLong(u -> u.getEstado() == EstadoUsuario.ELIMINADO ? 1 : 0).sum();
+        
+        estadisticas.put("totalUsuarios", total);
+        estadisticas.put("usuariosActivos", activos);
+        estadisticas.put("usuariosPendientes", pendientes);
+        estadisticas.put("usuariosSuspendidos", suspendidos);
+        estadisticas.put("usuariosEliminados", eliminados);
+        
+        // Calcular porcentajes
+        if (total > 0) {
+            estadisticas.put("porcentajeActivos", (double) activos / total * 100);
+            estadisticas.put("porcentajePendientes", (double) pendientes / total * 100);
+            estadisticas.put("porcentajeSuspendidos", (double) suspendidos / total * 100);
+            estadisticas.put("porcentajeEliminados", (double) eliminados / total * 100);
+        } else {
+            estadisticas.put("porcentajeActivos", 0.0);
+            estadisticas.put("porcentajePendientes", 0.0);
+            estadisticas.put("porcentajeSuspendidos", 0.0);
+            estadisticas.put("porcentajeEliminados", 0.0);
+        }
+        
+        System.out.println("🔍 [AdminUsuarioService] Estadísticas calculadas: " + estadisticas);
         return estadisticas;
     }
 
@@ -388,13 +482,63 @@ public class AdminUsuarioService {
             return false;
         }
 
-        // ADMIN puede gestionar cualquier usuario
-        if (tienePermisoParaCrearUsuarios(usuarioGestor)) {
+        // SUPERADMIN puede gestionar cualquier usuario
+        if (usuarioGestor.isSuperAdmin()) {
+            System.out.println("🔍 [AdminUsuarioService] Usuario " + usuarioGestor.getEmail() + " es SUPERADMIN, puede gestionar cualquier usuario");
             return true;
         }
 
-        // Un usuario solo puede gestionar sus propios datos
-        return usuarioGestor.getId().equals(usuarioIdAGestionar);
+        // Un usuario puede gestionar sus propios datos
+        if (usuarioGestor.getId().equals(usuarioIdAGestionar)) {
+            System.out.println("🔍 [AdminUsuarioService] Usuario " + usuarioGestor.getEmail() + " puede gestionar sus propios datos");
+            return true;
+        }
+
+        // ADMINISTRADOR puede gestionar sus usuarios subordinados
+        if (esAdministrador(usuarioGestor)) {
+            // Verificar si el usuario a gestionar es subordinado
+            User usuarioAGestionar = userRepository.findById(usuarioIdAGestionar).orElse(null);
+            if (usuarioAGestionar != null) {
+                boolean esSubordinado = esUsuarioSubordinado(usuarioGestor, usuarioAGestionar);
+                System.out.println("🔍 [AdminUsuarioService] Usuario " + usuarioGestor.getEmail() + " es ADMINISTRADOR, puede gestionar subordinado " + usuarioAGestionar.getEmail() + ": " + esSubordinado);
+                return esSubordinado;
+            }
+        }
+
+        System.out.println("❌ [AdminUsuarioService] Usuario " + usuarioGestor.getEmail() + " NO puede gestionar usuario ID: " + usuarioIdAGestionar);
+        return false;
+    }
+
+    /**
+     * Verificar si un usuario es ADMINISTRADOR (no SUPERADMIN)
+     */
+    private boolean esAdministrador(User usuario) {
+        if (usuario == null || usuario.getRoles() == null) {
+            return false;
+        }
+        return usuario.getRoles().stream()
+                .anyMatch(role -> "ADMINISTRADOR".equals(role.getNombre()));
+    }
+
+    /**
+     * Verificar si un usuario es subordinado de otro
+     */
+    private boolean esUsuarioSubordinado(User usuarioPadre, User usuarioHijo) {
+        if (usuarioPadre == null || usuarioHijo == null) {
+            return false;
+        }
+
+        // Verificar si es hijo directo (parentUser)
+        if (usuarioHijo.getParentUser() != null && usuarioHijo.getParentUser().getId().equals(usuarioPadre.getId())) {
+            return true;
+        }
+
+        // Verificar si fue creado por el usuario padre
+        if (usuarioHijo.getCreadoPor() != null && usuarioHijo.getCreadoPor().getId().equals(usuarioPadre.getId())) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

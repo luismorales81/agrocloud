@@ -103,4 +103,8 @@ public interface LaborRepository extends JpaRepository<Labor, Long> {
     List<Labor> findByUsuarioId(Long usuarioId);
     List<Labor> findByFechaInicio(LocalDate fechaInicio);
     List<Labor> findByTipoLabor(Labor.TipoLabor tipoLabor);
+    
+    // Métodos para transiciones automáticas de estado
+    List<Labor> findByLoteAndTipoLaborAndEstado(Plot lote, Labor.TipoLabor tipoLabor, Labor.EstadoLabor estado);
+    List<Labor> findByLoteAndTipoLaborInAndEstado(Plot lote, List<Labor.TipoLabor> tiposLabor, Labor.EstadoLabor estado);
 }

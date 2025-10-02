@@ -13,7 +13,12 @@ import java.util.List;
 
 /**
  * Repositorio para la gestión de cosechas
+ * 
+ * @deprecated Este repositorio está deprecado. Usar {@link HistorialCosechaRepository} en su lugar.
+ * La tabla 'cosechas' será eliminada en la migración V1_12.
+ * Razón: Sistema unificado con historial_cosechas que tiene campos completos para análisis y reportes.
  */
+@Deprecated
 @Repository
 public interface CosechaRepository extends JpaRepository<Cosecha, Long> {
 

@@ -11,7 +11,8 @@ interface Ingreso {
   concepto: string;
   descripcion?: string;
   tipoIngreso: 'VENTA_CULTIVO' | 'VENTA_ANIMAL' | 'SERVICIOS_AGRICOLAS' | 'SUBSIDIOS' | 'OTROS_INGRESOS';
-  fechaIngreso: string;
+  fechaIngreso?: string;
+  fecha?: string;  // Campo que viene del backend
   monto: number;
   unidadMedida?: string;
   cantidad?: number;
@@ -26,11 +27,14 @@ interface Ingreso {
 
 interface Egreso {
   id?: number;
-  concepto: string;
+  concepto?: string;
   descripcion?: string;
-  tipoEgreso: string;
-  fechaEgreso: string;
-  monto: number;
+  tipoEgreso?: string;
+  tipo?: string;  // Campo que viene del backend
+  fechaEgreso?: string;
+  fecha?: string;  // Campo que viene del backend
+  monto?: number;
+  costoTotal?: number;  // Campo que viene del backend
   unidadMedida?: string;
   cantidad?: number;
   proveedor?: string;
@@ -40,10 +44,13 @@ interface Egreso {
     id: number;
     nombre: string;
   };
+  loteId?: number;
+  loteNombre?: string;
   insumo?: {
     id: number;
     nombre: string;
   };
+  referenciaId?: number;
 }
 
 interface Lote {
@@ -77,8 +84,12 @@ const FinanzasManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'ingreso' | 'egreso'>('ingreso');
-  const [showInsumoModal, setShowInsumoModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingresos' | 'egresos'>('ingresos');
+  
+  // Paginación
+  const [paginaIngresos, setPaginaIngresos] = useState(1);
+  const [paginaEgresos, setPaginaEgresos] = useState(1);
+  const registrosPorPagina = 10;
   
   // Formulario de ingreso
   const [ingresoForm, setIngresoForm] = useState<Ingreso>({
@@ -108,18 +119,6 @@ const FinanzasManagement: React.FC = () => {
     observaciones: ''
   });
 
-  // Formulario de nuevo insumo
-  const [nuevoInsumoForm, setNuevoInsumoForm] = useState({
-    nombre: '',
-    descripcion: '',
-    tipo: 'FERTILIZANTE',
-    unidad: '',
-    precioUnitario: 0,
-    stockMinimo: 0,
-    stockActual: 0,
-    proveedor: '',
-    fechaVencimiento: ''
-  });
 
   const tiposIngreso = [
     { value: 'VENTA_CULTIVO', label: 'Venta de Cultivo' },
@@ -130,13 +129,12 @@ const FinanzasManagement: React.FC = () => {
   ];
 
   const tiposEgreso = [
+    { value: 'INSUMO', label: 'Insumo' },
     { value: 'INSUMOS', label: 'Insumos' },
-    { value: 'COMBUSTIBLE', label: 'Combustible' },
-    { value: 'MANO_OBRA', label: 'Mano de Obra' },
-    { value: 'MAQUINARIA', label: 'Maquinaria' },
-    { value: 'SERVICIOS', label: 'Servicios' },
-    { value: 'IMPUESTOS', label: 'Impuestos' },
-    { value: 'OTROS_EGRESOS', label: 'Otros Egresos' }
+    { value: 'MAQUINARIA_COMPRA', label: 'Compra de Maquinaria' },
+    { value: 'MAQUINARIA_ALQUILER', label: 'Alquiler de Maquinaria' },
+    { value: 'SERVICIO', label: 'Servicio' },
+    { value: 'OTROS', label: 'Otros' }
   ];
 
   const tiposInsumo = [
@@ -157,6 +155,21 @@ const FinanzasManagement: React.FC = () => {
     { value: 'CONFIRMADO', label: 'Confirmado' },
     { value: 'PAGADO', label: 'Pagado' },
     { value: 'CANCELADO', label: 'Cancelado' }
+  ];
+
+  const unidadesMedida = [
+    { value: 'kg', label: 'Kilogramos (kg)' },
+    { value: 'ton', label: 'Toneladas (ton)' },
+    { value: 'quintal', label: 'Quintales' },
+    { value: 'bolsa', label: 'Bolsas' },
+    { value: 'litro', label: 'Litros (L)' },
+    { value: 'galon', label: 'Galones' },
+    { value: 'metro', label: 'Metros (m)' },
+    { value: 'hectarea', label: 'Hectáreas (ha)' },
+    { value: 'unidad', label: 'Unidades' },
+    { value: 'caja', label: 'Cajas' },
+    { value: 'paquete', label: 'Paquetes' },
+    { value: 'otro', label: 'Otro' }
   ];
 
   useEffect(() => {
@@ -181,25 +194,31 @@ const FinanzasManagement: React.FC = () => {
 
   const cargarIngresos = async () => {
     try {
-      // Por ahora, usar datos locales
-      setIngresos([]);
+      console.log('📥 Cargando ingresos desde BD...');
+      const response = await api.get('/api/public/ingresos');
+      setIngresos(response.data || []);
+      console.log('✅ Ingresos cargados desde BD:', response.data?.length || 0);
     } catch (error) {
-      console.error('Error cargando ingresos:', error);
+      console.error('❌ Error cargando ingresos:', error);
+      setIngresos([]);
     }
   };
 
   const cargarEgresos = async () => {
     try {
-      // Por ahora, usar datos locales
-      setEgresos([]);
+      console.log('📥 Cargando egresos desde BD...');
+      const response = await api.get('/api/public/egresos');
+      setEgresos(response.data || []);
+      console.log('✅ Egresos cargados desde BD:', response.data?.length || 0);
     } catch (error) {
-      console.error('Error cargando egresos:', error);
+      console.error('❌ Error cargando egresos:', error);
+      setEgresos([]);
     }
   };
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/public/campos');
+      const response = await api.get('/api/public/campos');
       setLotes(response.data || []);
       console.log('Lotes cargados:', response.data);
     } catch (error) {
@@ -210,7 +229,7 @@ const FinanzasManagement: React.FC = () => {
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/public/insumos');
+      const response = await api.get('/api/public/insumos');
       setInsumos(response.data || []);
       console.log('Insumos cargados:', response.data);
     } catch (error) {
@@ -260,16 +279,37 @@ const FinanzasManagement: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Agregar ingreso localmente
-      const nuevoIngreso = {
-        ...ingresoForm,
-        id: Date.now() // ID temporal
+      // Preparar datos para enviar al backend
+      const ingresoData = {
+        concepto: ingresoForm.concepto,
+        descripcion: ingresoForm.descripcion,
+        tipoIngreso: ingresoForm.tipoIngreso,
+        monto: ingresoForm.monto,
+        cantidad: ingresoForm.cantidad,
+        unidadMedida: ingresoForm.unidadMedida,
+        fecha: ingresoForm.fechaIngreso,
+        clienteComprador: ingresoForm.clienteComprador,
+        observaciones: ingresoForm.observaciones,
+        estado: ingresoForm.estado,
+        lote: ingresoForm.lote ? { id: ingresoForm.lote.id } : null
       };
-      setIngresos(prev => [...prev, nuevoIngreso]);
+
+      console.log('📤 Enviando ingreso al backend:', ingresoData);
+      
+      // Guardar en la base de datos
+      const response = await api.post('/api/public/ingresos', ingresoData);
+      const ingresoGuardado = response.data;
+      
+      console.log('✅ Ingreso guardado en BD:', ingresoGuardado);
+      
+      // Agregar a la lista local
+      setIngresos(prev => [...prev, ingresoGuardado]);
+      
+      alert('✅ Ingreso guardado exitosamente en la base de datos');
       cerrarModal();
     } catch (error) {
-      console.error('Error guardando ingreso:', error);
-      alert('Error al guardar el ingreso');
+      console.error('❌ Error guardando ingreso:', error);
+      alert('❌ Error al guardar el ingreso en la base de datos');
     } finally {
       setLoading(false);
     }
@@ -298,12 +338,32 @@ const FinanzasManagement: React.FC = () => {
         }
       }
 
-      // Agregar egreso localmente
-      const nuevoEgreso = {
-        ...egresoForm,
-        id: Date.now() // ID temporal
+      // Preparar datos para enviar al backend
+      const egresoData = {
+        concepto: egresoForm.concepto,
+        descripcion: egresoForm.descripcion,
+        tipo: egresoForm.tipoEgreso,
+        cantidad: egresoForm.cantidad,
+        unidadMedida: egresoForm.unidadMedida,
+        costoTotal: egresoForm.monto,
+        fecha: egresoForm.fechaEgreso,
+        proveedor: egresoForm.proveedor,
+        observaciones: egresoForm.observaciones,
+        estado: egresoForm.estado,
+        lote: egresoForm.lote ? { id: egresoForm.lote.id } : null,
+        referenciaId: egresoForm.insumo?.id
       };
-      setEgresos(prev => [...prev, nuevoEgreso]);
+
+      console.log('📤 Enviando egreso al backend:', egresoData);
+      
+      // Guardar en la base de datos
+      const response = await api.post('/api/public/egresos', egresoData);
+      const egresoGuardado = response.data;
+      
+      console.log('✅ Egreso guardado en BD:', egresoGuardado);
+      
+      // Agregar a la lista local
+      setEgresos(prev => [...prev, egresoGuardado]);
       
       // Si es un egreso de insumos, actualizar el inventario
       if (egresoForm.tipoEgreso === 'INSUMOS') {
@@ -316,9 +376,9 @@ const FinanzasManagement: React.FC = () => {
             nombre: egresoForm.insumo.nombre,
             descripcion: egresoForm.descripcion || `Comprado el ${egresoForm.fechaEgreso}`,
             tipo: 'OTROS',
-            unidad: egresoForm.unidadMedida || 'unidades',
-            precioUnitario: egresoForm.monto / (egresoForm.cantidad || 1),
-            stockMinimo: 0,
+            unidadMedida: egresoForm.unidadMedida || 'unidad',
+            precioUnitario: (egresoForm.monto || 0) / (egresoForm.cantidad || 1),
+            stockMinimo: 1,
             stockActual: egresoForm.cantidad || 0,
             proveedor: egresoForm.proveedor || '',
             fechaVencimiento: null,
@@ -326,7 +386,7 @@ const FinanzasManagement: React.FC = () => {
           };
 
           try {
-            const response = await api.post('/public/insumos', nuevoInsumo);
+            const response = await api.post('/api/public/insumos', nuevoInsumo);
             const insumoCreado = response.data;
             setInsumos(prev => [...prev, insumoCreado]);
             alert(`✅ Nuevo insumo "${insumoCreado.nombre}" creado y agregado al inventario`);
@@ -337,55 +397,16 @@ const FinanzasManagement: React.FC = () => {
         }
       }
       
+      alert('✅ Egreso guardado exitosamente en la base de datos');
       cerrarModal();
     } catch (error) {
-      console.error('Error guardando egreso:', error);
-      alert('Error al guardar el egreso');
+      console.error('❌ Error guardando egreso:', error);
+      alert('❌ Error al guardar el egreso en la base de datos');
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para crear un nuevo insumo
-  const crearNuevoInsumo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      // Crear el nuevo insumo en el backend
-      const response = await api.post('/public/insumos', {
-        ...nuevoInsumoForm,
-        activo: true
-      });
-
-      const insumoCreado = response.data;
-      
-      // Agregar a la lista local
-      setInsumos(prev => [...prev, insumoCreado]);
-      
-      // Cerrar modal y limpiar formulario
-      setShowInsumoModal(false);
-      setNuevoInsumoForm({
-        nombre: '',
-        descripcion: '',
-        tipo: 'FERTILIZANTE',
-        unidad: '',
-        precioUnitario: 0,
-        stockMinimo: 0,
-        stockActual: 0,
-        proveedor: '',
-        fechaVencimiento: ''
-      });
-
-      // Mostrar mensaje de éxito
-      alert(`✅ Insumo "${insumoCreado.nombre}" creado exitosamente`);
-      
-    } catch (error) {
-      console.error('Error creando insumo:', error);
-      alert('❌ Error al crear el insumo. Intenta nuevamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Función para actualizar el inventario de insumos
   const actualizarInventarioInsumo = async (insumoId: number, cantidad: number) => {
@@ -400,7 +421,7 @@ const FinanzasManagement: React.FC = () => {
       const nuevoStock = insumoExistente.stockActual + cantidad;
       
       // Actualizar en el backend
-      await api.put(`/public/insumos/${insumoId}`, {
+      await api.put(`/api/public/insumos/${insumoId}`, {
         ...insumoExistente,
         stockActual: nuevoStock
       });
@@ -499,8 +520,10 @@ const FinanzasManagement: React.FC = () => {
     }).format(monto);
   };
 
-  const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-AR');
+  const formatearFecha = (fecha: string | undefined) => {
+    if (!fecha) return 'Sin fecha';
+    const date = new Date(fecha);
+    return isNaN(date.getTime()) ? 'Fecha inválida' : date.toLocaleDateString('es-AR');
   };
 
   const obtenerColorEstado = (estado: string) => {
@@ -512,14 +535,105 @@ const FinanzasManagement: React.FC = () => {
     }
   };
 
+  const actualizarEstadoIngreso = async (id: number, nuevoEstado: string) => {
+    try {
+      setLoading(true);
+      console.log(`📝 Actualizando estado de ingreso ${id} a ${nuevoEstado}`);
+      
+      // Buscar el ingreso completo
+      const ingresoActual = ingresos.find(i => i.id === id);
+      if (!ingresoActual) {
+        alert('Error: No se encontró el ingreso');
+        setLoading(false);
+        return;
+      }
+      
+      // Preparar el objeto completo con el nuevo estado
+      const ingresoActualizado = {
+        concepto: ingresoActual.concepto,
+        descripcion: ingresoActual.descripcion,
+        tipoIngreso: ingresoActual.tipoIngreso,
+        monto: ingresoActual.monto,
+        cantidad: ingresoActual.cantidad,
+        unidadMedida: ingresoActual.unidadMedida,
+        fecha: ingresoActual.fecha || ingresoActual.fechaIngreso,
+        clienteComprador: ingresoActual.clienteComprador,
+        observaciones: ingresoActual.observaciones,
+        estado: nuevoEstado,
+        lote: ingresoActual.lote ? { id: ingresoActual.lote.id } : null
+      };
+      
+      // Actualizar en el backend
+      await api.put(`/api/public/ingresos/${id}`, ingresoActualizado);
+      
+      // Actualizar en el estado local
+      setIngresos(prev => prev.map(ingreso => 
+        ingreso.id === id ? { ...ingreso, estado: nuevoEstado as any } : ingreso
+      ));
+      
+      console.log(`✅ Estado de ingreso actualizado a ${nuevoEstado}`);
+    } catch (error) {
+      console.error('❌ Error actualizando estado de ingreso:', error);
+      alert('Error al actualizar el estado del ingreso');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const actualizarEstadoEgreso = async (id: number, nuevoEstado: string) => {
+    try {
+      setLoading(true);
+      console.log(`📝 Actualizando estado de egreso ${id} a ${nuevoEstado}`);
+      
+      // Buscar el egreso completo
+      const egresoActual = egresos.find(e => e.id === id);
+      if (!egresoActual) {
+        alert('Error: No se encontró el egreso');
+        setLoading(false);
+        return;
+      }
+      
+      // Preparar el objeto completo con el nuevo estado
+      const egresoActualizado = {
+        concepto: egresoActual.concepto,
+        descripcion: egresoActual.descripcion,
+        tipo: egresoActual.tipo || egresoActual.tipoEgreso,
+        cantidad: egresoActual.cantidad,
+        unidadMedida: egresoActual.unidadMedida,
+        costoTotal: egresoActual.costoTotal || egresoActual.monto,
+        fecha: egresoActual.fecha || egresoActual.fechaEgreso,
+        proveedor: egresoActual.proveedor,
+        observaciones: egresoActual.observaciones,
+        estado: nuevoEstado,
+        lote: (egresoActual.lote?.id || egresoActual.loteId) ? { id: egresoActual.lote?.id || egresoActual.loteId } : null,
+        referenciaId: egresoActual.referenciaId
+      };
+      
+      // Actualizar en el backend
+      await api.put(`/api/public/egresos/${id}`, egresoActualizado);
+      
+      // Actualizar en el estado local
+      setEgresos(prev => prev.map(egreso => 
+        egreso.id === id ? { ...egreso, estado: nuevoEstado as any } : egreso
+      ));
+      
+      console.log(`✅ Estado de egreso actualizado a ${nuevoEstado}`);
+    } catch (error) {
+      console.error('❌ Error actualizando estado de egreso:', error);
+      alert('Error al actualizar el estado del egreso');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const obtenerColorTipo = (tipo: string) => {
     switch (tipo) {
+      case 'INSUMO':
       case 'INSUMOS': return 'blue';
-      case 'COMBUSTIBLE': return 'orange';
-      case 'MANO_OBRA': return 'purple';
-      case 'MAQUINARIA': return 'red';
-      case 'SERVICIOS': return 'green';
-      case 'IMPUESTOS': return 'yellow';
+      case 'MAQUINARIA_COMPRA': return 'red';
+      case 'MAQUINARIA_ALQUILER': return 'orange';
+      case 'SERVICIO': return 'green';
+      case 'OTROS': return 'gray';
       default: return 'gray';
     }
   };
@@ -556,7 +670,7 @@ const FinanzasManagement: React.FC = () => {
              <div className="text-center">
                <p className="text-sm text-gray-600">Total Egresos</p>
                <p className="text-2xl font-bold text-red-600">
-                 {formatearMoneda(egresos.reduce((sum, egreso) => sum + egreso.monto, 0))}
+                 {formatearMoneda(egresos.reduce((sum, egreso) => sum + (egreso.costoTotal || egreso.monto || 0), 0))}
                </p>
                <p className="text-xs text-gray-500">{egresos.length} registros</p>
              </div>
@@ -568,16 +682,112 @@ const FinanzasManagement: React.FC = () => {
                <p className="text-sm text-gray-600">Balance Neto</p>
                <p className={`text-2xl font-bold ${
                  (ingresos.reduce((sum, ingreso) => sum + ingreso.monto, 0) - 
-                  egresos.reduce((sum, egreso) => sum + egreso.monto, 0)) >= 0 
+                  egresos.reduce((sum, egreso) => sum + (egreso.costoTotal || egreso.monto || 0), 0)) >= 0 
                    ? 'text-green-600' : 'text-red-600'
                }`}>
                  {formatearMoneda(
                    ingresos.reduce((sum, ingreso) => sum + ingreso.monto, 0) - 
-                   egresos.reduce((sum, egreso) => sum + egreso.monto, 0)
+                   egresos.reduce((sum, egreso) => sum + (egreso.costoTotal || egreso.monto || 0), 0)
                  )}
                </p>
                <p className="text-xs text-gray-500">Ingresos - Egresos</p>
              </div>
+           </CardContent>
+         </Card>
+       </div>
+
+       {/* Gráficos de Distribución */}
+       <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+         {/* Gráfico de Ingresos por Tipo */}
+         <Card>
+           <CardHeader>
+             <CardTitle>📊 Ingresos por Tipo</CardTitle>
+           </CardHeader>
+           <CardContent>
+             {(() => {
+               const ingresosPorTipo = ingresos.reduce((acc, ingreso) => {
+                 const tipo = ingreso.tipoIngreso;
+                 acc[tipo] = (acc[tipo] || 0) + ingreso.monto;
+                 return acc;
+               }, {} as Record<string, number>);
+               
+               const totalIngresos = Object.values(ingresosPorTipo).reduce((sum, val) => sum + val, 0);
+               
+               return (
+                 <div className="space-y-3">
+                   {Object.entries(ingresosPorTipo).map(([tipo, monto]) => {
+                     const porcentaje = totalIngresos > 0 ? (monto / totalIngresos) * 100 : 0;
+                     return (
+                       <div key={tipo} className="space-y-1">
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-700">{tipo.replace('_', ' ')}</span>
+                           <span className="font-medium">{formatearMoneda(monto)}</span>
+                         </div>
+                         <div className="w-full bg-gray-200 rounded-full h-2">
+                           <div 
+                             className="bg-green-600 h-2 rounded-full transition-all" 
+                             style={{width: `${porcentaje}%`}}
+                           />
+                         </div>
+                         <div className="text-xs text-gray-500 text-right">
+                           {porcentaje.toFixed(1)}%
+                         </div>
+                       </div>
+                     );
+                   })}
+                   {Object.keys(ingresosPorTipo).length === 0 && (
+                     <p className="text-gray-500 text-sm text-center py-4">No hay datos para mostrar</p>
+                   )}
+                 </div>
+               );
+             })()}
+           </CardContent>
+         </Card>
+
+         {/* Gráfico de Egresos por Tipo */}
+         <Card>
+           <CardHeader>
+             <CardTitle>📊 Egresos por Tipo</CardTitle>
+           </CardHeader>
+           <CardContent>
+             {(() => {
+               const egresosPorTipo = egresos.reduce((acc, egreso) => {
+                 const tipo = egreso.tipo || egreso.tipoEgreso || 'OTROS';
+                 const monto = egreso.costoTotal || egreso.monto || 0;
+                 acc[tipo] = (acc[tipo] || 0) + monto;
+                 return acc;
+               }, {} as Record<string, number>);
+               
+               const totalEgresos = Object.values(egresosPorTipo).reduce((sum, val) => sum + val, 0);
+               
+               return (
+                 <div className="space-y-3">
+                   {Object.entries(egresosPorTipo).map(([tipo, monto]) => {
+                     const porcentaje = totalEgresos > 0 ? (monto / totalEgresos) * 100 : 0;
+                     return (
+                       <div key={tipo} className="space-y-1">
+                         <div className="flex justify-between text-sm">
+                           <span className="text-gray-700">{tipo.replace('_', ' ')}</span>
+                           <span className="font-medium">{formatearMoneda(monto)}</span>
+                         </div>
+                         <div className="w-full bg-gray-200 rounded-full h-2">
+                           <div 
+                             className="bg-red-600 h-2 rounded-full transition-all" 
+                             style={{width: `${porcentaje}%`}}
+                           />
+                         </div>
+                         <div className="text-xs text-gray-500 text-right">
+                           {porcentaje.toFixed(1)}%
+                         </div>
+                       </div>
+                     );
+                   })}
+                   {Object.keys(egresosPorTipo).length === 0 && (
+                     <p className="text-gray-500 text-sm text-center py-4">No hay datos para mostrar</p>
+                   )}
+                 </div>
+               );
+             })()}
            </CardContent>
          </Card>
        </div>
@@ -627,9 +837,12 @@ const FinanzasManagement: React.FC = () => {
                 <p className="text-gray-500">No hay ingresos registrados</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {ingresos.map((ingreso) => (
-                  <div key={ingreso.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <>
+                <div className="space-y-4">
+                  {ingresos
+                    .slice((paginaIngresos - 1) * registrosPorPagina, paginaIngresos * registrosPorPagina)
+                    .map((ingreso) => (
+                    <div key={ingreso.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-semibold">{ingreso.concepto}</h3>
@@ -638,7 +851,7 @@ const FinanzasManagement: React.FC = () => {
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
-                        📅 {formatearFecha(ingreso.fechaIngreso)} • {ingreso.tipoIngreso.replace('_', ' ')}
+                        📅 {formatearFecha(ingreso.fecha || ingreso.fechaIngreso)} • {ingreso.tipoIngreso.replace('_', ' ')}
                         {ingreso.lote && ` • Lote: ${ingreso.lote.nombre}`}
                       </p>
                       {ingreso.descripcion && (
@@ -648,20 +861,66 @@ const FinanzasManagement: React.FC = () => {
                         <p className="text-sm text-gray-500">Cliente: {ingreso.clienteComprador}</p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-2">
                       <p className="text-xl font-bold text-green-600">
                         {formatearMoneda(ingreso.monto)}
                       </p>
+                      <div className="flex flex-col gap-2">
+                        <Select
+                          value={ingreso.estado}
+                          onValueChange={(value) => actualizarEstadoIngreso(ingreso.id!, value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {estados.map(estado => (
+                              <SelectItem key={estado.value} value={estado.value}>
+                                {estado.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={() => handleDeleteIngreso(ingreso.id!)}
+                          className="text-red-600 hover:text-red-900 text-sm"
+                        >
+                          🗑️ Eliminar
+                        </Button>
+                      </div>
+                    </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Paginación de Ingresos */}
+                {ingresos.length > registrosPorPagina && (
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                    <p className="text-sm text-gray-600">
+                      Mostrando {((paginaIngresos - 1) * registrosPorPagina) + 1} - {Math.min(paginaIngresos * registrosPorPagina, ingresos.length)} de {ingresos.length}
+                    </p>
+                    <div className="flex gap-2">
                       <Button
-                        onClick={() => handleDeleteIngreso(ingreso.id!)}
-                        className="mt-2 text-red-600 hover:text-red-900"
+                        onClick={() => setPaginaIngresos(p => Math.max(1, p - 1))}
+                        disabled={paginaIngresos === 1}
+                        className="text-sm"
                       >
-                        🗑️ Eliminar
+                        ← Anterior
+                      </Button>
+                      <span className="px-3 py-2 text-sm">
+                        Página {paginaIngresos} de {Math.ceil(ingresos.length / registrosPorPagina)}
+                      </span>
+                      <Button
+                        onClick={() => setPaginaIngresos(p => Math.min(Math.ceil(ingresos.length / registrosPorPagina), p + 1))}
+                        disabled={paginaIngresos >= Math.ceil(ingresos.length / registrosPorPagina)}
+                        className="text-sm"
+                      >
+                        Siguiente →
                       </Button>
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -670,15 +929,7 @@ const FinanzasManagement: React.FC = () => {
       {activeTab === 'egresos' && (
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>📉 Lista de Egresos</CardTitle>
-              <Button 
-                onClick={() => setShowInsumoModal(true)} 
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                📦 Gestionar Insumos
-              </Button>
-            </div>
+            <CardTitle>📉 Lista de Egresos</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -690,22 +941,27 @@ const FinanzasManagement: React.FC = () => {
                 <p className="text-gray-500">No hay egresos registrados</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {egresos.map((egreso) => (
-                  <div key={egreso.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <>
+                <div className="space-y-4">
+                  {egresos
+                    .slice((paginaEgresos - 1) * registrosPorPagina, paginaEgresos * registrosPorPagina)
+                    .map((egreso) => (
+                    <div key={egreso.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-semibold">{egreso.concepto}</h3>
-                        <Badge color={obtenerColorTipo(egreso.tipoEgreso)}>
-                          {egreso.tipoEgreso.replace('_', ' ')}
-                        </Badge>
+                        {(egreso.tipo || egreso.tipoEgreso) && (
+                          <Badge color={obtenerColorTipo(egreso.tipo || egreso.tipoEgreso || '')}>
+                            {(egreso.tipo || egreso.tipoEgreso || '').replace('_', ' ')}
+                          </Badge>
+                        )}
                         <Badge color={obtenerColorEstado(egreso.estado)}>
                           {egreso.estado}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
-                        📅 {formatearFecha(egreso.fechaEgreso)}
-                        {egreso.lote && ` • Lote: ${egreso.lote.nombre}`}
+                        📅 {formatearFecha(egreso.fecha || egreso.fechaEgreso)}
+                        {(egreso.lote?.nombre || egreso.loteNombre) && ` • Lote: ${egreso.lote?.nombre || egreso.loteNombre}`}
                         {egreso.insumo && ` • Insumo: ${egreso.insumo.nombre}`}
                       </p>
                       {egreso.descripcion && (
@@ -715,20 +971,66 @@ const FinanzasManagement: React.FC = () => {
                         <p className="text-sm text-gray-500">Proveedor: {egreso.proveedor}</p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-2">
                       <p className="text-xl font-bold text-red-600">
-                        {formatearMoneda(egreso.monto)}
+                        {formatearMoneda(egreso.costoTotal || egreso.monto || 0)}
                       </p>
+                      <div className="flex flex-col gap-2">
+                        <Select
+                          value={egreso.estado}
+                          onValueChange={(value) => actualizarEstadoEgreso(egreso.id!, value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {estados.map(estado => (
+                              <SelectItem key={estado.value} value={estado.value}>
+                                {estado.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={() => handleDeleteEgreso(egreso.id!)}
+                          className="text-red-600 hover:text-red-900 text-sm"
+                        >
+                          🗑️ Eliminar
+                        </Button>
+                      </div>
+                    </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Paginación de Egresos */}
+                {egresos.length > registrosPorPagina && (
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                    <p className="text-sm text-gray-600">
+                      Mostrando {((paginaEgresos - 1) * registrosPorPagina) + 1} - {Math.min(paginaEgresos * registrosPorPagina, egresos.length)} de {egresos.length}
+                    </p>
+                    <div className="flex gap-2">
                       <Button
-                        onClick={() => handleDeleteEgreso(egreso.id!)}
-                        className="mt-2 text-red-600 hover:text-red-900"
+                        onClick={() => setPaginaEgresos(p => Math.max(1, p - 1))}
+                        disabled={paginaEgresos === 1}
+                        className="text-sm"
                       >
-                        🗑️ Eliminar
+                        ← Anterior
+                      </Button>
+                      <span className="px-3 py-2 text-sm">
+                        Página {paginaEgresos} de {Math.ceil(egresos.length / registrosPorPagina)}
+                      </span>
+                      <Button
+                        onClick={() => setPaginaEgresos(p => Math.min(Math.ceil(egresos.length / registrosPorPagina), p + 1))}
+                        disabled={paginaEgresos >= Math.ceil(egresos.length / registrosPorPagina)}
+                        className="text-sm"
+                      >
+                        Siguiente →
                       </Button>
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -790,7 +1092,7 @@ const FinanzasManagement: React.FC = () => {
                   </label>
                                      <Input
                      type="date"
-                     value={ingresoForm.fechaIngreso}
+                     value={ingresoForm.fechaIngreso || ''}
                      onChange={(value) => setIngresoForm({...ingresoForm, fechaIngreso: value})}
                      required
                    />
@@ -817,17 +1119,33 @@ const FinanzasManagement: React.FC = () => {
                 </summary>
                 <div className="mt-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                         <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                         Lote (opcional)
-                       </label>
-                                               <Input
-                          type="text"
-                          value={ingresoForm.lote?.nombre || ''}
-                          onChange={(value) => setIngresoForm({...ingresoForm, lote: value ? {id: 0, nombre: value} : undefined})}
-                          placeholder="Nombre del lote"
-                        />
-                     </div>
+                                      <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lote (opcional)
+                      </label>
+                      <Select
+                        value={ingresoForm.lote?.id?.toString() || ''}
+                        onValueChange={(value: string) => {
+                          const loteSeleccionado = lotes.find(l => l.id.toString() === value);
+                          setIngresoForm({
+                            ...ingresoForm, 
+                            lote: loteSeleccionado ? {id: loteSeleccionado.id, nombre: loteSeleccionado.nombre} : undefined
+                          });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar lote" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sin lote</SelectItem>
+                          {lotes.map(lote => (
+                            <SelectItem key={lote.id} value={lote.id.toString()}>
+                              {lote.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -854,12 +1172,21 @@ const FinanzasManagement: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Unidad de Medida
                       </label>
-                                             <Input
-                         type="text"
-                         value={ingresoForm.unidadMedida || ''}
-                         onChange={(value) => setIngresoForm({...ingresoForm, unidadMedida: value})}
-                         placeholder="kg, toneladas, etc."
-                       />
+                      <Select
+                        value={ingresoForm.unidadMedida || ''}
+                        onValueChange={(value: string) => setIngresoForm({...ingresoForm, unidadMedida: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar unidad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unidadesMedida.map(unidad => (
+                            <SelectItem key={unidad.value} value={unidad.value}>
+                              {unidad.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
@@ -948,7 +1275,7 @@ const FinanzasManagement: React.FC = () => {
                   </label>
                                      <Input
                      type="text"
-                     value={egresoForm.concepto}
+                     value={egresoForm.concepto || ''}
                      onChange={(value) => setEgresoForm({...egresoForm, concepto: value})}
                      placeholder="Ej: Compra de fertilizante"
                      required
@@ -960,7 +1287,7 @@ const FinanzasManagement: React.FC = () => {
                     Tipo de Egreso *
                   </label>
                   <Select
-                    value={egresoForm.tipoEgreso}
+                    value={egresoForm.tipoEgreso || ''}
                     onValueChange={(value) => setEgresoForm({...egresoForm, tipoEgreso: value})}
                   >
                     <SelectTrigger>
@@ -982,7 +1309,7 @@ const FinanzasManagement: React.FC = () => {
                   </label>
                                      <Input
                      type="date"
-                     value={egresoForm.fechaEgreso}
+                     value={egresoForm.fechaEgreso || ''}
                      onChange={(value) => setEgresoForm({...egresoForm, fechaEgreso: value})}
                      required
                    />
@@ -994,7 +1321,7 @@ const FinanzasManagement: React.FC = () => {
                   </label>
                                      <Input
                      type="number"
-                     value={egresoForm.monto.toString()}
+                     value={(egresoForm.monto || 0).toString()}
                      onChange={(value) => setEgresoForm({...egresoForm, monto: parseFloat(value) || 0})}
                      placeholder="0.00"
                      required
@@ -1009,19 +1336,35 @@ const FinanzasManagement: React.FC = () => {
                 </summary>
                 <div className="mt-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                         <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                         Lote (opcional)
-                       </label>
-                                               <Input
-                          type="text"
-                          value={egresoForm.lote?.nombre || ''}
-                          onChange={(value) => setEgresoForm({...egresoForm, lote: value ? {id: 0, nombre: value} : undefined})}
-                          placeholder="Nombre del lote"
-                        />
-                     </div>
+                                      <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lote (opcional)
+                      </label>
+                      <Select
+                        value={egresoForm.lote?.id?.toString() || ''}
+                        onValueChange={(value: string) => {
+                          const loteSeleccionado = lotes.find(l => l.id.toString() === value);
+                          setEgresoForm({
+                            ...egresoForm, 
+                            lote: loteSeleccionado ? {id: loteSeleccionado.id, nombre: loteSeleccionado.nombre} : undefined
+                          });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar lote" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sin lote</SelectItem>
+                          {lotes.map(lote => (
+                            <SelectItem key={lote.id} value={lote.id.toString()}>
+                              {lote.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                                           <div>
+                                          <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Insumo {egresoForm.tipoEgreso === 'INSUMOS' ? '*' : '(opcional)'}
                         </label>
@@ -1114,12 +1457,21 @@ const FinanzasManagement: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Unidad de Medida
                       </label>
-                                             <Input
-                         type="text"
-                         value={egresoForm.unidadMedida || ''}
-                         onChange={(value) => setEgresoForm({...egresoForm, unidadMedida: value})}
-                         placeholder="kg, litros, etc."
-                       />
+                      <Select
+                        value={egresoForm.unidadMedida || ''}
+                        onValueChange={(value: string) => setEgresoForm({...egresoForm, unidadMedida: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar unidad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unidadesMedida.map(unidad => (
+                            <SelectItem key={unidad.value} value={unidad.value}>
+                              {unidad.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
@@ -1151,7 +1503,7 @@ const FinanzasManagement: React.FC = () => {
                       </label>
                       <Select
                         value={egresoForm.estado}
-                        onValueChange={(value) => setEgresoForm({...egresoForm, estado: value})}
+                        onValueChange={(value: any) => setEgresoForm({...egresoForm, estado: value})}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -1201,153 +1553,6 @@ const FinanzasManagement: React.FC = () => {
                 </Button>
                 <Button type="submit" disabled={loading}>
                   {loading ? '⏳ Guardando...' : '💾 Guardar Egreso'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Nuevo Insumo */}
-      {showInsumoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">📦 Nuevo Insumo</h2>
-              <Button onClick={() => setShowInsumoModal(false)} className="text-gray-500 hover:text-gray-700">
-                ❌
-              </Button>
-            </div>
-            
-            <form onSubmit={crearNuevoInsumo} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre del Insumo *
-                  </label>
-                  <Input
-                    type="text"
-                    value={nuevoInsumoForm.nombre}
-                    onChange={(value) => setNuevoInsumoForm({...nuevoInsumoForm, nombre: value})}
-                    placeholder="Ej: Fertilizante NPK"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Insumo *
-                  </label>
-                  <Select
-                    value={nuevoInsumoForm.tipo}
-                    onValueChange={(value) => setNuevoInsumoForm({...nuevoInsumoForm, tipo: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tiposInsumo.map(tipo => (
-                        <SelectItem key={tipo.value} value={tipo.value}>
-                          {tipo.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unidad de Medida *
-                  </label>
-                  <Input
-                    type="text"
-                    value={nuevoInsumoForm.unidad}
-                    onChange={(value) => setNuevoInsumoForm({...nuevoInsumoForm, unidad: value})}
-                    placeholder="kg, litros, unidades"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Precio Unitario *
-                  </label>
-                  <Input
-                    type="number"
-                    value={nuevoInsumoForm.precioUnitario.toString()}
-                    onChange={(value) => setNuevoInsumoForm({...nuevoInsumoForm, precioUnitario: parseFloat(value) || 0})}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Stock Mínimo
-                  </label>
-                  <Input
-                    type="number"
-                    value={nuevoInsumoForm.stockMinimo.toString()}
-                    onChange={(value) => setNuevoInsumoForm({...nuevoInsumoForm, stockMinimo: parseFloat(value) || 0})}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Stock Inicial
-                  </label>
-                  <Input
-                    type="number"
-                    value={nuevoInsumoForm.stockActual.toString()}
-                    onChange={(value) => setNuevoInsumoForm({...nuevoInsumoForm, stockActual: parseFloat(value) || 0})}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Proveedor
-                  </label>
-                  <Input
-                    type="text"
-                    value={nuevoInsumoForm.proveedor}
-                    onChange={(value) => setNuevoInsumoForm({...nuevoInsumoForm, proveedor: value})}
-                    placeholder="Nombre del proveedor"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Vencimiento
-                  </label>
-                  <Input
-                    type="date"
-                    value={nuevoInsumoForm.fechaVencimiento}
-                    onChange={(value) => setNuevoInsumoForm({...nuevoInsumoForm, fechaVencimiento: value})}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Descripción
-                </label>
-                <textarea
-                  value={nuevoInsumoForm.descripcion}
-                  onChange={(e) => setNuevoInsumoForm({...nuevoInsumoForm, descripcion: e.target.value})}
-                  placeholder="Descripción del insumo..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <Button type="button" onClick={() => setShowInsumoModal(false)}>
-                  ❌ Cancelar
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? '⏳ Creando...' : '💾 Crear Insumo'}
                 </Button>
               </div>
             </form>

@@ -14,7 +14,7 @@ import com.agrocloud.model.entity.LaborManoObra;
 import com.agrocloud.model.entity.LaborInsumo;
 import com.agrocloud.model.entity.Plot;
 import com.agrocloud.model.entity.User;
-import com.agrocloud.model.entity.Insumo;
+import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.UserCompanyRole;
 import com.agrocloud.model.entity.Role;
 import com.agrocloud.model.enums.TipoMaquinaria;
@@ -24,14 +24,16 @@ import com.agrocloud.repository.LaborRepository;
 import com.agrocloud.repository.LaborMaquinariaRepository;
 import com.agrocloud.repository.LaborManoObraRepository;
 import com.agrocloud.repository.LaborInsumoRepository;
-import com.agrocloud.repository.InsumoRepository;
 import com.agrocloud.repository.PlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
@@ -57,10 +59,14 @@ public class LaborService {
     private LaborInsumoRepository laborInsumoRepository;
     
     @Autowired
-    private InsumoRepository insumoRepository;
+    private InventarioService inventarioService;
     
     @Autowired
-    private InventarioService inventarioService;
+    private TransicionEstadoService transicionEstadoService;
+
+    @Autowired
+    private UserService userService;
+    
     
     @Autowired
     private EstadoLoteService estadoLoteService;
@@ -70,20 +76,102 @@ public class LaborService {
      * Incluye labores del usuario y de sus dependientes
      */
     public List<Labor> getLaboresByUser(User user) {
-        // Obtener todos los lotes accesibles por el usuario
-        List<Plot> lotesUsuario = plotRepository.findAccessibleByUser(user);
-        
-        // Extraer los IDs de los lotes
-        List<Long> loteIds = lotesUsuario.stream()
-            .map(Plot::getId)
-            .toList();
-        
-        if (loteIds.isEmpty()) {
-            return List.of();
+        try {
+            System.out.println("[LABOR_SERVICE] getLaboresByUser iniciado para usuario: " + (user != null ? user.getEmail() : "null"));
+            
+            if (user == null) {
+                System.err.println("[LABOR_SERVICE] ERROR: Usuario es null");
+                return new ArrayList<>();
+            }
+            
+            List<Plot> lotesUsuario;
+            
+            if (user.isSuperAdmin()) {
+                // Solo SuperAdmin ve todos los lotes activos
+                System.out.println("[LABOR_SERVICE] Usuario es SuperAdmin, mostrando todos los lotes");
+                lotesUsuario = plotRepository.findAll().stream()
+                        .filter(plot -> {
+                            Boolean activo = plot.getActivo();
+                            return activo != null && activo;
+                        })
+                        .toList();
+            } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null)) {
+                // Admin de empresa ve TODOS los lotes de su empresa
+                System.out.println("[LABOR_SERVICE] Usuario es Admin de empresa, mostrando TODOS los lotes de la empresa");
+                
+                Empresa empresa = user.getEmpresa();
+                if (empresa == null) {
+                    System.out.println("[LABOR_SERVICE] Usuario ADMIN no tiene empresa asignada");
+                    return new ArrayList<>();
+                }
+                
+                // Obtener todos los usuarios de la empresa
+                List<User> todosUsuarios = userService.findAll();
+                List<User> usuariosEmpresa = todosUsuarios.stream()
+                        .filter(u -> u.perteneceAEmpresa(empresa.getId()))
+                        .collect(Collectors.toList());
+                
+                System.out.println("[LABOR_SERVICE] Empresa ID: " + empresa.getId() + ", Usuarios: " + usuariosEmpresa.size());
+                
+                // Obtener lotes de TODOS los usuarios de la empresa
+                lotesUsuario = new ArrayList<>();
+                for (User userEmpresa : usuariosEmpresa) {
+                    List<Plot> lotesUsuarioEmpresa = plotRepository.findByUserIdAndActivoTrue(userEmpresa.getId());
+                    if (lotesUsuarioEmpresa != null) {
+                        lotesUsuario.addAll(lotesUsuarioEmpresa);
+                        System.out.println("[LABOR_SERVICE] Lotes del usuario " + userEmpresa.getUsername() + ": " + lotesUsuarioEmpresa.size());
+                    }
+                }
+                
+                System.out.println("[LABOR_SERVICE] Total lotes de la empresa: " + lotesUsuario.size());
+            } else {
+                // Otros usuarios ven solo sus lotes y los de sus sub-usuarios
+                System.out.println("[LABOR_SERVICE] Usuario normal, mostrando lotes accesibles");
+                
+                // Obtener lotes del usuario actual
+                lotesUsuario = plotRepository.findByUserIdAndActivoTrue(user.getId());
+                System.out.println("[LABOR_SERVICE] Lotes del usuario encontrados: " + (lotesUsuario != null ? lotesUsuario.size() : "null"));
+                
+                if (lotesUsuario == null) {
+                    lotesUsuario = new ArrayList<>();
+                }
+                
+                // Obtener lotes de usuarios dependientes
+                List<User> usuariosDependientes = userService.findByParentUserId(user.getId());
+                if (usuariosDependientes != null && !usuariosDependientes.isEmpty()) {
+                    System.out.println("[LABOR_SERVICE] Usuarios dependientes encontrados: " + usuariosDependientes.size());
+                    for (User dependiente : usuariosDependientes) {
+                        List<Plot> lotesDependiente = plotRepository.findByUserIdAndActivoTrue(dependiente.getId());
+                        if (lotesDependiente != null) {
+                            lotesUsuario.addAll(lotesDependiente);
+                            System.out.println("[LABOR_SERVICE] Lotes del dependiente " + dependiente.getUsername() + ": " + lotesDependiente.size());
+                        }
+                    }
+                }
+                
+                System.out.println("[LABOR_SERVICE] Total lotes accesibles: " + lotesUsuario.size());
+            }
+            
+            // Extraer los IDs de los lotes
+            List<Long> loteIds = lotesUsuario.stream()
+                .map(Plot::getId)
+                .toList();
+            
+            if (loteIds.isEmpty()) {
+                System.out.println("[LABOR_SERVICE] No hay lotes accesibles, retornando lista vacía");
+                return new ArrayList<>();
+            }
+            
+            // Buscar labores por los IDs de lotes
+            List<Labor> labores = laborRepository.findByLoteIdInOrderByFechaInicioDesc(loteIds);
+            System.out.println("[LABOR_SERVICE] Labores encontradas: " + labores.size());
+            return labores;
+            
+        } catch (Exception e) {
+            System.err.println("[LABOR_SERVICE] ERROR en getLaboresByUser: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
         }
-        
-        // Buscar labores por los IDs de lotes
-        return laborRepository.findByLoteIdInOrderByFechaInicioDesc(loteIds);
     }
 
     /**
@@ -131,6 +219,11 @@ public class LaborService {
         // Guardar la labor primero para obtener el ID
         Labor laborGuardada = laborRepository.save(labor);
         
+        // Evaluar y aplicar transiciones automáticas de estado
+        if (labor.getLote() != null && laborGuardada.getEstado() == Labor.EstadoLabor.COMPLETADA) {
+            transicionEstadoService.evaluarYAplicarTransicion(labor.getLote(), laborGuardada);
+        }
+        
         // Procesar insumos usados si existen
         if (labor.getInsumosUsados() != null && !labor.getInsumosUsados().isEmpty()) {
             // TODO: Implementar procesamiento de insumos usados
@@ -143,7 +236,8 @@ public class LaborService {
             for (Object maqData : labor.getMaquinariaAsignada()) {
                 System.out.println("Tipo de maqData: " + maqData.getClass().getName());
                 System.out.println("Contenido de maqData: " + maqData);
-                if (maqData instanceof Map) {
+                if (maqData instanceof Map<?, ?>) {
+                    @SuppressWarnings("unchecked")
                     Map<String, Object> maq = (Map<String, Object>) maqData;
                     System.out.println("Mapeando maquinaria: " + maq);
                     LaborMaquinaria laborMaq = new LaborMaquinaria();
@@ -174,7 +268,8 @@ public class LaborService {
             for (Object moData : labor.getManoObra()) {
                 System.out.println("Tipo de moData: " + moData.getClass().getName());
                 System.out.println("Contenido de moData: " + moData);
-                if (moData instanceof Map) {
+                if (moData instanceof Map<?, ?>) {
+                    @SuppressWarnings("unchecked")
                     Map<String, Object> mo = (Map<String, Object>) moData;
                     System.out.println("Mapeando mano de obra: " + mo);
                     LaborManoObra laborMo = new LaborManoObra();
@@ -236,7 +331,13 @@ public class LaborService {
         }
         
         labor.setResponsable(request.getResponsable());
-        labor.setCostoTotal(request.getCostoTotal());
+        
+        // Establecer costo total, si es null usar BigDecimal.ZERO
+        if (request.getCostoTotal() != null) {
+            labor.setCostoTotal(request.getCostoTotal());
+        } else {
+            labor.setCostoTotal(BigDecimal.ZERO);
+        }
         
         // Mapear lote
         if (request.getLote() != null && request.getLote().get("id") != null) {
@@ -256,6 +357,11 @@ public class LaborService {
         
         // Guardar la labor primero para obtener el ID
         Labor laborGuardada = laborRepository.save(labor);
+        
+        // Evaluar y aplicar transiciones automáticas de estado
+        if (labor.getLote() != null && laborGuardada.getEstado() == Labor.EstadoLabor.COMPLETADA) {
+            transicionEstadoService.evaluarYAplicarTransicion(labor.getLote(), laborGuardada);
+        }
         
         // Procesar insumos usados
         if (request.getInsumosUsados() != null && !request.getInsumosUsados().isEmpty()) {
@@ -511,7 +617,7 @@ public class LaborService {
         }
         
         // Calcular rendimiento real (cantidad obtenida / área en hectáreas)
-        BigDecimal rendimientoReal = cantidadObtenida.divide(areaHectareas, 2, BigDecimal.ROUND_HALF_UP);
+        BigDecimal rendimientoReal = cantidadObtenida.divide(areaHectareas, 2, RoundingMode.HALF_UP);
         
         // Actualizar valores en el lote
         lote.setRendimientoEsperado(rendimientoEsperado);
@@ -520,7 +626,7 @@ public class LaborService {
         // Calcular porcentaje de cumplimiento
         BigDecimal porcentajeCumplimiento = BigDecimal.ZERO;
         if (rendimientoEsperado != null && rendimientoEsperado.compareTo(BigDecimal.ZERO) > 0) {
-            porcentajeCumplimiento = rendimientoReal.divide(rendimientoEsperado, 4, BigDecimal.ROUND_HALF_UP)
+            porcentajeCumplimiento = rendimientoReal.divide(rendimientoEsperado, 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100"));
         }
         
@@ -637,7 +743,10 @@ public class LaborService {
     }
 
     /**
-     * Eliminar labor
+     * Eliminar labor según su estado.
+     * 
+     * PLANIFICADA: Se cancela y restauran los insumos automáticamente
+     * EN_PROGRESO/COMPLETADA: Requiere anulación formal con justificación
      */
     public void eliminarLabor(Long id, User usuario) {
         Labor labor = laborRepository.findById(id)
@@ -653,8 +762,106 @@ public class LaborService {
             throw new RuntimeException("No tiene permisos para eliminar esta labor. Usuario: " + usuario.getEmail() + ", Lote: " + labor.getLote().getId());
         }
         
+        // Caso 1: Labor PLANIFICADA → Cancelar y restaurar insumos automáticamente
+        if (labor.isPlanificada()) {
+            System.out.println("Cancelando labor planificada ID: " + id);
+            
+            // Obtener insumos de la labor
+            List<LaborInsumo> insumosLabor = laborInsumoRepository.findByLaborId(id);
+            
+            // Restaurar insumos al inventario
+            if (!insumosLabor.isEmpty()) {
+                inventarioService.restaurarInventarioLabor(
+                    insumosLabor, 
+                    usuario, 
+                    "Cancelación de labor planificada"
+                );
+                System.out.println("Restaurados " + insumosLabor.size() + " insumos al inventario");
+            }
+            
+            // Marcar como cancelada
+            labor.setEstado(Labor.EstadoLabor.CANCELADA);
+            labor.setActivo(false);
+            laborRepository.save(labor);
+            
+            System.out.println("Labor cancelada exitosamente");
+        }
+        // Caso 2: Labor EN_PROGRESO o COMPLETADA → Requiere anulación formal
+        else if (labor.requiereAnulacionFormal()) {
+            throw new RuntimeException(
+                "Esta labor está " + labor.getEstado() + " y requiere anulación formal. " +
+                "Use el proceso de anulación con justificación (solo ADMINISTRADOR)."
+            );
+        }
+        // Caso 3: Ya está CANCELADA o ANULADA
+        else {
+            labor.setActivo(false);
+            laborRepository.save(labor);
+        }
+    }
+    
+    /**
+     * Anular una labor ejecutada (EN_PROGRESO o COMPLETADA).
+     * Requiere permisos de ADMINISTRADOR y justificación obligatoria.
+     * 
+     * @param id ID de la labor
+     * @param justificacion Motivo de la anulación (obligatorio)
+     * @param restaurarInsumos Si true, restaura los insumos al inventario
+     * @param usuario Usuario que realiza la anulación (debe ser ADMINISTRADOR)
+     */
+    public void anularLabor(Long id, String justificacion, boolean restaurarInsumos, User usuario) {
+        Labor labor = laborRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Labor no encontrada con ID: " + id));
+        
+        // Verificar si la labor ya está inactiva
+        if (!labor.getActivo()) {
+            throw new RuntimeException("La labor ya está eliminada o anulada");
+        }
+        
+        // Verificar permisos: debe ser ADMINISTRADOR
+        if (!usuario.isSuperAdmin() && !usuario.esAdministradorEmpresa(usuario.getEmpresa() != null ? usuario.getEmpresa().getId() : null)) {
+            throw new RuntimeException("Solo los ADMINISTRADORES pueden anular labores ejecutadas");
+        }
+        
+        // Verificar permisos sobre el lote
+        if (labor.getLote() != null && !tieneAccesoAlLote(labor.getLote(), usuario)) {
+            throw new RuntimeException("No tiene permisos para anular esta labor");
+        }
+        
+        // Validar justificación
+        if (justificacion == null || justificacion.trim().isEmpty()) {
+            throw new RuntimeException("La justificación es obligatoria para anular una labor");
+        }
+        
+        if (justificacion.length() > 1000) {
+            throw new RuntimeException("La justificación no puede exceder 1000 caracteres");
+        }
+        
+        System.out.println("Anulando labor ID: " + id + " por: " + usuario.getEmail());
+        
+        // Obtener insumos de la labor
+        List<LaborInsumo> insumosLabor = laborInsumoRepository.findByLaborId(id);
+        
+        // Restaurar insumos si se solicita
+        if (restaurarInsumos && !insumosLabor.isEmpty()) {
+            inventarioService.restaurarInventarioLabor(
+                insumosLabor, 
+                usuario, 
+                "Anulación de labor: " + justificacion
+            );
+            System.out.println("Restaurados " + insumosLabor.size() + " insumos al inventario por anulación");
+        }
+        
+        // Marcar como anulada con auditoría completa
+        labor.setEstado(Labor.EstadoLabor.ANULADA);
         labor.setActivo(false);
+        labor.setMotivoAnulacion(justificacion);
+        labor.setFechaAnulacion(java.time.LocalDateTime.now());
+        labor.setUsuarioAnulacion(usuario);
+        
         laborRepository.save(labor);
+        
+        System.out.println("Labor anulada exitosamente. Insumos restaurados: " + restaurarInsumos);
     }
 
     /**
@@ -721,12 +928,7 @@ public class LaborService {
      * Obtener la empresa asociada al lote
      */
     private Long obtenerEmpresaDelLote(Plot lote) {
-        // Si el lote tiene empresa directa, usarla
-        if (lote.getEmpresa() != null) {
-            return lote.getEmpresa().getId();
-        }
-        
-        // Si no, usar la empresa del usuario propietario
+        // Como la tabla lotes no tiene empresa_id, usar la empresa del usuario propietario
         if (lote.getUser() != null && !lote.getUser().getUserCompanyRoles().isEmpty()) {
             return lote.getUser().getUserCompanyRoles().iterator().next().getEmpresa().getId();
         }
@@ -873,7 +1075,7 @@ public class LaborService {
             labor.getObservaciones(),
             labor.getLote() != null ? labor.getLote().getId() : null,
             labor.getLote() != null ? labor.getLote().getNombre() : null,
-            null, // responsable - no existe en la entidad
+            labor.getResponsable(), // responsable - obtener de la entidad
             horasTotales, // horasTrabajo - calculadas de mano de obra
             labor.getCostoTotal(),
             null, // progreso - no existe en la entidad
@@ -1082,7 +1284,7 @@ public class LaborService {
             lote.getRendimientoReal(),
             lote.getRendimientoReal() != null && lote.getRendimientoEsperado() != null && 
             lote.getRendimientoEsperado().compareTo(BigDecimal.ZERO) > 0 ?
-                lote.getRendimientoReal().divide(lote.getRendimientoEsperado(), 4, BigDecimal.ROUND_HALF_UP)
+                lote.getRendimientoReal().divide(lote.getRendimientoEsperado(), 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100")) : null,
             lote.getEstado() != null ? lote.getEstado().getDescripcion() : "Sin estado",
             laborCosecha.getObservaciones()
@@ -1133,13 +1335,13 @@ public class LaborService {
                 .map(ReporteCosechaDTO::getRendimientoReal)
                 .filter(r -> r != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(new BigDecimal(reportesCultivo.size()), 2, BigDecimal.ROUND_HALF_UP);
+                .divide(new BigDecimal(reportesCultivo.size()), 2, RoundingMode.HALF_UP);
             
             BigDecimal cumplimientoPromedio = reportesCultivo.stream()
                 .map(ReporteCosechaDTO::getPorcentajeCumplimiento)
                 .filter(c -> c != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(new BigDecimal(reportesCultivo.size()), 2, BigDecimal.ROUND_HALF_UP);
+                .divide(new BigDecimal(reportesCultivo.size()), 2, RoundingMode.HALF_UP);
             
             statsCultivo.put("rendimientoPromedio", rendimientoPromedio);
             statsCultivo.put("cumplimientoPromedio", cumplimientoPromedio);
@@ -1157,5 +1359,97 @@ public class LaborService {
         }
         
         return estadisticas;
+    }
+    
+    /**
+     * Obtiene las tareas disponibles según el estado del lote
+     * Implementa la lógica de filtrado inteligente por estado
+     */
+    public List<String> getTareasDisponiblesPorEstado(EstadoLote estado) {
+        switch (estado) {
+            case DISPONIBLE:
+                return Arrays.asList("arado", "rastra", "fertilizacion", "monitoreo");
+            
+            case PREPARADO:
+                return Arrays.asList("siembra", "fertilizacion", "monitoreo");
+            
+            case EN_PREPARACION:
+                return Arrays.asList("arado", "rastra", "fertilizacion", "monitoreo");
+            
+            case SEMBRADO:
+                return Arrays.asList("riego", "fertilizacion", "pulverizacion", "monitoreo");
+            
+            case EN_CRECIMIENTO:
+                return Arrays.asList("riego", "fertilizacion", "pulverizacion", "desmalezado", 
+                                   "aplicacion_herbicida", "aplicacion_insecticida", "monitoreo");
+            
+            case EN_FLORACION:
+                return Arrays.asList("riego", "pulverizacion", "aplicacion_insecticida", "monitoreo");
+            
+            case EN_FRUTIFICACION:
+                return Arrays.asList("riego", "pulverizacion", "aplicacion_insecticida", "monitoreo");
+            
+            case LISTO_PARA_COSECHA:
+                return Arrays.asList("cosecha", "monitoreo");
+            
+            case EN_COSECHA:
+                return Arrays.asList("cosecha", "monitoreo");
+            
+            case COSECHADO:
+                return Arrays.asList("arado", "rastra", "monitoreo");
+            
+            case EN_DESCANSO:
+                return Arrays.asList("monitoreo");
+            
+            case ENFERMO:
+                return Arrays.asList("pulverizacion", "aplicacion_herbicida", "aplicacion_insecticida", 
+                                   "monitoreo", "otro");
+            
+            case ABANDONADO:
+                return Arrays.asList("monitoreo", "otro");
+            
+            default:
+                return Arrays.asList("monitoreo", "otro");
+        }
+    }
+    
+    /**
+     * Valida si una tarea es apropiada para el estado actual del lote
+     */
+    public boolean validarTareaParaEstado(EstadoLote estado, String tipoTarea) {
+        List<String> tareasDisponibles = getTareasDisponiblesPorEstado(estado);
+        return tareasDisponibles.contains(tipoTarea);
+    }
+    
+    /**
+     * Obtiene información detallada sobre las tareas disponibles
+     */
+    public Map<String, Object> getInfoTareasDisponibles(EstadoLote estado) {
+        List<String> tareas = getTareasDisponiblesPorEstado(estado);
+        
+        Map<String, String> tareasConDescripcion = new java.util.HashMap<>();
+        tareasConDescripcion.put("arado", "🚜 Preparación profunda del suelo");
+        tareasConDescripcion.put("rastra", "🔧 Nivelación y refinamiento del suelo");
+        tareasConDescripcion.put("siembra", "🌱 Plantación del cultivo");
+        tareasConDescripcion.put("fertilizacion", "🌿 Aplicación de nutrientes");
+        tareasConDescripcion.put("riego", "💧 Aplicación de agua");
+        tareasConDescripcion.put("pulverizacion", "💨 Aplicación de productos fitosanitarios");
+        tareasConDescripcion.put("desmalezado", "🌾 Control manual de malezas");
+        tareasConDescripcion.put("aplicacion_herbicida", "🧪 Control químico de malezas");
+        tareasConDescripcion.put("aplicacion_insecticida", "🐛 Control de plagas");
+        tareasConDescripcion.put("cosecha", "🌾 Recolección del cultivo");
+        tareasConDescripcion.put("monitoreo", "👁️ Inspección y seguimiento");
+        tareasConDescripcion.put("otro", "📝 Otra actividad");
+        
+        Map<String, Object> resultado = new java.util.HashMap<>();
+        resultado.put("estado", estado.name());
+        resultado.put("tareas", tareas);
+        resultado.put("tareasConInfo", tareas.stream()
+                .collect(Collectors.toMap(
+                    tarea -> tarea,
+                    tarea -> tareasConDescripcion.getOrDefault(tarea, "📝 " + tarea)
+                )));
+        
+        return resultado;
     }
 }

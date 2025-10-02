@@ -58,7 +58,7 @@ const MaquinariaManagement: React.FC = () => {
   const loadMaquinaria = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/v1/maquinaria');
+        const response = await api.get('/api/maquinaria');
       
       // Mapear datos del backend al formato esperado por el frontend
       const maquinariaMapeada = response.data.map((maq: any) => ({

@@ -1,6 +1,7 @@
 package com.agrocloud.dto;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 
 /**
@@ -60,7 +61,7 @@ public class ReporteCosechaDTO {
         if (cantidadEsperada != null && cantidadObtenida != null) {
             this.diferenciaAbsoluta = cantidadObtenida.subtract(cantidadEsperada);
             if (cantidadEsperada.compareTo(BigDecimal.ZERO) > 0) {
-                this.diferenciaPorcentual = diferenciaAbsoluta.divide(cantidadEsperada, 4, BigDecimal.ROUND_HALF_UP)
+                this.diferenciaPorcentual = diferenciaAbsoluta.divide(cantidadEsperada, 4, RoundingMode.HALF_UP)
                         .multiply(new BigDecimal("100"));
             }
         }

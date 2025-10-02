@@ -56,6 +56,9 @@ const api = axios.create({
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+    } else if (error.response?.status === 500) {
+      console.error('🚨 [API] Error interno del servidor:', error.response?.data);
+      // No redirigir en errores 500, solo loggear
     }
     
     return Promise.reject(error);
@@ -162,7 +165,7 @@ export const fieldService = {
   async getAll() {
     console.log('🔧 [FieldService] Obteniendo campos...');
     try {
-      const response = await api.get('/api/v1/campos');
+      const response = await api.get('/api/campos');
       console.log('✅ [FieldService] Campos obtenidos:', response.data.length);
       return response.data;
     } catch (error) {
@@ -174,7 +177,7 @@ export const fieldService = {
   async create(fieldData: any) {
     console.log('🔧 [FieldService] Creando campo...');
     try {
-      const response = await api.post('/api/v1/campos', fieldData);
+      const response = await api.post('/api/campos', fieldData);
       console.log('✅ [FieldService] Campo creado:', response.data.id);
       return response.data;
     } catch (error) {
@@ -202,7 +205,7 @@ export const inputService = {
   async getAll() {
     console.log('🔧 [InputService] Obteniendo insumos...');
     try {
-      const response = await api.get('/api/v1/insumos');
+      const response = await api.get('/api/insumos');
       console.log('✅ [InputService] Insumos obtenidos:', response.data.length);
       return response.data;
     } catch (error) {
@@ -216,7 +219,7 @@ export const machineryService = {
   async getAll() {
     console.log('🔧 [MachineryService] Obteniendo maquinaria...');
     try {
-      const response = await api.get('/api/v1/maquinaria');
+      const response = await api.get('/api/maquinaria');
       console.log('✅ [MachineryService] Maquinaria obtenida:', response.data.length);
       return response.data;
     } catch (error) {

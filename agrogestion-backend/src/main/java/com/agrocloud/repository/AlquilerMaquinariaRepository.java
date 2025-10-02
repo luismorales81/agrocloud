@@ -12,6 +12,11 @@ import java.util.List;
 /**
  * Repositorio para la gestión de alquileres de maquinaria
  */
+/**
+ * @deprecated Repositorio deprecado. La tabla alquiler_maquinaria será eliminada en V1_13.
+ * Usar labor_maquinaria con tipoMaquinaria=ALQUILADA en su lugar.
+ */
+@Deprecated
 @Repository
 public interface AlquilerMaquinariaRepository extends JpaRepository<AlquilerMaquinaria, Long> {
 

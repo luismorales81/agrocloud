@@ -1,6 +1,8 @@
 package com.agrocloud.service;
 
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.entity.Empresa;
+import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.Insumo;
 import com.agrocloud.repository.InsumoRepository;
 import com.agrocloud.repository.FieldRepository;
@@ -10,14 +12,15 @@ import com.agrocloud.repository.LaborRepository;
 import com.agrocloud.repository.IngresoRepository;
 import com.agrocloud.repository.EgresoRepository;
 import com.agrocloud.repository.CultivoRepository;
-import com.agrocloud.repository.CosechaRepository;
+// import com.agrocloud.repository.CosechaRepository;  // DEPRECADO
+import com.agrocloud.repository.HistorialCosechaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -53,8 +56,11 @@ public class DashboardService {
     @Autowired
     private CultivoRepository cultivoRepository;
 
+    // @Autowired
+    // private CosechaRepository cosechaRepository;  // DEPRECADO - Usar historialCosechaRepository
+    
     @Autowired
-    private CosechaRepository cosechaRepository;
+    private HistorialCosechaRepository historialCosechaRepository;
 
     /**
      * Obtener estadísticas del dashboard para un usuario específico
@@ -79,14 +85,14 @@ public class DashboardService {
         
         // Obtener estadísticas del usuario actual
         long camposUsuario = fieldRepository.countByUserId(userId);
-        long lotesUsuario = plotRepository.countByUserId(userId);
+        long lotesUsuario = plotRepository.countByUserIdAndActivoTrue(userId);
         long cultivosUsuario = cultivoRepository.countByUsuarioId(userId);
         long insumosUsuario = insumoRepository.countByUserId(userId);
         long maquinariaUsuario = maquinariaRepository.countByUserId(userId);
         long laboresUsuario = laborRepository.countByUsuarioId(userId);
         long ingresosUsuario = ingresoRepository.countByUserId(userId);
         long egresosUsuario = egresoRepository.countByUserId(userId);
-        long cosechasUsuario = cosechaRepository.countByUsuarioId(userId);
+        long cosechasUsuario = historialCosechaRepository.countByUsuarioId(userId);
         
         System.out.println("📊 [DashboardService] Estadísticas del usuario:");
         System.out.println("  - Campos: " + camposUsuario);
@@ -127,14 +133,14 @@ public class DashboardService {
             System.out.println("👥 [DashboardService] Usuarios dependientes encontrados: " + usuariosDependientes.size());
             for (User dependiente : usuariosDependientes) {
                 camposDependientes += fieldRepository.countByUserId(dependiente.getId());
-                lotesDependientes += plotRepository.countByUserId(dependiente.getId());
+                lotesDependientes += plotRepository.countByUserIdAndActivoTrue(dependiente.getId());
                 cultivosDependientes += cultivoRepository.countByUsuarioId(dependiente.getId());
                 insumosDependientes += insumoRepository.countByUserId(dependiente.getId());
                 maquinariaDependientes += maquinariaRepository.countByUserId(dependiente.getId());
                 laboresDependientes += laborRepository.countByUsuarioId(dependiente.getId());
                 ingresosDependientes += ingresoRepository.countByUserId(dependiente.getId());
                 egresosDependientes += egresoRepository.countByUserId(dependiente.getId());
-                cosechasDependientes += cosechaRepository.countByUsuarioId(dependiente.getId());
+                cosechasDependientes += historialCosechaRepository.countByUsuarioId(dependiente.getId());
             }
             
             System.out.println("📊 [DashboardService] Estadísticas de dependientes:");
@@ -247,7 +253,10 @@ public class DashboardService {
         System.out.println("🔍 [DashboardService] Roles encontrados: " + usuario.getRoles().stream().map(role -> role.getNombre()).collect(Collectors.joining(", ")));
         
         boolean esAdmin = usuario.getRoles().stream()
-                .anyMatch(role -> "ADMIN".equals(role.getNombre()) || "ADMINISTRADOR".equals(role.getNombre()) || "SUPERADMIN".equals(role.getNombre()));
+                .anyMatch(role -> "ADMIN".equals(role.getNombre()) || 
+                                 "ADMINISTRADOR".equals(role.getNombre()) || 
+                                 "SUPERADMIN".equals(role.getNombre()) ||
+                                 "ADMIN_EMPRESA".equals(role.getNombre()));
         
         System.out.println("✅ [DashboardService] Usuario " + usuario.getUsername() + " es admin: " + esAdmin);
         
@@ -357,18 +366,50 @@ public class DashboardService {
         Map<String, Object> estadisticas = new HashMap<>();
         
         try {
-            System.out.println("🔍 [DashboardService] Obteniendo estadísticas globales para ADMIN");
+            System.out.println("🔍 [DashboardService] Obteniendo estadísticas de la empresa para ADMIN");
             
-            // Obtener estadísticas globales (todos los usuarios)
-            long camposTotal = fieldRepository.count();
-            long lotesTotal = plotRepository.count();
-            long cultivosTotal = cultivoRepository.count();
-            long insumosTotal = insumoRepository.count();
-            long maquinariaTotal = maquinariaRepository.count();
-            long laboresTotal = laborRepository.count();
-            long ingresosTotal = ingresoRepository.count();
-            long egresosTotal = egresoRepository.count();
-            long cosechasTotal = cosechaRepository.count();
+            // Obtener la empresa del usuario administrador
+            Empresa empresa = usuario.getEmpresa();
+            if (empresa == null) {
+                System.out.println("❌ [DashboardService] Usuario ADMIN no tiene empresa asignada");
+                return estadisticas;
+            }
+            Long empresaId = empresa.getId();
+            
+            // Obtener todos los usuarios de la empresa
+            List<User> todosUsuarios = userService.findAll();
+            List<User> usuariosEmpresa = todosUsuarios.stream()
+                    .filter(user -> user.perteneceAEmpresa(empresaId))
+                    .collect(Collectors.toList());
+            
+            System.out.println("🏢 [DashboardService] Empresa ID: " + empresaId + ", Usuarios: " + usuariosEmpresa.size());
+            
+            // Obtener estadísticas de la empresa (solo usuarios de la empresa)
+            long camposTotal = 0;
+            long lotesTotal = 0;
+            long cultivosTotal = 0;
+            long insumosTotal = 0;
+            long maquinariaTotal = 0;
+            long laboresTotal = 0;
+            long ingresosTotal = 0;
+            long egresosTotal = 0;
+            long cosechasTotal = 0;
+            
+            // Sumar estadísticas de todos los usuarios de la empresa
+            for (User userEmpresa : usuariosEmpresa) {
+                // Contar solo campos activos para que coincida con FieldService
+                List<Field> camposActivos = fieldRepository.findByUserIdAndActivoTrue(userEmpresa.getId());
+                camposTotal += camposActivos != null ? camposActivos.size() : 0;
+                // Contar solo lotes activos para que coincida con PlotService
+                lotesTotal += plotRepository.countByUserIdAndActivoTrue(userEmpresa.getId());
+                cultivosTotal += cultivoRepository.countByUsuarioId(userEmpresa.getId());
+                insumosTotal += insumoRepository.countByUserId(userEmpresa.getId());
+                maquinariaTotal += maquinariaRepository.countByUserId(userEmpresa.getId());
+                laboresTotal += laborRepository.countByUsuarioId(userEmpresa.getId());
+                ingresosTotal += ingresoRepository.countByUserId(userEmpresa.getId());
+                egresosTotal += egresoRepository.countByUserId(userEmpresa.getId());
+                cosechasTotal += historialCosechaRepository.countByUsuarioId(userEmpresa.getId());
+            }
             
             System.out.println("📊 [DashboardService] Estadísticas globales:");
             System.out.println("  - Campos: " + camposTotal);

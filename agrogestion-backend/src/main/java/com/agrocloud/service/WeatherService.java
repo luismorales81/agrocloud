@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -26,6 +27,9 @@ public class WeatherService {
     private static final String API_KEY = "8ee79cbd9f27221c0668a98dca8bd466";
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    
+    @Autowired
+    private WeatherApiUsageService weatherApiUsageService;
     
     public WeatherService() {
         this.restTemplate = new RestTemplate();
@@ -45,6 +49,14 @@ public class WeatherService {
             if (!isValidCoordinates(latitude, longitude)) {
                 throw new IllegalArgumentException("Coordenadas inválidas");
             }
+            
+            // Verificar si se puede hacer la llamada (no se ha alcanzado el límite)
+            if (!weatherApiUsageService.puedeHacerLlamada()) {
+                throw new RuntimeException("Límite diario de uso de la API del clima alcanzado (1000 usos/día)");
+            }
+            
+            // Registrar el uso de la API
+            weatherApiUsageService.registrarUso();
             
             // Obtener clima actual
             WeatherCurrentDTO currentWeather = getCurrentWeather(latitude, longitude);
