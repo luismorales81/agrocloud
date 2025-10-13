@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "cd agrogestion-backend && java -jar target/agrocloud-backend-*.jar --spring.profiles.active=testing",
+    "startCommand": "java -jar agrogestion-backend/target/agrocloud-backend-*.jar --spring.profiles.active=testing",
     "healthcheckPath": "/api/v1/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",

@@ -1,1 +1,1 @@
-web: cd agrogestion-backend && java -jar target/agrocloud-backend-*.jar --spring.profiles.active=testing
+web: java -jar agrogestion-backend/target/agrocloud-backend-*.jar --spring.profiles.active=testing
