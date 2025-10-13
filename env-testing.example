@@ -1,0 +1,60 @@
+# ============================================================
+# VARIABLES DE ENTORNO - TESTING
+# AgroGestion - Railway Testing
+# ============================================================
+
+# ============================================================
+# BACKEND - SPRING BOOT
+# ============================================================
+
+# Perfil de Spring
+SPRING_PROFILES_ACTIVE=testing
+
+# Base de datos MySQL (Railway)
+SPRING_DATASOURCE_URL=jdbc:mysql://mysql.railway.internal:3306/railway
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=WSoobrppUQbaPINdsRcoQVkUvtYKjmSe
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+
+# JWT Secret (generar uno nuevo para testing)
+JWT_SECRET=testing-jwt-secret-2025-agrogestion-railway
+
+# Puerto del backend
+PORT=8080
+
+# ============================================================
+# FRONTEND - VITE
+# ============================================================
+
+# URL del backend (se actualizará con la URL real de Railway)
+VITE_API_URL=https://agrogestion-backend-testing.railway.app
+
+# ============================================================
+# MYSQL - RAILWAY
+# ============================================================
+
+# Credenciales MySQL (Railway)
+MYSQLHOST=mysql.railway.internal
+MYSQLPORT=3306
+MYSQLUSER=root
+MYSQLPASSWORD=WSoobrppUQbaPINdsRcoQVkUvtYKjmSe
+MYSQLDATABASE=railway
+
+# ============================================================
+# CONFIGURACIÓN ADICIONAL
+# ============================================================
+
+# Logging
+LOGGING_LEVEL_ROOT=INFO
+LOGGING_LEVEL_COM_AGROCLOUD=DEBUG
+
+# CORS
+CORS_ALLOWED_ORIGINS=https://agrogestion-frontend-testing.vercel.app
+
+# ============================================================
+# NOTAS
+# ============================================================
+# 1. Actualizar VITE_API_URL con la URL real del backend
+# 2. Actualizar CORS_ALLOWED_ORIGINS con la URL real del frontend
+# 3. Generar JWT_SECRET único para testing
+# 4. Verificar credenciales MySQL en Railway
