@@ -3,11 +3,11 @@ FROM maven:3.9.5-eclipse-temurin-17 AS build
 WORKDIR /app
 
 # 1️⃣ Copiar solo pom.xml y bajar dependencias
-COPY agrogestion-backend/pom.xml .
+COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
 # 2️⃣ Copiar código fuente
-COPY agrogestion-backend/src ./src
+COPY src ./src
 
 # 3️⃣ Compilar el proyecto sin tests
 RUN mvn clean package -DskipTests
