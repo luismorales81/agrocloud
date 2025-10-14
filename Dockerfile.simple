@@ -1,14 +1,14 @@
 # Dockerfile simple para Railway
 FROM maven:3.9.5-eclipse-temurin-17 AS build
 
-# Establecer directorio de trabajo
+# Establecer el directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de configuración de Maven
+# Copiar los archivos de configuración de Maven desde la subcarpeta
 COPY agrogestion-backend/pom.xml .
 
-# Copiar código fuente
-COPY agrogestion-backend/src src
+# Copiar el código fuente
+COPY agrogestion-backend/src ./src
 
 # Compilar la aplicación con Maven
 RUN mvn clean package -DskipTests && ls -la target/
@@ -21,10 +21,10 @@ WORKDIR /app
 # Instalar wget para healthcheck
 RUN apk add --no-cache wget
 
-# Copiar el JAR compilado (usar wildcard para evitar problemas de nombre)
+# Copiar el JAR compilado desde la etapa de build
 COPY --from=build /app/target/*.jar app.jar
 
-# Exponer puerto
+# Exponer el puerto que usará la app
 EXPOSE 8080
 
 # Healthcheck
