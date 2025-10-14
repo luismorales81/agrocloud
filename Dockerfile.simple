@@ -1,30 +1,23 @@
 # Etapa 1: Build
 FROM maven:3.9.5-eclipse-temurin-17 AS build
 WORKDIR /app
-
-# 1️⃣ Copiar solo pom.xml y bajar dependencias
-COPY agrogestion-backend/pom.xml .
-RUN mvn dependency:go-offline -B
-
-# 2️⃣ Copiar código fuente desde la subcarpeta
+COPY agrogestion-backend/pom.xml ./
 COPY agrogestion-backend/src ./src
-
-# 3️⃣ Compilar el proyecto sin tests
 RUN mvn clean package -DskipTests
 
 # Etapa 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+RUN apk add --no-cache wget curl
 
-# Instalar wget para healthcheck
-RUN apk add --no-cache wget
-
-# Copiar jar compilado
 COPY --from=build /app/target/*.jar app.jar
 
+# Exponer el puerto esperado
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/ || exit 1
+# Healthcheck compatible con Railway
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
+  CMD curl -f http://localhost:${PORT:-8080}/actuator/health || exit 1
 
+# Ejecutar la app con perfil de Railway
 CMD ["java", "-Dspring.profiles.active=railway-mysql", "-jar", "app.jar"]
