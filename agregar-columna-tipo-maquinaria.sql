@@ -27,3 +27,9 @@ ORDER BY id_labor_maquinaria DESC
 LIMIT 10;
 
 
+
+
+
+
+
+

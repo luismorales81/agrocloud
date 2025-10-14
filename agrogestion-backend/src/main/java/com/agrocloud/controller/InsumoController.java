@@ -246,4 +246,81 @@ public class InsumoController {
                 .toList();
         return ResponseEntity.ok(insumos);
     }
+    
+    // Validar stock disponible de un insumo
+    @PostMapping("/{id}/validar-stock")
+    public ResponseEntity<java.util.Map<String, Object>> validarStockDisponible(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        User user;
+        if (userDetails == null) {
+            user = userService.findByEmail("test@test.com");
+        } else {
+            user = userService.findByEmail(userDetails.getUsername());
+        }
+        
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        
+        try {
+            java.math.BigDecimal cantidadRequerida = new java.math.BigDecimal(request.get("cantidad").toString());
+            
+            InsumoService.StockValidationResult resultado = insumoService.validarStockDisponible(id, cantidadRequerida);
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("valido", resultado.isValido());
+            response.put("mensaje", resultado.getMensaje());
+            response.put("stockDisponible", resultado.getStockDisponible());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            java.util.Map<String, Object> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("valido", false);
+            errorResponse.put("mensaje", "Error al validar stock: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+    
+    // Calcular stock real disponible considerando cantidades ya asignadas
+    @PostMapping("/{id}/stock-disponible")
+    public ResponseEntity<java.util.Map<String, Object>> calcularStockRealDisponible(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, Object> request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        User user;
+        if (userDetails == null) {
+            user = userService.findByEmail("test@test.com");
+        } else {
+            user = userService.findByEmail(userDetails.getUsername());
+        }
+        
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+        
+        try {
+            java.math.BigDecimal cantidadesYaAsignadas = java.math.BigDecimal.ZERO;
+            
+            if (request != null && request.containsKey("cantidadesYaAsignadas")) {
+                cantidadesYaAsignadas = new java.math.BigDecimal(request.get("cantidadesYaAsignadas").toString());
+            }
+            
+            java.math.BigDecimal stockDisponible = insumoService.calcularStockRealDisponible(id, cantidadesYaAsignadas);
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("success", true);
+            response.put("stockDisponible", stockDisponible);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            java.util.Map<String, Object> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("mensaje", "Error al calcular stock disponible: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
 }

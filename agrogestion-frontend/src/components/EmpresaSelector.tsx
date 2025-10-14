@@ -89,15 +89,15 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
             <span className="text-blue-600 text-sm font-medium">
-              {empresaActiva.empresaNombre?.charAt(0).toUpperCase() || 'E'}
+              {empresaActiva.nombre?.charAt(0).toUpperCase() || 'E'}
             </span>
           </div>
           <div className="text-left">
             <div className="text-sm font-medium text-gray-900">
-              {empresaActiva.empresaNombre}
+              {empresaActiva.nombre}
             </div>
             <div className="text-xs text-gray-500">
-              {empresasUsuario.find(ue => ue.id === empresaActiva.id)?.rol}
+              {empresasUsuario.find(ue => ue.empresaId === empresaActiva.id)?.rol}
             </div>
           </div>
         </div>
@@ -129,7 +129,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                 key={usuarioEmpresa.id}
                 onClick={() => handleCambiarEmpresa(usuarioEmpresa.id)}
                 className={`w-full px-3 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
-                  empresaActiva.id === usuarioEmpresa.id ? 'bg-blue-50' : ''
+                  empresaActiva.id === usuarioEmpresa.empresaId ? 'bg-blue-50' : ''
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -144,7 +144,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {usuarioEmpresa.empresaNombre}
                       </p>
-                      {empresaActiva.id === usuarioEmpresa.id && (
+                      {empresaActiva.id === usuarioEmpresa.empresaId && (
                         <span className="text-blue-600 text-xs">✓</span>
                       )}
                     </div>
@@ -172,7 +172,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
           <div className="p-3 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{empresasUsuario.length} empresa{empresasUsuario.length !== 1 ? 's' : ''} disponible{empresasUsuario.length !== 1 ? 's' : ''}</span>
-              <span>Empresa activa: {empresaActiva.empresaNombre}</span>
+              <span>Empresa activa: {empresaActiva.nombre}</span>
             </div>
           </div>
         </div>

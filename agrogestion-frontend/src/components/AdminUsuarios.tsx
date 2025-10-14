@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { showNotification } from '../utils/notification';
 import api from '../services/api';
 import '../styles/admin-forms.css';
@@ -13,7 +13,8 @@ interface Usuario {
   estado: string;
   activo: boolean;
   emailVerified: boolean;
-  roles: Array<{ id: number; name: string; description: string }>;
+  roles?: Array<{ id: number; name: string; description: string }>;
+  roleIds?: number[];
   creadoPorId?: number;
   creadoPorNombre?: string;
   createdAt: string;
@@ -67,10 +68,73 @@ const AdminUsuarios: React.FC = () => {
     lastName: '',
     email: '',
     phone: '',
+    password: '',
     roleIds: [] as number[]
   });
 
   const [nuevaContraseña, setNuevaContraseña] = useState('');
+
+  // Persistencia de estado del modal y formulario para evitar cierre por remount
+  useEffect(() => {
+    try {
+      const persistedCrear = localStorage.getItem('adminUsuarios.dialogCrear');
+      const persistedForm = localStorage.getItem('adminUsuarios.nuevoUsuario');
+      if (persistedCrear === '1') {
+        setDialogCrear(true);
+      }
+      if (persistedForm) {
+        const parsed = JSON.parse(persistedForm);
+        if (parsed && typeof parsed === 'object') {
+          setNuevoUsuario(prev => ({
+            ...prev,
+            ...parsed,
+            roleIds: Array.isArray(parsed.roleIds) ? parsed.roleIds : []
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ [AdminUsuarios] No se pudo restaurar estado persistido', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('adminUsuarios.dialogCrear', dialogCrear ? '1' : '0');
+    } catch {}
+  }, [dialogCrear]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('adminUsuarios.nuevoUsuario', JSON.stringify(nuevoUsuario));
+    } catch {}
+  }, [nuevoUsuario]);
+
+  // Función para filtrar usuarios (memoizada)
+  const filtrarUsuarios = useCallback(() => {
+    // Verificar que usuarios sea un array
+    if (!Array.isArray(usuarios)) {
+      console.error('❌ [AdminUsuarios] usuarios no es un array:', usuarios);
+      return [];
+    }
+    
+    return usuarios.filter(usuario => {
+      const cumpleEstado = !filtroEstado || usuario.estado === filtroEstado;
+      const cumpleRol = !filtroRol || (Array.isArray(usuario.roles) && usuario.roles.some(rol => rol.name === filtroRol));
+      const cumpleActivo = filtroActivo === null || usuario.activo === filtroActivo;
+      const cumpleBusqueda = !busqueda || 
+        usuario.firstName.toLowerCase().includes(busqueda.toLowerCase()) ||
+        usuario.lastName.toLowerCase().includes(busqueda.toLowerCase()) ||
+        usuario.email.toLowerCase().includes(busqueda.toLowerCase()) ||
+        usuario.username.toLowerCase().includes(busqueda.toLowerCase());
+
+      return cumpleEstado && cumpleRol && cumpleActivo && cumpleBusqueda;
+    });
+  }, [usuarios, filtroEstado, filtroRol, filtroActivo, busqueda]);
+
+  // Memoizar usuarios filtrados
+  const usuariosFiltrados = useMemo(() => {
+    return filtrarUsuarios();
+  }, [filtrarUsuarios]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -81,59 +145,24 @@ const AdminUsuarios: React.FC = () => {
     try {
       setLoading(true);
       
-      // Verificar autenticación
-      const token = localStorage.getItem('token');
-      const user = localStorage.getItem('user');
-      console.log('🔍 [AdminUsuarios] Token disponible:', token ? 'SÍ' : 'NO');
-      console.log('🔍 [AdminUsuarios] Token value:', token);
-      console.log('🔍 [AdminUsuarios] User disponible:', user ? 'SÍ' : 'NO');
-      if (user) {
-        const userData = JSON.parse(user);
-        console.log('🔍 [AdminUsuarios] Usuario logueado:', userData);
-        console.log('🔍 [AdminUsuarios] Rol del usuario:', userData.roleName);
-        console.log('🔍 [AdminUsuarios] ID del usuario:', userData.id);
-        console.log('🔍 [AdminUsuarios] Email del usuario:', userData.email);
-      }
-      
       // Cargar usuarios usando el servicio de API
       try {
-        console.log('🔍 [AdminUsuarios] Iniciando petición a /api/admin/usuarios');
         const responseUsuarios = await api.get('/api/admin/usuarios');
-        console.log('🔍 [AdminUsuarios] Respuesta completa:', responseUsuarios);
-        console.log('🔍 [AdminUsuarios] Status:', responseUsuarios.status);
-        console.log('🔍 [AdminUsuarios] Headers:', responseUsuarios.headers);
-        console.log('🔍 [AdminUsuarios] Respuesta de usuarios:', responseUsuarios.data);
-        console.log('🔍 [AdminUsuarios] Tipo de datos:', typeof responseUsuarios.data);
-        console.log('🔍 [AdminUsuarios] Es array:', Array.isArray(responseUsuarios.data));
-        console.log('🔍 [AdminUsuarios] Es null:', responseUsuarios.data === null);
-        console.log('🔍 [AdminUsuarios] Es undefined:', responseUsuarios.data === undefined);
-        console.log('🔍 [AdminUsuarios] Longitud del array:', responseUsuarios.data?.length);
-        
-        // Asegurar que sea un array
         const usuariosData = Array.isArray(responseUsuarios.data) ? responseUsuarios.data : [];
-        console.log('🔍 [AdminUsuarios] Datos finales para setUsuarios:', usuariosData);
+        console.log('📊 [AdminUsuarios] Usuarios cargados del backend:', usuariosData);
+        if (usuariosData.length > 0) {
+          console.log('📊 [AdminUsuarios] Primer usuario con roles:', usuariosData[0]);
+        }
         setUsuarios(usuariosData);
       } catch (error) {
         console.error('❌ [AdminUsuarios] Error cargando usuarios:', error);
-        console.error('❌ [AdminUsuarios] Error details:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          config: error.config
-        });
         setUsuarios([]);
       }
 
       // Cargar roles usando el servicio de API
       try {
         const responseRoles = await api.get('/api/admin/usuarios/roles');
-        console.log('🔍 [AdminUsuarios] Respuesta de roles:', responseRoles.data);
-        console.log('🔍 [AdminUsuarios] Tipo de roles:', typeof responseRoles.data);
-        console.log('🔍 [AdminUsuarios] Roles es array:', Array.isArray(responseRoles.data));
-        
-        // Asegurar que sea un array
         const rolesData = Array.isArray(responseRoles.data) ? responseRoles.data : [];
-        console.log('🔍 [AdminUsuarios] Datos finales para setRoles:', rolesData);
         setRoles(rolesData);
       } catch (error) {
         console.error('❌ [AdminUsuarios] Error cargando roles:', error);
@@ -154,14 +183,25 @@ const AdminUsuarios: React.FC = () => {
   };
 
   const crearUsuario = async () => {
+    if (!nuevoUsuario.email || !nuevoUsuario.firstName || !nuevoUsuario.lastName || nuevoUsuario.roleIds.length === 0) {
+      showNotification('Por favor complete todos los campos obligatorios', 'error');
+      return;
+    }
+
+    if (!nuevoUsuario.password || nuevoUsuario.password.length < 6) {
+      showNotification('La contraseña debe tener al menos 6 caracteres', 'error');
+      return;
+    }
+
     try {
       const usuarioData = {
-        username: nuevoUsuario.username,
+        username: nuevoUsuario.username || nuevoUsuario.email,
         firstName: nuevoUsuario.firstName,
         lastName: nuevoUsuario.lastName,
         email: nuevoUsuario.email,
         phone: nuevoUsuario.phone,
-        roles: nuevoUsuario.roleIds.map(id => ({ id }))
+        password: nuevoUsuario.password,
+        roleIds: nuevoUsuario.roleIds
       };
 
       // Usar el servicio de API
@@ -189,11 +229,11 @@ const AdminUsuarios: React.FC = () => {
         estado: usuarioSeleccionado.estado,
         activo: usuarioSeleccionado.activo,
         emailVerified: usuarioSeleccionado.emailVerified,
-        roles: usuarioSeleccionado.roles
+        roleIds: usuarioSeleccionado.roleIds // Enviar roleIds en lugar de roles
       };
 
       // Usar el servicio de API
-      await api.put(`/admin/usuarios/${usuarioSeleccionado.id}`, usuarioData);
+      await api.put(`/api/admin/usuarios/${usuarioSeleccionado.id}`, usuarioData);
 
       showNotification('Usuario actualizado exitosamente', 'success');
       setDialogEditar(false);
@@ -207,7 +247,7 @@ const AdminUsuarios: React.FC = () => {
   const cambiarEstadoUsuario = async (id: number, nuevoEstado: string) => {
     try {
       // Usar el servicio de API
-      await api.patch(`/admin/usuarios/${id}/estado?estado=${nuevoEstado}`);
+      await api.patch(`/api/admin/usuarios/${id}/estado?estado=${nuevoEstado}`);
 
       showNotification(`Estado cambiado a ${nuevoEstado}`, 'success');
       cargarDatos();
@@ -220,7 +260,7 @@ const AdminUsuarios: React.FC = () => {
   const cambiarEstadoActivo = async (id: number, activo: boolean) => {
     try {
       // Usar el servicio de API
-      await api.patch(`/admin/usuarios/${id}/activo?activo=${activo}`);
+      await api.patch(`/api/admin/usuarios/${id}/activo?activo=${activo}`);
 
       showNotification(`Usuario ${activo ? 'activado' : 'desactivado'}`, 'success');
       cargarDatos();
@@ -233,9 +273,14 @@ const AdminUsuarios: React.FC = () => {
   const resetearContraseña = async () => {
     if (!usuarioSeleccionado || !nuevaContraseña) return;
 
+    if (nuevaContraseña.length < 6) {
+      showNotification('La contraseña debe tener al menos 6 caracteres', 'error');
+      return;
+    }
+
     try {
       // Usar el servicio de API
-      await api.patch(`/admin/usuarios/${usuarioSeleccionado.id}/reset-password?nuevaContraseña=${nuevaContraseña}`);
+      await api.patch(`/api/admin/usuarios/${usuarioSeleccionado.id}/reset-password?nuevaContraseña=${nuevaContraseña}`);
 
       showNotification('Contraseña reseteada exitosamente', 'success');
       setDialogResetPassword(false);
@@ -247,7 +292,6 @@ const AdminUsuarios: React.FC = () => {
     }
   };
 
-
   const limpiarFormulario = () => {
     setNuevoUsuario({
       username: '',
@@ -255,32 +299,8 @@ const AdminUsuarios: React.FC = () => {
       lastName: '',
       email: '',
       phone: '',
+      password: '',
       roleIds: []
-    });
-  };
-
-  const filtrarUsuarios = () => {
-    console.log('🔍 [AdminUsuarios] filtrarUsuarios llamado con usuarios:', usuarios);
-    console.log('🔍 [AdminUsuarios] Tipo de usuarios:', typeof usuarios);
-    console.log('🔍 [AdminUsuarios] Es array:', Array.isArray(usuarios));
-    
-    // Verificar que usuarios sea un array
-    if (!Array.isArray(usuarios)) {
-      console.error('❌ [AdminUsuarios] usuarios no es un array:', usuarios);
-      return [];
-    }
-    
-    return usuarios.filter(usuario => {
-      const cumpleEstado = !filtroEstado || usuario.estado === filtroEstado;
-      const cumpleRol = !filtroRol || (Array.isArray(usuario.roles) && usuario.roles.some(rol => rol.name === filtroRol));
-      const cumpleActivo = filtroActivo === null || usuario.activo === filtroActivo;
-      const cumpleBusqueda = !busqueda || 
-        usuario.firstName.toLowerCase().includes(busqueda.toLowerCase()) ||
-        usuario.lastName.toLowerCase().includes(busqueda.toLowerCase()) ||
-        usuario.email.toLowerCase().includes(busqueda.toLowerCase()) ||
-        usuario.username.toLowerCase().includes(busqueda.toLowerCase());
-
-      return cumpleEstado && cumpleRol && cumpleActivo && cumpleBusqueda;
     });
   };
 
@@ -300,8 +320,6 @@ const AdminUsuarios: React.FC = () => {
       </div>
     );
   }
-
-  const usuariosFiltrados = filtrarUsuarios();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -496,7 +514,14 @@ const AdminUsuarios: React.FC = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => {
-                            setUsuarioSeleccionado(usuario);
+                            // Mapear roles a roleIds para el formulario
+                            const usuarioConRoleIds = {
+                              ...usuario,
+                              roleIds: usuario.roles ? usuario.roles.map(r => r.id) : []
+                            };
+                            console.log('📝 [AdminUsuarios] Usuario seleccionado para editar:', usuarioConRoleIds);
+                            console.log('📝 [AdminUsuarios] Roles del usuario:', usuario.roles);
+                            setUsuarioSeleccionado(usuarioConRoleIds);
                             setDialogEditar(true);
                           }}
                           className="text-indigo-600 hover:text-indigo-900 text-xs"
@@ -599,7 +624,39 @@ const AdminUsuarios: React.FC = () => {
                   <div className="admin-help-text">Email válido para autenticación</div>
                 </div>
 
-                <div className="admin-field-group" style={{gridColumn: '1 / -1'}}>
+                <div className="admin-field-group">
+                  <label className="admin-label">Contraseña *</label>
+                  <input
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={nuevoUsuario.password}
+                    onChange={(e) => setNuevoUsuario({...nuevoUsuario, password: e.target.value})}
+                    className="admin-input"
+                    required
+                    minLength={6}
+                  />
+                  <div className="admin-help-text">Contraseña para el primer acceso (mínimo 6 caracteres)</div>
+                </div>
+
+                <div className="admin-field-group">
+                  <label className="admin-label">Rol *</label>
+                  <select
+                    value={nuevoUsuario.roleIds[0] || ''}
+                    onChange={(e) => setNuevoUsuario({...nuevoUsuario, roleIds: [parseInt(e.target.value)]})}
+                    className="admin-input"
+                    required
+                  >
+                    <option value="">Seleccionar rol</option>
+                    {Array.isArray(roles) && roles.map(rol => (
+                      <option key={rol.id} value={rol.id}>
+                        {rol.name} - {rol.description}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="admin-help-text">Rol que tendrá el usuario en el sistema</div>
+                </div>
+
+                <div className="admin-field-group">
                   <label className="admin-label">Teléfono</label>
                   <input
                     type="tel"
@@ -632,39 +689,70 @@ const AdminUsuarios: React.FC = () => {
 
         {/* Diálogo de editar usuario */}
         {dialogEditar && usuarioSeleccionado && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+            <div className="relative mx-auto p-5 border w-96 max-h-[90vh] overflow-y-auto shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Editar Usuario</h3>
                 <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Nombre"
-                    value={usuarioSeleccionado.firstName}
-                    onChange={(e) => setUsuarioSeleccionado({...usuarioSeleccionado, firstName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Apellido"
-                    value={usuarioSeleccionado.lastName}
-                    onChange={(e) => setUsuarioSeleccionado({...usuarioSeleccionado, lastName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={usuarioSeleccionado.email}
-                    onChange={(e) => setUsuarioSeleccionado({...usuarioSeleccionado, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Teléfono"
-                    value={usuarioSeleccionado.phone}
-                    onChange={(e) => setUsuarioSeleccionado({...usuarioSeleccionado, phone: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                    <input
+                      type="text"
+                      placeholder="Nombre"
+                      value={usuarioSeleccionado.firstName}
+                      onChange={(e) => setUsuarioSeleccionado({...usuarioSeleccionado, firstName: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                    <input
+                      type="text"
+                      placeholder="Apellido"
+                      value={usuarioSeleccionado.lastName}
+                      onChange={(e) => setUsuarioSeleccionado({...usuarioSeleccionado, lastName: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={usuarioSeleccionado.email}
+                      onChange={(e) => setUsuarioSeleccionado({...usuarioSeleccionado, email: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+                    <select
+                      value={usuarioSeleccionado.roleIds?.[0] || ''}
+                      onChange={(e) => setUsuarioSeleccionado({
+                        ...usuarioSeleccionado, 
+                        roleIds: e.target.value ? [parseInt(e.target.value)] : []
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Seleccionar rol</option>
+                      {Array.isArray(roles) && roles.map(rol => (
+                        <option key={rol.id} value={rol.id}>
+                          {rol.name} - {rol.description}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Cambiar el rol del usuario en el sistema</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                    <input
+                      type="tel"
+                      placeholder="Teléfono"
+                      value={usuarioSeleccionado.phone}
+                      onChange={(e) => setUsuarioSeleccionado({...usuarioSeleccionado, phone: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
                 </div>
                 <div className="flex justify-end space-x-3 mt-6">
                   <button
@@ -724,4 +812,4 @@ const AdminUsuarios: React.FC = () => {
   );
 };
 
-export default AdminUsuarios;
+export default memo(AdminUsuarios);

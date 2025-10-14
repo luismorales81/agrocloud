@@ -2,6 +2,7 @@ package com.agrocloud.repository;
 
 import com.agrocloud.model.entity.EstadoUsuario;
 import com.agrocloud.model.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +17,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
     
     Optional<User> findByEmail(String email);
+    
+    // Método para cargar todos los usuarios con sus roles
+    @EntityGraph(attributePaths = {"roles"})
+    @Query("SELECT u FROM User u")
+    List<User> findAllWithRoles();
     
     List<User> findByActivoTrue();
     

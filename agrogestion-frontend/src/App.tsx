@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import FieldsManagement from './components/FieldsManagement';
 import LotesManagement from './components/LotesManagement';
@@ -10,6 +10,7 @@ import LaboresManagement from './components/LaboresManagement';
 import ReportsManagement from './components/ReportsManagement';
 import BalanceReport from './components/BalanceReport';
 import FinanzasManagement from './components/FinanzasManagement';
+import InventarioGranosManagement from './components/InventarioGranosManagement';
 import AdminUsuarios from './components/AdminUsuarios';
 import AdminEmpresas from './components/AdminEmpresas';
 import AdminDashboard from './components/AdminDashboard';
@@ -35,6 +36,8 @@ const Dashboard: React.FC = () => {
   
   // Verificar que el contexto de empresa esté disponible
   const empresaContext = useEmpresa();
+  const { rolUsuario } = empresaContext || {}; // Obtener rol del contexto de empresa
+  
   if (!empresaContext) {
     return <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
@@ -44,7 +47,7 @@ const Dashboard: React.FC = () => {
     </div>;
   }
   
-  const { empresaActiva, esAdministrador, esAsesor, esOperario, esContador, esTecnico, esSoloLectura } = empresaContext;
+  const { empresaActiva, esAdministrador, esAsesor, esOperario, esContador, esTecnico, esSoloLectura, tienePermisoFinanciero } = empresaContext;
   const { formatCurrency, selectedCurrency, exchangeType, rateInfo, realRates, changeCurrency, changeExchangeType } = useCurrencyContext();
   useCurrencyUpdate(); // Forzar actualización cuando cambie la moneda
 
@@ -93,18 +96,18 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
-  // Actualizar tasas de cotización cada 30 segundos
-  useEffect(() => {
-    const updateRatesInterval = setInterval(async () => {
-      try {
-        await changeCurrency(selectedCurrency); // Esto disparará la actualización
-      } catch (error) {
-        console.error('Error actualizando tasas:', error);
-      }
-    }, 30000); // 30 segundos
+  // Actualizar tasas de cotización cada 30 segundos - DESHABILITADO TEMPORALMENTE
+  // useEffect(() => {
+  //   const updateRatesInterval = setInterval(async () => {
+  //     try {
+  //       await changeCurrency(selectedCurrency); // Esto disparará la actualización
+  //     } catch (error) {
+  //       console.error('Error actualizando tasas:', error);
+  //     }
+  //   }, 30000); // 30 segundos
 
-    return () => clearInterval(updateRatesInterval);
-  }, [selectedCurrency, changeCurrency]);
+  //   return () => clearInterval(updateRatesInterval);
+  // }, [selectedCurrency, changeCurrency]);
 
 
 
@@ -243,6 +246,12 @@ const Dashboard: React.FC = () => {
             <FinanzasManagement />
           </ProtectedRouteComponent>
         );
+      case 'inventario':
+        return (
+          <ProtectedRouteComponent permission="canViewFinances">
+            <InventarioGranosManagement />
+          </ProtectedRouteComponent>
+        );
       case 'reports':
         return (
           <ProtectedRouteComponent permission="canViewReports">
@@ -252,7 +261,7 @@ const Dashboard: React.FC = () => {
       case 'users':
         return (
           <ProtectedRouteComponent permission="canManageUsers">
-            <UserManagement />
+            <UserManagement key="admin-usuarios-stable" />
           </ProtectedRouteComponent>
         );
       case 'admin-empresas':
@@ -369,7 +378,7 @@ const Dashboard: React.FC = () => {
             Bienvenido, {user?.name || 'Usuario'}!
           </h2>
           <p style={{ opacity: '0.9' }}>
-            Rol: {user?.roleName ? user.roleName.charAt(0).toUpperCase() + user.roleName.slice(1) : 'Usuario'}
+            Rol: {rolUsuario ? rolUsuario.replace(/_/g, ' ').split(' ').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ') : 'Usuario'}
           </p>
         </div>
         
@@ -378,99 +387,104 @@ const Dashboard: React.FC = () => {
           gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
           gap: '1.5rem' 
         }}>
-          {/* Balance Operativo (Corto plazo) */}
-          <div style={{ 
-            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: 'white',
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('balance')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>📊</span>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Balance Operativo</h3>
-                <p style={{ margin: 0, opacity: '0.9', fontSize: '1.2rem', fontWeight: 'bold' }}>{formatCurrency(dashboardStats.balanceOperativo)}</p>
-              </div>
-            </div>
-            <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Ingresos - Egresos (Flujo de caja)</p>
-          </div>
-
-          {/* Balance Patrimonial (Largo plazo) */}
-          <div style={{ 
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: 'white',
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('balance')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>💰</span>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Balance Patrimonial</h3>
-                <p style={{ margin: 0, opacity: '0.9', fontSize: '1.2rem', fontWeight: 'bold' }}>{formatCurrency(dashboardStats.balancePatrimonial)}</p>
-              </div>
-            </div>
-            <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Incluye valor de activos</p>
-          </div>
-
-          {/* Desglose Financiero */}
-          <div style={{ 
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-            color: 'white',
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('finanzas')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>📈</span>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Desglose Financiero</h3>
-                <div style={{ fontSize: '0.9rem', opacity: '0.9' }}>
-                  <div>Ingresos: {formatCurrency(dashboardStats.totalIngresos)}</div>
-                  <div>Egresos: {formatCurrency(dashboardStats.totalEgresos)}</div>
-                  <div>Activos: {formatCurrency(dashboardStats.valorActivos)}</div>
+          {/* Tarjetas Financieras - Solo para usuarios con permiso financiero */}
+          {tienePermisoFinanciero() && (
+            <>
+              {/* Balance Operativo (Corto plazo) */}
+              <div style={{ 
+                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                color: 'white',
+                padding: '1.5rem',
+                borderRadius: '0.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+              }}
+              onClick={() => setActivePage('balance')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>📊</span>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Balance Operativo</h3>
+                    <p style={{ margin: 0, opacity: '0.9', fontSize: '1.2rem', fontWeight: 'bold' }}>{formatCurrency(dashboardStats.balanceOperativo)}</p>
+                  </div>
                 </div>
+                <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Ingresos - Egresos (Flujo de caja)</p>
               </div>
-            </div>
-            <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Detalle de ingresos, egresos y activos</p>
-          </div>
+
+              {/* Balance Patrimonial (Largo plazo) */}
+              <div style={{ 
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                padding: '1.5rem',
+                borderRadius: '0.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+              }}
+              onClick={() => setActivePage('balance')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>💰</span>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Balance Patrimonial</h3>
+                    <p style={{ margin: 0, opacity: '0.9', fontSize: '1.2rem', fontWeight: 'bold' }}>{formatCurrency(dashboardStats.balancePatrimonial)}</p>
+                  </div>
+                </div>
+                <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Incluye valor de activos</p>
+              </div>
+
+              {/* Desglose Financiero */}
+              <div style={{ 
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                color: 'white',
+                padding: '1.5rem',
+                borderRadius: '0.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+              }}
+              onClick={() => setActivePage('finanzas')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>📈</span>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Desglose Financiero</h3>
+                    <div style={{ fontSize: '0.9rem', opacity: '0.9' }}>
+                      <div>Ingresos: {formatCurrency(dashboardStats.totalIngresos)}</div>
+                      <div>Egresos: {formatCurrency(dashboardStats.totalEgresos)}</div>
+                      <div>Activos: {formatCurrency(dashboardStats.valorActivos)}</div>
+                    </div>
+                  </div>
+                </div>
+                <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Detalle de ingresos, egresos y activos</p>
+              </div>
+            </>
+          )}
 
           {/* Campos */}
           <div style={{ 
@@ -559,7 +573,7 @@ const Dashboard: React.FC = () => {
             <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de plantaciones y variedades</p>
           </div>
 
-          {/* Cosechas */}
+          {/* Cosechas - DESHABILITADO: Ahora se gestiona desde Lotes
           <div style={{ 
             backgroundColor: 'white', 
             padding: '1.5rem',
@@ -586,7 +600,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Registro de cosechas y rendimientos</p>
-          </div>
+          </div> */}
 
           {/* Insumos */}
           <div style={{ 
@@ -675,34 +689,36 @@ const Dashboard: React.FC = () => {
             <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Seguimiento de tareas agrícolas</p>
           </div>
 
-          {/* Finanzas */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('finanzas')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>💳</span>
-              <div>
-                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Finanzas</h3>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Control completo</p>
+          {/* Finanzas - Solo para usuarios con permiso financiero */}
+          {tienePermisoFinanciero() && (
+            <div style={{ 
+              backgroundColor: 'white', 
+              padding: '1.5rem',
+              borderRadius: '0.5rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            }}
+            onClick={() => setActivePage('finanzas')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>💳</span>
+                <div>
+                  <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Finanzas</h3>
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Control completo</p>
+                </div>
               </div>
+              <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de ingresos y egresos</p>
             </div>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de ingresos y egresos</p>
-          </div>
+          )}
         </div>
           </div>
         );
@@ -719,54 +735,128 @@ const Dashboard: React.FC = () => {
     onToggleSidebar: () => void;
   }> = ({ activePage, onPageChange, user, isMobile, sidebarOpen, onToggleSidebar }) => {
     const permissions = usePermissions();
+    // Persistir estado del menú en localStorage para evitar reinicios
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(() => {
+    const saved = localStorage.getItem('sidebar-expanded-groups');
+    return saved ? JSON.parse(saved) : ['produccion', 'recursos', 'finanzas', 'admin'];
+  });
     
     // Solo SUPERADMIN puede ver el Dashboard Administrador
     const isSuperAdmin = user?.roleName === 'SUPERADMIN';
     const isAdministrador = user?.roleName === 'ADMINISTRADOR';
     
-    // Configurar menú según el rol del usuario
-    let menuItems;
+    const toggleGroup = (groupId: string) => {
+      setExpandedGroups(prev => {
+        const newGroups = prev.includes(groupId) 
+          ? prev.filter(id => id !== groupId)
+          : [...prev, groupId];
+        
+        // Guardar en localStorage para persistir el estado
+        localStorage.setItem('sidebar-expanded-groups', JSON.stringify(newGroups));
+        return newGroups;
+      });
+    };
     
-    if (isSuperAdmin) {
-      // Dashboard Administrador Global - Solo para SUPERADMIN
-      menuItems = [
-        { id: 'dashboard', label: 'Dashboard Admin Global', icon: '📊', permission: null },
-        { id: 'users', label: 'Usuarios', icon: '👥', permission: 'canManageUsers' },
-        { id: 'admin-empresas', label: 'Admin Empresas', icon: '🏢', permission: 'canManageCompanies' }
-      ];
-    } else {
-      // Dashboard normal para todos los demás usuarios (incluyendo ADMINISTRADOR)
-      menuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '📊', permission: null }, // Dashboard normal
-        { id: 'fields', label: 'Campos', icon: '🌾', permission: 'canViewFields' },
-        { id: 'plots', label: 'Lotes', icon: '🔲', permission: 'canViewLotes' },
-        { id: 'crops', label: 'Cultivos', icon: '🌱', permission: 'canViewCultivos' },
-        { id: 'cosechas', label: 'Cosechas', icon: '🌾', permission: 'canViewCosechas' },
-        { id: 'inputs', label: 'Insumos', icon: '🧪', permission: 'canViewInsumos' },
-        { id: 'machinery', label: 'Maquinaria', icon: '🚜', permission: 'canViewMaquinaria' },
-        { id: 'labors', label: 'Labores', icon: '⚒️', permission: 'canViewLabores' },
-        { id: 'balance', label: 'Balance', icon: '💰', permission: 'canViewFinancialReports' },
-        { id: 'finanzas', label: 'Finanzas', icon: '💳', permission: 'canViewFinances' },
-        { id: 'reports', label: 'Reportes', icon: '📋', permission: 'canViewReports' }
-      ];
-      
-      // Solo ADMINISTRADOR puede gestionar usuarios
-      if (isAdministrador) {
-        menuItems.push(
-          { id: 'users', label: 'Usuarios', icon: '👥', permission: 'canManageUsers' }
-        );
-      }
-      
-      // Solo SUPERADMIN puede gestionar empresas
+    // Configurar menú agrupado según el rol del usuario (memoizado para evitar re-renders)
+    const menuStructure = useMemo(() => {
       if (isSuperAdmin) {
-        menuItems.push(
-          { id: 'admin-empresas', label: 'Admin Empresas', icon: '🏢', permission: 'canManageCompanies' }
-        );
+      // Dashboard Administrador Global - Solo para SUPERADMIN
+      return {
+        singleItems: [
+          { id: 'dashboard', label: 'Dashboard Admin Global', icon: '📊', permission: null }
+        ],
+        groups: [
+          {
+            id: 'admin',
+            label: 'Administración',
+            icon: '⚙️',
+            items: [
+              { id: 'users', label: 'Usuarios', icon: '👥', permission: 'canManageUsers' },
+              { id: 'admin-empresas', label: 'Empresas', icon: '🏢', permission: 'canManageCompanies' }
+            ]
+          }
+        ]
+      };
+    } else {
+      // Dashboard normal para todos los demás usuarios
+      const adminItems = [];
+      if (isAdministrador) {
+        adminItems.push({ id: 'users', label: 'Usuarios', icon: '👥', permission: 'canManageUsers' });
       }
-    }
+      
+      const menuStructure = {
+        singleItems: [
+          { id: 'dashboard', label: 'Dashboard', icon: '📊', permission: null }
+        ],
+        groups: [
+          {
+            id: 'produccion',
+            label: 'Producción',
+            icon: '🌱',
+            items: [
+              { id: 'fields', label: 'Campos', icon: '🌾', permission: 'canViewFields' },
+              { id: 'plots', label: 'Lotes', icon: '🔲', permission: 'canViewLotes' },
+              { id: 'crops', label: 'Cultivos', icon: '🌱', permission: 'canViewCultivos' },
+              { id: 'labors', label: 'Labores', icon: '⚒️', permission: 'canViewLabores' }
+              // { id: 'cosechas', label: 'Cosechas', icon: '🌾', permission: 'canViewCosechas' } // Ahora se gestiona desde Lotes
+            ]
+          },
+          {
+            id: 'recursos',
+            label: 'Recursos & Stock',
+            icon: '📦',
+            items: [
+              { id: 'inputs', label: 'Insumos', icon: '🧪', permission: 'canViewInsumos' },
+              { id: 'machinery', label: 'Maquinaria', icon: '🚜', permission: 'canViewMaquinaria' },
+              { id: 'inventario', label: 'Inventario Granos', icon: '📦', permission: 'canViewFinances' }
+            ]
+          },
+          {
+            id: 'reportes',
+            label: 'Reportes y Análisis',
+            icon: '📊',
+            items: [
+              { id: 'reports', label: 'Reportes Operativos', icon: '📋', permission: 'canViewReports' }
+            ]
+          },
+          {
+            id: 'finanzas',
+            label: 'Gestión Financiera',
+            icon: '💰',
+            items: [
+              { id: 'finanzas', label: 'Finanzas', icon: '💳', permission: 'canViewFinances' },
+              { id: 'balance', label: 'Balance', icon: '💰', permission: 'canViewFinancialReports' }
+            ]
+          }
+        ]
+      };
+      
+      // Agregar grupo de Administración solo si hay items
+      if (adminItems.length > 0) {
+        menuStructure.groups.push({
+          id: 'admin',
+          label: 'Administración',
+          icon: '⚙️',
+          items: adminItems
+        });
+      }
+      
+      return menuStructure;
+      }
+    }, [isSuperAdmin, isAdministrador]);
     
-    // Filtrar elementos según permisos
-    menuItems = menuItems.filter(item => !item.permission || permissions[item.permission as keyof typeof permissions]);
+    // Filtrar items según permisos
+    const filterItemsByPermissions = (items: any[]) => {
+      return items.filter(item => !item.permission || permissions[item.permission as keyof typeof permissions]);
+    };
+    
+    const filteredSingleItems = filterItemsByPermissions(menuStructure.singleItems);
+    const filteredGroups = menuStructure.groups
+      .map(group => ({
+        ...group,
+        items: filterItemsByPermissions(group.items)
+      }))
+      .filter(group => group.items.length > 0);
 
     return (
       <div style={{
@@ -801,7 +891,7 @@ const Dashboard: React.FC = () => {
               {user?.name || 'Usuario'}
             </div>
             <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '1rem' }}>
-              {user?.roleName ? user.roleName.charAt(0).toUpperCase() + user.roleName.slice(1) : 'Usuario'}
+              {rolUsuario ? rolUsuario.replace(/_/g, ' ').split(' ').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ') : 'Usuario'}
             </div>
             <button
               onClick={() => setShowChangePassword(true)}
@@ -825,7 +915,8 @@ const Dashboard: React.FC = () => {
           </div>
           
           <nav>
-            {menuItems.map((item) => (
+            {/* Items individuales (Dashboard) */}
+            {filteredSingleItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -833,25 +924,113 @@ const Dashboard: React.FC = () => {
                   if (isMobile) onToggleSidebar();
                 }}
                 data-testid={`nav-${item.id}`}
-            style={{
+                style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
-                  marginBottom: '0.25rem',
+                  marginBottom: '0.5rem',
                   backgroundColor: activePage === item.id ? '#374151' : 'transparent',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.375rem',
-              cursor: 'pointer',
+                  cursor: 'pointer',
                   textAlign: 'left',
                   fontSize: '0.875rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  gap: '0.5rem',
+                  fontWeight: activePage === item.id ? '600' : '400'
                 }}
               >
                 <span>{item.icon}</span>
                 {item.label}
               </button>
+            ))}
+            
+            {/* Grupos colapsables */}
+            {filteredGroups.map((group) => (
+              <div key={group.id} style={{ marginBottom: '0.5rem' }}>
+                {/* Header del grupo */}
+                <button
+                  onClick={() => toggleGroup(group.id)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    backgroundColor: '#374151',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span>{group.icon}</span>
+                    {group.label}
+                  </div>
+                  <span style={{ 
+                    transform: expandedGroups.includes(group.id) ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease',
+                    fontSize: '0.75rem'
+                  }}>
+                    ▼
+                  </span>
+                </button>
+                
+                {/* Items del grupo */}
+                {expandedGroups.includes(group.id) && (
+                  <div style={{ 
+                    paddingLeft: '0.5rem',
+                    marginTop: '0.25rem'
+                  }}>
+                    {group.items.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onPageChange(item.id);
+                          if (isMobile) onToggleSidebar();
+                        }}
+                        data-testid={`nav-${item.id}`}
+                        style={{
+                          width: '100%',
+                          padding: '0.625rem 1rem',
+                          marginBottom: '0.25rem',
+                          backgroundColor: activePage === item.id ? '#4b5563' : 'transparent',
+                          color: activePage === item.id ? 'white' : '#d1d5db',
+                          border: 'none',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontSize: '0.8125rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (activePage !== item.id) {
+                            e.currentTarget.style.backgroundColor = '#374151';
+                            e.currentTarget.style.color = 'white';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (activePage !== item.id) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#d1d5db';
+                          }
+                        }}
+                      >
+                        <span>{item.icon}</span>
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
         </div>

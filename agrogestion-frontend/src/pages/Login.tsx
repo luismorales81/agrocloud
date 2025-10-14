@@ -10,11 +10,10 @@ import { type TestUser } from '../data/testUsers';
 import './Login.css';
 
 const Login: React.FC = () => {
-  console.log('🔧 [Login] Componente Login renderizado');
-  
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [mostrarSelectorEmpresa, setMostrarSelectorEmpresa] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Por defecto activado
   const { login } = useAuth();
@@ -23,52 +22,51 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('🔧 [Login] Formulario enviado');
+    setError(''); // Limpiar errores previos
     
     if (!username || !password) {
-      console.log('⚠️ [Login] Campos vacíos');
+      setError('Por favor completa todos los campos');
       return;
     }
 
-    console.log('🔧 [Login] Iniciando proceso de login...');
     setLoading(true);
-    const success = await login(username, password, rememberMe);
     
-    console.log('🔧 [Login] Resultado del login:', success);
-    
-    if (success) {
-      console.log('✅ [Login] Login exitoso, cargando empresas del usuario');
-      // Cargar empresas del usuario
-      const empresasCargadas = await cargarEmpresasUsuario();
+    try {
+      const success = await login(username, password, rememberMe);
       
-      // Usar las empresas cargadas directamente
-      if (empresasCargadas.length > 1) {
-        setMostrarSelectorEmpresa(true);
-      } else if (empresasCargadas.length === 1) {
-        // Si solo tiene una empresa, navegar directamente
-        navigate('/dashboard');
+      if (success) {
+        // Cargar empresas del usuario
+        const empresasCargadas = await cargarEmpresasUsuario();
+        
+        // Usar las empresas cargadas directamente
+        if (empresasCargadas.length > 1) {
+          setMostrarSelectorEmpresa(true);
+        } else if (empresasCargadas.length === 1) {
+          // Si solo tiene una empresa, navegar directamente
+          navigate('/dashboard');
+        } else {
+          // Si no tiene empresas, mostrar mensaje de error
+          setError('No tienes acceso a ninguna empresa. Contacta al administrador.');
+        }
       } else {
-        // Si no tiene empresas, mostrar mensaje de error
-        alert('No tienes acceso a ninguna empresa. Contacta al administrador.');
+        setError('❌ Email o contraseña incorrectos. Por favor, verifica tus credenciales.');
       }
-    } else {
-      console.log('❌ [Login] Login fallido');
+    } catch (err) {
+      setError('❌ Error al conectar con el servidor. Por favor, intenta nuevamente.');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const handleEmpresaSeleccionada = (empresaId: number) => {
-    console.log('✅ [Login] Empresa seleccionada:', empresaId);
     setMostrarSelectorEmpresa(false);
     navigate('/dashboard');
   };
 
   const handleTestUserSelect = (user: TestUser) => {
-    console.log('🧪 [Login] Usuario de prueba seleccionado:', user);
     setUsername(user.email);
     setPassword(user.password);
+    setError(''); // Limpiar error al seleccionar usuario de prueba
   };
 
   return (
@@ -83,23 +81,30 @@ const Login: React.FC = () => {
             AgroCloud
           </h2>
           <p className="mt-2 text-center text-lg text-white login-subtitle">
-            Sistema de Gestión Agrícola
+            Sistema de Gestión Agropecuaria
           </p>
           <p className="mt-1 text-center text-sm text-gray-200 login-subtitle">
-            Tecnología moderna para la agricultura tradicional
+            Tecnología moderna para el campo argentino
           </p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="login-card rounded-xl p-8">
+            {/* Mensaje de error visible */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700 font-medium">{error}</p>
+              </div>
+            )}
+            
             <Input
               label="Email"
               type="email"
               placeholder="Ingrese su email"
               value={username}
               onChange={(value) => {
-                console.log('🔧 [Login] Email cambiado:', value);
                 setUsername(value);
+                setError(''); // Limpiar error al escribir
               }}
               data-testid="email-input"
               required
@@ -111,8 +116,8 @@ const Login: React.FC = () => {
               placeholder="Ingrese su contraseña"
               value={password}
               onChange={(value) => {
-                console.log('🔧 [Login] Contraseña cambiada:', value ? '***' : '');
                 setPassword(value);
+                setError(''); // Limpiar error al escribir
               }}
               data-testid="password-input"
               required
@@ -148,6 +153,24 @@ const Login: React.FC = () => {
             >
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
+            
+            {/* Ayuda rápida con credenciales */}
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-800 font-medium mb-2">💡 Credenciales de prueba:</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-white p-2 rounded border border-blue-100">
+                  <p className="font-semibold text-gray-700">Email:</p>
+                  <p className="text-blue-600">tecnico.juan@agrocloud.com</p>
+                </div>
+                <div className="bg-white p-2 rounded border border-blue-100">
+                  <p className="font-semibold text-gray-700">Contraseña:</p>
+                  <p className="text-blue-600 font-mono">admin123</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mt-2 text-center">
+                Haz clic en "Mostrar usuarios" abajo para ver todos los usuarios de prueba
+              </p>
+            </div>
           </div>
         </form>
         

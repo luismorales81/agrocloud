@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useEmpresa } from '../contexts/EmpresaContext';
 import { offlineService } from '../services/offlineService';
+import api from '../services/api';
+import PermissionGate from './PermissionGate';
 
 interface Insumo {
   id: number;
@@ -90,6 +94,36 @@ interface Lote {
 
 const LaboresManagement: React.FC = () => {
   const { formatCurrency } = useCurrencyContext();
+  const { user } = useAuth();
+  const empresaContext = useEmpresa();
+  const esOperario = empresaContext?.esOperario() || false;
+  const esAdministrador = empresaContext?.esAdministrador() || false;
+  const esJefeCampo = empresaContext?.esJefeCampo() || false;
+  const esConsultorExterno = empresaContext?.esConsultorExterno() || false;
+  
+  // Función para verificar si el usuario puede editar/eliminar una labor
+  const puedeModificarLabor = (labor: any): boolean => {
+    // CONSULTOR_EXTERNO es solo lectura, no puede modificar nada
+    if (esConsultorExterno) {
+      return false;
+    }
+    
+    // ADMIN y JEFE_CAMPO pueden modificar cualquier labor
+    if (esAdministrador || esJefeCampo) {
+      return true;
+    }
+    
+    // OPERARIO solo puede modificar sus propias labores
+    if (esOperario) {
+      // Comparar el responsable de la labor con el nombre del usuario
+      const nombreUsuario = user?.name || '';
+      const responsableLabor = labor.responsable || '';
+      return nombreUsuario.toLowerCase() === responsableLabor.toLowerCase();
+    }
+    
+    // Otros roles no pueden modificar
+    return false;
+  };
   
   // Función para mapear estados del frontend al backend
   const mapEstadoToBackend = (estado: string) => {
@@ -260,16 +294,9 @@ const LaboresManagement: React.FC = () => {
       }
 
       // Cargar lotes
-      const lotesResponse = await fetch('http://localhost:8080/api/v1/lotes', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (lotesResponse.ok) {
-        const lotesData = await lotesResponse.json();
+      const lotesResponse = await api.get('/api/v1/lotes');
+      if (lotesResponse.status >= 200 && lotesResponse.status < 300) {
+        const lotesData = lotesResponse.data;
         const lotesMapeados: Lote[] = lotesData.map((lote: any) => ({
           id: lote.id,
           nombre: lote.nombre,
@@ -281,16 +308,9 @@ const LaboresManagement: React.FC = () => {
       }
 
       // Cargar insumos
-      const insumosResponse = await fetch('http://localhost:8080/api/insumos', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (insumosResponse.ok) {
-        const insumosData = await insumosResponse.json();
+      const insumosResponse = await api.get('/api/insumos');
+      if (insumosResponse.status >= 200 && insumosResponse.status < 300) {
+        const insumosData = insumosResponse.data;
         const insumosMapeados: Insumo[] = insumosData.map((insumo: any) => ({
           id: insumo.id,
           nombre: insumo.nombre,
@@ -303,16 +323,9 @@ const LaboresManagement: React.FC = () => {
       }
 
       // Cargar maquinaria
-      const maquinariaResponse = await fetch('http://localhost:8080/api/maquinaria', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (maquinariaResponse.ok) {
-        const maquinariaData = await maquinariaResponse.json();
+      const maquinariaResponse = await api.get('/api/maquinaria');
+      if (maquinariaResponse.status >= 200 && maquinariaResponse.status < 300) {
+        const maquinariaData = maquinariaResponse.data;
         const maquinariaMapeada: Maquinaria[] = maquinariaData.map((maq: any) => ({
           id: maq.id,
           nombre: maq.nombre,
@@ -375,19 +388,12 @@ const LaboresManagement: React.FC = () => {
 
     try {
       console.log('🔍 Cargando tareas disponibles para estado:', estadoLote);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/labores/tareas-disponibles/${estadoLote}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get(`/api/labores/tareas-disponibles/${estadoLote}`);
 
       console.log('📡 Response status:', response.status);
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data;
         console.log('✅ Tareas recibidas del backend:', data.tareas);
         setTiposLaborDisponibles(data.tareas || []);
       } else {
@@ -785,27 +791,13 @@ const LaboresManagement: React.FC = () => {
       let response;
       if (editingLabor) {
         // Editar labor existente
-        response = await fetch(`http://localhost:8080/api/labores/${editingLabor.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(laborCompleta)
-        });
+        response = await api.put(`/api/labores/${editingLabor.id}`, laborCompleta);
       } else {
         // Crear nueva labor
-        response = await fetch('http://localhost:8080/api/labores', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(laborCompleta)
-        });
+        response = await api.post('/api/labores', laborCompleta);
       }
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         alert(editingLabor ? 'Labor actualizada exitosamente' : 'Labor creada exitosamente');
         // Invalidar caché de labores para forzar recarga fresca
         offlineService.remove('labores');
@@ -850,15 +842,9 @@ const LaboresManagement: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`http://localhost:8080/api/labores/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await api.delete(`/api/labores/${id}`);
 
-        if (response.ok || response.status === 204) {
+        if (response.status >= 200 && response.status < 300) {
           // Invalidar caché de labores para forzar recarga fresca
           offlineService.remove('labores');
           // Eliminar del estado local solo si la API confirma la eliminación
@@ -1148,21 +1134,23 @@ const LaboresManagement: React.FC = () => {
               </option>
             ))}
           </select>
-          <button
-            onClick={handleOpenAddModal}
-            style={{
-              background: '#f59e0b',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}
-          >
-            ➕ {isMobile ? 'Nueva' : 'Nueva Labor'}
-          </button>
+          <PermissionGate permission="canCreateLabores">
+            <button
+              onClick={handleOpenAddModal}
+              style={{
+                background: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ {isMobile ? 'Nueva' : 'Nueva Labor'}
+            </button>
+          </PermissionGate>
         </div>
       </div>
 
@@ -1274,21 +1262,23 @@ const LaboresManagement: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => handleOpenEditModal(labor)}
-                          style={{
-                            padding: '4px 8px',
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                          title="Editar labor"
-                        >
-                          ✏️
-                        </button>
+                        {puedeModificarLabor(labor) && (
+                          <button
+                            onClick={() => handleOpenEditModal(labor)}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            title="Editar labor"
+                          >
+                            ✏️
+                          </button>
+                        )}
                         <button
                           onClick={() => handleVerDetallesCostos(labor)}
                           style={{
@@ -1304,21 +1294,23 @@ const LaboresManagement: React.FC = () => {
                         >
                           💰
                         </button>
-                        <button
-                          onClick={() => deleteLabor(labor.id!)}
-                          style={{
-                            padding: '4px 8px',
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                          title="Eliminar labor"
-                        >
-                          🗑️
-                        </button>
+                        {puedeModificarLabor(labor) && (
+                          <button
+                            onClick={() => deleteLabor(labor.id!)}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            title="Eliminar labor"
+                          >
+                            🗑️
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -3,6 +3,7 @@ import FieldWeatherButton from './FieldWeatherButton';
 import OpenMeteoWeatherWidget from './OpenMeteoWeatherWidget';
 import PermissionGate from './PermissionGate';
 import { loadGoogleMaps, GOOGLE_MAPS_CONFIG } from '../config/googleMaps';
+import api from '../services/api';
 
 // Declaraciones de tipos para Google Maps
 declare global {
@@ -393,19 +394,8 @@ const FieldsManagement: React.FC = () => {
       }
 
       // Llamar a la API real para obtener los campos del usuario
-      const response = await fetch('http://localhost:8080/api/campos', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const response = await api.get('/api/campos');
+      const data = response.data;
       
       // Mapear los datos de la API al formato del frontend
       const camposMapeados: Campo[] = data.map((field: any) => ({
@@ -826,28 +816,14 @@ const FieldsManagement: React.FC = () => {
       let response;
     if (isEditing && selectedField) {
       // Editar campo existente
-        response = await fetch(`http://localhost:8080/api/campos/${selectedField.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(fieldData)
-        });
+        response = await api.put(`/api/campos/${selectedField.id}`, fieldData);
     } else {
         // Crear nuevo campo
-        response = await fetch('http://localhost:8080/api/campos', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(fieldData)
-        });
-      }
+        response = await api.post('/api/campos', fieldData);
+    }
 
-      if (response.ok) {
-        const updatedField = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const updatedField = response.data;
         
         if (isEditing && selectedField) {
           // Actualizar campo existente en el estado local
@@ -903,26 +879,15 @@ const FieldsManagement: React.FC = () => {
         }
 
         console.log('Intentando eliminar campo con ID:', campoId);
-        // TODO: Crear archivo .env.local con VITE_API_URL=http://localhost:8080
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-        const url = `${apiUrl}/api/campos/${campoId}`;
-        console.log('URL de eliminación:', url);
-
-        const response = await fetch(url, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        
+        const response = await api.delete(`/api/campos/${campoId}`);
 
         console.log('Respuesta del servidor:', {
           status: response.status,
-          statusText: response.statusText,
-          ok: response.ok
+          statusText: response.statusText
         });
 
-        if (response.ok || response.status === 204) {
+        if (response.status >= 200 && response.status < 300) {
           // Con eliminación lógica, recargar la lista de campos para reflejar el cambio
           console.log('Campo eliminado exitosamente (eliminación lógica)');
           alert('Campo eliminado correctamente');

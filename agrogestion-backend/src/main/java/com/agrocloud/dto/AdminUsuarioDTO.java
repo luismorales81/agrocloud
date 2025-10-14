@@ -34,6 +34,7 @@ public class AdminUsuarioDTO {
     
     // Roles del usuario
     private Set<RoleDTO> roles;
+    private Set<Long> roleIds; // Para recibir/enviar solo los IDs de los roles
     
     // Información de jerarquía
     private Long parentUserId;
@@ -162,6 +163,14 @@ public class AdminUsuarioDTO {
     
     public void setRoles(Set<RoleDTO> roles) {
         this.roles = roles;
+    }
+    
+    public Set<Long> getRoleIds() {
+        return roleIds;
+    }
+    
+    public void setRoleIds(Set<Long> roleIds) {
+        this.roleIds = roleIds;
     }
     
     public Long getParentUserId() {

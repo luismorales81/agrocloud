@@ -348,4 +348,101 @@ public class LaborController {
             return ResponseEntity.internalServerError().build();
         }
     }
+    
+    /**
+     * Calcula el costo total de una labor sumando todos sus componentes
+     */
+    @GetMapping("/{id}/calcular-costo")
+    public ResponseEntity<Map<String, Object>> calcularCostoTotal(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            java.math.BigDecimal costoTotal = laborService.calcularCostoTotalLabor(id);
+            
+            Map<String, Object> respuesta = Map.of(
+                "success", true,
+                "costoTotal", costoTotal,
+                "mensaje", "Costo total calculado correctamente"
+            );
+            
+            return ResponseEntity.ok(respuesta);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "mensaje", e.getMessage()
+            );
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "mensaje", "Error al calcular costo: " + e.getMessage()
+            );
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+    
+    /**
+     * Obtiene el desglose detallado de costos de una labor
+     */
+    @GetMapping("/{id}/desglose-costos")
+    public ResponseEntity<Map<String, Object>> obtenerDesgloseCostos(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            Map<String, java.math.BigDecimal> desglose = laborService.calcularDesgloseCostosLabor(id);
+            
+            Map<String, Object> respuesta = new java.util.HashMap<>();
+            respuesta.put("success", true);
+            respuesta.putAll(desglose);
+            
+            return ResponseEntity.ok(respuesta);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "mensaje", e.getMessage()
+            );
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "mensaje", "Error al obtener desglose: " + e.getMessage()
+            );
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+    
+    /**
+     * Actualiza el costo total de una labor recalculándolo desde sus componentes
+     */
+    @PostMapping("/{id}/actualizar-costo")
+    public ResponseEntity<Map<String, Object>> actualizarCostoTotal(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            Labor laborActualizada = laborService.actualizarCostoTotalLabor(id);
+            
+            Map<String, Object> respuesta = Map.of(
+                "success", true,
+                "costoTotal", laborActualizada.getCostoTotal(),
+                "mensaje", "Costo actualizado correctamente"
+            );
+            
+            return ResponseEntity.ok(respuesta);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "mensaje", e.getMessage()
+            );
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "mensaje", "Error al actualizar costo: " + e.getMessage()
+            );
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
 }

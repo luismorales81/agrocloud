@@ -129,25 +129,25 @@ public class EstadoLoteService {
             case EN_CRECIMIENTO:
             case EN_FLORACION:
             case EN_FRUTIFICACION:
-                return rolUsuario == Rol.PRODUCTOR || rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.ADMIN || rolUsuario == Rol.TECNICO;
+                return rolUsuario == Rol.PRODUCTOR || rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.TECNICO;
                 
             case LISTO_PARA_COSECHA:
             case EN_COSECHA:
             case COSECHADO:
-                return rolUsuario == Rol.PRODUCTOR || rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.ADMIN || rolUsuario == Rol.TECNICO;
+                return rolUsuario == Rol.PRODUCTOR || rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.TECNICO;
                 
             case EN_DESCANSO:
             case EN_PREPARACION:
             case DISPONIBLE:
             case PREPARADO:
-                return rolUsuario == Rol.PRODUCTOR || rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.ADMIN || rolUsuario == Rol.TECNICO;
+                return rolUsuario == Rol.PRODUCTOR || rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.TECNICO;
                 
             case ENFERMO:
             case ABANDONADO:
-                return rolUsuario == Rol.PRODUCTOR || rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.ADMIN || rolUsuario == Rol.TECNICO || rolUsuario == Rol.ASESOR;
+                return rolUsuario == Rol.PRODUCTOR || rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.TECNICO || rolUsuario == Rol.ASESOR;
                 
             default:
-                return rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.ADMIN;
+                return rolUsuario == Rol.ADMINISTRADOR;
         }
     }
     
@@ -168,7 +168,7 @@ public class EstadoLoteService {
         
         // Es administrador de la empresa
         Rol rolUsuario = obtenerRolUsuario(usuario);
-        if (rolUsuario == Rol.ADMINISTRADOR || rolUsuario == Rol.ADMIN) {
+        if (rolUsuario == Rol.ADMINISTRADOR) {
             // Verificar que pertenece a la misma empresa que el lote
             return perteneceAMismaEmpresa(usuario, lote);
         }

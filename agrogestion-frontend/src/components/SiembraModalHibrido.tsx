@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 
 interface Lote {
   id?: number;
@@ -121,18 +122,11 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarCultivos = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/v1/cultivos', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/v1/cultivos');
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Cultivos cargados:', data);
-        setCultivos(data);
+      if (response.status >= 200 && response.status < 300) {
+        console.log('Cultivos cargados:', response.data);
+        setCultivos(response.data);
       } else {
         console.error('Error al cargar cultivos, status:', response.status);
       }
@@ -143,17 +137,10 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarInsumos = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/insumos', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/insumos');
 
-      if (response.ok) {
-        const data = await response.json();
-        setInsumos(data);
+      if (response.status >= 200 && response.status < 300) {
+        setInsumos(response.data);
       }
     } catch (error) {
       console.error('Error cargando insumos:', error);
@@ -162,17 +149,10 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarMaquinarias = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/maquinaria', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/maquinaria');
 
-      if (response.ok) {
-        const data = await response.json();
-        const maquinariasMapeadas = data.map((maq: any) => ({
+      if (response.status >= 200 && response.status < 300) {
+        const maquinariasMapeadas = response.data.map((maq: any) => ({
           id: maq.id,
           nombre: maq.nombre,
           tipo: maq.tipo || 'No especificado',
@@ -334,24 +314,19 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
         observaciones: mo.observaciones
       }));
 
-      const response = await fetch(`http://localhost:8080/api/v1/lotes/${lote.id}/sembrar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          cultivoId: parseInt(formData.cultivoId),
-          fechaSiembra: formData.fechaSiembra,
-          observaciones: formData.observaciones,
-          insumos: insumosData,
-          maquinaria: maquinariaData,
-          manoObra: manoObraData
-        })
-      });
+      const siembraData = {
+        cultivoId: parseInt(formData.cultivoId),
+        fechaSiembra: formData.fechaSiembra,
+        observaciones: formData.observaciones,
+        insumos: insumosData,
+        maquinaria: maquinariaData,
+        manoObra: manoObraData
+      };
+      
+      const response = await api.post(`/api/v1/lotes/${lote.id}/sembrar`, siembraData);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data;
         const costos = calcularCostos();
         const mensaje = costos.total > 0 
           ? `✅ ${data.message || 'Lote sembrado exitosamente'}\n💰 Costo total registrado: $${costos.total.toLocaleString()}`
@@ -360,8 +335,7 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
         onSuccess();
         onClose();
       } else {
-        const errorData = await response.json();
-        alert(`❌ Error: ${errorData.message || 'No se pudo sembrar el lote'}`);
+        alert(`❌ Error: ${response.data?.message || 'No se pudo sembrar el lote'}`);
       }
     } catch (error) {
       console.error('Error al sembrar:', error);

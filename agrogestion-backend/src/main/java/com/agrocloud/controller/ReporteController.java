@@ -30,6 +30,18 @@ public class ReporteController {
 
     @Autowired
     private UserService userService;
+    
+    /**
+     * Valida que la fecha de fin no sea anterior a la fecha de inicio.
+     * @param fechaInicio Fecha de inicio del rango
+     * @param fechaFin Fecha de fin del rango
+     * @throws IllegalArgumentException si las fechas son inválidas
+     */
+    private void validarRangoFechas(LocalDate fechaInicio, LocalDate fechaFin) {
+        if (fechaInicio != null && fechaFin != null && fechaFin.isBefore(fechaInicio)) {
+            throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio");
+        }
+    }
 
     /**
      * Obtiene reporte de rendimiento por cultivo y lote.
@@ -43,6 +55,9 @@ public class ReporteController {
             Authentication authentication) {
         
         try {
+            // Validar rango de fechas
+            validarRangoFechas(fechaInicio, fechaFin);
+            
             System.out.println("[REPORTE_CONTROLLER] Iniciando obtenerReporteRendimiento");
             System.out.println("[REPORTE_CONTROLLER] Parámetros recibidos:");
             System.out.println("[REPORTE_CONTROLLER] - fechaInicio: " + fechaInicio);
@@ -66,6 +81,9 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] Reporte generado con " + reporte.size() + " registros");
             return ResponseEntity.ok(reporte);
             
+        } catch (IllegalArgumentException e) {
+            System.err.println("[REPORTE_CONTROLLER] ERROR de validación: " + e.getMessage());
+            return ResponseEntity.badRequest().body(null);
         } catch (Exception e) {
             System.err.println("[REPORTE_CONTROLLER] ERROR en obtenerReporteRendimiento: " + e.getMessage());
             System.err.println("[REPORTE_CONTROLLER] Stack trace completo:");
@@ -86,6 +104,9 @@ public class ReporteController {
             Authentication authentication) {
         
         try {
+            // Validar rango de fechas
+            validarRangoFechas(fechaInicio, fechaFin);
+            
             System.out.println("[REPORTE_CONTROLLER] Iniciando obtenerReporteCosechas");
             System.out.println("[REPORTE_CONTROLLER] Parámetros recibidos:");
             System.out.println("[REPORTE_CONTROLLER] - fechaInicio: " + fechaInicio);
@@ -114,6 +135,9 @@ public class ReporteController {
             }
             return ResponseEntity.ok(reporte);
             
+        } catch (IllegalArgumentException e) {
+            System.err.println("[REPORTE_CONTROLLER] ERROR de validación: " + e.getMessage());
+            return ResponseEntity.badRequest().body(null);
         } catch (Exception e) {
             System.err.println("[REPORTE_CONTROLLER] ERROR en obtenerReporteCosechas: " + e.getMessage());
             System.err.println("[REPORTE_CONTROLLER] Stack trace completo:");
@@ -133,6 +157,9 @@ public class ReporteController {
             Authentication authentication) {
         
         try {
+            // Validar rango de fechas
+            validarRangoFechas(fechaInicio, fechaFin);
+            
             System.out.println("[REPORTE_CONTROLLER] Iniciando obtenerEstadisticasProduccion");
             System.out.println("[REPORTE_CONTROLLER] Parámetros recibidos:");
             System.out.println("[REPORTE_CONTROLLER] - fechaInicio: " + fechaInicio);
@@ -153,6 +180,9 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] Estadísticas de producción generadas exitosamente");
             return ResponseEntity.ok(estadisticas);
             
+        } catch (IllegalArgumentException e) {
+            System.err.println("[REPORTE_CONTROLLER] ERROR de validación: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             System.err.println("[REPORTE_CONTROLLER] ERROR en obtenerEstadisticasProduccion: " + e.getMessage());
             System.err.println("[REPORTE_CONTROLLER] Stack trace completo:");
@@ -172,6 +202,9 @@ public class ReporteController {
             Authentication authentication) {
         
         try {
+            // Validar rango de fechas
+            validarRangoFechas(fechaInicio, fechaFin);
+            
             System.out.println("[REPORTE_CONTROLLER] Iniciando obtenerReporteRentabilidad");
             System.out.println("[REPORTE_CONTROLLER] Parámetros recibidos:");
             System.out.println("[REPORTE_CONTROLLER] - fechaInicio: " + fechaInicio);
@@ -199,6 +232,9 @@ public class ReporteController {
             }
             return ResponseEntity.ok(reporte);
             
+        } catch (IllegalArgumentException e) {
+            System.err.println("[REPORTE_CONTROLLER] ERROR de validación: " + e.getMessage());
+            return ResponseEntity.badRequest().body(null);
         } catch (Exception e) {
             System.err.println("[REPORTE_CONTROLLER] ERROR en obtenerReporteRentabilidad: " + e.getMessage());
             System.err.println("[REPORTE_CONTROLLER] Stack trace completo:");

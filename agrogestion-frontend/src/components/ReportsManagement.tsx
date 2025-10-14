@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
+import { useEmpresa } from '../contexts/EmpresaContext';
 import { exportService } from '../services/ExportService';
 import type { ExportOptions } from '../services/ExportService';
 import api from '../services/api';
@@ -33,10 +34,14 @@ interface ProduccionData {
 
 const ReportsManagement: React.FC = () => {
   const { formatCurrency } = useCurrencyContext();
+  const empresaContext = useEmpresa();
+  const tienePermisoFinanciero = empresaContext?.tienePermisoFinanciero() || false;
+  
   const [activeReport, setActiveReport] = useState<string>('rindes');
   const [dateRange, setDateRange] = useState({ inicio: '', fin: '' });
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
+  const [errorFechas, setErrorFechas] = useState<string>('');
 
   // Datos mock para los reportes
   const mockRindeData: RindeData[] = [
@@ -54,6 +59,20 @@ const ReportsManagement: React.FC = () => {
 
   const generateReport = async (tipo: string) => {
     console.log('🔍 [REPORTS] Iniciando generateReport para tipo:', tipo);
+    
+    // Validar fechas
+    if (dateRange.inicio && dateRange.fin) {
+      const inicio = new Date(dateRange.inicio);
+      const fin = new Date(dateRange.fin);
+      
+      if (fin < inicio) {
+        setErrorFechas('La fecha de fin no puede ser anterior a la fecha de inicio');
+        alert('Error: La fecha de fin no puede ser anterior a la fecha de inicio');
+        return;
+      }
+    }
+    
+    setErrorFechas('');
     setLoading(true);
     
     try {
@@ -613,6 +632,20 @@ const ReportsManagement: React.FC = () => {
     }
 
     const datos = reportData.datos;
+    
+    // Función para determinar el estado de la cosecha
+    const getEstadoCosecha = (item: any) => {
+      // Si tiene fecha de cosecha, está completada
+      if (item.fechaCosecha) {
+        return 'Completada';
+      }
+      // Si tiene cantidad cosechada, está en proceso
+      if (item.cantidadCosechada && item.cantidadCosechada > 0) {
+        return 'En Proceso';
+      }
+      // Si no tiene nada, está pendiente
+      return 'Pendiente';
+    };
     console.log('✅ [RENDER] Datos de cosechas encontrados:', datos.length, 'registros');
 
     // Calcular estadísticas básicas
@@ -692,12 +725,12 @@ const ReportsManagement: React.FC = () => {
                         borderRadius: '12px',
                         fontSize: '12px',
                         fontWeight: 'bold',
-                        background: item.estadoHumedad === 'Óptimo' ? '#dcfce7' : 
-                                    item.estadoHumedad === 'Aceptable' ? '#fef3c7' : '#fecaca',
-                        color: item.estadoHumedad === 'Óptimo' ? '#166534' : 
-                               item.estadoHumedad === 'Aceptable' ? '#92400e' : '#991b1b'
+                        background: getEstadoCosecha(item) === 'Completada' ? '#dcfce7' : 
+                                   getEstadoCosecha(item) === 'En Proceso' ? '#fef3c7' : '#fecaca',
+                        color: getEstadoCosecha(item) === 'Completada' ? '#166534' : 
+                               getEstadoCosecha(item) === 'En Proceso' ? '#92400e' : '#991b1b'
                       }}>
-                        {item.estadoHumedad || 'N/A'}
+                        {getEstadoCosecha(item)}
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>{item.rendimientoReal || 0} {item.unidadRendimiento || ''}</td>
@@ -957,7 +990,7 @@ const ReportsManagement: React.FC = () => {
           <div>
             <h1 style={{ margin: '0 0 5px 0', fontSize: '24px' }}>📈 Sistema de Reportes</h1>
             <p style={{ margin: '0', opacity: '0.9' }}>
-              Genera y analiza reportes detallados de tu producción agrícola
+              Genera y analiza reportes detallados de tu producción agropecuaria
             </p>
           </div>
         </div>
@@ -1011,21 +1044,24 @@ const ReportsManagement: React.FC = () => {
           >
             🌾 Cosechas
           </button>
-          <button
-            onClick={() => setActiveReport('rentabilidad')}
-            style={{
-              background: activeReport === 'rentabilidad' ? '#ef4444' : '#e5e7eb',
-              color: activeReport === 'rentabilidad' ? 'white' : '#374151',
-              border: 'none',
-              padding: '12px 20px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}
-          >
-            💰 Rentabilidad
-          </button>
+          {/* Reporte de Rentabilidad - Solo para usuarios con permiso financiero */}
+          {tienePermisoFinanciero && (
+            <button
+              onClick={() => setActiveReport('rentabilidad')}
+              style={{
+                background: activeReport === 'rentabilidad' ? '#ef4444' : '#e5e7eb',
+                color: activeReport === 'rentabilidad' ? 'white' : '#374151',
+                border: 'none',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              💰 Rentabilidad
+            </button>
+          )}
         </div>
 
         {/* Filtros de fecha */}
@@ -1035,10 +1071,13 @@ const ReportsManagement: React.FC = () => {
             <input
               type="date"
               value={dateRange.inicio}
-              onChange={(e) => setDateRange(prev => ({ ...prev, inicio: e.target.value }))}
+              onChange={(e) => {
+                setDateRange(prev => ({ ...prev, inicio: e.target.value }));
+                setErrorFechas('');
+              }}
               style={{
                 padding: '8px 12px',
-                border: '1px solid #ddd',
+                border: errorFechas ? '2px solid #ef4444' : '1px solid #ddd',
                 borderRadius: '5px',
                 fontSize: '14px'
               }}
@@ -1049,15 +1088,32 @@ const ReportsManagement: React.FC = () => {
             <input
               type="date"
               value={dateRange.fin}
-              onChange={(e) => setDateRange(prev => ({ ...prev, fin: e.target.value }))}
+              onChange={(e) => {
+                setDateRange(prev => ({ ...prev, fin: e.target.value }));
+                setErrorFechas('');
+              }}
+              min={dateRange.inicio}
               style={{
                 padding: '8px 12px',
-                border: '1px solid #ddd',
+                border: errorFechas ? '2px solid #ef4444' : '1px solid #ddd',
                 borderRadius: '5px',
                 fontSize: '14px'
               }}
             />
           </div>
+          {errorFechas && (
+            <div style={{ 
+              width: '100%',
+              padding: '10px',
+              background: '#fef2f2',
+              border: '1px solid #ef4444',
+              borderRadius: '5px',
+              color: '#991b1b',
+              fontSize: '14px'
+            }}>
+              ⚠️ {errorFechas}
+            </div>
+          )}
           <button
             onClick={() => generateReport(activeReport)}
             disabled={loading}
@@ -1220,7 +1276,7 @@ const ReportsManagement: React.FC = () => {
           {activeReport === 'rindes' && renderRindeReport()}
           {activeReport === 'produccion' && renderProduccionReport()}
           {activeReport === 'cosechas' && renderCosechasReport()}
-          {activeReport === 'rentabilidad' && renderRentabilidadReport()}
+          {activeReport === 'rentabilidad' && tienePermisoFinanciero && renderRentabilidadReport()}
         </div>
       )}
 

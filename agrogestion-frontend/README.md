@@ -1,6 +1,6 @@
 # AgroCloud Frontend
 
-Sistema de gestión agrícola - Frontend en React con TypeScript
+Sistema de gestión agropecuaria - Frontend en React con TypeScript
 
 ## 🚀 Características
 

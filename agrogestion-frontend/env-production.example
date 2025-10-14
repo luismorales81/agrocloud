@@ -1,0 +1,15 @@
+# ============================================================
+# FRONTEND - PRODUCTION
+# AgroGestion - Vercel Production
+# ============================================================
+
+# URL del backend (Railway Production)
+VITE_API_URL=https://agrogestion-backend-production.railway.app
+
+# Entorno
+NODE_ENV=production
+VITE_APP_ENV=production
+
+# Configuración adicional
+VITE_APP_NAME=AgroGestion
+VITE_APP_VERSION=2.0.0

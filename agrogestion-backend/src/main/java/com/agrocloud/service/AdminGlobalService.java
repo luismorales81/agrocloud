@@ -191,11 +191,14 @@ public class AdminGlobalService {
         empresa.setFechaInicioTrial(LocalDate.now());
         empresa.setFechaFinTrial(LocalDate.now().plusDays(30));
 
-        // Obtener el super admin como creador
-        System.out.println("🔍 [AdminGlobalService] Buscando super admin...");
-        User superAdmin = userRepository.findByUsername("admin")
-                .orElseThrow(() -> new RuntimeException("Super admin no encontrado"));
-        System.out.println("✅ [AdminGlobalService] Super admin encontrado: " + superAdmin.getUsername());
+        // Obtener el primer SUPERADMIN disponible como creador
+        System.out.println("🔍 [AdminGlobalService] Buscando SUPERADMIN...");
+        User superAdmin = userRepository.findAll().stream()
+                .filter(u -> u.getRoles().stream()
+                        .anyMatch(r -> "SUPERADMIN".equals(r.getNombre())))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("SUPERADMIN no encontrado"));
+        System.out.println("✅ [AdminGlobalService] SUPERADMIN encontrado: " + superAdmin.getUsername());
         empresa.setCreadoPor(superAdmin);
 
         System.out.println("💾 [AdminGlobalService] Guardando empresa en base de datos...");

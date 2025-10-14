@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -165,20 +166,41 @@ public class AdminUsuarioController {
     @PostMapping
     @Operation(summary = "Crear usuario", description = "Crear un nuevo usuario en el sistema (Solo ADMIN)")
     public ResponseEntity<AdminUsuarioDTO> crearUsuario(@RequestBody AdminUsuarioDTO usuarioDTO,
-                                                       HttpServletRequest httpRequest) {
+                                                       Authentication authentication) {
         try {
-            // TODO: En producción, obtener usuario actual del JWT
-            // Por ahora, validamos que sea ADMIN
-            User usuarioActual = userService.findByUsername("admin");
+            // Obtener usuario actual del contexto de autenticación
+            String username = authentication.getName();
+            System.out.println("🔍 [AdminUsuarioController] Username del contexto: " + username);
+            
+            // Intentar buscar por username primero, luego por email
+            User usuarioActual = null;
+            try {
+                usuarioActual = userService.findByUsername(username);
+                System.out.println("✅ [AdminUsuarioController] Usuario encontrado por username");
+            } catch (Exception e) {
+                System.out.println("⚠️ [AdminUsuarioController] Usuario no encontrado por username, intentando por email...");
+                try {
+                    usuarioActual = userService.findByEmail(username);
+                    System.out.println("✅ [AdminUsuarioController] Usuario encontrado por email");
+                } catch (Exception e2) {
+                    System.err.println("❌ [AdminUsuarioController] Usuario no encontrado ni por username ni por email: " + username);
+                    return ResponseEntity.status(401).body(null);
+                }
+            }
+            
+            System.out.println("✅ [AdminUsuarioController] Usuario autenticado: " + usuarioActual.getEmail());
+            System.out.println("✅ [AdminUsuarioController] Roles del usuario: " + usuarioActual.getRoles());
             
             // VALIDACIÓN DE PERMISOS: Solo ADMIN puede crear usuarios
             if (!adminUsuarioService.puedeGestionarUsuario(usuarioActual, null)) {
+                System.err.println("❌ [AdminUsuarioController] Usuario sin permisos para gestionar usuarios");
                 return ResponseEntity.status(403).body(null);
             }
             
             AdminUsuarioDTO usuarioCreado = adminUsuarioService.crearUsuario(usuarioDTO, usuarioActual);
             return ResponseEntity.ok(usuarioCreado);
         } catch (Exception e) {
+            System.err.println("❌ [AdminUsuarioController] Error creando usuario: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
         }
@@ -191,14 +213,26 @@ public class AdminUsuarioController {
     @Operation(summary = "Actualizar usuario", description = "Actualizar datos de un usuario existente")
     public ResponseEntity<AdminUsuarioDTO> actualizarUsuario(@PathVariable Long id,
                                                              @RequestBody AdminUsuarioDTO usuarioDTO,
-                                                             HttpServletRequest httpRequest) {
+                                                             Authentication authentication) {
         try {
-            // Por ahora, usamos el usuario admin como actualizador
-            User usuarioActual = userService.findByUsername("admin");
+            // Obtener usuario actual del contexto de autenticación
+            String username = authentication.getName();
+            User usuarioActual = null;
+            try {
+                usuarioActual = userService.findByUsername(username);
+            } catch (Exception e) {
+                usuarioActual = userService.findByEmail(username);
+            }
+            
+            if (usuarioActual == null) {
+                System.err.println("❌ [AdminUsuarioController] Usuario no encontrado: " + username);
+                return ResponseEntity.status(401).body(null);
+            }
             
             AdminUsuarioDTO usuarioActualizado = adminUsuarioService.actualizarUsuario(id, usuarioDTO, usuarioActual);
             return ResponseEntity.ok(usuarioActualizado);
         } catch (Exception e) {
+            System.err.println("❌ [AdminUsuarioController] Error actualizando usuario: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
         }
@@ -211,14 +245,49 @@ public class AdminUsuarioController {
     @Operation(summary = "Cambiar estado", description = "Cambiar el estado de un usuario")
     public ResponseEntity<AdminUsuarioDTO> cambiarEstadoUsuario(@PathVariable Long id,
                                                                @RequestParam EstadoUsuario estado,
-                                                               HttpServletRequest httpRequest) {
+                                                               Authentication authentication) {
+        System.out.println("════════════════════════════════════════════════════════");
+        System.out.println("🔄 [AdminUsuarioController] CAMBIAR ESTADO USUARIO - VERSION 2.0");
+        System.out.println("════════════════════════════════════════════════════════");
+        System.out.println("🆔 Usuario ID: " + id);
+        System.out.println("📊 Nuevo Estado: " + estado);
+        
         try {
-            User usuarioActual = userService.findByUsername("admin");
+            // Obtener usuario actual del contexto de autenticación
+            String username = authentication.getName();
+            System.out.println("🔍 Username del JWT: " + username);
+            
+            User usuarioActual = null;
+            try {
+                System.out.println("🔍 Intentando buscar por username...");
+                usuarioActual = userService.findByUsername(username);
+                System.out.println("✅ Usuario encontrado por username");
+            } catch (Exception e) {
+                System.out.println("⚠️ No encontrado por username, intentando por email...");
+                usuarioActual = userService.findByEmail(username);
+                System.out.println("✅ Usuario encontrado por email");
+            }
+            
+            if (usuarioActual == null) {
+                System.err.println("❌ [AdminUsuarioController] Usuario no encontrado: " + username);
+                return ResponseEntity.status(401).body(null);
+            }
+            
+            System.out.println("✅ Usuario autenticado: " + usuarioActual.getEmail());
+            System.out.println("🔧 Llamando a adminUsuarioService.cambiarEstadoUsuario...");
             
             AdminUsuarioDTO usuarioActualizado = adminUsuarioService.cambiarEstadoUsuario(id, estado, usuarioActual);
+            
+            System.out.println("✅ Estado cambiado exitosamente");
+            System.out.println("════════════════════════════════════════════════════════");
             return ResponseEntity.ok(usuarioActualizado);
         } catch (Exception e) {
+            System.err.println("❌❌❌ [AdminUsuarioController] ERROR CAMBIANDO ESTADO ❌❌❌");
+            System.err.println("❌ Mensaje: " + e.getMessage());
+            System.err.println("❌ Tipo: " + e.getClass().getName());
+            System.err.println("❌ Stack trace:");
             e.printStackTrace();
+            System.err.println("════════════════════════════════════════════════════════");
             return ResponseEntity.status(500).body(null);
         }
     }
@@ -230,9 +299,21 @@ public class AdminUsuarioController {
     @Operation(summary = "Cambiar estado activo", description = "Activar o desactivar un usuario")
     public ResponseEntity<AdminUsuarioDTO> cambiarEstadoActivo(@PathVariable Long id,
                                                               @RequestParam Boolean activo,
-                                                              HttpServletRequest httpRequest) {
+                                                              Authentication authentication) {
         try {
-            User usuarioActual = userService.findByUsername("admin");
+            // Obtener usuario actual del contexto de autenticación
+            String username = authentication.getName();
+            User usuarioActual = null;
+            try {
+                usuarioActual = userService.findByUsername(username);
+            } catch (Exception e) {
+                usuarioActual = userService.findByEmail(username);
+            }
+            
+            if (usuarioActual == null) {
+                System.err.println("❌ [AdminUsuarioController] Usuario no encontrado: " + username);
+                return ResponseEntity.status(401).body(null);
+            }
             
             AdminUsuarioDTO usuarioActualizado = adminUsuarioService.cambiarEstadoActivo(id, activo, usuarioActual);
             return ResponseEntity.ok(usuarioActualizado);
@@ -249,13 +330,26 @@ public class AdminUsuarioController {
     @Operation(summary = "Resetear contraseña", description = "Resetear la contraseña de un usuario")
     public ResponseEntity<AdminUsuarioDTO> resetearContraseña(@PathVariable Long id,
                                                              @RequestParam String nuevaContraseña,
-                                                             HttpServletRequest httpRequest) {
+                                                             Authentication authentication) {
         try {
-            User usuarioActual = userService.findByUsername("admin");
+            // Obtener usuario actual del contexto de autenticación
+            String username = authentication.getName();
+            User usuarioActual = null;
+            try {
+                usuarioActual = userService.findByUsername(username);
+            } catch (Exception e) {
+                usuarioActual = userService.findByEmail(username);
+            }
+            
+            if (usuarioActual == null) {
+                System.err.println("❌ [AdminUsuarioController] Usuario no encontrado: " + username);
+                return ResponseEntity.status(401).body(null);
+            }
             
             AdminUsuarioDTO usuarioActualizado = adminUsuarioService.resetearContraseña(id, nuevaContraseña, usuarioActual);
             return ResponseEntity.ok(usuarioActualizado);
         } catch (Exception e) {
+            System.err.println("❌ [AdminUsuarioController] Error reseteando contraseña: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
         }
@@ -310,29 +404,129 @@ public class AdminUsuarioController {
     }
 
     /**
-     * Obtener todos los roles disponibles
+     * Obtener roles disponibles (filtrados por jerarquía)
      */
     @GetMapping("/roles")
-    @Operation(summary = "Listar roles", description = "Obtener lista de todos los roles disponibles")
-    public ResponseEntity<List<RoleDTO>> obtenerTodosLosRoles() {
+    @Operation(summary = "Listar roles", description = "Obtener lista de roles que el usuario puede asignar según su jerarquía")
+    public ResponseEntity<List<RoleDTO>> obtenerTodosLosRoles(Authentication authentication) {
         try {
+            System.out.println("🔍 [AdminUsuarioController] Iniciando obtención de roles");
+            
+            // Validar autenticación
+            if (authentication == null) {
+                System.err.println("❌ [AdminUsuarioController] Authentication es null");
+                return ResponseEntity.status(401).body(null);
+            }
+            
+            // Obtener usuario actual
+            String username = authentication.getName();
+            System.out.println("🔍 [AdminUsuarioController] Username del contexto: " + username);
+            
+            // Intentar buscar por username primero, luego por email
+            User usuarioActual = null;
+            try {
+                usuarioActual = userService.findByUsername(username);
+                System.out.println("✅ [AdminUsuarioController] Usuario encontrado por username");
+            } catch (Exception e) {
+                System.out.println("⚠️ [AdminUsuarioController] Usuario no encontrado por username, intentando por email...");
+                try {
+                    usuarioActual = userService.findByEmail(username);
+                    System.out.println("✅ [AdminUsuarioController] Usuario encontrado por email");
+                } catch (Exception e2) {
+                    System.err.println("❌ [AdminUsuarioController] Usuario no encontrado ni por username ni por email: " + username);
+                    return ResponseEntity.status(401).body(null);
+                }
+            }
+            
+            System.out.println("✅ [AdminUsuarioController] Usuario encontrado: " + usuarioActual.getEmail());
+            
+            // Obtener todos los roles primero (sin filtrar) por si hay error
             List<Role> roles = roleService.getAllRoles();
-            List<RoleDTO> rolesDTO = roles.stream()
-                    .map(role -> {
-                        RoleDTO dto = new RoleDTO();
-                        dto.setId(role.getId());
-                        dto.setName(role.getNombre());
-                        dto.setDescription(role.getDescription());
-                        dto.setCreatedAt(role.getCreatedAt());
-                        dto.setUpdatedAt(role.getCreatedAt());
-                        return dto;
-                    })
-                    .collect(Collectors.toList());
+            System.out.println("✅ [AdminUsuarioController] Total de roles en el sistema: " + roles.size());
+            
+            // Intentar obtener rol del usuario actual
+            String rolActual = "";
+            try {
+                rolActual = usuarioActual.getRoles().stream()
+                        .findFirst()
+                        .map(role -> role.getNombre())
+                        .orElse("");
+                System.out.println("✅ [AdminUsuarioController] Rol del usuario: " + rolActual);
+            } catch (Exception e) {
+                System.err.println("❌ [AdminUsuarioController] Error obteniendo rol del usuario: " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // Filtrar roles según jerarquía
+            List<RoleDTO> rolesDTO;
+            try {
+                final String rolFinal = rolActual; // Variable final para lambda
+                rolesDTO = roles.stream()
+                        .filter(role -> puedeAsignarRol(rolFinal, role.getNombre()))
+                        .map(role -> {
+                            RoleDTO dto = new RoleDTO();
+                            dto.setId(role.getId());
+                            dto.setName(role.getNombre());
+                            dto.setDescription(role.getDescription());
+                            dto.setCreatedAt(role.getCreatedAt());
+                            dto.setUpdatedAt(role.getCreatedAt());
+                            return dto;
+                        })
+                        .collect(Collectors.toList());
+                
+                System.out.println("✅ [AdminUsuarioController] Roles filtrados para " + rolActual + ": " + 
+                    rolesDTO.stream().map(RoleDTO::getName).collect(Collectors.toList()));
+            } catch (Exception e) {
+                System.err.println("❌ [AdminUsuarioController] Error filtrando roles, devolviendo todos: " + e.getMessage());
+                e.printStackTrace();
+                // Si falla el filtrado, devolver todos los roles
+                rolesDTO = roles.stream()
+                        .map(role -> {
+                            RoleDTO dto = new RoleDTO();
+                            dto.setId(role.getId());
+                            dto.setName(role.getNombre());
+                            dto.setDescription(role.getDescription());
+                            dto.setCreatedAt(role.getCreatedAt());
+                            dto.setUpdatedAt(role.getCreatedAt());
+                            return dto;
+                        })
+                        .collect(Collectors.toList());
+            }
+            
             return ResponseEntity.ok(rolesDTO);
         } catch (Exception e) {
+            System.err.println("❌ [AdminUsuarioController] Error general obteniendo roles: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
         }
+    }
+    
+    /**
+     * Verifica si un usuario con un rol puede asignar otro rol según la jerarquía
+     * 
+     * SUPERADMIN (7)      → Puede asignar TODOS los roles
+     * ADMINISTRADOR (6)   → Puede asignar: PRODUCTOR, ASESOR, TECNICO, OPERARIO, INVITADO
+     * PRODUCTOR (5)       → No puede asignar roles
+     * ASESOR (4)          → No puede asignar roles
+     * TECNICO (2)         → No puede asignar roles
+     * OPERARIO (1)        → No puede asignar roles
+     * INVITADO (0)        → No puede asignar roles
+     */
+    private boolean puedeAsignarRol(String rolUsuario, String rolAAsignar) {
+        // SUPERADMIN puede asignar cualquier rol
+        if ("SUPERADMIN".equals(rolUsuario)) {
+            return true;
+        }
+        
+        // ADMINISTRADOR puede asignar roles subordinados (no SUPERADMIN, ADMINISTRADOR ni ADMIN)
+        if ("ADMINISTRADOR".equals(rolUsuario)) {
+            return !("SUPERADMIN".equals(rolAAsignar) || 
+                     "ADMINISTRADOR".equals(rolAAsignar) || 
+                     "ADMIN".equals(rolAAsignar));
+        }
+        
+        // Otros roles no pueden asignar roles
+        return false;
     }
 
     /**
@@ -422,20 +616,21 @@ public class AdminUsuarioController {
                     .count();
             reporte.put("usuariosSinCreador", usuariosSinCreador);
             
-            // Usuarios con ADMIN como padre
+            // Usuarios con SUPERADMIN o ADMINISTRADOR como padre
             long usuariosConAdminPadre = usuarios.stream()
                     .filter(u -> {
                         if (u.getParentUserId() == null) return false;
-                        // Buscar el usuario padre para ver si es ADMIN
+                        // Buscar el usuario padre para ver si es SUPERADMIN o ADMINISTRADOR
                         try {
                             AdminUsuarioDTO padre = adminUsuarioService.obtenerUsuarioPorId(u.getParentUserId());
-                            return "admin".equals(padre.getUsername());
+                            return padre.getRoles() != null && padre.getRoles().stream()
+                                    .anyMatch(r -> "SUPERADMIN".equals(r) || "ADMINISTRADOR".equals(r));
                         } catch (Exception e) {
                             return false;
                         }
                     })
                     .count();
-            reporte.put("usuariosConAdminPadre", usuariosConAdminPadre);
+            reporte.put("usuariosConAdministradorPadre", usuariosConAdminPadre);
             
             // Usuarios que necesitan corrección
             long usuariosNecesitanCorreccion = usuariosRaiz + usuariosSinCreador;

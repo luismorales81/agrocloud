@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useEmpresa } from '../contexts/EmpresaContext';
 import api from '../services/api';
+import PermissionGate from './PermissionGate';
 
 interface Insumo {
   id?: number;
@@ -19,6 +22,8 @@ interface Insumo {
 
 const InsumosManagement: React.FC = () => {
   const { formatCurrency } = useCurrencyContext();
+  const { user } = useAuth();
+  const { rolUsuario } = useEmpresa();
   const [insumos, setInsumos] = useState<Insumo[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null);
@@ -88,6 +93,16 @@ const InsumosManagement: React.FC = () => {
   };
 
   // Unidades de medida
+  // Verificar si el usuario puede modificar insumos
+  const puedeModificarInsumos = () => {
+    if (!rolUsuario) return false;
+    // Solo OPERARIO, INVITADO y CONSULTOR_EXTERNO NO pueden modificar (solo lectura)
+    return rolUsuario !== 'OPERARIO' && 
+           rolUsuario !== 'INVITADO' && 
+           rolUsuario !== 'CONSULTOR_EXTERNO' && 
+           rolUsuario !== 'LECTURA';
+  };
+
   const unidadesMedida = [
     'Kg',
     'Litro',
@@ -217,15 +232,9 @@ const InsumosManagement: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`http://localhost:8080/api/insumos/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await api.delete(`/api/insumos/${id}`);
 
-        if (response.ok || response.status === 204) {
+        if (response.status >= 200 && response.status < 300) {
           // Eliminar del estado local solo si la API confirma la eliminación
           setInsumos(prev => prev.filter(insumo => insumo.id !== id));
           alert('Insumo eliminado exitosamente');
@@ -354,21 +363,23 @@ const InsumosManagement: React.FC = () => {
 
       {/* Botones de acción */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <button
-          onClick={showFormWithScroll}
-          style={{
-            background: '#8b5cf6',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 'bold'
-          }}
-        >
-          ➕ Nuevo Insumo
-        </button>
+        <PermissionGate permission="canCreateInsumos">
+          <button
+            onClick={showFormWithScroll}
+            style={{
+              background: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            ➕ Nuevo Insumo
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Filtros */}
@@ -410,7 +421,7 @@ const InsumosManagement: React.FC = () => {
       </div>
 
       {/* Formulario */}
-      {showForm && (
+      {showForm && puedeModificarInsumos() && (
         <div style={{ 
           background: '#f9fafb', 
           padding: '20px', 
@@ -752,34 +763,46 @@ const InsumosManagement: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          onClick={() => editInsumo(insumo)}
-                          style={{
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          ✏️ Editar
-                        </button>
-                        <button
-                          onClick={() => deleteInsumo(insumo.id!)}
-                          style={{
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          🗑️ Eliminar
-                        </button>
+                        {puedeModificarInsumos() ? (
+                          <>
+                            <button
+                              onClick={() => editInsumo(insumo)}
+                              style={{
+                                background: '#3b82f6',
+                                color: 'white',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              onClick={() => deleteInsumo(insumo.id!)}
+                              style={{
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </>
+                        ) : (
+                          <span style={{ 
+                            color: '#6b7280',
+                            fontSize: '12px',
+                            fontStyle: 'italic'
+                          }}>
+                            Solo lectura
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>

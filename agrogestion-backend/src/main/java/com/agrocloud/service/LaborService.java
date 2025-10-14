@@ -20,6 +20,7 @@ import com.agrocloud.model.entity.Role;
 import com.agrocloud.model.enums.TipoMaquinaria;
 import com.agrocloud.model.enums.EstadoLote;
 import com.agrocloud.model.enums.Rol;
+import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.repository.LaborRepository;
 import com.agrocloud.repository.LaborMaquinariaRepository;
 import com.agrocloud.repository.LaborManoObraRepository;
@@ -95,9 +96,12 @@ public class LaborService {
                             return activo != null && activo;
                         })
                         .toList();
-            } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null)) {
-                // Admin de empresa ve TODOS los lotes de su empresa
-                System.out.println("[LABOR_SERVICE] Usuario es Admin de empresa, mostrando TODOS los lotes de la empresa");
+            } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null) ||
+                       user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) ||
+                       user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
+                       user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
+                // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven TODAS las labores de los lotes de su empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
+                System.out.println("[LABOR_SERVICE] Usuario es Admin/JEFE_CAMPO/OPERARIO/CONSULTOR_EXTERNO de empresa, mostrando TODAS las labores de la empresa");
                 
                 Empresa empresa = user.getEmpresa();
                 if (empresa == null) {
@@ -757,9 +761,19 @@ public class LaborService {
             throw new RuntimeException("La labor ya está eliminada");
         }
         
-        // Verificar permisos
+        // Verificar permisos sobre el lote
         if (labor.getLote() != null && !tieneAccesoAlLote(labor.getLote(), usuario)) {
             throw new RuntimeException("No tiene permisos para eliminar esta labor. Usuario: " + usuario.getEmail() + ", Lote: " + labor.getLote().getId());
+        }
+        
+        // Si es OPERARIO, solo puede eliminar sus propias labores
+        if (usuario.tieneRolEnEmpresa(RolEmpresa.OPERARIO)) {
+            String nombreUsuario = usuario.getFirstName() + " " + usuario.getLastName();
+            String responsableLabor = labor.getResponsable();
+            
+            if (responsableLabor == null || !responsableLabor.equalsIgnoreCase(nombreUsuario)) {
+                throw new RuntimeException("Los operarios solo pueden eliminar sus propias labores");
+            }
         }
         
         // Caso 1: Labor PLANIFICADA → Cancelar y restaurar insumos automáticamente
@@ -818,9 +832,11 @@ public class LaborService {
             throw new RuntimeException("La labor ya está eliminada o anulada");
         }
         
-        // Verificar permisos: debe ser ADMINISTRADOR
-        if (!usuario.isSuperAdmin() && !usuario.esAdministradorEmpresa(usuario.getEmpresa() != null ? usuario.getEmpresa().getId() : null)) {
-            throw new RuntimeException("Solo los ADMINISTRADORES pueden anular labores ejecutadas");
+        // Verificar permisos: debe ser ADMINISTRADOR o JEFE_CAMPO
+        if (!usuario.isSuperAdmin() && 
+            !usuario.esAdministradorEmpresa(usuario.getEmpresa() != null ? usuario.getEmpresa().getId() : null) &&
+            !usuario.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO)) {
+            throw new RuntimeException("Solo los ADMINISTRADORES y JEFE_CAMPO pueden anular labores ejecutadas");
         }
         
         // Verificar permisos sobre el lote
@@ -980,15 +996,13 @@ public class LaborService {
         switch (rol) {
             case SUPERADMIN:
             case ADMINISTRADOR:
-            case ADMIN:
             case PRODUCTOR:
             case TECNICO:
             case ASESOR:
+            case OPERARIO:  // ← CORREGIDO: OPERARIO SÍ puede crear labores
                 return true;
-            case OPERARIO:
             case INVITADO:
-            case USUARIO_REGISTRADO:
-                return false; // Estos roles no pueden gestionar labores
+                return false; // Solo INVITADO no puede gestionar labores
             default:
                 return false;
         }
@@ -1191,11 +1205,33 @@ public class LaborService {
         
         if (laborOpt.isPresent()) {
             Labor labor = laborOpt.get();
-            if (tieneAccesoALabor(labor, user)) {
-                labor.setActivo(false);
-                laborRepository.save(labor);
-                return true;
+            
+            // Verificar acceso al lote de la labor
+            if (!tieneAccesoALabor(labor, user)) {
+                System.err.println("[LABOR_SERVICE] Usuario no tiene acceso al lote de la labor");
+                return false;
             }
+            
+            // Si es OPERARIO, solo puede eliminar sus propias labores
+            if (user.tieneRolEnEmpresa(RolEmpresa.OPERARIO)) {
+                String nombreUsuario = user.getFirstName() + " " + user.getLastName();
+                String responsableLabor = labor.getResponsable();
+                
+                System.out.println("[LABOR_SERVICE] Validando permiso para OPERARIO:");
+                System.out.println("[LABOR_SERVICE] - Usuario: " + nombreUsuario);
+                System.out.println("[LABOR_SERVICE] - Responsable labor: " + responsableLabor);
+                
+                if (responsableLabor == null || !responsableLabor.equalsIgnoreCase(nombreUsuario)) {
+                    System.err.println("[LABOR_SERVICE] OPERARIO no puede eliminar labores de otros");
+                    throw new RuntimeException("Los operarios solo pueden eliminar sus propias labores");
+                }
+            }
+            
+            // ADMIN y JEFE_CAMPO pueden eliminar cualquier labor
+            labor.setActivo(false);
+            laborRepository.save(labor);
+            System.out.println("[LABOR_SERVICE] Labor eliminada exitosamente por: " + user.getEmail());
+            return true;
         }
         
         return false;
@@ -1451,5 +1487,109 @@ public class LaborService {
                 )));
         
         return resultado;
+    }
+    
+    /**
+     * Calcula el costo total de una labor sumando todos sus componentes
+     * Migrado desde el frontend para centralizar la lógica de negocio
+     * 
+     * @param laborId ID de la labor
+     * @return Costo total calculado
+     */
+    public BigDecimal calcularCostoTotalLabor(Long laborId) {
+        Optional<Labor> laborOpt = laborRepository.findById(laborId);
+        
+        if (!laborOpt.isPresent()) {
+            throw new RuntimeException("Labor no encontrada con ID: " + laborId);
+        }
+        
+        Labor labor = laborOpt.get();
+        
+        // Calcular costo de insumos
+        BigDecimal costoInsumos = laborInsumoRepository.findByLaborId(laborId).stream()
+                .map(LaborInsumo::getCostoTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Calcular costo de maquinaria
+        BigDecimal costoMaquinaria = laborMaquinariaRepository.findByLaborId(laborId).stream()
+                .map(LaborMaquinaria::getCosto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Calcular costo de mano de obra
+        BigDecimal costoManoObra = laborManoObraRepository.findByLaborId(laborId).stream()
+                .map(LaborManoObra::getCostoTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Sumar todos los costos
+        BigDecimal costoTotal = costoInsumos
+                .add(costoMaquinaria)
+                .add(costoManoObra);
+        
+        return costoTotal;
+    }
+    
+    /**
+     * Calcula el desglose detallado de costos de una labor
+     * 
+     * @param laborId ID de la labor
+     * @return Map con el desglose de costos
+     */
+    public Map<String, BigDecimal> calcularDesgloseCostosLabor(Long laborId) {
+        Optional<Labor> laborOpt = laborRepository.findById(laborId);
+        
+        if (!laborOpt.isPresent()) {
+            throw new RuntimeException("Labor no encontrada con ID: " + laborId);
+        }
+        
+        Labor labor = laborOpt.get();
+        
+        // Calcular costo de insumos
+        BigDecimal costoInsumos = laborInsumoRepository.findByLaborId(laborId).stream()
+                .map(LaborInsumo::getCostoTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Calcular costo de maquinaria
+        BigDecimal costoMaquinaria = laborMaquinariaRepository.findByLaborId(laborId).stream()
+                .map(LaborMaquinaria::getCosto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Calcular costo de mano de obra
+        BigDecimal costoManoObra = laborManoObraRepository.findByLaborId(laborId).stream()
+                .map(LaborManoObra::getCostoTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Costo total
+        BigDecimal costoTotal = costoInsumos
+                .add(costoMaquinaria)
+                .add(costoManoObra);
+        
+        Map<String, BigDecimal> desglose = new java.util.HashMap<>();
+        desglose.put("costoInsumos", costoInsumos);
+        desglose.put("costoMaquinaria", costoMaquinaria);
+        desglose.put("costoManoObra", costoManoObra);
+        desglose.put("costoTotal", costoTotal);
+        
+        return desglose;
+    }
+    
+    /**
+     * Actualiza el costo total de una labor recalculándolo desde sus componentes
+     * 
+     * @param laborId ID de la labor
+     * @return Labor actualizada
+     */
+    @Transactional
+    public Labor actualizarCostoTotalLabor(Long laborId) {
+        Optional<Labor> laborOpt = laborRepository.findById(laborId);
+        
+        if (!laborOpt.isPresent()) {
+            throw new RuntimeException("Labor no encontrada con ID: " + laborId);
+        }
+        
+        Labor labor = laborOpt.get();
+        BigDecimal costoTotal = calcularCostoTotalLabor(laborId);
+        labor.setCostoTotal(costoTotal);
+        
+        return laborRepository.save(labor);
     }
 }

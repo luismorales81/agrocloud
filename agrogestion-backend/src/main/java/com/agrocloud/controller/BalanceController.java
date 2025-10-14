@@ -29,6 +29,18 @@ public class BalanceController {
 
     @Autowired
     private UserService userService;
+    
+    /**
+     * Valida que la fecha de fin no sea anterior a la fecha de inicio.
+     * @param fechaInicio Fecha de inicio del rango
+     * @param fechaFin Fecha de fin del rango
+     * @throws IllegalArgumentException si las fechas son inválidas
+     */
+    private void validarRangoFechas(LocalDate fechaInicio, LocalDate fechaFin) {
+        if (fechaInicio != null && fechaFin != null && fechaFin.isBefore(fechaInicio)) {
+            throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio");
+        }
+    }
 
     /**
      * Obtiene el balance general para un rango de fechas.
@@ -40,6 +52,9 @@ public class BalanceController {
             Authentication authentication) {
         
         try {
+            // Validar rango de fechas
+            validarRangoFechas(fechaInicio, fechaFin);
+            
             // Obtener el usuario por email desde la autenticación
             String email = authentication.getName();
             User user = userService.findByEmail(email);
@@ -49,6 +64,9 @@ public class BalanceController {
             
             BalanceDTO balance = balanceService.calcularBalance(user.getId(), fechaInicio, fechaFin);
             return ResponseEntity.ok(balance);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error de validación en obtenerBalanceGeneral: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             System.err.println("Error en obtenerBalanceGeneral: " + e.getMessage());
             e.printStackTrace();
@@ -67,6 +85,9 @@ public class BalanceController {
             Authentication authentication) {
         
         try {
+            // Validar rango de fechas
+            validarRangoFechas(fechaInicio, fechaFin);
+            
             String email = authentication.getName();
             User user = userService.findByEmail(email);
             if (user == null) {
@@ -75,6 +96,9 @@ public class BalanceController {
             
             BalanceDTO balance = balanceService.calcularBalancePorLote(loteId, user.getId(), fechaInicio, fechaFin);
             return ResponseEntity.ok(balance);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error de validación en obtenerBalancePorLote: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             System.err.println("Error en obtenerBalancePorLote: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
@@ -180,9 +204,15 @@ public class BalanceController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             Authentication authentication) {
         try {
+            // Validar rango de fechas
+            validarRangoFechas(fechaInicio, fechaFin);
+            
             Long usuarioId = Long.parseLong(authentication.getName());
             BalanceDTO balance = balanceService.calcularBalance(usuarioId, fechaInicio, fechaFin);
             return ResponseEntity.ok(balance);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error de validación en obtenerBalancePorPeriodo: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }

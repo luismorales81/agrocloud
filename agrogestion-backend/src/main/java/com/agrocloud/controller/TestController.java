@@ -527,7 +527,7 @@ public class TestController {
             // Verificar si es admin
             boolean esAdmin = user.getRoles() != null && 
                 user.getRoles().stream()
-                    .anyMatch(role -> "ADMIN".equals(role.getNombre()) || "ADMINISTRADOR".equals(role.getNombre()));
+                    .anyMatch(role -> "ADMINISTRADOR".equals(role.getNombre()) || "SUPERADMIN".equals(role.getNombre()));
             
             response.put("esAdmin", esAdmin);
             response.put("success", true);

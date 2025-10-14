@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
+import { usePermissions } from '../hooks/usePermissions';
 import SiembraModal from './SiembraModalHibrido';
 import CosechaModal from './CosechaModal';
 import AccionLoteModal from './AccionLoteModal';
 import EstadosLoteAyuda from './EstadosLoteAyuda';
+import api from '../services/api';
+import PermissionGate from './PermissionGate';
 
 interface Campo {
   id: number;
@@ -45,6 +48,7 @@ interface Labor {
 const LotesManagement: React.FC = () => {
   // Versión actualizada con modales simplificados - v2.0
   const { formatCurrency } = useCurrencyContext();
+  const permissions = usePermissions();
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [campos, setCampos] = useState<Campo[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -367,19 +371,8 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:8080/api/campos', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const response = await api.get('/api/campos');
+      const data = response.data;
       
       // Mapear los datos de la API al formato del frontend
       const camposMapeados: Campo[] = data.map((field: any) => {
@@ -429,19 +422,8 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:8080/api/v1/lotes', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const response = await api.get('/api/v1/lotes');
+      const data = response.data;
       
       // Mapear los datos de la API al formato del frontend
       const lotesMapeados: Lote[] = data.map((lote: any) => ({
@@ -473,19 +455,8 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:8080/api/labores', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const response = await api.get('/api/labores');
+      const data = response.data;
       
       // Mapear los datos de la API al formato del frontend
       const laboresMapeadas: Labor[] = data.map((labor: any) => ({
@@ -525,23 +496,10 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:8080/api/v1/cultivos', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Extraer nombres únicos de cultivos
-        const nombresCultivos = [...new Set(data.map((cultivo: any) => cultivo.nombre))];
-        setCultivos(nombresCultivos);
-      } else {
-        console.warn('Error cargando cultivos, usando lista básica');
-        setCultivos(['Soja', 'Maíz', 'Trigo', 'Girasol', 'Sorgo', 'Cebada', 'Avena', 'Arroz']);
-      }
+      const response = await api.get('/api/v1/cultivos');
+      // Extraer nombres únicos de cultivos
+      const nombresCultivos = [...new Set(response.data.map((cultivo: any) => cultivo.nombre))];
+      setCultivos(nombresCultivos);
     } catch (error) {
       console.error('Error cargando cultivos:', error);
       // Fallback a lista básica
@@ -667,27 +625,13 @@ const LotesManagement: React.FC = () => {
       let response;
       if (isEditing && selectedLote) {
         // Editar lote existente
-        response = await fetch(`http://localhost:8080/api/v1/lotes/${selectedLote.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(loteData)
-        });
+        response = await api.put(`/api/v1/lotes/${selectedLote.id}`, loteData);
       } else {
         // Crear nuevo lote
-        response = await fetch('http://localhost:8080/api/v1/lotes', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(loteData)
-        });
+        response = await api.post('/api/v1/lotes', loteData);
       }
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         alert(isEditing ? 'Lote actualizado exitosamente' : 'Lote creado exitosamente');
         closeModal();
         
@@ -698,9 +642,23 @@ const LotesManagement: React.FC = () => {
         console.error('Error del servidor:', errorData);
         alert('Error al guardar el lote. Por favor, inténtalo de nuevo.');
       }
-    } catch (error) {
-      console.error('Error de conexión:', error);
-      alert('Error de conexión. Por favor, verifica tu conexión e intenta nuevamente.');
+    } catch (error: any) {
+      console.error('Error al guardar lote:', error);
+      
+      // Intentar extraer el mensaje de error del backend
+      let errorMessage = 'Error de conexión. Por favor, verifica tu conexión e intenta nuevamente.';
+      
+      if (error.response?.data?.message) {
+        // El backend devolvió un mensaje de error específico
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data) {
+        // El backend devolvió datos pero sin mensaje
+        errorMessage = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : 'Error al guardar el lote. Por favor, inténtalo de nuevo.';
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -715,15 +673,9 @@ const LotesManagement: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`http://localhost:8080/api/v1/lotes/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await api.delete(`/api/v1/lotes/${id}`);
 
-        if (response.ok || response.status === 204) {
+        if (response.status >= 200 && response.status < 300) {
           // Eliminar del estado local solo si la API confirma la eliminación
           setLotes(prev => prev.filter(lote => lote.id !== id));
           alert('Lote eliminado exitosamente');
@@ -916,21 +868,23 @@ const LotesManagement: React.FC = () => {
 
       {/* Botones de acción */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <button
-          onClick={handleAgregarLote}
-          data-testid="add-lote-button"
-          style={{
-            background: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          ➕ Agregar Lote
-        </button>
+        <PermissionGate permission="canCreateLotes">
+          <button
+            onClick={handleAgregarLote}
+            data-testid="add-lote-button"
+            style={{
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            ➕ Agregar Lote
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Filtros */}
@@ -1111,7 +1065,7 @@ const LotesManagement: React.FC = () => {
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', position: 'relative' }}>
                         {/* Botones contextuales según el estado del lote */}
-                        {puedeSembrar(lote.estado) && (
+                        {permissions.canCreateCosechas && puedeSembrar(lote.estado) && (
                           <button
                             onClick={() => handleSembrar(lote)}
                             data-testid={`lote-${lote.id}-sembrar-button`}
@@ -1131,7 +1085,7 @@ const LotesManagement: React.FC = () => {
                         )}
                         
                         {/* Botón de Cosechar con dropdown para acciones especiales */}
-                        {puedeCosechar(lote.estado) && (
+                        {permissions.canCreateCosechas && puedeCosechar(lote.estado) && (
                           <div style={{ position: 'relative' }}>
                             <button
                               onClick={(e) => {
@@ -1271,36 +1225,40 @@ const LotesManagement: React.FC = () => {
                         >
                           📋 Historial
                         </button>
-                        <button
-                          onClick={() => handleEditar(lote)}
-                          data-testid={`lote-${lote.id}-editar-button`}
-                          style={{
-                            background: '#2196F3',
-                            color: 'white',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          ✏️ Editar
-                        </button>
-                        <button
-                          onClick={() => handleEliminar(lote.id!)}
-                          data-testid={`lote-${lote.id}-eliminar-button`}
-                          style={{
-                            background: '#f44336',
-                            color: 'white',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          🗑️ Eliminar
-                        </button>
+                        {permissions.canEditLotes && (
+                          <button
+                            onClick={() => handleEditar(lote)}
+                            data-testid={`lote-${lote.id}-editar-button`}
+                            style={{
+                              background: '#2196F3',
+                              color: 'white',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            ✏️ Editar
+                          </button>
+                        )}
+                        {permissions.canDeleteLotes && (
+                          <button
+                            onClick={() => handleEliminar(lote.id!)}
+                            data-testid={`lote-${lote.id}-eliminar-button`}
+                            style={{
+                              background: '#f44336',
+                              color: 'white',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            🗑️ Eliminar
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1833,7 +1791,7 @@ const LotesManagement: React.FC = () => {
             setLoteParaSiembra(null);
           }}
           onSuccess={() => {
-            loadData(); // Recargar datos después de sembrar
+            cargarDatos(); // Recargar datos después de sembrar
           }}
         />
       )}
@@ -1862,7 +1820,7 @@ const LotesManagement: React.FC = () => {
             setLoteParaAccion(null);
           }}
           onSuccess={() => {
-            loadData(); // Recargar datos después de la acción
+            cargarDatos(); // Recargar datos después de la acción
           }}
         />
       )}

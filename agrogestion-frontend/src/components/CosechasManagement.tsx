@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HistorialCosechasModal from './HistorialCosechasModal';
 import api from '../services/api';
+import PermissionGate from './PermissionGate';
 // import humidityService from '../services/humidityService';
 
 interface Cosecha {
@@ -557,47 +558,49 @@ const CosechasManagement: React.FC = () => {
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ margin: 0, color: '#1f2937' }}>🌾 Gestión de Cosechas</h1>
-        <button
-          onClick={() => {
-            // Resetear formulario con fecha de hoy
-            setFormData({
-              lote_id: 0,
-              cultivo_id: 0,
-              superficie_ha: 0,
-              fecha_siembra: '',
-              densidad_siembra: 0,
-              variedad_semilla: '',
-              fertilizante_nitrogeno: 0,
-              fertilizante_fosforo: 0,
-              fertilizante_potasio: 0,
-              otros_insumos: '',
-              fecha_cosecha: new Date().toISOString().split('T')[0],
-              cantidad_cosechada: 0,
-              unidad_cosecha: 'kg',
-              rinde_real: 0,
-              rinde_esperado: 0,
-              diferencia_rinde: 0,
-              porcentaje_cumplimiento: 0,
-              clima_favorable: true,
-              plagas_enfermedades: false,
-              riego_suficiente: true,
-              observaciones: ''
-            });
-            setShowForm(true);
-          }}
-          style={{
-            backgroundColor: '#10b981',
-            color: 'white',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            fontSize: '1rem',
-            fontWeight: '500'
-          }}
-        >
-          + Nueva Cosecha
-        </button>
+        <PermissionGate permission="canCreateCosechas">
+          <button
+            onClick={() => {
+              // Resetear formulario con fecha de hoy
+              setFormData({
+                lote_id: 0,
+                cultivo_id: 0,
+                superficie_ha: 0,
+                fecha_siembra: '',
+                densidad_siembra: 0,
+                variedad_semilla: '',
+                fertilizante_nitrogeno: 0,
+                fertilizante_fosforo: 0,
+                fertilizante_potasio: 0,
+                otros_insumos: '',
+                fecha_cosecha: new Date().toISOString().split('T')[0],
+                cantidad_cosechada: 0,
+                unidad_cosecha: 'kg',
+                rinde_real: 0,
+                rinde_esperado: 0,
+                diferencia_rinde: 0,
+                porcentaje_cumplimiento: 0,
+                clima_favorable: true,
+                plagas_enfermedades: false,
+                riego_suficiente: true,
+                observaciones: ''
+              });
+              setShowForm(true);
+            }}
+            style={{
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500'
+            }}
+          >
+            + Nueva Cosecha
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Filtros */}

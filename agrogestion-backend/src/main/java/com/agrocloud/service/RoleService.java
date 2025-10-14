@@ -54,9 +54,16 @@ public class RoleService {
     }
     
     /**
-     * Obtener todos los roles
+     * Obtener todos los roles activos
      */
     public List<Role> getAllRoles() {
+        return roleRepository.findByActivoTrue();
+    }
+    
+    /**
+     * Obtener todos los roles (incluidos inactivos) - solo para administración
+     */
+    public List<Role> getAllRolesIncludingInactive() {
         return roleRepository.findAll();
     }
     

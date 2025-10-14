@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../services/api';
 
 interface Lote {
   id?: number;
@@ -55,7 +56,7 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
           colorFondo: '#efebe9',
           colorBorde: '#a1887f',
           descripcion: 'Cosecha anticipada del cultivo para uso como forraje en alimentación animal',
-          requiereCantidad: true,
+          requiereCantidad: false,
           mensajeConfirmacion: 'Se registrará como cosecha de forraje. ¿Continuar?'
         };
     }
@@ -77,23 +78,22 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
       let endpoint = '';
       let body: any = {};
 
       switch (accion) {
         case 'abandonar':
-          endpoint = `http://localhost:8080/api/v1/lotes/${lote.id}/abandonar`;
+          endpoint = `/api/v1/lotes/${lote.id}/abandonar`;
           body = { motivo: formData.motivo };
           break;
         
         case 'limpiar':
-          endpoint = `http://localhost:8080/api/v1/lotes/${lote.id}/limpiar`;
+          endpoint = `/api/v1/lotes/${lote.id}/limpiar`;
           body = { motivo: formData.motivo };
           break;
         
         case 'forraje':
-          endpoint = `http://localhost:8080/api/v1/lotes/${lote.id}/convertir-forraje`;
+          endpoint = `/api/v1/lotes/${lote.id}/convertir-forraje`;
           body = {
             fechaCosecha: new Date().toISOString().split('T')[0],
             cantidadCosechada: parseFloat(formData.cantidadCosechada),
@@ -106,23 +106,15 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
           break;
       }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
+      const response = await api.post(endpoint, body);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data;
         alert(`✅ ${data.message || 'Acción completada exitosamente'}`);
         onSuccess();
         onClose();
       } else {
-        const errorData = await response.json();
-        alert(`❌ Error: ${errorData.message || 'No se pudo completar la acción'}`);
+        alert(`❌ Error: ${response.data?.message || 'No se pudo completar la acción'}`);
       }
     } catch (error) {
       console.error('Error al ejecutar acción:', error);

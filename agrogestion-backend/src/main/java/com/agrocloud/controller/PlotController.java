@@ -91,20 +91,31 @@ public class PlotController {
 
     // Crear nuevo lote
     @PostMapping
-    public ResponseEntity<Plot> createLote(@RequestBody Plot lote, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> createLote(@RequestBody Plot lote, @AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = userService.findByEmail(userDetails.getUsername());
             lote.setUser(user);
             Plot savedLote = plotService.saveLote(lote);
             return ResponseEntity.ok(savedLote);
+        } catch (RuntimeException e) {
+            System.err.println("[PLOT_CONTROLLER] ERROR al crear lote: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            System.err.println("[PLOT_CONTROLLER] ERROR inesperado al crear lote: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "Error interno del servidor"
+            ));
         }
     }
 
     // Actualizar lote existente
     @PutMapping("/{id}")
-    public ResponseEntity<Plot> updateLote(@PathVariable Long id, @RequestBody Plot lote, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> updateLote(@PathVariable Long id, @RequestBody Plot lote, @AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = userService.findByEmail(userDetails.getUsername());
             Optional<Plot> existingLote = plotService.getLoteById(id, user);
@@ -117,8 +128,19 @@ public class PlotController {
             } else {
                 return ResponseEntity.notFound().build();
             }
+        } catch (RuntimeException e) {
+            System.err.println("[PLOT_CONTROLLER] ERROR al actualizar lote: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            System.err.println("[PLOT_CONTROLLER] ERROR inesperado al actualizar lote: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "Error interno del servidor"
+            ));
         }
     }
 

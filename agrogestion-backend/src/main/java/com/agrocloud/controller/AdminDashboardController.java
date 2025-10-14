@@ -203,6 +203,6 @@ public class AdminDashboardController {
         }
         
         return usuario.getRoles().stream()
-                .anyMatch(role -> "ADMIN".equals(role.getNombre()) || "ADMINISTRADOR".equals(role.getNombre()));
+                .anyMatch(role -> "ADMINISTRADOR".equals(role.getNombre()) || "SUPERADMIN".equals(role.getNombre()));
     }
 }

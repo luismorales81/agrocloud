@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 
 interface Role {
   id: number;
@@ -39,17 +40,10 @@ const RolesManagement: React.FC = () => {
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/roles', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/roles');
       
-      if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
+      if (response.status >= 200 && response.status < 300) {
+        setRoles(response.data);
       } else {
         console.error('Error cargando roles');
       }
@@ -63,17 +57,10 @@ const RolesManagement: React.FC = () => {
   // Cargar permisos disponibles
   const loadAvailablePermissions = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/roles/permissions/available', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/roles/permissions/available');
       
-      if (response.ok) {
-        const data = await response.json();
-        setAvailablePermissions(data);
+      if (response.status >= 200 && response.status < 300) {
+        setAvailablePermissions(response.data);
       }
     } catch (error) {
       console.error('Error cargando permisos:', error);
@@ -83,17 +70,10 @@ const RolesManagement: React.FC = () => {
   // Cargar estadísticas
   const loadStats = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/roles/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/roles/stats');
       
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+      if (response.status >= 200 && response.status < 300) {
+        setStats(response.data);
       }
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
@@ -104,17 +84,9 @@ const RolesManagement: React.FC = () => {
   const createRole = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/roles', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
+      const response = await api.post('/api/roles', formData);
       
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         setFormData({ name: '', description: '', permissions: [] });
         setShowForm(false);
         loadRoles();
@@ -137,17 +109,9 @@ const RolesManagement: React.FC = () => {
     
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/roles/${selectedRole.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
+      const response = await api.put(`/api/roles/${selectedRole.id}`, formData);
       
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         setFormData({ name: '', description: '', permissions: [] });
         setSelectedRole(null);
         setShowForm(false);
@@ -170,16 +134,9 @@ const RolesManagement: React.FC = () => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este rol?')) return;
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/roles/${roleId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.delete(`/api/roles/${roleId}`);
       
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         loadRoles();
         loadStats();
       } else {
@@ -205,17 +162,9 @@ const RolesManagement: React.FC = () => {
   // Agregar permiso
   const addPermission = async (roleId: number, permission: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/roles/${roleId}/permissions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ permission })
-      });
+      const response = await api.post(`/api/roles/${roleId}/permissions`, { permission });
       
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         loadRoles();
       } else {
         alert('Error agregando permiso');
@@ -229,17 +178,9 @@ const RolesManagement: React.FC = () => {
   // Remover permiso
   const removePermission = async (roleId: number, permission: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/roles/${roleId}/permissions`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ permission })
-      });
+      const response = await api.delete(`/api/roles/${roleId}/permissions`, { data: { permission } });
       
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         loadRoles();
       } else {
         alert('Error removiendo permiso');

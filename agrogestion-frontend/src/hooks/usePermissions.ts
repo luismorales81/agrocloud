@@ -65,11 +65,16 @@ export const usePermissions = (): Permissions => {
   const { user } = useAuth();
   const { 
     esAdministrador, 
+    esJefeCampo,
+    esJefeFinanciero,
+    esOperario,
+    esConsultorExterno,
+    // Legacy
     esAsesor, 
-    esOperario, 
     esContador, 
     esTecnico, 
     esSoloLectura,
+    esProductor,
     tienePermisoEscritura,
     tienePermisoAdministracion,
     tienePermisoFinanciero
@@ -79,13 +84,13 @@ export const usePermissions = (): Permissions => {
   const isGlobalAdmin = user?.roleName === 'ADMINISTRADOR';
   const isGlobalSuperAdmin = user?.roleName === 'SUPERADMIN';
   
-  // SUPERADMIN tiene acceso limitado: solo dashboard, reportes y admin global
+  // Nuevos roles
   const isAdmin = esAdministrador() || isGlobalAdmin;
-  const isAsesor = esAsesor();
+  const isJefeCampo = esJefeCampo();
+  const isJefeFinanciero = esJefeFinanciero();
   const isOperario = esOperario();
-  const isContador = esContador();
-  const isTecnico = esTecnico();
-  const isSoloLectura = esSoloLectura();
+  const isConsultorExterno = esConsultorExterno();
+  
   const canWrite = tienePermisoEscritura() || isGlobalAdmin;
   const canAdmin = tienePermisoAdministracion() || isGlobalAdmin;
   const canFinance = tienePermisoFinanciero() || isGlobalAdmin;
@@ -104,50 +109,50 @@ export const usePermissions = (): Permissions => {
   return {
     // Gestión de campos - SUPERADMIN NO tiene acceso a funcionalidades operativas
     canViewFields: !isGlobalSuperAdmin, // SUPERADMIN no puede ver campos
-    canCreateFields: !isGlobalSuperAdmin && canWrite && !isSoloLectura,
-    canEditFields: !isGlobalSuperAdmin && canWrite && !isSoloLectura,
-    canDeleteFields: !isGlobalSuperAdmin && (isAdmin || isAsesor),
+    canCreateFields: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canEditFields: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canDeleteFields: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
     
     // Gestión de lotes - SUPERADMIN NO tiene acceso
     canViewLotes: !isGlobalSuperAdmin,
-    canCreateLotes: !isGlobalSuperAdmin && canWrite && !isSoloLectura,
-    canEditLotes: !isGlobalSuperAdmin && canWrite && !isSoloLectura,
-    canDeleteLotes: !isGlobalSuperAdmin && (isAdmin || isAsesor),
+    canCreateLotes: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canEditLotes: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canDeleteLotes: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
     
     // Gestión de cultivos - SUPERADMIN NO tiene acceso
     canViewCultivos: !isGlobalSuperAdmin,
-    canCreateCultivos: !isGlobalSuperAdmin && canWrite && (isOperario || isTecnico || isAsesor || isAdmin),
-    canEditCultivos: !isGlobalSuperAdmin && canWrite && (isOperario || isTecnico || isAsesor || isAdmin),
-    canDeleteCultivos: !isGlobalSuperAdmin && (isAdmin || isAsesor),
+    canCreateCultivos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canEditCultivos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canDeleteCultivos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
     
     // Gestión de cosechas - SUPERADMIN NO tiene acceso
     canViewCosechas: !isGlobalSuperAdmin,
-    canCreateCosechas: !isGlobalSuperAdmin && canWrite && (isOperario || isTecnico || isAsesor || isAdmin),
-    canEditCosechas: !isGlobalSuperAdmin && canWrite && (isOperario || isTecnico || isAsesor || isAdmin),
-    canDeleteCosechas: !isGlobalSuperAdmin && (isAdmin || isAsesor),
+    canCreateCosechas: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditCosechas: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeleteCosechas: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
     
     // Gestión de insumos - SUPERADMIN NO tiene acceso
     canViewInsumos: !isGlobalSuperAdmin,
-    canCreateInsumos: !isGlobalSuperAdmin && canWrite && (isOperario || isTecnico || isAsesor || isAdmin),
-    canEditInsumos: !isGlobalSuperAdmin && canWrite && (isOperario || isTecnico || isAsesor || isAdmin),
-    canDeleteInsumos: !isGlobalSuperAdmin && (isAdmin || isAsesor),
+    canCreateInsumos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canEditInsumos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canDeleteInsumos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
     
     // Gestión de maquinaria - SUPERADMIN NO tiene acceso
     canViewMaquinaria: !isGlobalSuperAdmin,
-    canCreateMaquinaria: !isGlobalSuperAdmin && canWrite && (isTecnico || isAsesor || isAdmin),
-    canEditMaquinaria: !isGlobalSuperAdmin && canWrite && (isTecnico || isAsesor || isAdmin),
-    canDeleteMaquinaria: !isGlobalSuperAdmin && (isAdmin || isAsesor),
+    canCreateMaquinaria: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canEditMaquinaria: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canDeleteMaquinaria: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
     
     // Gestión de labores - SUPERADMIN NO tiene acceso
     canViewLabores: !isGlobalSuperAdmin,
-    canCreateLabores: !isGlobalSuperAdmin && canWrite && (isOperario || isTecnico || isAsesor || isAdmin),
-    canEditLabores: !isGlobalSuperAdmin && canWrite && (isOperario || isTecnico || isAsesor || isAdmin),
-    canDeleteLabores: !isGlobalSuperAdmin && (isAdmin || isAsesor),
+    canCreateLabores: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditLabores: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeleteLabores: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
     
-          // Reportes - SUPERADMIN NO ve reportes operativos, solo los del admin global
-          canViewReports: !isGlobalSuperAdmin, // SUPERADMIN no ve reportes operativos
-          canViewFinancialReports: !isGlobalSuperAdmin && canFinance, // SUPERADMIN no ve reportes financieros operativos
-          canExportReports: !isGlobalSuperAdmin && (canWrite && !isSoloLectura),
+    // Reportes - SUPERADMIN NO ve reportes operativos, solo los del admin global
+    canViewReports: !isGlobalSuperAdmin, // SUPERADMIN no ve reportes operativos
+    canViewFinancialReports: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero), // Solo roles con acceso financiero
+    canExportReports: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isJefeFinanciero),
     
     // Administración - SUPERADMIN tiene acceso completo a administración
     canManageUsers: isGlobalAdmin || isGlobalSuperAdmin || isAdmin,
@@ -155,9 +160,9 @@ export const usePermissions = (): Permissions => {
     canViewAdminPanel: isGlobalAdmin || isGlobalSuperAdmin || canAdmin,
     
     // Finanzas - SUPERADMIN NO tiene acceso a gestión financiera operativa
-    canViewFinances: !isGlobalSuperAdmin && canFinance,
-    canCreateFinances: !isGlobalSuperAdmin && canFinance && canWrite,
-    canEditFinances: !isGlobalSuperAdmin && canFinance && canWrite,
-    canDeleteFinances: !isGlobalSuperAdmin && (isAdmin || isAsesor)
+    canViewFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
+    canCreateFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
+    canEditFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
+    canDeleteFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero)
   };
 };

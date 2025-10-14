@@ -2,13 +2,20 @@ import axios from 'axios';
 import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
 // Configuración base de Axios - Vite
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// Soporta tanto VITE_API_URL como VITE_API_BASE_URL para compatibilidad
+const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const BASE_URL = API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`;
 
-console.log('🔧 [API] Configurando servicio con URL:', BASE_URL);
-console.log('🔧 [API] Variables de entorno disponibles:', {
-  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
-  MODE: import.meta.env.MODE
-});
+console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
+console.log('%c🚀 API SERVICE INITIALIZED - VERSION 2.1', 'color: #00ff00; font-weight: bold; font-size: 16px');
+console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
+console.log('%c📡 API_URL:', 'color: #ffaa00; font-weight: bold', API_URL);
+console.log('%c📡 BASE_URL:', 'color: #ffaa00; font-weight: bold', BASE_URL);
+console.log('%c✅ /api prefix included:', 'color: #00ff00; font-weight: bold', BASE_URL.includes('/api'));
+console.log('%c🔧 VITE_API_URL:', 'color: #ffaa00', import.meta.env.VITE_API_URL || 'NOT SET');
+console.log('%c🔧 MODE:', 'color: #ffaa00', import.meta.env.MODE);
+console.log('%c🌍 ENV:', 'color: #ffaa00', import.meta.env.VITE_ENVIRONMENT || 'development');
+console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
 
 // Crear instancia de Axios
 const api = axios.create({

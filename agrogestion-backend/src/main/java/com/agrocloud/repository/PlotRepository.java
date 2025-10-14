@@ -71,4 +71,11 @@ public interface PlotRepository extends JpaRepository<Plot, Long> {
     // Métodos faltantes para los tests
     List<Plot> findByCampoId(Long campoId);
     List<Plot> findByNombreContainingIgnoreCase(String nombre);
+    
+    // Buscar lotes activos por campo
+    List<Plot> findByCampoIdAndActivoTrue(Long campoId);
+    
+    // Query para calcular la superficie total ocupada por lotes activos de un campo
+    @Query("SELECT COALESCE(SUM(p.areaHectareas), 0) FROM Plot p WHERE p.campo.id = :campoId AND p.activo = true")
+    java.math.BigDecimal calcularSuperficieOcupadaPorCampo(@Param("campoId") Long campoId);
 }

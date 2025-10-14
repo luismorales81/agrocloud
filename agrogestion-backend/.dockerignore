@@ -1,0 +1,44 @@
+# ============================================================
+# .dockerignore - Optimizar build de Docker
+# ============================================================
+
+# Archivos de Maven
+target/
+.mvn/
+mvnw
+mvnw.cmd
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Archivos de configuración local
+.env
+.env.local
+.env.development
+
+# Archivos de test
+src/test/
+
+# Archivos de documentación
+*.md
+docs/
+
+# Archivos de Git
+.git/
+.gitignore

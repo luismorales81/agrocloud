@@ -1,22 +1,23 @@
 package com.agrocloud.controller;
 
+import com.agrocloud.dto.LoginRequest;
+import com.agrocloud.dto.LoginResponse;
+import com.agrocloud.dto.CreateUserRequest;
+import com.agrocloud.dto.UserDto;
+import com.agrocloud.service.AuthService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import com.agrocloud.dto.LoginRequest;
-import com.agrocloud.dto.LoginResponse;
-import com.agrocloud.service.AuthService;
-import java.util.Map;
-import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Autenticación", description = "Endpoints para autenticación de usuarios")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"})
+@CrossOrigin(origins = "*")
 public class AuthController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     
     @Autowired
     private AuthService authService;
@@ -24,147 +25,65 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
     
-    @GetMapping("/test")
-    @Operation(summary = "Test endpoint", description = "Endpoint de prueba para verificar que el controlador funcione")
-    public ResponseEntity<String> test() {
-        return ResponseEntity.ok("AuthController funcionando correctamente");
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+        try {
+            logger.info("🔧 [AuthController] Recibida petición de login para: {}", loginRequest.getEmail());
+            LoginResponse response = authService.login(loginRequest);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("❌ [AuthController] Error en login: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Credenciales incorrectas");
+        }
+    }
+    
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody CreateUserRequest registerRequest) {
+        try {
+            logger.info("🔧 [AuthController] Recibida petición de registro para: {}", registerRequest.getEmail());
+            
+            // Generar hash de la contraseña para verificar
+            String passwordHash = passwordEncoder.encode(registerRequest.getPassword());
+            logger.info("🔑 [AuthController] Hash generado para '{}': {}", registerRequest.getPassword(), passwordHash);
+            
+            // Crear usuario usando el servicio
+            UserDto userDto = authService.createUser(registerRequest);
+            logger.info("✅ [AuthController] Usuario registrado exitosamente: {}", userDto.getEmail());
+            
+            return ResponseEntity.ok(userDto);
+        } catch (Exception e) {
+            logger.error("❌ [AuthController] Error en registro: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Error al registrar usuario: " + e.getMessage());
+        }
+    }
+    
+    @PostMapping("/generate-hash")
+    public ResponseEntity<String> generateHash(@RequestParam String password) {
+        String hash = passwordEncoder.encode(password);
+        logger.info("🔑 [AuthController] Hash generado para '{}': {}", password, hash);
+        return ResponseEntity.ok(hash);
     }
     
     @GetMapping("/generate-hash")
-    @Operation(summary = "Generar hash", description = "Generar hash de contraseña usando el PasswordEncoder actual")
-    public ResponseEntity<String> generateHash(@RequestParam String password) {
-        try {
-            String hash = passwordEncoder.encode(password);
-            return ResponseEntity.ok("Hash generado: " + hash);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error generando hash: " + e.getMessage());
-        }
+    public ResponseEntity<String> generateHashGet(@RequestParam String password) {
+        String hash = passwordEncoder.encode(password);
+        logger.info("🔑 [AuthController] Hash generado para '{}': {}", password, hash);
+        return ResponseEntity.ok(hash);
     }
     
-    @PostMapping("/test-productor")
-    @Operation(summary = "Test productor", description = "Endpoint de prueba específico para diagnosticar productor")
-    public ResponseEntity<String> testProductor(@RequestBody LoginRequest loginRequest) {
-        try {
-            System.out.println("🔧 [AuthController] Probando login de productor: " + loginRequest.getEmail());
-            
-            // Verificar que authService no sea null
-            if (authService == null) {
-                return ResponseEntity.status(500).body("ERROR: authService es null");
-            }
-            
-            // Intentar el login paso a paso
-            try {
-                LoginResponse response = authService.login(loginRequest);
-                System.out.println("✅ [AuthController] Login de productor exitoso");
-                return ResponseEntity.ok("✅ Login exitoso: " + response.getToken().substring(0, 20) + "...");
-            } catch (Exception e) {
-                System.err.println("❌ [AuthController] Error en login de productor: " + e.getMessage());
-                e.printStackTrace();
-                return ResponseEntity.status(500).body("ERROR en login: " + e.getMessage());
-            }
-            
-        } catch (Exception e) {
-            System.err.println("❌ [AuthController] Error general en test-productor: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("ERROR general: " + e.getMessage());
-        }
+    @GetMapping("/test-hash")
+    public ResponseEntity<String> testHash(@RequestParam String password) {
+        String hash = passwordEncoder.encode(password);
+        boolean matches = passwordEncoder.matches(password, hash);
+        String result = String.format("Password: %s\nHash: %s\nMatches: %s", password, hash, matches);
+        logger.info("🔑 [AuthController] Test hash: {}", result);
+        return ResponseEntity.ok(result);
     }
     
-    @PostMapping("/login")
-    @Operation(summary = "Iniciar sesión", description = "Autenticar usuario y generar token JWT")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
-        System.out.println("🔧 [AuthController] Intentando login para: " + loginRequest.getEmail());
-        
-        // Validar datos de entrada
-        if (loginRequest.getEmail() == null || loginRequest.getEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("El email es obligatorio");
-        }
-        if (loginRequest.getPassword() == null || loginRequest.getPassword().trim().isEmpty()) {
-            throw new IllegalArgumentException("La contraseña es obligatoria");
-        }
-        
-        LoginResponse response = authService.login(loginRequest);
-        System.out.println("✅ [AuthController] Login exitoso para: " + loginRequest.getEmail());
-        return ResponseEntity.ok(response);
-    }
-    
-    @PostMapping("/change-password")
-    @Operation(summary = "Cambiar contraseña", description = "Cambiar la contraseña del usuario autenticado")
-    public ResponseEntity<Map<String, String>> changePassword(@RequestBody Map<String, String> request, 
-                                                              @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        try {
-            // Verificar si hay token de autenticación (simulado para tests)
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Token de autenticación requerido");
-                return ResponseEntity.status(401).body(errorResponse);
-            }
-            
-            String currentPassword = request.get("currentPassword");
-            String newPassword = request.get("newPassword");
-            String confirmPassword = request.get("confirmPassword");
-            
-            // Validar que todos los campos estén presentes
-            if (currentPassword == null || newPassword == null || confirmPassword == null) {
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Todos los campos son obligatorios");
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
-            
-            // Validar que las contraseñas nuevas coincidan
-            if (!newPassword.equals(confirmPassword)) {
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Las contraseñas nuevas no coinciden");
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
-            
-            // Simular validación de contraseña actual (por ahora siempre falla para tests)
-            if ("passwordIncorrecta".equals(currentPassword)) {
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "La contraseña actual es incorrecta");
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
-            
-            // Simular cambio de contraseña exitoso
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Contraseña cambiada exitosamente");
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Error al cambiar contraseña: " + e.getMessage());
-            return ResponseEntity.status(500).body(errorResponse);
-        }
-    }
-    
-    @PostMapping("/request-password-reset")
-    @Operation(summary = "Solicitar reset de contraseña", description = "Solicitar reset de contraseña por email")
-    public ResponseEntity<Map<String, String>> requestPasswordReset(@RequestBody Map<String, String> request) {
-        try {
-            String email = request.get("email");
-            
-            if (email == null || email.trim().isEmpty()) {
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "El email es obligatorio");
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
-            
-            // Simular validación de email (por ahora siempre falla para emails inválidos)
-            if ("usuario@inexistente.com".equals(email)) {
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Usuario no encontrado");
-                return ResponseEntity.notFound().build();
-            }
-            
-            // Simular solicitud de reset exitosa
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Se ha enviado un enlace de reset a tu email");
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Error al solicitar reset de contraseña: " + e.getMessage());
-            return ResponseEntity.status(500).body(errorResponse);
-        }
+    @PostMapping("/test-password")
+    public ResponseEntity<String> testPassword(@RequestParam String password, @RequestParam String hash) {
+        boolean matches = passwordEncoder.matches(password, hash);
+        logger.info("🔍 [AuthController] Verificando '{}' contra hash: {} = {}", password, hash, matches);
+        return ResponseEntity.ok("Matches: " + matches);
     }
 }

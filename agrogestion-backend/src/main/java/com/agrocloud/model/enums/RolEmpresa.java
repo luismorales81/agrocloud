@@ -3,12 +3,17 @@ package com.agrocloud.model.enums;
 public enum RolEmpresa {
     SUPERADMIN("Super Administrador"),
     ADMINISTRADOR("Administrador de Empresa"),
-    ASESOR("Asesor/Ingeniero Agrónomo"),
-    OPERARIO("Operario"),
-    TECNICO("Técnico"),
-    CONTADOR("Contador"),
-    LECTURA("Solo Lectura"),
-    PRODUCTOR("Productor");
+    JEFE_CAMPO("Jefe de Campo"),
+    JEFE_FINANCIERO("Jefe Financiero"),
+    OPERARIO("Operario de Campo"),
+    CONSULTOR_EXTERNO("Consultor Externo"),
+    
+    // Roles legacy - mantener para retrocompatibilidad
+    @Deprecated PRODUCTOR("Productor - usar JEFE_CAMPO"),
+    @Deprecated ASESOR("Asesor - usar JEFE_CAMPO"),
+    @Deprecated TECNICO("Técnico - usar JEFE_CAMPO"),
+    @Deprecated CONTADOR("Contador - usar JEFE_FINANCIERO"),
+    @Deprecated LECTURA("Solo Lectura - usar CONSULTOR_EXTERNO");
 
     private final String descripcion;
 
@@ -26,6 +31,18 @@ public enum RolEmpresa {
     }
 
     /**
+     * Mapea roles antiguos a roles nuevos
+     */
+    public RolEmpresa getRolActualizado() {
+        return switch (this) {
+            case PRODUCTOR, ASESOR, TECNICO -> JEFE_CAMPO;
+            case CONTADOR -> JEFE_FINANCIERO;
+            case LECTURA -> CONSULTOR_EXTERNO;
+            default -> this;
+        };
+    }
+
+    /**
      * Verifica si este rol tiene el nivel de permisos requerido o superior
      */
     public boolean tieneNivelPermisos(RolEmpresa rolMinimo) {
@@ -39,15 +56,15 @@ public enum RolEmpresa {
      * Obtiene el nivel numérico de permisos del rol
      */
     private int getNivelPermisos() {
-        return switch (this) {
-            case SUPERADMIN -> 7;
-            case ADMINISTRADOR -> 6;
-            case PRODUCTOR -> 5;
-            case ASESOR -> 4;
-            case CONTADOR -> 3;
-            case TECNICO -> 2;
+        RolEmpresa rolActualizado = getRolActualizado();
+        return switch (rolActualizado) {
+            case SUPERADMIN -> 5;
+            case ADMINISTRADOR -> 4;
+            case JEFE_CAMPO -> 3;
+            case JEFE_FINANCIERO -> 2;
             case OPERARIO -> 1;
-            case LECTURA -> 0;
+            case CONSULTOR_EXTERNO -> 0;
+            default -> 0;
         };
     }
 
@@ -55,27 +72,54 @@ public enum RolEmpresa {
      * Verifica si el rol puede gestionar usuarios en la empresa
      */
     public boolean puedeGestionarUsuarios() {
-        return this == SUPERADMIN || this == ADMINISTRADOR;
+        RolEmpresa rolActualizado = getRolActualizado();
+        return rolActualizado == SUPERADMIN || rolActualizado == ADMINISTRADOR;
     }
 
     /**
      * Verifica si el rol tiene acceso a reportes financieros
      */
     public boolean tieneAccesoFinanciero() {
-        return this == SUPERADMIN || this == ADMINISTRADOR || this == PRODUCTOR || this == CONTADOR;
+        RolEmpresa rolActualizado = getRolActualizado();
+        return rolActualizado == SUPERADMIN || 
+               rolActualizado == ADMINISTRADOR || 
+               rolActualizado == JEFE_FINANCIERO;
+    }
+
+    /**
+     * Verifica si el rol puede gestionar operaciones de campo
+     */
+    public boolean puedeGestionarCampo() {
+        RolEmpresa rolActualizado = getRolActualizado();
+        return rolActualizado == SUPERADMIN || 
+               rolActualizado == ADMINISTRADOR || 
+               rolActualizado == JEFE_CAMPO;
     }
 
     /**
      * Verifica si el rol puede cargar datos de campo
      */
     public boolean puedeCargarDatos() {
-        return this != LECTURA;
+        RolEmpresa rolActualizado = getRolActualizado();
+        return rolActualizado != CONSULTOR_EXTERNO;
     }
 
     /**
-     * Verifica si el rol puede validar datos
+     * Verifica si el rol puede ejecutar labores
      */
-    public boolean puedeValidarDatos() {
-        return this == SUPERADMIN || this == ADMINISTRADOR || this == PRODUCTOR || this == ASESOR || this == TECNICO;
+    public boolean puedeEjecutarLabores() {
+        RolEmpresa rolActualizado = getRolActualizado();
+        return rolActualizado == SUPERADMIN || 
+               rolActualizado == ADMINISTRADOR || 
+               rolActualizado == JEFE_CAMPO || 
+               rolActualizado == OPERARIO;
+    }
+
+    /**
+     * Verifica si el rol es de solo lectura
+     */
+    public boolean esSoloLectura() {
+        RolEmpresa rolActualizado = getRolActualizado();
+        return rolActualizado == CONSULTOR_EXTERNO;
     }
 }

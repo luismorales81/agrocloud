@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 
 interface Lote {
   id?: number;
@@ -52,17 +53,10 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
       
       try {
         setLoadingInfo(true);
-        const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:8080/api/v1/lotes/${lote.id}/info-cosecha`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await api.get(`/api/v1/lotes/${lote.id}/info-cosecha`);
 
-        if (response.ok) {
-          const info = await response.json();
-          setInfoCosecha(info);
+        if (response.status >= 200 && response.status < 300) {
+          setInfoCosecha(response.data);
           
           // Auto-completar campos con datos del cultivo
           setFormData(prev => ({
@@ -93,30 +87,24 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/v1/lotes/${lote.id}/cosechar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          fechaCosecha: formData.fechaCosecha,
-          cantidadCosechada: parseFloat(formData.cantidadCosechada),
-          unidadMedida: formData.unidadMedida,
-          variedadSemilla: formData.variedadSemilla || null,
-          estadoSuelo: formData.estadoSuelo || 'BUENO',
-          requiereDescanso: formData.requiereDescanso || false,
-          diasDescansoRecomendados: formData.requiereDescanso ? parseInt(formData.diasDescansoRecomendados) : 0,
-          precioVenta: formData.precioVenta ? parseFloat(formData.precioVenta) : null,
-          observaciones: formData.observaciones,
-          maquinaria: [],
-          manoObra: []
-        })
-      });
+      const cosechaData = {
+        fechaCosecha: formData.fechaCosecha,
+        cantidadCosechada: parseFloat(formData.cantidadCosechada),
+        unidadMedida: formData.unidadMedida,
+        variedadSemilla: formData.variedadSemilla || null,
+        estadoSuelo: formData.estadoSuelo || 'BUENO',
+        requiereDescanso: formData.requiereDescanso || false,
+        diasDescansoRecomendados: formData.requiereDescanso ? parseInt(formData.diasDescansoRecomendados) : 0,
+        precioVenta: formData.precioVenta ? parseFloat(formData.precioVenta) : null,
+        observaciones: formData.observaciones,
+        maquinaria: [],
+        manoObra: []
+      };
+      
+      const response = await api.post(`/api/v1/lotes/${lote.id}/cosechar`, cosechaData);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data;
         
         // Calcular rendimiento si es posible
         let rendimiento = '';
@@ -129,8 +117,7 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
         onSuccess();
         onClose();
       } else {
-        const errorData = await response.json();
-        alert(`❌ Error: ${errorData.message || 'No se pudo cosechar el lote'}`);
+        alert(`❌ Error: ${response.data?.message || 'No se pudo cosechar el lote'}`);
       }
     } catch (error) {
       console.error('Error al cosechar:', error);

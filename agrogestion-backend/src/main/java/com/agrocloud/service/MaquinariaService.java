@@ -2,6 +2,7 @@ package com.agrocloud.service;
 
 import com.agrocloud.model.entity.Maquinaria;
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.repository.MaquinariaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,9 +31,12 @@ public class MaquinariaService {
             System.out.println("[MAQUINARIA_SERVICE] Usuario esAdmin: " + user.isAdmin());
             System.out.println("[MAQUINARIA_SERVICE] Roles del usuario: " + user.getRoles().stream().map(r -> r.getNombre()).toList());
             
-            if (user.isAdmin()) {
-                // Admin ve todas las maquinarias
-                System.out.println("[MAQUINARIA_SERVICE] Usuario es admin, obteniendo todas las maquinarias");
+            if (user.isAdmin() || 
+                user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || 
+                user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
+                user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
+                // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven todas las maquinarias de la empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
+                System.out.println("[MAQUINARIA_SERVICE] Usuario es admin/JEFE_CAMPO/OPERARIO/CONSULTOR_EXTERNO, obteniendo todas las maquinarias");
                 List<Maquinaria> allMaquinarias = maquinariaRepository.findAll();
                 System.out.println("[MAQUINARIA_SERVICE] Total de maquinarias encontradas: " + allMaquinarias.size());
                 return allMaquinarias;
@@ -57,7 +61,7 @@ public class MaquinariaService {
         
         if (maquinaria.isPresent()) {
             Maquinaria m = maquinaria.get();
-            if (user.isAdmin() || user.canAccessUser(m.getUser())) {
+            if (user.isAdmin() || user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || user.canAccessUser(m.getUser())) {
                 return maquinaria;
             }
         }
@@ -80,7 +84,7 @@ public class MaquinariaService {
             Maquinaria maquinaria = existingMaquinaria.get();
             
             // Verificar acceso
-            if (user.isAdmin() || user.canAccessUser(maquinaria.getUser())) {
+            if (user.isAdmin() || user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || user.canAccessUser(maquinaria.getUser())) {
                 // Actualizar campos básicos
                 maquinaria.setNombre(maquinariaData.getNombre());
                 maquinaria.setDescripcion(maquinariaData.getDescripcion());
@@ -115,7 +119,7 @@ public class MaquinariaService {
         
         if (maquinaria.isPresent()) {
             Maquinaria m = maquinaria.get();
-            if (user.isAdmin() || user.canAccessUser(m.getUser())) {
+            if (user.isAdmin() || user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || user.canAccessUser(m.getUser())) {
                 m.setActivo(false);
                 maquinariaRepository.save(m);
                 return true;
@@ -125,9 +129,9 @@ public class MaquinariaService {
         return false;
     }
 
-    // Eliminar maquinaria físicamente (solo para administradores)
+    // Eliminar maquinaria físicamente (solo para administradores y JEFE_CAMPO)
     public boolean deleteMaquinariaFisicamente(Long id, User user) {
-        if (!user.isAdmin()) {
+        if (!user.isAdmin() && !user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO)) {
             return false;
         }
         
@@ -142,8 +146,8 @@ public class MaquinariaService {
 
     // Buscar maquinaria por nombre
     public List<Maquinaria> searchMaquinariaByName(String nombre, User user) {
-        if (user.isAdmin()) {
-            // Admin busca en todas las maquinarias
+        if (user.isAdmin() || user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO)) {
+            // Admin o JEFE_CAMPO buscan en todas las maquinarias
             return maquinariaRepository.findAll().stream()
                     .filter(m -> m.getNombre().toLowerCase().contains(nombre.toLowerCase()))
                     .toList();

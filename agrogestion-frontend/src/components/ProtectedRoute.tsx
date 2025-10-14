@@ -4,7 +4,7 @@ import AccessDenied from './AccessDenied';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  permission: keyof ReturnType<typeof usePermissions>;
+  permission?: keyof ReturnType<typeof usePermissions>;
   showAccessDenied?: boolean;
 }
 
@@ -14,11 +14,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   showAccessDenied = true
 }) => {
   const permissions = usePermissions();
-  
-  // Verificar si el usuario tiene el permiso requerido
-  const hasPermission = permissions[permission];
-  
-  if (!hasPermission) {
+
+  // Si no se especifica permiso, permitir por defecto
+  if (!permission) {
+    return <>{children}</>;
+  }
+
+  // Evitar desmontes si los permisos aún no cargaron (undefined)
+  const valorPermiso = (permissions as any)?.[permission];
+  if (valorPermiso === undefined) {
+    return <>{children}</>;
+  }
+
+  if (!valorPermiso) {
     // Mostrar mensaje de acceso denegado o redirigir
     if (showAccessDenied) {
       return <AccessDenied />;

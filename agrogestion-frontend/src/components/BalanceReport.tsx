@@ -46,6 +46,7 @@ const BalanceReport: React.FC = () => {
   const [tipoReporte, setTipoReporte] = useState('general');
   const [loteId, setLoteId] = useState('');
   const [lotes, setLotes] = useState<any[]>([]);
+  const [errorFechas, setErrorFechas] = useState<string>('');
 
   useEffect(() => {
     // Establecer fechas por defecto (mes actual)
@@ -69,6 +70,19 @@ const BalanceReport: React.FC = () => {
   };
 
   const generarReporte = async () => {
+    // Validar fechas antes de generar el reporte
+    if ((tipoReporte === 'general' || tipoReporte === 'lote') && fechaInicio && fechaFin) {
+      const inicio = new Date(fechaInicio);
+      const fin = new Date(fechaFin);
+      
+      if (fin < inicio) {
+        setErrorFechas('La fecha de fin no puede ser anterior a la fecha de inicio');
+        alert('Error: La fecha de fin no puede ser anterior a la fecha de inicio');
+        return;
+      }
+    }
+    
+    setErrorFechas('');
     setLoading(true);
     try {
       let url = '';
@@ -155,7 +169,11 @@ const BalanceReport: React.FC = () => {
                   <Input
                     type="date"
                     value={fechaInicio}
-                    onChange={(value) => setFechaInicio(value)}
+                    onChange={(value) => {
+                      setFechaInicio(value);
+                      setErrorFechas('');
+                    }}
+                    className={errorFechas ? 'border-red-500' : ''}
                   />
                 </div>
                 <div>
@@ -163,8 +181,16 @@ const BalanceReport: React.FC = () => {
                   <Input
                     type="date"
                     value={fechaFin}
-                    onChange={(value) => setFechaFin(value)}
+                    onChange={(value) => {
+                      setFechaFin(value);
+                      setErrorFechas('');
+                    }}
+                    min={fechaInicio}
+                    className={errorFechas ? 'border-red-500' : ''}
                   />
+                  {errorFechas && (
+                    <p className="text-sm text-red-600 mt-1">⚠️ {errorFechas}</p>
+                  )}
                 </div>
               </>
             )}

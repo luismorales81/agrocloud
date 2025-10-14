@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 
 interface User {
   id: number;
@@ -41,6 +42,7 @@ const UsersManagement: React.FC = () => {
     sendInvitationEmail: true
   });
   const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('');
   const [filterActive, setFilterActive] = useState<boolean | null>(null);
@@ -48,26 +50,25 @@ const UsersManagement: React.FC = () => {
 
   // Cargar datos al montar el componente
   useEffect(() => {
+    console.log('🔄 [UsersManagement] useEffect ejecutándose - montando componente');
     loadUsers();
     loadRoles();
     loadStats();
   }, []);
 
+  // Debug: detectar cambios en showForm
+  useEffect(() => {
+    console.log('📝 [UsersManagement] showForm cambió a:', showForm);
+  }, [showForm]);
+
   // Cargar usuarios
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/auth/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/auth/users');
       
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
+      if (response.status >= 200 && response.status < 300) {
+        setUsers(response.data);
       } else {
         console.error('Error cargando usuarios');
       }
@@ -81,17 +82,10 @@ const UsersManagement: React.FC = () => {
   // Cargar roles
   const loadRoles = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/auth/roles', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/auth/roles');
       
-      if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
+      if (response.status >= 200 && response.status < 300) {
+        setRoles(response.data);
       }
     } catch (error) {
       console.error('Error cargando roles:', error);
@@ -101,17 +95,10 @@ const UsersManagement: React.FC = () => {
   // Cargar estadísticas
   const loadStats = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/auth/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/auth/stats');
       
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+      if (response.status >= 200 && response.status < 300) {
+        setStats(response.data);
       }
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
@@ -120,32 +107,38 @@ const UsersManagement: React.FC = () => {
 
   // Crear usuario
   const createUser = async () => {
+    console.log('🚀 [UsersManagement] Iniciando creación de usuario...');
+    console.log('📝 [UsersManagement] showForm antes:', showForm);
+    console.log('📋 [UsersManagement] formData:', formData);
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
+      setFormLoading(true);
+      const response = await api.post('/api/auth/register', formData);
       
-      if (response.ok) {
+      console.log('📡 [UsersManagement] Respuesta del servidor:', response.status, response.data);
+      
+      if (response.status >= 200 && response.status < 300) {
+        console.log('✅ [UsersManagement] Usuario creado exitosamente');
+        alert('✅ Usuario creado exitosamente');
         setFormData({ name: '', email: '', password: '', roleId: 0, sendInvitationEmail: true });
         setShowForm(false);
         loadUsers();
         loadStats();
       } else {
         const error = await response.text();
+        console.error('❌ [UsersManagement] Error del servidor:', error);
         alert('Error creando usuario: ' + error);
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error creando usuario');
+      console.error('❌ [UsersManagement] Error en catch:', error);
+      if (error.response) {
+        console.error('❌ [UsersManagement] Error response:', error.response.status, error.response.data);
+        alert('Error creando usuario: ' + (error.response.data || error.response.statusText));
+      } else {
+        alert('Error creando usuario: ' + error.message);
+      }
     } finally {
-      setLoading(false);
+      setFormLoading(false);
+      console.log('🏁 [UsersManagement] Finalizando creación de usuario');
     }
   };
 
@@ -154,18 +147,10 @@ const UsersManagement: React.FC = () => {
     if (!selectedUser) return;
     
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/auth/users/${selectedUser.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
+      setFormLoading(true);
+      const response = await api.put(`/api/auth/users/${selectedUser.id}`, formData);
       
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         setFormData({ name: '', email: '', password: '', roleId: 0, sendInvitationEmail: true });
         setSelectedUser(null);
         setShowForm(false);
@@ -178,23 +163,16 @@ const UsersManagement: React.FC = () => {
       console.error('Error:', error);
       alert('Error actualizando usuario');
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
   // Cambiar estado de usuario
   const toggleUserStatus = async (userId: number) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/auth/users/${userId}/toggle-status`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.patch(`/api/auth/users/${userId}/toggle-status`);
       
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         loadUsers();
         loadStats();
       } else {
@@ -211,16 +189,9 @@ const UsersManagement: React.FC = () => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este usuario?')) return;
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/auth/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.delete(`/api/auth/users/${userId}`);
       
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         loadUsers();
         loadStats();
       } else {
@@ -459,7 +430,9 @@ const UsersManagement: React.FC = () => {
       {/* Botón para agregar nuevo usuario */}
       <div style={{ marginBottom: '20px' }}>
         <button
+          type="button"
           onClick={() => {
+            console.log('📝 [UsersManagement] Abriendo formulario de nuevo usuario');
             setSelectedUser(null);
             setFormData({ name: '', email: '', password: '', roleId: 0, sendInvitationEmail: true });
             setShowForm(true);
@@ -590,24 +563,27 @@ const UsersManagement: React.FC = () => {
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
             <button
+              type="button"
               onClick={selectedUser ? updateUser : createUser}
-              disabled={loading || !formData.name || !formData.email || !formData.roleId || (!selectedUser && !formData.password)}
+              disabled={formLoading || !formData.name || !formData.email || !formData.roleId || (!selectedUser && !formData.password)}
               style={{
                 background: '#2196F3',
                 color: 'white',
                 border: 'none',
                 padding: '10px 20px',
                 borderRadius: '5px',
-                cursor: loading ? 'not-allowed' : 'pointer',
+                cursor: formLoading ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
-                opacity: loading ? 0.6 : 1
+                opacity: formLoading ? 0.6 : 1
               }}
             >
-              {loading ? '💾 Guardando...' : (selectedUser ? '💾 Actualizar Usuario' : '💾 Crear Usuario')}
+              {formLoading ? '💾 Guardando...' : (selectedUser ? '💾 Actualizar Usuario' : '💾 Crear Usuario')}
             </button>
             
             <button
+              type="button"
               onClick={() => {
+                console.log('❌ [UsersManagement] Cerrando formulario manualmente');
                 setShowForm(false);
                 setSelectedUser(null);
                 setFormData({ name: '', email: '', password: '', roleId: 0, sendInvitationEmail: true });

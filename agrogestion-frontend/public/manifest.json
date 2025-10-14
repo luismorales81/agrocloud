@@ -1,7 +1,7 @@
 {
-  "name": "AgroCloud - Sistema de Gestión Agrícola",
+  "name": "AgroCloud - Sistema de Gestión Agropecuaria",
   "short_name": "AgroCloud",
-  "description": "Sistema completo de gestión agrícola para productores",
+  "description": "Sistema completo de gestión agropecuaria para productores",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

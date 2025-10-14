@@ -2,6 +2,7 @@ package com.agrocloud.dto;
 
 import com.agrocloud.model.enums.EstadoUsuarioEmpresa;
 import com.agrocloud.model.enums.RolEmpresa;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 
 /**
@@ -17,7 +18,11 @@ public class UsuarioEmpresaDTO {
     private String empresaNombre;
     private String empresaCuit;
     private String empresaEmail;
+    
+    @JsonProperty("rol")
     private RolEmpresa rol;
+    
+    @JsonProperty("estado")
     private EstadoUsuarioEmpresa estado;
     private LocalDate fechaInicio;
     private LocalDate fechaFin;

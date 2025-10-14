@@ -20,6 +20,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -33,13 +34,13 @@ public class SecurityConfig {
             .authenticationProvider(authenticationProvider)
             .authorizeHttpRequests(auth -> auth
                 // Permitir endpoints públicos
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test", "/api/auth/test-auth", "/api/auth/test-productor", "/api/auth/generate-hash", "/api/health", "/api/public/**", "/api/admin-global/dashboard-test", "/api/admin-global/test-simple", "/api/admin-global/dashboard-simple", "/api/admin-global/test-connectivity", "/api/admin-global/empresas-basic", "/api/admin-global/usuarios-basic", "/api/admin-global/estadisticas-uso", "/api/v1/weather-simple/**", "/api/v1/weather/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test", "/api/auth/test-auth", "/api/auth/test-productor", "/api/auth/generate-hash", "/api/auth/test-password", "/api/health", "/api/public/**", "/api/admin-global/dashboard-test", "/api/admin-global/test-simple", "/api/admin-global/dashboard-simple", "/api/admin-global/test-connectivity", "/api/admin-global/empresas-basic", "/api/admin-global/usuarios-basic", "/api/admin-global/estadisticas-uso", "/api/v1/weather-simple/**", "/api/v1/weather/**").permitAll()
                 // Endpoints de administración global (solo SuperAdmin)
                 .requestMatchers("/api/admin-global/**").hasAuthority("ROLE_SUPERADMIN")
                 // Endpoints de administración de empresa
-                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMINISTRADOR", "ROLE_ADMIN")
+                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMINISTRADOR")
                 // Endpoints de roles (solo administradores)
-                .requestMatchers("/api/roles/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMINISTRADOR", "ROLE_ADMIN")
+                .requestMatchers("/api/roles/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMINISTRADOR")
                 // Endpoints de gestión de empresas (solo SuperAdmin)
                 .requestMatchers("/api/empresas/**").hasAuthority("ROLE_SUPERADMIN")
                 // Endpoints de gestión de usuarios-empresas (solo SuperAdmin)
@@ -77,7 +78,28 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173", "null"));
+        
+        // Obtener origenes permitidos de variables de entorno o usar defaults para desarrollo
+        String allowedOriginsEnv = System.getenv("CORS_ALLOWED_ORIGINS");
+        List<String> allowedOrigins;
+        
+        if (allowedOriginsEnv != null && !allowedOriginsEnv.isEmpty()) {
+            // Producción: usar variables de entorno
+            allowedOrigins = Arrays.asList(allowedOriginsEnv.split(","));
+        } else {
+            // Desarrollo: usar localhost
+            allowedOrigins = Arrays.asList(
+                "http://localhost:3000", 
+                "http://localhost:3001", 
+                "http://localhost:5173", 
+                "http://127.0.0.1:3000", 
+                "http://127.0.0.1:3001", 
+                "http://127.0.0.1:5173",
+                "null"
+            );
+        }
+        
+        configuration.setAllowedOriginPatterns(allowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

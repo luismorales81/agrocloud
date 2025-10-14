@@ -253,10 +253,8 @@ public class DashboardService {
         System.out.println("🔍 [DashboardService] Roles encontrados: " + usuario.getRoles().stream().map(role -> role.getNombre()).collect(Collectors.joining(", ")));
         
         boolean esAdmin = usuario.getRoles().stream()
-                .anyMatch(role -> "ADMIN".equals(role.getNombre()) || 
-                                 "ADMINISTRADOR".equals(role.getNombre()) || 
-                                 "SUPERADMIN".equals(role.getNombre()) ||
-                                 "ADMIN_EMPRESA".equals(role.getNombre()));
+                .anyMatch(role -> "ADMINISTRADOR".equals(role.getNombre()) || 
+                                 "SUPERADMIN".equals(role.getNombre()));
         
         System.out.println("✅ [DashboardService] Usuario " + usuario.getUsername() + " es admin: " + esAdmin);
         

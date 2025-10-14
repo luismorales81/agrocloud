@@ -138,6 +138,7 @@ public class AuthService implements UserDetailsService {
         
         // Crear usuario
         User user = new User();
+        user.setUsername(request.getEmail()); // Usar email como username
         user.setFirstName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));

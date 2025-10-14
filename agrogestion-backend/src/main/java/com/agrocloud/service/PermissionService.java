@@ -23,30 +23,33 @@ public class PermissionService {
         
         switch (roleName.toUpperCase()) {
             case "SUPERADMIN":
-            case "ADMIN":
             case "ADMINISTRADOR":
                 permissions.addAll(getAdminPermissions());
                 break;
-            case "PRODUCTOR":
-                permissions.addAll(getProductorPermissions());
+            case "JEFE_CAMPO":
+                permissions.addAll(getJefeCampoPermissions());
                 break;
-            case "INGENIERO_AGRONOMO":
-                permissions.addAll(getIngenieroAgronomoPermissions());
-                break;
-            case "TECNICO":
-                permissions.addAll(getTecnicoPermissions());
+            case "JEFE_FINANCIERO":
+                permissions.addAll(getJefeFinancieroPermissions());
                 break;
             case "OPERARIO":
                 permissions.addAll(getOperarioPermissions());
                 break;
-            case "CONTADOR":
-                permissions.addAll(getContadorPermissions());
+            case "CONSULTOR_EXTERNO":
+                permissions.addAll(getConsultorExternoPermissions());
                 break;
+            // Mantener compatibilidad con roles antiguos
+            case "PRODUCTOR":
             case "ASESOR":
-                permissions.addAll(getAsesorPermissions());
+            case "TECNICO":
+                permissions.addAll(getJefeCampoPermissions());
                 break;
+            case "CONTADOR":
+                permissions.addAll(getJefeFinancieroPermissions());
+                break;
+            case "LECTURA":
             case "INVITADO":
-                permissions.addAll(getInvitadoPermissions());
+                permissions.addAll(getConsultorExternoPermissions());
                 break;
             default:
                 // Sin permisos para roles no reconocidos
@@ -123,9 +126,10 @@ public class PermissionService {
     }
 
     /**
-     * Permisos para PRODUCTOR - Acceso completo a operaciones
+     * Permisos para JEFE_CAMPO - Gestión completa de operaciones de campo
+     * (Fusión de PRODUCTOR, ASESOR, TECNICO)
      */
-    private Set<String> getProductorPermissions() {
+    private Set<String> getJefeCampoPermissions() {
         Set<String> permissions = new HashSet<>();
         
         // Campos
@@ -170,96 +174,7 @@ public class PermissionService {
         permissions.add("canUpdateLabores");
         permissions.add("canDeleteLabores");
         
-        // Finanzas
-        permissions.add("canViewFinances");
-        permissions.add("canCreateFinances");
-        permissions.add("canUpdateFinances");
-        
-        // Reportes
-        permissions.add("canViewFinancialReports");
-        permissions.add("canViewReports");
-        
-        return permissions;
-    }
-
-    /**
-     * Permisos para INGENIERO_AGRONOMO - Acceso técnico completo
-     */
-    private Set<String> getIngenieroAgronomoPermissions() {
-        Set<String> permissions = new HashSet<>();
-        
-        // Campos
-        permissions.add("canViewFields");
-        permissions.add("canCreateFields");
-        permissions.add("canUpdateFields");
-        
-        // Lotes
-        permissions.add("canViewLotes");
-        permissions.add("canCreateLotes");
-        permissions.add("canUpdateLotes");
-        
-        // Cultivos
-        permissions.add("canViewCultivos");
-        permissions.add("canCreateCultivos");
-        permissions.add("canUpdateCultivos");
-        
-        // Cosechas
-        permissions.add("canViewCosechas");
-        permissions.add("canCreateCosechas");
-        permissions.add("canUpdateCosechas");
-        
-        // Insumos
-        permissions.add("canViewInsumos");
-        permissions.add("canCreateInsumos");
-        permissions.add("canUpdateInsumos");
-        
-        // Maquinaria
-        permissions.add("canViewMaquinaria");
-        permissions.add("canCreateMaquinaria");
-        permissions.add("canUpdateMaquinaria");
-        
-        // Labores
-        permissions.add("canViewLabores");
-        permissions.add("canCreateLabores");
-        permissions.add("canUpdateLabores");
-        
-        // Reportes
-        permissions.add("canViewFinancialReports");
-        permissions.add("canViewReports");
-        
-        return permissions;
-    }
-
-    /**
-     * Permisos para TECNICO - Solo lectura y operaciones básicas
-     */
-    private Set<String> getTecnicoPermissions() {
-        Set<String> permissions = new HashSet<>();
-        
-        // Campos
-        permissions.add("canViewFields");
-        
-        // Lotes
-        permissions.add("canViewLotes");
-        
-        // Cultivos
-        permissions.add("canViewCultivos");
-        
-        // Cosechas
-        permissions.add("canViewCosechas");
-        
-        // Insumos
-        permissions.add("canViewInsumos");
-        
-        // Maquinaria
-        permissions.add("canViewMaquinaria");
-        
-        // Labores
-        permissions.add("canViewLabores");
-        permissions.add("canCreateLabores");
-        permissions.add("canUpdateLabores");
-        
-        // Reportes
+        // Reportes (sin acceso financiero)
         permissions.add("canViewReports");
         
         return permissions;
@@ -298,71 +213,54 @@ public class PermissionService {
     }
 
     /**
-     * Permisos para CONTADOR - Solo finanzas y reportes
+     * Permisos para JEFE_FINANCIERO - Gestión financiera y contable
+     * (Reemplaza a CONTADOR)
      */
-    private Set<String> getContadorPermissions() {
+    private Set<String> getJefeFinancieroPermissions() {
         Set<String> permissions = new HashSet<>();
         
-        // Finanzas
+        // Lectura de operaciones (para contexto financiero)
+        permissions.add("canViewFields");
+        permissions.add("canViewLotes");
+        permissions.add("canViewCultivos");
+        permissions.add("canViewCosechas");
+        permissions.add("canViewInsumos");
+        permissions.add("canViewMaquinaria");
+        permissions.add("canViewLabores");
+        
+        // Finanzas (gestión completa)
         permissions.add("canViewFinances");
         permissions.add("canCreateFinances");
         permissions.add("canUpdateFinances");
+        permissions.add("canDeleteFinances");
         
         // Reportes
         permissions.add("canViewFinancialReports");
         permissions.add("canViewReports");
-        
-        // Cosechas (para análisis de costos)
-        permissions.add("canViewCosechas");
+        permissions.add("canExportReports");
         
         return permissions;
     }
 
     /**
-     * Permisos para ASESOR - Solo lectura para asesoramiento
+     * Permisos para CONSULTOR_EXTERNO - Solo lectura completa
+     * (Reemplaza a ASESOR, LECTURA, INVITADO)
      */
-    private Set<String> getAsesorPermissions() {
+    private Set<String> getConsultorExternoPermissions() {
         Set<String> permissions = new HashSet<>();
         
-        // Campos
+        // Solo lectura de todo
         permissions.add("canViewFields");
-        
-        // Lotes
         permissions.add("canViewLotes");
-        
-        // Cultivos
         permissions.add("canViewCultivos");
-        
-        // Cosechas
         permissions.add("canViewCosechas");
-        
-        // Insumos
         permissions.add("canViewInsumos");
-        
-        // Maquinaria
         permissions.add("canViewMaquinaria");
-        
-        // Labores
         permissions.add("canViewLabores");
         
-        // Reportes
-        permissions.add("canViewFinancialReports");
+        // Reportes (sin acceso a finanzas)
         permissions.add("canViewReports");
-        
-        return permissions;
-    }
-
-    /**
-     * Permisos para INVITADO - Acceso muy limitado
-     */
-    private Set<String> getInvitadoPermissions() {
-        Set<String> permissions = new HashSet<>();
-        
-        // Solo lectura básica
-        permissions.add("canViewFields");
-        permissions.add("canViewLotes");
-        permissions.add("canViewCultivos");
-        permissions.add("canViewCosechas");
+        permissions.add("canExportReports");
         
         return permissions;
     }

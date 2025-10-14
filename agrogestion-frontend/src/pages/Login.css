@@ -1,11 +1,37 @@
 /* Estilos específicos para la página de Login */
 
 .login-background {
+  /* Gradiente de fondo agrícola en caso de que no haya imagen */
+  background: linear-gradient(
+    135deg,
+    #1a5f2a 0%,
+    #2d7a3e 25%,
+    #4a9556 50%,
+    #6fb078 75%,
+    #8bc34a 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  min-height: 100vh;
+}
+
+/* Si existe la imagen, usarla como overlay */
+.login-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background-image: url('/images/fondo-login.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  opacity: 0.3;
+  z-index: 0;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .login-overlay {

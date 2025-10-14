@@ -100,8 +100,8 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
     // Disparar evento para notificar cambios
     window.dispatchEvent(new CustomEvent('currencyChanged', { detail: currency }));
     
-    // Forzar re-renderizado de todos los componentes
-    window.dispatchEvent(new Event('currencyUpdate'));
+    // Forzar re-renderizado de todos los componentes - DESHABILITADO TEMPORALMENTE
+    // window.dispatchEvent(new Event('currencyUpdate'));
   };
 
   const changeExchangeType = (type: 'oficial' | 'blue') => {
@@ -112,8 +112,8 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
     // Disparar evento para notificar cambios
     window.dispatchEvent(new CustomEvent('exchangeTypeChanged', { detail: type }));
     
-    // Forzar re-renderizado de todos los componentes
-    window.dispatchEvent(new Event('currencyUpdate'));
+    // Forzar re-renderizado de todos los componentes - DESHABILITADO TEMPORALMENTE
+    // window.dispatchEvent(new Event('currencyUpdate'));
   };
 
   const updateRates = async () => {

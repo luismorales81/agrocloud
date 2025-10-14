@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login Directo</title>
+</head>
+<body>
+    <h2>Test de Login</h2>
+    <form id="loginForm">
+        <div>
+            <label>Email:</label><br>
+            <input type="email" id="email" value="admin@agrocloud.com" style="width: 300px; padding: 5px;">
+        </div>
+        <div style="margin-top: 10px;">
+            <label>Password:</label><br>
+            <input type="password" id="password" value="admin123" style="width: 300px; padding: 5px;">
+        </div>
+        <button type="submit" style="margin-top: 10px; padding: 8px 20px;">Login</button>
+    </form>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Enviando petición...';
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3 style="color: green;">✅ LOGIN EXITOSO</h3>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <p><strong>Token:</strong> ${data.token ? data.token.substring(0, 50) + '...' : 'N/A'}</p>
+                        <p><strong>Usuario:</strong> ${JSON.stringify(data.user, null, 2)}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3 style="color: red;">❌ LOGIN FALLIDO</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Error:</strong> ${JSON.stringify(data, null, 2)}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3 style="color: red;">❌ ERROR DE CONEXIÓN</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        });
+    </script>
+    
+    <hr style="margin: 30px 0;">
+    <h3>Usuarios para probar:</h3>
+    <button onclick="setUser('admin@agrocloud.com', 'admin123')">Admin</button>
+    <button onclick="setUser('tecnico.juan@agrocloud.com', 'admin123')">Técnico Juan</button>
+    <button onclick="setUser('admin.campo@agrocloud.com', 'admin123')">Admin Campo</button>
+    
+    <script>
+        function setUser(email, password) {
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+        }
+    </script>
+</body>
+</html>
+

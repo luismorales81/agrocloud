@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Badge from './ui/Badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
 import api from '../services/api';
+import PermissionGate from './PermissionGate';
 
 interface Ingreso {
   id?: number;
@@ -452,15 +453,9 @@ const FinanzasManagement: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`http://localhost:8080/api/ingresos/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await api.delete(`/api/ingresos/${id}`);
 
-        if (response.ok || response.status === 204) {
+        if (response.status >= 200 && response.status < 300) {
           // Eliminar del estado local solo si la API confirma la eliminación
           setIngresos(prev => prev.filter(ingreso => ingreso.id !== id));
           alert('Ingreso eliminado exitosamente');
@@ -488,15 +483,9 @@ const FinanzasManagement: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`http://localhost:8080/api/egresos/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await api.delete(`/api/egresos/${id}`);
 
-        if (response.ok || response.status === 204) {
+        if (response.status >= 200 && response.status < 300) {
           // Eliminar del estado local solo si la API confirma la eliminación
           setEgresos(prev => prev.filter(egreso => egreso.id !== id));
           alert('Egreso eliminado exitosamente');
@@ -643,12 +632,16 @@ const FinanzasManagement: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">💰 Gestión Financiera</h1>
         <div className="flex gap-2">
-          <Button onClick={() => abrirModal('ingreso')} className="bg-green-600 hover:bg-green-700">
-            ➕ Nuevo Ingreso
-          </Button>
-          <Button onClick={() => abrirModal('egreso')} className="bg-red-600 hover:bg-red-700">
-            ➖ Nuevo Egreso
-          </Button>
+          <PermissionGate permission="canCreateFinances">
+            <Button onClick={() => abrirModal('ingreso')} className="bg-green-600 hover:bg-green-700">
+              ➕ Nuevo Ingreso
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="canCreateFinances">
+            <Button onClick={() => abrirModal('egreso')} className="bg-red-600 hover:bg-red-700">
+              ➖ Nuevo Egreso
+            </Button>
+          </PermissionGate>
         </div>
              </div>
 
@@ -881,12 +874,14 @@ const FinanzasManagement: React.FC = () => {
                             ))}
                           </SelectContent>
                         </Select>
-                        <Button
-                          onClick={() => handleDeleteIngreso(ingreso.id!)}
-                          className="text-red-600 hover:text-red-900 text-sm"
-                        >
-                          🗑️ Eliminar
-                        </Button>
+                        <PermissionGate permission="canDeleteFinances">
+                          <Button
+                            onClick={() => handleDeleteIngreso(ingreso.id!)}
+                            className="text-red-600 hover:text-red-900 text-sm"
+                          >
+                            🗑️ Eliminar
+                          </Button>
+                        </PermissionGate>
                       </div>
                     </div>
                     </div>
@@ -991,12 +986,14 @@ const FinanzasManagement: React.FC = () => {
                             ))}
                           </SelectContent>
                         </Select>
-                        <Button
-                          onClick={() => handleDeleteEgreso(egreso.id!)}
-                          className="text-red-600 hover:text-red-900 text-sm"
-                        >
-                          🗑️ Eliminar
-                        </Button>
+                        <PermissionGate permission="canDeleteFinances">
+                          <Button
+                            onClick={() => handleDeleteEgreso(egreso.id!)}
+                            className="text-red-600 hover:text-red-900 text-sm"
+                          >
+                            🗑️ Eliminar
+                          </Button>
+                        </PermissionGate>
                       </div>
                     </div>
                     </div>

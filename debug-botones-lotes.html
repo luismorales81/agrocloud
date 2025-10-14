@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug - Botones de Lotes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2e7d32;
+        }
+        .code-block {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        button {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1b5e20;
+        }
+        .result {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #4caf50;
+        }
+        .error {
+            background: #ffebee;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #f44336;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug: Botones de Lotes</h1>
+        
+        <p>Este script te ayudará a diagnosticar por qué no ves los botones de Sembrar/Cosechar.</p>
+        
+        <h2>Paso 1: Verificar Estado de los Lotes</h2>
+        <button onclick="verificarLotes()">🔍 Verificar Lotes en el Backend</button>
+        <div id="lotes-result"></div>
+        
+        <h2>Paso 2: Verificar Funciones del Frontend</h2>
+        <button onclick="verificarFunciones()">🔍 Verificar Funciones puedeSembrar/puedeCosechar</button>
+        <div id="funciones-result"></div>
+        
+        <h2>Paso 3: Código para Consola del Navegador</h2>
+        <p>Copia y pega este código en la consola del navegador (F12) cuando estés en la página de Lotes:</p>
+        <div class="code-block">
+            <pre>// Verificar qué lotes existen y sus estados
+console.log('=== VERIFICACIÓN DE LOTES ===');
+
+// 1. Ver datos de la tabla
+const filas = document.querySelectorAll('table tbody tr');
+console.log(`Total de filas en la tabla: ${filas.length}`);
+
+filas.forEach((fila, index) => {
+  const celdas = fila.querySelectorAll('td');
+  if (celdas.length >= 4) {
+    const nombre = celdas[0]?.textContent?.trim();
+    const estado = celdas[3]?.textContent?.trim();
+    const botones = fila.querySelector('td:last-child')?.innerHTML || '';
+    
+    const tieneSembrar = botones.includes('Sembrar');
+    const tieneCosechar = botones.includes('Cosechar');
+    
+    console.log(`\nLote ${index + 1}:`);
+    console.log(`  Nombre: ${nombre}`);
+    console.log(`  Estado: ${estado}`);
+    console.log(`  Botón Sembrar: ${tieneSembrar ? '✅ SÍ' : '❌ NO'}`);
+    console.log(`  Botón Cosechar: ${tieneCosechar ? '✅ SÍ' : '❌ NO'}`);
+  }
+});
+
+// 2. Verificar si las funciones existen
+console.log('\n=== VERIFICACIÓN DE CÓDIGO ===');
+console.log('¿Existe SiembraModal?', typeof SiembraModal !== 'undefined');
+console.log('¿Existe CosechaModal?', typeof CosechaModal !== 'undefined');</pre>
+        </div>
+        
+        <h2>Solución Rápida</h2>
+        <div class="result">
+            <h3>Si NO ves los botones, las causas probables son:</h3>
+            <ol>
+                <li><strong>Todos tus lotes están COSECHADOS o EN_DESCANSO</strong> → No mostrarán botones (es correcto)</li>
+                <li><strong>El frontend no recargó los cambios</strong> → Presiona Ctrl+Shift+R (recarga sin caché)</li>
+                <li><strong>Error de compilación</strong> → Revisa la consola del navegador (F12)</li>
+            </ol>
+        </div>
+        
+        <h2>Crear Lote de Prueba</h2>
+        <p>Si no tienes lotes en estado DISPONIBLE, crea uno de prueba:</p>
+        <button onclick="window.open('http://localhost:3000', '_blank')">🌐 Abrir Aplicación</button>
+    </div>
+    
+    <script>
+        async function verificarLotes() {
+            const resultDiv = document.getElementById('lotes-result');
+            resultDiv.innerHTML = '<p>Cargando...</p>';
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('http://localhost:8080/api/v1/lotes', {
+                    headers: {
+                        'Authorization': `Bearer ${token || ''}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const lotes = await response.json();
+                    
+                    let html = '<div class="result">';
+                    html += `<h3>✅ Lotes encontrados: ${lotes.length}</h3>`;
+                    
+                    if (lotes.length === 0) {
+                        html += '<p><strong>⚠️ No tienes lotes creados.</strong> Crea un lote nuevo desde la aplicación.</p>';
+                    } else {
+                        html += '<table style="width:100%; border-collapse: collapse;">';
+                        html += '<tr style="background:#f5f5f5"><th style="padding:8px; border:1px solid #ddd">Nombre</th><th style="padding:8px; border:1px solid #ddd">Estado</th><th style="padding:8px; border:1px solid #ddd">Cultivo</th><th style="padding:8px; border:1px solid #ddd">Botón Esperado</th></tr>';
+                        
+                        lotes.forEach(lote => {
+                            const estado = lote.estado;
+                            let botonEsperado = 'Ninguno';
+                            
+                            if (['DISPONIBLE', 'PREPARADO', 'EN_PREPARACION'].includes(estado)) {
+                                botonEsperado = '🌱 Sembrar';
+                            } else if (['SEMBRADO', 'EN_CRECIMIENTO', 'EN_FLORACION', 'EN_FRUTIFICACION', 'LISTO_PARA_COSECHA'].includes(estado)) {
+                                botonEsperado = '🌾 Cosechar';
+                            }
+                            
+                            html += `<tr>
+                                <td style="padding:8px; border:1px solid #ddd">${lote.nombre}</td>
+                                <td style="padding:8px; border:1px solid #ddd"><strong>${estado}</strong></td>
+                                <td style="padding:8px; border:1px solid #ddd">${lote.cultivoActual || '-'}</td>
+                                <td style="padding:8px; border:1px solid #ddd">${botonEsperado}</td>
+                            </tr>`;
+                        });
+                        
+                        html += '</table>';
+                        
+                        // Análisis
+                        const disponibles = lotes.filter(l => ['DISPONIBLE', 'PREPARADO', 'EN_PREPARACION'].includes(l.estado)).length;
+                        const sembrados = lotes.filter(l => ['SEMBRADO', 'EN_CRECIMIENTO', 'EN_FLORACION', 'EN_FRUTIFICACION', 'LISTO_PARA_COSECHA'].includes(l.estado)).length;
+                        const otros = lotes.length - disponibles - sembrados;
+                        
+                        html += '<h4>Resumen:</h4>';
+                        html += `<p>✅ Lotes que deberían mostrar "🌱 Sembrar": <strong>${disponibles}</strong></p>`;
+                        html += `<p>✅ Lotes que deberían mostrar "🌾 Cosechar": <strong>${sembrados}</strong></p>`;
+                        html += `<p>⚪ Lotes sin botones (correcto): <strong>${otros}</strong></p>`;
+                        
+                        if (disponibles === 0 && sembrados === 0) {
+                            html += '<p style="color:orange"><strong>⚠️ Todos tus lotes están en estados finales (COSECHADO, EN_DESCANSO, etc.).</strong><br>Crea un lote nuevo o cambia el estado de uno existente para ver los botones.</p>';
+                        }
+                    }
+                    
+                    html += '</div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<div class="error"><p>❌ Error al obtener lotes del backend.</p><p>Verifica que el backend esté corriendo y que tengas sesión iniciada.</p></div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><p>❌ Error de conexión: ${error.message}</p><p>Verifica que el backend esté corriendo en http://localhost:8080</p></div>`;
+            }
+        }
+        
+        function verificarFunciones() {
+            const resultDiv = document.getElementById('funciones-result');
+            
+            const codigo = `
+// Funciones esperadas en el frontend
+const puedeSembrar = (estado) => {
+  return estado === 'DISPONIBLE' || estado === 'PREPARADO' || estado === 'EN_PREPARACION';
+};
+
+const puedeCosechar = (estado) => {
+  return estado === 'SEMBRADO' || estado === 'LISTO_PARA_COSECHA' || 
+         estado === 'EN_CRECIMIENTO' || estado === 'EN_FLORACION' || 
+         estado === 'EN_FRUTIFICACION';
+};
+
+// Pruebas
+console.log('=== PRUEBA DE FUNCIONES ===');
+const estados = ['DISPONIBLE', 'PREPARADO', 'SEMBRADO', 'EN_CRECIMIENTO', 'LISTO_PARA_COSECHA', 'COSECHADO'];
+
+estados.forEach(estado => {
+  console.log(\`Estado: \${estado}\`);
+  console.log(\`  puedeSembrar: \${puedeSembrar(estado) ? '✅' : '❌'}\`);
+  console.log(\`  puedeCosechar: \${puedeCosechar(estado) ? '✅' : '❌'}\`);
+});
+            `;
+            
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <h3>✅ Funciones Correctas</h3>
+                    <p>Copia este código en la consola del navegador para probar:</p>
+                    <div class="code-block"><pre>${codigo}</pre></div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

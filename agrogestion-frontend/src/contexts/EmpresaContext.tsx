@@ -23,7 +23,9 @@ interface UsuarioEmpresa {
   usuarioNombre: string;
   empresaId: number;
   empresaNombre: string;
-  rol: 'ADMINISTRADOR' | 'ASESOR' | 'OPERARIO' | 'CONTADOR' | 'TECNICO' | 'LECTURA' | 'PRODUCTOR';
+  rol: 'ADMINISTRADOR' | 'JEFE_CAMPO' | 'JEFE_FINANCIERO' | 'OPERARIO' | 'CONSULTOR_EXTERNO' | 
+       // Roles legacy para retrocompatibilidad
+       'ASESOR' | 'CONTADOR' | 'TECNICO' | 'LECTURA' | 'PRODUCTOR';
   estado: 'ACTIVO' | 'INACTIVO' | 'PENDIENTE';
   fechaInicio: string;
   fechaFin: string;
@@ -37,13 +39,19 @@ interface EmpresaContextType {
   rolUsuario: string | null;
   cambiarEmpresa: (empresaId: number) => Promise<void>;
   cargarEmpresasUsuario: () => Promise<void>;
+  // Nuevos roles
   esAdministrador: () => boolean;
-  esAsesor: () => boolean;
+  esJefeCampo: () => boolean;
+  esJefeFinanciero: () => boolean;
   esOperario: () => boolean;
+  esConsultorExterno: () => boolean;
+  // Roles legacy (mantener para retrocompatibilidad)
+  esAsesor: () => boolean;
   esContador: () => boolean;
   esTecnico: () => boolean;
   esSoloLectura: () => boolean;
   esProductor: () => boolean;
+  // Permisos
   tienePermisoEscritura: () => boolean;
   tienePermisoAdministracion: () => boolean;
   tienePermisoFinanciero: () => boolean;
@@ -160,25 +168,39 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
     }
   };
 
-  // Métodos de verificación de permisos
+  // Métodos de verificación de permisos - NUEVOS ROLES
   const esAdministrador = () => rolUsuario === 'ADMINISTRADOR';
-  const esAsesor = () => rolUsuario === 'ASESOR';
+  const esJefeCampo = () => rolUsuario === 'JEFE_CAMPO' || 
+                            rolUsuario === 'PRODUCTOR' || 
+                            rolUsuario === 'ASESOR' || 
+                            rolUsuario === 'TECNICO';
+  const esJefeFinanciero = () => rolUsuario === 'JEFE_FINANCIERO' || 
+                                  rolUsuario === 'CONTADOR';
   const esOperario = () => rolUsuario === 'OPERARIO';
-  const esContador = () => rolUsuario === 'CONTADOR';
-  const esTecnico = () => rolUsuario === 'TECNICO';
-  const esSoloLectura = () => rolUsuario === 'LECTURA';
-  const esProductor = () => rolUsuario === 'PRODUCTOR';
+  const esConsultorExterno = () => rolUsuario === 'CONSULTOR_EXTERNO' || 
+                                     rolUsuario === 'LECTURA';
+
+  // Métodos legacy (mantener para retrocompatibilidad)
+  const esAsesor = () => rolUsuario === 'ASESOR' || rolUsuario === 'JEFE_CAMPO';
+  const esContador = () => rolUsuario === 'CONTADOR' || rolUsuario === 'JEFE_FINANCIERO';
+  const esTecnico = () => rolUsuario === 'TECNICO' || rolUsuario === 'JEFE_CAMPO';
+  const esSoloLectura = () => rolUsuario === 'LECTURA' || rolUsuario === 'CONSULTOR_EXTERNO';
+  const esProductor = () => rolUsuario === 'PRODUCTOR' || rolUsuario === 'JEFE_CAMPO';
 
   const tienePermisoEscritura = (): boolean => {
-    return Boolean(rolUsuario && !esSoloLectura() && rolUsuario !== 'LECTURA');
+    // Solo ADMINISTRADOR y JEFE_CAMPO tienen permisos de escritura en operaciones
+    return Boolean(rolUsuario && (
+      rolUsuario === 'ADMINISTRADOR' || 
+      esJefeCampo()
+    ));
   };
 
   const tienePermisoAdministracion = () => {
-    return esAdministrador() || esAsesor();
+    return esAdministrador();
   };
 
   const tienePermisoFinanciero = () => {
-    return esAdministrador() || esAsesor() || esContador() || esProductor();
+    return esAdministrador() || esJefeFinanciero();
   };
 
   // Cargar empresa activa desde localStorage al inicializar
@@ -202,13 +224,19 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
     rolUsuario,
     cambiarEmpresa,
     cargarEmpresasUsuario,
+    // Nuevos roles
     esAdministrador,
-    esAsesor,
+    esJefeCampo,
+    esJefeFinanciero,
     esOperario,
+    esConsultorExterno,
+    // Roles legacy
+    esAsesor,
     esContador,
     esTecnico,
     esSoloLectura,
     esProductor,
+    // Permisos
     tienePermisoEscritura,
     tienePermisoAdministracion,
     tienePermisoFinanciero,

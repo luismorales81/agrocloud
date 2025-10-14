@@ -100,10 +100,15 @@ public class User implements UserDetails {
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
 
-    // Relación con UserCompanyRole (tabla intermedia)
+    // Relación con UserCompanyRole (tabla intermedia) - Sistema antiguo
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserCompanyRole> userCompanyRoles = new ArrayList<>();
+    
+    // Relación con UsuarioEmpresa (nueva tabla multiempresa) - Sistema nuevo
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<UsuarioEmpresa> usuarioEmpresas = new ArrayList<>();
 
     // Constructors
     public User() {}
@@ -240,6 +245,14 @@ public class User implements UserDetails {
     public void setUserCompanyRoles(List<UserCompanyRole> userCompanyRoles) {
         this.userCompanyRoles = userCompanyRoles;
     }
+    
+    public List<UsuarioEmpresa> getUsuarioEmpresas() {
+        return usuarioEmpresas;
+    }
+    
+    public void setUsuarioEmpresas(List<UsuarioEmpresa> usuarioEmpresas) {
+        this.usuarioEmpresas = usuarioEmpresas;
+    }
 
     // Getters y Setters para los nuevos campos
     public String getFirstName() {
@@ -334,8 +347,7 @@ public class User implements UserDetails {
     public boolean isAdmin() {
         return getRoles().stream()
                 .anyMatch(role -> role.getNombre().equals("ADMINISTRADOR") || 
-                                role.getNombre().equals("SUPERADMIN") || 
-                                role.getNombre().equals("ADMIN"));
+                                role.getNombre().equals("SUPERADMIN"));
     }
 
     public boolean isSuperAdmin() {
@@ -366,8 +378,60 @@ public class User implements UserDetails {
 
     // Métodos adicionales requeridos por el código existente
     public void setRoles(Set<Role> roles) {
-        // Este método no se implementa completamente ya que los roles se manejan a través de UserCompanyRole
-        // Se mantiene para compatibilidad con el código existente
+        System.out.println("🔧 [User.setRoles] Actualizando roles del usuario (sin empresa específica)");
+        System.out.println("🔧 [User.setRoles] Roles a establecer: " + roles);
+        
+        // Obtener la primera empresa del usuario, si existe
+        final Empresa empresaParaRol;
+        if (!userCompanyRoles.isEmpty()) {
+            empresaParaRol = userCompanyRoles.get(0).getEmpresa();
+            System.out.println("📍 [User.setRoles] Usando empresa existente: " + (empresaParaRol != null ? empresaParaRol.getId() : "null"));
+        } else {
+            empresaParaRol = null;
+        }
+        
+        // Si no tiene empresa, necesitamos obtenerla del contexto (esto debería manejarse desde el servicio)
+        // Por ahora, simplemente limpiamos y agregamos roles para las empresas existentes
+        if (empresaParaRol != null) {
+            setRolesConEmpresa(roles, empresaParaRol);
+        } else {
+            System.out.println("⚠️ [User.setRoles] No se puede asignar rol sin empresa. El usuario debe estar asociado a al menos una empresa.");
+        }
+    }
+    
+    /**
+     * Método sobrecargado para asignar roles con una empresa específica
+     */
+    public void setRolesConEmpresa(Set<Role> roles, Empresa empresa) {
+        System.out.println("🔧 [User.setRolesConEmpresa] Actualizando roles del usuario");
+        System.out.println("🔧 [User.setRolesConEmpresa] Roles a establecer: " + roles);
+        System.out.println("🔧 [User.setRolesConEmpresa] Empresa: " + (empresa != null ? empresa.getId() : "null"));
+        
+        if (empresa == null) {
+            System.out.println("⚠️ [User.setRolesConEmpresa] Empresa es null, no se pueden asignar roles");
+            return;
+        }
+        
+        // Limpiar roles existentes para esta empresa
+        userCompanyRoles.removeIf(ucr -> ucr.getEmpresa() != null && ucr.getEmpresa().equals(empresa));
+        System.out.println("🗑️ [User.setRolesConEmpresa] Roles anteriores eliminados para empresa: " + empresa.getId());
+        
+        // Agregar nuevos roles
+        if (roles != null) {
+            for (Role role : roles) {
+                UserCompanyRole ucr = new UserCompanyRole();
+                ucr.setUsuario(this);
+                ucr.setRol(role);
+                ucr.setEmpresa(empresa);
+                ucr.setActivo(true);
+                ucr.setFechaCreacion(LocalDateTime.now());
+                ucr.setFechaActualizacion(LocalDateTime.now());
+                userCompanyRoles.add(ucr);
+                System.out.println("➕ [User.setRolesConEmpresa] Agregado rol: " + role.getNombre() + " para empresa: " + empresa.getId());
+            }
+        }
+        
+        System.out.println("✅ [User.setRolesConEmpresa] Total userCompanyRoles: " + userCompanyRoles.size());
     }
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
@@ -387,8 +451,67 @@ public class User implements UserDetails {
     public boolean esAdministradorEmpresa(Long empresaId) {
         return userCompanyRoles.stream()
                 .anyMatch(ucr -> ucr.getEmpresa().getId().equals(empresaId) && 
-                               (ucr.getRol().getNombre().equals("ADMINISTRADOR") || 
-                                ucr.getRol().getNombre().equals("ADMIN")));
+                                ucr.getRol().getNombre().equals("ADMINISTRADOR"));
+    }
+    
+    /**
+     * Verifica si el usuario tiene un rol específico en su empresa actual
+     * Busca en ambos sistemas: el nuevo (usuario_empresas) y el antiguo (usuarios_empresas_roles)
+     */
+    public boolean tieneRolEnEmpresa(com.agrocloud.model.enums.RolEmpresa rolBuscado) {
+        String nombreRolBuscado = rolBuscado.name();
+        
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas con enum RolEmpresa)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            boolean encontradoEnNuevo = usuarioEmpresas.stream()
+                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                    .anyMatch(ue -> {
+                        com.agrocloud.model.enums.RolEmpresa rolActual = ue.getRol();
+                        if (rolActual == null) {
+                            return false;
+                        }
+                        
+                        // Aplicar mapeo de roles antiguos a nuevos
+                        com.agrocloud.model.enums.RolEmpresa rolActualizado = rolActual.getRolActualizado();
+                        
+                        // Comparar con el rol buscado
+                        return rolActualizado == rolBuscado || rolActualizado.name().equals(nombreRolBuscado);
+                    });
+            
+            if (encontradoEnNuevo) {
+                return true;
+            }
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles con tabla roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            return userCompanyRoles.stream()
+                    .anyMatch(ucr -> {
+                        Role role = ucr.getRol();
+                        if (role == null || role.getNombre() == null) {
+                            return false;
+                        }
+                        
+                        String nombreRolActual = role.getNombre();
+                        
+                        // Mapeo de roles antiguos a nuevos
+                        if ("PRODUCTOR".equals(nombreRolActual) || 
+                            "ASESOR".equals(nombreRolActual) || 
+                            "TECNICO".equals(nombreRolActual)) {
+                            return "JEFE_CAMPO".equals(nombreRolBuscado);
+                        } else if ("CONTADOR".equals(nombreRolActual)) {
+                            return "JEFE_FINANCIERO".equals(nombreRolBuscado);
+                        } else if ("LECTURA".equals(nombreRolActual)) {
+                            return "CONSULTOR_EXTERNO".equals(nombreRolBuscado);
+                        }
+                        
+                        // Comparación directa para roles nuevos
+                        return nombreRolActual.equals(nombreRolBuscado);
+                    });
+        }
+        
+        // No se encontró el rol en ningún sistema
+        return false;
     }
 
     public void setEmpresa(Empresa empresa) {

@@ -2,12 +2,16 @@ package com.agrocloud.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
     
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
+    
+    @Value("${email.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
     
     /**
      * Enviar email de recuperación de contraseña
@@ -17,9 +21,8 @@ public class EmailService {
         logger.info("Token de recuperación: {}", resetToken);
         
         try {
-            // Implementación real del envío de email
-            // TODO: Hacer configurable con application.properties
-            String resetUrl = "http://localhost:3000/reset-password?token=" + resetToken;
+            // Construir URL usando configuración
+            String resetUrl = frontendUrl + "/reset-password?token=" + resetToken;
             logger.info("URL de recuperación: {}", resetUrl);
             
             // Aquí se implementaría el envío real del email
@@ -49,9 +52,8 @@ public class EmailService {
         logger.info("Token de verificación: {}", verificationToken);
         
         try {
-            // Implementación real del envío de email
-            // TODO: Hacer configurable con application.properties
-            String verificationUrl = "http://localhost:3000/verify-email?token=" + verificationToken;
+            // Construir URL usando configuración
+            String verificationUrl = frontendUrl + "/verify-email?token=" + verificationToken;
             logger.info("URL de verificación: {}", verificationUrl);
             
             // Aquí se implementaría el envío real del email

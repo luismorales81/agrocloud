@@ -1,4 +1,5 @@
 import { showNotification } from './api';
+import api from './api';
 
 // Tipos para el caché offline
 interface CacheEntry<T> {
@@ -232,55 +233,22 @@ class OfflineService {
 
   public async getLabores(): Promise<any[]> {
     return this.get('labores', async () => {
-      const response = await fetch('http://localhost:8080/api/labores', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      return response.json();
+      const response = await api.get('/api/labores');
+      return response.data;
     }, 2 * 60 * 1000); // 2 minutos TTL (más frecuente)
   }
 
   public async getInsumos(): Promise<any[]> {
     return this.get('insumos', async () => {
-      const response = await fetch('http://localhost:8080/api/insumos', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      return response.json();
+      const response = await api.get('/api/insumos');
+      return response.data;
     }, 10 * 60 * 1000); // 10 minutos TTL
   }
 
   public async getMaquinaria(): Promise<any[]> {
     return this.get('maquinaria', async () => {
-      const response = await fetch('http://localhost:8080/api/maquinaria', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      return response.json();
+      const response = await api.get('/api/maquinaria');
+      return response.data;
     }, 10 * 60 * 1000);
   }
 

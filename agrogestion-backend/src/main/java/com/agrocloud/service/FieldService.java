@@ -3,6 +3,7 @@ package com.agrocloud.service;
 import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.repository.FieldRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -56,9 +57,12 @@ public class FieldService {
                             return activo != null && activo;
                         })
                         .toList();
-            } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null)) {
-                // Admin de empresa ve TODOS los campos de su empresa
-                System.out.println("[FIELD_SERVICE] Usuario es Admin de empresa, mostrando TODOS los campos de la empresa");
+            } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null) || 
+                       user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) ||
+                       user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
+                       user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
+                // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven TODOS los campos de su empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
+                System.out.println("[FIELD_SERVICE] Usuario es Admin/JEFE_CAMPO/OPERARIO/CONSULTOR_EXTERNO de empresa, mostrando TODOS los campos de la empresa");
                 
                 Empresa empresa = user.getEmpresa();
                 if (empresa == null) {

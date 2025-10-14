@@ -1,13 +1,17 @@
 package com.agrocloud.service;
 
+import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.Plot;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.model.entity.Empresa;
+import com.agrocloud.model.enums.RolEmpresa;
+import com.agrocloud.repository.FieldRepository;
 import com.agrocloud.repository.PlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +26,9 @@ public class PlotService {
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private FieldRepository fieldRepository;
 
     // Obtener todos los lotes activos accesibles por un usuario
     public List<Plot> getLotesByUser(User user) {
@@ -43,9 +50,12 @@ public class PlotService {
                         })
                         .toList();
             } else if (user.getUserCompanyRoles() != null && !user.getUserCompanyRoles().isEmpty() && 
-                       user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null)) {
-                // Admin de empresa ve TODOS los lotes de su empresa
-                System.out.println("[PLOT_SERVICE] Usuario es Admin de empresa, mostrando TODOS los lotes de la empresa");
+                       (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null) ||
+                        user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) ||
+                        user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
+                        user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO))) {
+                // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven TODOS los lotes de su empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
+                System.out.println("[PLOT_SERVICE] Usuario es Admin/JEFE_CAMPO/OPERARIO/CONSULTOR_EXTERNO de empresa, mostrando TODOS los lotes de la empresa");
                 
                 Empresa empresa = user.getEmpresa();
                 if (empresa == null) {
@@ -136,6 +146,10 @@ public class PlotService {
 
     // Crear nuevo lote
     public Plot saveLote(Plot lote) {
+        // Validar superficie disponible si tiene campo asignado
+        if (lote.getCampo() != null) {
+            validarSuperficieDisponible(lote.getCampo().getId(), lote.getAreaHectareas(), lote.getId());
+        }
         return plotRepository.save(lote);
     }
 
@@ -145,6 +159,12 @@ public class PlotService {
         
         if (existingLote.isPresent()) {
             Plot lote = existingLote.get();
+            
+            // Validar superficie disponible si se cambia el campo o la superficie
+            if (loteData.getCampo() != null) {
+                validarSuperficieDisponible(loteData.getCampo().getId(), loteData.getAreaHectareas(), id);
+            }
+            
             lote.setNombre(loteData.getNombre());
             lote.setDescripcion(loteData.getDescripcion());
             lote.setAreaHectareas(loteData.getAreaHectareas());
@@ -223,5 +243,64 @@ public class PlotService {
         } else {
             return plotRepository.findByCampoIdAndUserId(campoId, user.getId());
         }
+    }
+    
+    /**
+     * Calcula la superficie disponible de un campo
+     * @param campoId ID del campo
+     * @return Superficie disponible en hectáreas
+     */
+    public BigDecimal calcularSuperficieDisponible(Long campoId) {
+        Field campo = fieldRepository.findById(campoId)
+                .orElseThrow(() -> new RuntimeException("Campo no encontrado con ID: " + campoId));
+        
+        BigDecimal superficieTotal = campo.getAreaHectareas();
+        BigDecimal superficieOcupada = plotRepository.calcularSuperficieOcupadaPorCampo(campoId);
+        
+        return superficieTotal.subtract(superficieOcupada);
+    }
+    
+    /**
+     * Valida que la superficie del lote no exceda la superficie disponible del campo
+     * @param campoId ID del campo
+     * @param superficieLote Superficie del lote a validar
+     * @param loteIdActual ID del lote actual (null si es un lote nuevo)
+     * @throws RuntimeException si la superficie excede la disponible
+     */
+    private void validarSuperficieDisponible(Long campoId, BigDecimal superficieLote, Long loteIdActual) {
+        System.out.println("[PLOT_SERVICE] Validando superficie disponible para campo ID: " + campoId);
+        
+        // Obtener campo
+        Field campo = fieldRepository.findById(campoId)
+                .orElseThrow(() -> new RuntimeException("Campo no encontrado con ID: " + campoId));
+        
+        BigDecimal superficieTotal = campo.getAreaHectareas();
+        BigDecimal superficieOcupada = plotRepository.calcularSuperficieOcupadaPorCampo(campoId);
+        
+        // Si estamos actualizando un lote existente, restar su superficie actual de la ocupada
+        if (loteIdActual != null) {
+            Optional<Plot> loteActual = plotRepository.findById(loteIdActual);
+            if (loteActual.isPresent() && loteActual.get().getActivo()) {
+                superficieOcupada = superficieOcupada.subtract(loteActual.get().getAreaHectareas());
+            }
+        }
+        
+        BigDecimal superficieDisponible = superficieTotal.subtract(superficieOcupada);
+        
+        System.out.println("[PLOT_SERVICE] Superficie total del campo: " + superficieTotal + " ha");
+        System.out.println("[PLOT_SERVICE] Superficie ocupada: " + superficieOcupada + " ha");
+        System.out.println("[PLOT_SERVICE] Superficie disponible: " + superficieDisponible + " ha");
+        System.out.println("[PLOT_SERVICE] Superficie del lote a crear/actualizar: " + superficieLote + " ha");
+        
+        // Validar que la superficie del lote no exceda la disponible
+        if (superficieLote.compareTo(superficieDisponible) > 0) {
+            throw new RuntimeException(
+                String.format("La superficie del lote (%.2f ha) excede la superficie disponible del campo (%.2f ha). " +
+                             "Superficie total del campo: %.2f ha. Superficie ocupada por otros lotes: %.2f ha.",
+                             superficieLote, superficieDisponible, superficieTotal, superficieOcupada)
+            );
+        }
+        
+        System.out.println("[PLOT_SERVICE] Validación de superficie exitosa");
     }
 }

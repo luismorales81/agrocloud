@@ -130,7 +130,10 @@ public class EmpresaController {
                             dto.setEmpresaNombre(relacion.getEmpresa().getNombre());
                             dto.setEmpresaCuit(relacion.getEmpresa().getCuit());
                             dto.setEmpresaEmail(relacion.getEmpresa().getEmailContacto());
-                            dto.setRol(relacion.getRol());
+                            // Mapear rol antiguo a rol actualizado
+                            RolEmpresa rolOriginal = relacion.getRol();
+                            RolEmpresa rolActualizado = rolOriginal != null ? rolOriginal.getRolActualizado() : rolOriginal;
+                            dto.setRol(rolActualizado);
                             dto.setEstado(relacion.getEstado());
                             return dto;
                         })

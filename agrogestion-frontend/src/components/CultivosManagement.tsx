@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
+import PermissionGate from './PermissionGate';
 
 interface Cultivo {
   id?: number;
@@ -66,19 +68,8 @@ const CultivosManagement: React.FC = () => {
       }
 
       // Llamada real a la API
-      const response = await fetch('http://localhost:8080/api/v1/cultivos', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const response = await api.get('/api/v1/cultivos');
+      const data = response.data;
       console.log('Cultivos cargados desde API:', data);
       setCultivos(data);
     } catch (error) {
@@ -107,26 +98,11 @@ const CultivosManagement: React.FC = () => {
         return;
       }
 
-      const url = editingCultivo 
-        ? `http://localhost:8080/api/v1/cultivos/${editingCultivo.id}`
-        : 'http://localhost:8080/api/v1/cultivos';
-      
-      const method = editingCultivo ? 'PUT' : 'POST';
+      const response = editingCultivo
+        ? await api.put(`/api/v1/cultivos/${editingCultivo.id}`, formData)
+        : await api.post('/api/v1/cultivos', formData);
 
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const savedCultivo = await response.json();
+      const savedCultivo = response.data;
       console.log('Cultivo guardado:', savedCultivo);
       
       // Recargar la lista de cultivos desde la API
@@ -166,15 +142,9 @@ const CultivosManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:8080/api/v1/cultivos/${cultivoId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.delete(`/api/v1/cultivos/${cultivoId}`);
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
@@ -244,21 +214,23 @@ const CultivosManagement: React.FC = () => {
 
       {/* Botón para agregar nuevo cultivo */}
       <div style={{ marginBottom: '20px' }}>
-        <button
-          onClick={() => setShowForm(true)}
-          style={{
-            background: '#22C55E',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: 'bold'
-          }}
-        >
-          ➕ Agregar Nuevo Cultivo
-        </button>
+        <PermissionGate permission="canCreateCultivos">
+          <button
+            onClick={() => setShowForm(true)}
+            style={{
+              background: '#22C55E',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}
+          >
+            ➕ Agregar Nuevo Cultivo
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Formulario para nuevo/editar cultivo */}
@@ -590,34 +562,38 @@ const CultivosManagement: React.FC = () => {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    onClick={() => editCultivo(cultivo)}
-                    style={{
-                      background: '#2196F3',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}
-                  >
-                    ✏️ Editar
-                  </button>
-                  <button
-                    onClick={() => deleteCultivo(cultivo.id!)}
-                    style={{
-                      background: '#f44336',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}
-                  >
-                    🗑️ Eliminar
-                  </button>
+                  <PermissionGate permission="canEditCultivos">
+                    <button
+                      onClick={() => editCultivo(cultivo)}
+                      style={{
+                        background: '#2196F3',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      ✏️ Editar
+                    </button>
+                  </PermissionGate>
+                  <PermissionGate permission="canDeleteCultivos">
+                    <button
+                      onClick={() => deleteCultivo(cultivo.id!)}
+                      style={{
+                        background: '#f44336',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </PermissionGate>
                 </div>
               </div>
             ))}

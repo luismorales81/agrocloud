@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Entidad para representar cultivos agrícolas
+ * Entidad para representar cultivos agropecuarios
  */
 @Entity
 @Table(name = "cultivos")

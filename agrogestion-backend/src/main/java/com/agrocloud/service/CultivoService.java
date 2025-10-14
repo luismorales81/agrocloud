@@ -2,6 +2,7 @@ package com.agrocloud.service;
 
 import com.agrocloud.model.entity.Cultivo;
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.repository.CultivoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,8 +20,11 @@ public class CultivoService {
 
     // Obtener todos los cultivos accesibles por un usuario (solo activos)
     public List<Cultivo> getCultivosByUser(User user) {
-        if (user.isAdmin()) {
-            // Admin ve todos los cultivos activos
+        if (user.isAdmin() || 
+            user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || 
+            user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
+            user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
+            // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven todos los cultivos activos de la empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
             return cultivoRepository.findByActivoTrue();
         } else {
             // Usuario ve sus cultivos activos
@@ -35,7 +39,7 @@ public class CultivoService {
         if (cultivo.isPresent()) {
             Cultivo c = cultivo.get();
             // Verificar que esté activo y que el usuario tenga acceso
-            if (c.getActivo() && (user.isAdmin() || c.getUsuario().getId().equals(user.getId()))) {
+            if (c.getActivo() && (user.isAdmin() || user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || c.getUsuario().getId().equals(user.getId()))) {
                 return cultivo;
             }
         }

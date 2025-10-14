@@ -41,6 +41,9 @@ public class SiembraService {
     private InventarioService inventarioService;
     
     @Autowired
+    private InventarioGranoService inventarioGranoService;
+    
+    @Autowired
     private InsumoRepository insumoRepository;
     
     @Autowired
@@ -213,14 +216,14 @@ public class SiembraService {
                 request.getObservaciones() != null ? " | " + request.getObservaciones() : "")
         );
         
-        // Calcular costo total inicial
-        BigDecimal costoTotal = BigDecimal.ZERO;
+        // Calcular costo total de la labor de cosecha
+        BigDecimal costoCosecha = BigDecimal.ZERO;
         
         // Procesar maquinaria para calcular costo total
         if (request.getMaquinaria() != null && !request.getMaquinaria().isEmpty()) {
             for (MaquinariaAsignadaDTO maqDTO : request.getMaquinaria()) {
                 if (maqDTO.getCostoTotal() != null) {
-                    costoTotal = costoTotal.add(maqDTO.getCostoTotal());
+                    costoCosecha = costoCosecha.add(maqDTO.getCostoTotal());
                 }
             }
         }
@@ -229,18 +232,33 @@ public class SiembraService {
         if (request.getManoObra() != null && !request.getManoObra().isEmpty()) {
             for (ManoObraDTO moDTO : request.getManoObra()) {
                 if (moDTO.getCostoTotal() != null) {
-                    costoTotal = costoTotal.add(moDTO.getCostoTotal());
+                    costoCosecha = costoCosecha.add(moDTO.getCostoTotal());
                 }
             }
         }
         
         // Si no hay costos, establecer un costo mínimo para cumplir la validación
-        if (costoTotal.compareTo(BigDecimal.ZERO) <= 0) {
-            costoTotal = new BigDecimal("0.01"); // Costo mínimo simbólico
+        if (costoCosecha.compareTo(BigDecimal.ZERO) <= 0) {
+            costoCosecha = new BigDecimal("0.01"); // Costo mínimo simbólico
         }
         
         // Establecer el costo total en la labor
-        laborCosecha.setCostoTotal(costoTotal);
+        laborCosecha.setCostoTotal(costoCosecha);
+        
+        // Calcular costo TOTAL de producción del lote (TODAS las labores)
+        BigDecimal costoTotalProduccion = costoCosecha; // Empezar con costo de cosecha
+        
+        // Sumar costos de TODAS las labores del lote (siembra, mantenimiento, etc.)
+        List<Labor> todasLasLabores = laborRepository.findByLoteIdAndActivoTrue(lote.getId());
+        for (Labor labor : todasLasLabores) {
+            if (labor.getCostoTotal() != null && labor.getId() != null) {
+                costoTotalProduccion = costoTotalProduccion.add(labor.getCostoTotal());
+            }
+        }
+        
+        System.out.println("[SIEMBRA_SERVICE] Costo total de producción calculado: $" + costoTotalProduccion);
+        System.out.println("   - Costo de cosecha: $" + costoCosecha);
+        System.out.println("   - Labores anteriores: " + todasLasLabores.size());
         
         // Guardar la labor primero para obtener el ID
         laborCosecha = laborRepository.save(laborCosecha);
@@ -331,10 +349,9 @@ public class SiembraService {
             historialCosecha.setIngresoTotal(ingresoTotal);
         }
         
-        // Guardar costo total de producción (calculado de maquinaria y mano de obra)
-        if (costoTotal != null && costoTotal.compareTo(BigDecimal.ZERO) > 0) {
-            historialCosecha.setCostoTotalProduccion(costoTotal);
-        }
+        // Guardar costo total de producción (incluye TODAS las labores del lote)
+        historialCosecha.setCostoTotalProduccion(costoTotalProduccion);
+        System.out.println("[SIEMBRA_SERVICE] Costo total guardado en historial: $" + costoTotalProduccion);
         
         System.out.println("📝 [SiembraService] Guardando historial de cosecha:");
         System.out.println("   - Lote ID: " + historialCosecha.getLote().getId());
@@ -343,8 +360,18 @@ public class SiembraService {
         System.out.println("   - Cantidad: " + historialCosecha.getCantidadCosechada());
         System.out.println("   - Superficie: " + historialCosecha.getSuperficieHectareas());
         
-        historialCosechaRepository.save(historialCosecha);
+        historialCosecha = historialCosechaRepository.save(historialCosecha);
         System.out.println("✅ Registro guardado en historial_cosechas ID: " + historialCosecha.getId());
+        
+        // Crear inventario automáticamente
+        try {
+            inventarioGranoService.crearInventarioDesdeCosecha(historialCosecha, usuario);
+            System.out.println("✅ Inventario de grano creado automáticamente");
+        } catch (Exception e) {
+            System.err.println("⚠️ Error al crear inventario: " + e.getMessage());
+            e.printStackTrace();
+            // No falla la cosecha si falla el inventario
+        }
         
         // Actualizar el lote
         lote.setEstado(EstadoLote.COSECHADO);
@@ -465,6 +492,12 @@ public class SiembraService {
         String observacionesOriginal = request.getObservaciones() != null ? request.getObservaciones() : "";
         request.setObservaciones("CONVERSIÓN A FORRAJE | Cosecha anticipada para alimentación animal | " + observacionesOriginal);
         request.setEstadoSuelo("BUENO"); // Forraje normalmente no agota el suelo
+        
+        // Establecer cantidad por defecto si no se proporciona (para forraje no es crítica)
+        if (request.getCantidadCosechada() == null || request.getCantidadCosechada().compareTo(BigDecimal.ZERO) <= 0) {
+            request.setCantidadCosechada(BigDecimal.ONE); // 1 unidad por defecto
+            request.setUnidadMedida("tn"); // Toneladas por defecto
+        }
         
         // Usar el método de cosecha existente
         return cosecharLote(loteId, request, usuario, empresa);

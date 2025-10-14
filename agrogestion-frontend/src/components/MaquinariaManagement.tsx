@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useEmpresa } from '../contexts/EmpresaContext';
 import api from '../services/api';
+import PermissionGate from './PermissionGate';
 
 interface Maquinaria {
   id?: number;
@@ -25,6 +28,8 @@ interface Maquinaria {
 
 const MaquinariaManagement: React.FC = () => {
   const { formatCurrency } = useCurrencyContext();
+  const { user } = useAuth();
+  const { rolUsuario } = useEmpresa();
   const [maquinaria, setMaquinaria] = useState<Maquinaria[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,6 +54,16 @@ const MaquinariaManagement: React.FC = () => {
     valor_actual: null,
     notas: ''
   });
+
+  // Verificar si el usuario puede modificar maquinaria
+  const puedeModificarMaquinaria = () => {
+    if (!rolUsuario) return false;
+    // Solo OPERARIO, INVITADO y CONSULTOR_EXTERNO NO pueden modificar (solo lectura)
+    return rolUsuario !== 'OPERARIO' && 
+           rolUsuario !== 'INVITADO' && 
+           rolUsuario !== 'CONSULTOR_EXTERNO' && 
+           rolUsuario !== 'LECTURA';
+  };
 
   const tiposMaquinaria = ['tractor', 'cosechadora', 'pulverizadora', 'sembradora', 'arado', 'rastra', 'otro'];
   const estadosMaquinaria = ['ACTIVA', 'OPERATIVA', 'EN_MANTENIMIENTO', 'FUERA_DE_SERVICIO', 'RETIRADA'];
@@ -245,20 +260,22 @@ const MaquinariaManagement: React.FC = () => {
 
       {/* Botones de acción */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <button
-          onClick={showFormWithScroll}
-          style={{
-            background: '#2563eb',
-            color: 'white',
-            border: 'none',
-            padding: '0.5rem 1rem',
-            borderRadius: '0.25rem',
-            cursor: 'pointer',
-            fontSize: '0.875rem'
-          }}
-        >
-          ➕ Nueva Maquinaria
-        </button>
+        <PermissionGate permission="canCreateMaquinaria">
+          <button
+            onClick={showFormWithScroll}
+            style={{
+              background: '#2563eb',
+              color: 'white',
+              border: 'none',
+              padding: '0.5rem 1rem',
+              borderRadius: '0.25rem',
+              cursor: 'pointer',
+              fontSize: '0.875rem'
+            }}
+          >
+            ➕ Nueva Maquinaria
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Buscador */}
@@ -361,34 +378,46 @@ const MaquinariaManagement: React.FC = () => {
                     </td>
                     <td style={{ padding: '0.75rem' }}>
                       <div style={{ display: 'flex', gap: '0.25rem' }}>
-                        <button
-                          onClick={() => editMaquinaria(maq)}
-                          style={{
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '0.25rem',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem'
-                          }}
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => deleteMaquinaria(maq.id!)}
-                          style={{
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '0.25rem',
+                        {puedeModificarMaquinaria() ? (
+                          <>
+                            <button
+                              onClick={() => editMaquinaria(maq)}
+                              style={{
+                                background: '#3b82f6',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '0.25rem',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem'
+                              }}
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => deleteMaquinaria(maq.id!)}
+                              style={{
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '0.25rem',
                             cursor: 'pointer',
                             fontSize: '0.75rem'
                           }}
                         >
                           🗑️
-                        </button>
+                            </button>
+                          </>
+                        ) : (
+                          <span style={{ 
+                            color: '#6b7280',
+                            fontSize: '0.75rem',
+                            fontStyle: 'italic'
+                          }}>
+                            Solo lectura
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -400,7 +429,7 @@ const MaquinariaManagement: React.FC = () => {
       </div>
 
       {/* Formulario de maquinaria */}
-      {showForm && (
+      {showForm && puedeModificarMaquinaria() && (
         <div style={{
           position: 'fixed',
           top: 0,

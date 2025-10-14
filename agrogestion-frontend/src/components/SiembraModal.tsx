@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 
 interface Lote {
   id?: number;
@@ -36,17 +37,10 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
 
   const cargarCultivos = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/cultivos', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/cultivos');
 
-      if (response.ok) {
-        const data = await response.json();
-        setCultivos(data);
+      if (response.status >= 200 && response.status < 300) {
+        setCultivos(response.data);
       }
     } catch (error) {
       console.error('Error cargando cultivos:', error);
@@ -67,32 +61,25 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/v1/lotes/${lote.id}/sembrar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          cultivoId: parseInt(formData.cultivoId),
-          fechaSiembra: formData.fechaSiembra,
-          densidadSiembra: parseFloat(formData.densidadSiembra),
-          observaciones: formData.observaciones,
-          insumos: [],
-          maquinaria: [],
-          manoObra: []
-        })
-      });
+      const siembraData = {
+        cultivoId: parseInt(formData.cultivoId),
+        fechaSiembra: formData.fechaSiembra,
+        densidadSiembra: parseFloat(formData.densidadSiembra),
+        observaciones: formData.observaciones,
+        insumos: [],
+        maquinaria: [],
+        manoObra: []
+      };
+      
+      const response = await api.post(`/api/v1/lotes/${lote.id}/sembrar`, siembraData);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data;
         alert(`✅ ${data.message || 'Lote sembrado exitosamente'}`);
         onSuccess();
         onClose();
       } else {
-        const errorData = await response.json();
-        alert(`❌ Error: ${errorData.message || 'No se pudo sembrar el lote'}`);
+        alert(`❌ Error: ${response.data?.message || 'No se pudo sembrar el lote'}`);
       }
     } catch (error) {
       console.error('Error al sembrar:', error);

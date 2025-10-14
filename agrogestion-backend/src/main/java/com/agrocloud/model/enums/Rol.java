@@ -3,13 +3,11 @@ package com.agrocloud.model.enums;
 public enum Rol {
     SUPERADMIN("Super administrador"),
     ADMINISTRADOR("Administrador de empresa"),
-    ADMIN("Administrador del sistema"),
-    PRODUCTOR("Productor agrícola"),
-    TECNICO("Técnico agrícola"),
-    ASESOR("Asesor agrícola"),
+    PRODUCTOR("Productor agropecuario"),
+    TECNICO("Técnico agropecuario"),
+    ASESOR("Asesor agropecuario"),
     OPERARIO("Operario de campo"),
-    INVITADO("Usuario invitado con acceso limitado"),
-    USUARIO_REGISTRADO("Usuario común que puede loguearse y acceder a empresas");
+    INVITADO("Usuario invitado con acceso limitado");
 
     private final String descripcion;
 

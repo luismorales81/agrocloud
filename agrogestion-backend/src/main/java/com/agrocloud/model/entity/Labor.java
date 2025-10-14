@@ -14,7 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Entidad que representa las labores agrícolas en el sistema.
+ * Entidad que representa las labores agropecuarias en el sistema.
  * 
  * @author AgroGestion Team
  * @version 1.0.0
