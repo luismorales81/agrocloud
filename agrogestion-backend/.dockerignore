@@ -32,9 +32,6 @@ logs/
 .env.local
 .env.development
 
-# Archivos de test
-src/test/
-
 # Archivos de documentación
 *.md
 docs/
