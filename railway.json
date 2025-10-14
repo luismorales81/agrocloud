@@ -3,7 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "Dockerfile.simple",
-    "buildContext": "agrogestion-backend"
+    "buildContext": "."
   },
   "deploy": {
     "healthcheckPath": "/actuator/health",
