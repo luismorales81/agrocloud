@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
-import { offlineService } from '../services/offlineService';
+import { offlineService } from '../services/OfflineService';
 import api from '../services/api';
 import PermissionGate from './PermissionGate';
 
