@@ -35,6 +35,11 @@ const MaquinariaManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingMaquinaria, setEditingMaquinaria] = useState<Maquinaria | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [elementosPorPagina] = useState(10);
+  
   const [formData, setFormData] = useState<Maquinaria>({
     nombre: '',
     tipo: 'tractor',
@@ -73,7 +78,7 @@ const MaquinariaManagement: React.FC = () => {
   const loadMaquinaria = async () => {
     try {
       setLoading(true);
-        const response = await api.get('/api/maquinaria');
+        const response = await api.get('/maquinaria');
       
       // Mapear datos del backend al formato esperado por el frontend
       const maquinariaMapeada = response.data.map((maq: any) => ({
@@ -213,6 +218,21 @@ const MaquinariaManagement: React.FC = () => {
     maq.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Función para obtener maquinaria paginada
+  const obtenerMaquinariaPaginada = () => {
+    const totalPaginas = Math.ceil(filteredMaquinaria.length / elementosPorPagina);
+    const inicio = (paginaActual - 1) * elementosPorPagina;
+    const fin = inicio + elementosPorPagina;
+    const maquinariaPaginada = filteredMaquinaria.slice(inicio, fin);
+    
+    return { maquinariaPaginada, totalPaginas };
+  };
+
+  // Resetear paginación cuando cambie la búsqueda
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm]);
+
   const estadisticas = {
     total: maquinaria.length,
     activas: maquinaria.filter(m => m.estado === 'ACTIVA' || m.estado === 'OPERATIVA').length,
@@ -312,7 +332,20 @@ const MaquinariaManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredMaquinaria.map(maq => {
+              {(() => {
+                const { maquinariaPaginada, totalPaginas } = obtenerMaquinariaPaginada();
+                
+                if (filteredMaquinaria.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                        {searchTerm ? 'No se encontraron maquinarias que coincidan con la búsqueda' : 'No hay maquinarias registradas'}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return maquinariaPaginada.map(maq => {
                 const mantenimiento = getEstadoMantenimiento(maq);
                 return (
                   <tr key={maq.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -422,10 +455,109 @@ const MaquinariaManagement: React.FC = () => {
                     </td>
                   </tr>
                 );
-              })}
+                });
+              })()}
             </tbody>
           </table>
         </div>
+
+        {/* Paginación */}
+        {(() => {
+          const { totalPaginas } = obtenerMaquinariaPaginada();
+          
+          if (totalPaginas > 1) {
+            return (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                padding: '20px',
+                borderTop: '1px solid #e5e7eb',
+                background: '#f8f9fa'
+              }}>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                  Mostrando {((paginaActual - 1) * elementosPorPagina) + 1} - {Math.min(paginaActual * elementosPorPagina, filteredMaquinaria.length)} de {filteredMaquinaria.length} maquinarias
+                </div>
+                
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setPaginaActual(1)}
+                    disabled={paginaActual === 1}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                      color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                      cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ⏮️ Primera
+                  </button>
+                  
+                  <button
+                    onClick={() => setPaginaActual(paginaActual - 1)}
+                    disabled={paginaActual === 1}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                      color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                      cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ⬅️ Anterior
+                  </button>
+                  
+                  <span style={{ 
+                    padding: '8px 12px', 
+                    fontSize: '14px',
+                    color: '#374151',
+                    fontWeight: 'bold'
+                  }}>
+                    Página {paginaActual} de {totalPaginas}
+                  </span>
+                  
+                  <button
+                    onClick={() => setPaginaActual(paginaActual + 1)}
+                    disabled={paginaActual === totalPaginas}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                      color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                      cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Siguiente ➡️
+                  </button>
+                  
+                  <button
+                    onClick={() => setPaginaActual(totalPaginas)}
+                    disabled={paginaActual === totalPaginas}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                      color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                      cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Última ⏭️
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
 
       {/* Formulario de maquinaria */}

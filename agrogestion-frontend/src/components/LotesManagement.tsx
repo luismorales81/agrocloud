@@ -78,6 +78,10 @@ const LotesManagement: React.FC = () => {
   const [showEstadosAyuda, setShowEstadosAyuda] = useState(false);
   const [tipoAccion, setTipoAccion] = useState<'abandonar' | 'limpiar' | 'forraje'>('abandonar');
   const [menuAbierto, setMenuAbierto] = useState<number | null>(null);
+  
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [elementosPorPagina] = useState(10);
 
   // Función para calcular fecha de cosecha esperada según el cultivo
   const calcularFechaCosecha = (fechaSiembra: string, cultivo: string): string => {
@@ -371,7 +375,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.get('/api/campos');
+      const response = await api.get('/campos');
       const data = response.data;
       
       // Mapear los datos de la API al formato del frontend
@@ -422,7 +426,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.get('/api/v1/lotes');
+      const response = await api.get('/v1/lotes');
       const data = response.data;
       
       // Mapear los datos de la API al formato del frontend
@@ -455,7 +459,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.get('/api/labores');
+      const response = await api.get('/labores');
       const data = response.data;
       
       // Mapear los datos de la API al formato del frontend
@@ -496,7 +500,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.get('/api/v1/cultivos');
+      const response = await api.get('/v1/cultivos');
       // Extraer nombres únicos de cultivos
       const nombresCultivos = [...new Set(response.data.map((cultivo: any) => cultivo.nombre))];
       setCultivos(nombresCultivos);
@@ -625,10 +629,10 @@ const LotesManagement: React.FC = () => {
       let response;
       if (isEditing && selectedLote) {
         // Editar lote existente
-        response = await api.put(`/api/v1/lotes/${selectedLote.id}`, loteData);
+        response = await api.put(`/v1/lotes/${selectedLote.id}`, loteData);
       } else {
         // Crear nuevo lote
-        response = await api.post('/api/v1/lotes', loteData);
+        response = await api.post('/v1/lotes', loteData);
       }
 
       if (response.status >= 200 && response.status < 300) {
@@ -810,6 +814,21 @@ const LotesManagement: React.FC = () => {
     return matchesSearch && matchesCultivo;
   });
 
+  // Función para obtener lotes paginados
+  const obtenerLotesPaginados = () => {
+    const totalPaginas = Math.ceil(filteredLotes.length / elementosPorPagina);
+    const inicio = (paginaActual - 1) * elementosPorPagina;
+    const fin = inicio + elementosPorPagina;
+    const lotesPaginados = filteredLotes.slice(inicio, fin);
+    
+    return { lotesPaginados, totalPaginas };
+  };
+
+  // Resetear paginación cuando cambien los filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, selectedCultivo]);
+
   // Estadísticas
   const totalSuperficie = lotes.reduce((sum, lote) => sum + lote.superficie, 0);
   const cultivosUnicos = new Set(lotes.map(l => l.cultivo)).size;
@@ -951,32 +970,40 @@ const LotesManagement: React.FC = () => {
           <h3 style={{ margin: '0', color: '#495057' }}>📊 Lista de Lotes ({filteredLotes.length})</h3>
         </div>
 
-        {filteredLotes.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-            No se encontraron lotes
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ 
-              width: '100%', 
-              borderCollapse: 'collapse',
-              fontSize: '14px'
-            }}>
-              <thead>
-                <tr style={{ background: '#f8f9fa' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Lote</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Campo</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Superficie</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cultivo</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Tipo de Suelo</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha Siembra</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha Cosecha</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Estado</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLotes.map(lote => (
+        {(() => {
+          const { lotesPaginados, totalPaginas } = obtenerLotesPaginados();
+          
+          if (filteredLotes.length === 0) {
+            return (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                {searchTerm || selectedCultivo ? 'No se encontraron lotes que coincidan con los filtros' : 'No hay lotes registrados'}
+              </div>
+            );
+          }
+
+          return (
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ 
+                  width: '100%', 
+                  borderCollapse: 'collapse',
+                  fontSize: '14px'
+                }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Lote</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Campo</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Superficie</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Cultivo</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Tipo de Suelo</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha Siembra</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha Cosecha</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Estado</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lotesPaginados.map(lote => (
                   <tr key={lote.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
                     <td style={{ padding: '12px' }}>
                       <strong>{lote.nombre}</strong>
@@ -1262,11 +1289,104 @@ const LotesManagement: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Paginación */}
+              {totalPaginas > 1 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  padding: '20px',
+                  borderTop: '1px solid #e5e7eb',
+                  background: '#f8f9fa'
+                }}>
+                  <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                    Mostrando {((paginaActual - 1) * elementosPorPagina) + 1} - {Math.min(paginaActual * elementosPorPagina, filteredLotes.length)} de {filteredLotes.length} lotes
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setPaginaActual(1)}
+                      disabled={paginaActual === 1}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                        color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ⏮️ Primera
+                    </button>
+                    
+                    <button
+                      onClick={() => setPaginaActual(paginaActual - 1)}
+                      disabled={paginaActual === 1}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                        color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ⬅️ Anterior
+                    </button>
+                    
+                    <span style={{ 
+                      padding: '8px 12px', 
+                      fontSize: '14px',
+                      color: '#374151',
+                      fontWeight: 'bold'
+                    }}>
+                      Página {paginaActual} de {totalPaginas}
+                    </span>
+                    
+                    <button
+                      onClick={() => setPaginaActual(paginaActual + 1)}
+                      disabled={paginaActual === totalPaginas}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                        color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Siguiente ➡️
+                    </button>
+                    
+                    <button
+                      onClick={() => setPaginaActual(totalPaginas)}
+                      disabled={paginaActual === totalPaginas}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                        color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Última ⏭️
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Estadísticas */}

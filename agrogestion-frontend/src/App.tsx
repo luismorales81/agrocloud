@@ -15,6 +15,7 @@ import AdminUsuarios from './components/AdminUsuarios';
 import AdminEmpresas from './components/AdminEmpresas';
 import AdminDashboard from './components/AdminDashboard';
 import AdminGlobalDashboard from './components/AdminGlobalDashboard';
+import AyudaSistema from './components/AyudaSistema';
 import EmpresaSelector from './components/EmpresaSelector';
 import OfflineIndicator from './components/OfflineIndicator';
 import Login from './pages/Login';
@@ -119,7 +120,7 @@ const Dashboard: React.FC = () => {
         // Usar el endpoint que funciona correctamente
         
         // Usar el servicio de API que tiene configurado el interceptor de Axios
-        const response = await api.get(`/api/v1/dashboard/estadisticas-auth`);
+        const response = await api.get(`/v1/dashboard/estadisticas-auth`);
         const data = response.data;
         
         setDashboardStats({
@@ -268,6 +269,12 @@ const Dashboard: React.FC = () => {
         return (
           <ProtectedRouteComponent permission="canManageCompanies">
             <AdminEmpresas />
+          </ProtectedRouteComponent>
+        );
+      case 'ayuda':
+        return (
+          <ProtectedRouteComponent permission="canManageUsers">
+            <AyudaSistema />
           </ProtectedRouteComponent>
         );
       case 'dashboard':
@@ -772,7 +779,8 @@ const Dashboard: React.FC = () => {
             icon: '⚙️',
             items: [
               { id: 'users', label: 'Usuarios', icon: '👥', permission: 'canManageUsers' },
-              { id: 'admin-empresas', label: 'Empresas', icon: '🏢', permission: 'canManageCompanies' }
+              { id: 'admin-empresas', label: 'Empresas', icon: '🏢', permission: 'canManageCompanies' },
+              { id: 'ayuda', label: 'Ayuda', icon: '📚', permission: 'canManageUsers' }
             ]
           }
         ]
@@ -782,6 +790,7 @@ const Dashboard: React.FC = () => {
       const adminItems = [];
       if (isAdministrador) {
         adminItems.push({ id: 'users', label: 'Usuarios', icon: '👥', permission: 'canManageUsers' });
+        adminItems.push({ id: 'ayuda', label: 'Ayuda', icon: '📚', permission: 'canManageUsers' });
       }
       
       const menuStructure = {

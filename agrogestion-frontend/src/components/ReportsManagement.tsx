@@ -42,6 +42,25 @@ const ReportsManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
   const [errorFechas, setErrorFechas] = useState<string>('');
+  
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [elementosPorPagina] = useState(10);
+
+  // Función para obtener datos paginados
+  const obtenerDatosPaginados = (datos: any[]) => {
+    const totalPaginas = Math.ceil(datos.length / elementosPorPagina);
+    const inicio = (paginaActual - 1) * elementosPorPagina;
+    const fin = inicio + elementosPorPagina;
+    const datosPaginados = datos.slice(inicio, fin);
+    
+    return { datosPaginados, totalPaginas };
+  };
+
+  // Resetear paginación cuando cambie el reporte
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [activeReport]);
 
   // Datos mock para los reportes
   const mockRindeData: RindeData[] = [
@@ -92,7 +111,7 @@ const ReportsManagement: React.FC = () => {
       switch (tipo) {
         case 'rindes':
           console.log('🔍 [REPORTS] Llamando API de rendimiento...');
-          const rendimientoResponse = await api.get('/api/v1/reportes/rendimiento', {
+          const rendimientoResponse = await api.get('/v1/reportes/rendimiento', {
             params: params
           });
           console.log('✅ [REPORTS] Respuesta de rendimiento:', rendimientoResponse.data);
@@ -106,7 +125,7 @@ const ReportsManagement: React.FC = () => {
           break;
         case 'produccion':
           console.log('🔍 [REPORTS] Llamando API de estadísticas de producción...');
-          const estadisticasResponse = await api.get('/api/v1/reportes/estadisticas-produccion', {
+          const estadisticasResponse = await api.get('/v1/reportes/estadisticas-produccion', {
             params: params
           });
           console.log('✅ [REPORTS] Respuesta de estadísticas:', estadisticasResponse.data);
@@ -114,7 +133,7 @@ const ReportsManagement: React.FC = () => {
           break;
         case 'cosechas':
           console.log('🔍 [REPORTS] Llamando API de cosechas...');
-          const cosechasResponse = await api.get('/api/v1/reportes/cosechas', {
+          const cosechasResponse = await api.get('/v1/reportes/cosechas', {
             params: params
           });
           console.log('✅ [REPORTS] Respuesta de cosechas:', cosechasResponse.data);
@@ -128,7 +147,7 @@ const ReportsManagement: React.FC = () => {
           break;
         case 'rentabilidad':
           console.log('🔍 [REPORTS] Llamando API de rentabilidad...');
-          const rentabilidadResponse = await api.get('/api/v1/reportes/rentabilidad', {
+          const rentabilidadResponse = await api.get('/v1/reportes/rentabilidad', {
             params: params
           });
           console.log('✅ [REPORTS] Respuesta de rentabilidad:', rentabilidadResponse.data);
@@ -401,39 +420,141 @@ const ReportsManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {datos.map((item: any, index: number) => (
-                  <tr key={index} style={{ borderBottom: '1px solid #f1f3f4' }}>
-                    <td style={{ padding: '12px' }}><strong>{item.nombreLote || 'N/A'}</strong></td>
-                    <td style={{ padding: '12px' }}>{item.nombreCultivo || 'N/A'}</td>
-                    <td style={{ padding: '12px' }}>{item.superficieHectareas || 0}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ fontWeight: 'bold', color: '#10b981' }}>
-                        {item.rendimientoReal || 0}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px' }}>{item.rendimientoEsperado || 0}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        background: (item.porcentajeCumplimiento || 0) >= 100 ? '#dcfce7' : 
-                                    (item.porcentajeCumplimiento || 0) >= 80 ? '#fef3c7' : '#fecaca',
-                        color: (item.porcentajeCumplimiento || 0) >= 100 ? '#166534' : 
-                               (item.porcentajeCumplimiento || 0) >= 80 ? '#92400e' : '#991b1b'
-                      }}>
-                        {item.porcentajeCumplimiento || 0}%
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      {item.fechaCosecha ? new Date(item.fechaCosecha).toLocaleDateString('es-ES') : 'N/A'}
-                    </td>
-                  </tr>
-                ))}
+                {(() => {
+                  const { datosPaginados, totalPaginas } = obtenerDatosPaginados(datos);
+                  
+                  return datosPaginados.map((item: any, index: number) => (
+                    <tr key={index} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                      <td style={{ padding: '12px' }}><strong>{item.nombreLote || 'N/A'}</strong></td>
+                      <td style={{ padding: '12px' }}>{item.nombreCultivo || 'N/A'}</td>
+                      <td style={{ padding: '12px' }}>{item.superficieHectareas || 0}</td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{ fontWeight: 'bold', color: '#10b981' }}>
+                          {item.rendimientoReal || 0}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px' }}>{item.rendimientoEsperado || 0}</td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          background: (item.porcentajeCumplimiento || 0) >= 100 ? '#dcfce7' : 
+                                      (item.porcentajeCumplimiento || 0) >= 80 ? '#fef3c7' : '#fecaca',
+                          color: (item.porcentajeCumplimiento || 0) >= 100 ? '#166534' : 
+                                 (item.porcentajeCumplimiento || 0) >= 80 ? '#92400e' : '#991b1b'
+                        }}>
+                          {item.porcentajeCumplimiento || 0}%
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {item.fechaCosecha ? new Date(item.fechaCosecha).toLocaleDateString('es-ES') : 'N/A'}
+                      </td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
+          
+          {/* Paginación */}
+          {(() => {
+            const { totalPaginas } = obtenerDatosPaginados(datos);
+            
+            if (totalPaginas > 1) {
+              return (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  padding: '20px',
+                  borderTop: '1px solid #e5e7eb',
+                  background: '#f8f9fa'
+                }}>
+                  <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                    Mostrando {((paginaActual - 1) * elementosPorPagina) + 1} - {Math.min(paginaActual * elementosPorPagina, datos.length)} de {datos.length} registros
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setPaginaActual(1)}
+                      disabled={paginaActual === 1}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                        color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ⏮️ Primera
+                    </button>
+                    
+                    <button
+                      onClick={() => setPaginaActual(paginaActual - 1)}
+                      disabled={paginaActual === 1}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                        color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ⬅️ Anterior
+                    </button>
+                    
+                    <span style={{ 
+                      padding: '8px 12px', 
+                      fontSize: '14px',
+                      color: '#374151',
+                      fontWeight: 'bold'
+                    }}>
+                      Página {paginaActual} de {totalPaginas}
+                    </span>
+                    
+                    <button
+                      onClick={() => setPaginaActual(paginaActual + 1)}
+                      disabled={paginaActual === totalPaginas}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                        color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Siguiente ➡️
+                    </button>
+                    
+                    <button
+                      onClick={() => setPaginaActual(totalPaginas)}
+                      disabled={paginaActual === totalPaginas}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                        color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Última ⏭️
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
     );
@@ -1138,27 +1259,30 @@ const ReportsManagement: React.FC = () => {
         {reportData && (
           <div style={{ 
             display: 'flex', 
-            gap: '10px', 
+            gap: '8px', 
             alignItems: 'center', 
             flexWrap: 'wrap',
             marginTop: '15px',
-            padding: '15px',
+            padding: '12px',
             background: '#f8f9fa',
             borderRadius: '8px',
             border: '1px solid #e9ecef'
           }}>
-            <span style={{ fontWeight: 'bold', color: '#495057' }}>📤 Exportar:</span>
+            <span style={{ fontWeight: 'bold', color: '#495057', marginRight: '8px' }}>📤 Exportar:</span>
             <button
               onClick={() => exportReport('excel')}
               style={{
                 background: '#28a745',
                 color: 'white',
                 border: 'none',
-                padding: '8px 16px',
-                borderRadius: '5px',
+                padding: '6px 12px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 'bold'
+                fontSize: '12px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
               }}
             >
               📊 Excel
@@ -1169,11 +1293,14 @@ const ReportsManagement: React.FC = () => {
                 background: '#dc3545',
                 color: 'white',
                 border: 'none',
-                padding: '8px 16px',
-                borderRadius: '5px',
+                padding: '6px 12px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 'bold'
+                fontSize: '12px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
               }}
             >
               📄 PDF
@@ -1184,11 +1311,14 @@ const ReportsManagement: React.FC = () => {
                 background: '#6c757d',
                 color: 'white',
                 border: 'none',
-                padding: '8px 16px',
-                borderRadius: '5px',
+                padding: '6px 12px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 'bold'
+                fontSize: '12px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
               }}
             >
               📋 CSV
@@ -1255,21 +1385,6 @@ const ReportsManagement: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => exportReport('excel')}
-              style={{
-                background: '#10b981',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-            >
-              📥 Exportar Excel
-            </button>
           </div>
 
           {/* Contenido específico del reporte */}

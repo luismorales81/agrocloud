@@ -91,6 +91,78 @@ const FinanzasManagement: React.FC = () => {
   const [paginaIngresos, setPaginaIngresos] = useState(1);
   const [paginaEgresos, setPaginaEgresos] = useState(1);
   const registrosPorPagina = 10;
+
+  // Estados para filtros y búsqueda
+  const [busquedaIngresos, setBusquedaIngresos] = useState('');
+  const [filtroTipoIngreso, setFiltroTipoIngreso] = useState('TODOS');
+  const [filtroEstadoIngreso, setFiltroEstadoIngreso] = useState('TODOS');
+  
+  const [busquedaEgresos, setBusquedaEgresos] = useState('');
+  const [filtroTipoEgreso, setFiltroTipoEgreso] = useState('TODOS');
+  const [filtroEstadoEgreso, setFiltroEstadoEgreso] = useState('TODOS');
+
+  // Funciones de filtrado para ingresos
+  const obtenerIngresosFiltrados = () => {
+    let ingresosFiltrados = ingresos;
+
+    // Aplicar filtro de búsqueda
+    if (busquedaIngresos) {
+      ingresosFiltrados = ingresosFiltrados.filter(ingreso =>
+        ingreso.concepto.toLowerCase().includes(busquedaIngresos.toLowerCase()) ||
+        (ingreso.descripcion && ingreso.descripcion.toLowerCase().includes(busquedaIngresos.toLowerCase())) ||
+        (ingreso.clienteComprador && ingreso.clienteComprador.toLowerCase().includes(busquedaIngresos.toLowerCase()))
+      );
+    }
+
+    // Aplicar filtro de tipo
+    if (filtroTipoIngreso !== 'TODOS') {
+      ingresosFiltrados = ingresosFiltrados.filter(ingreso => ingreso.tipoIngreso === filtroTipoIngreso);
+    }
+
+    // Aplicar filtro de estado
+    if (filtroEstadoIngreso !== 'TODOS') {
+      ingresosFiltrados = ingresosFiltrados.filter(ingreso => ingreso.estado === filtroEstadoIngreso);
+    }
+
+    return ingresosFiltrados;
+  };
+
+  // Funciones de filtrado para egresos
+  const obtenerEgresosFiltrados = () => {
+    let egresosFiltrados = egresos;
+
+    // Aplicar filtro de búsqueda
+    if (busquedaEgresos) {
+      egresosFiltrados = egresosFiltrados.filter(egreso =>
+        (egreso.concepto && egreso.concepto.toLowerCase().includes(busquedaEgresos.toLowerCase())) ||
+        (egreso.descripcion && egreso.descripcion.toLowerCase().includes(busquedaEgresos.toLowerCase())) ||
+        (egreso.proveedor && egreso.proveedor.toLowerCase().includes(busquedaEgresos.toLowerCase()))
+      );
+    }
+
+    // Aplicar filtro de tipo
+    if (filtroTipoEgreso !== 'TODOS') {
+      egresosFiltrados = egresosFiltrados.filter(egreso => 
+        egreso.tipoEgreso === filtroTipoEgreso || egreso.tipo === filtroTipoEgreso
+      );
+    }
+
+    // Aplicar filtro de estado
+    if (filtroEstadoEgreso !== 'TODOS') {
+      egresosFiltrados = egresosFiltrados.filter(egreso => egreso.estado === filtroEstadoEgreso);
+    }
+
+    return egresosFiltrados;
+  };
+
+  // Resetear paginación cuando cambien los filtros
+  useEffect(() => {
+    setPaginaIngresos(1);
+  }, [busquedaIngresos, filtroTipoIngreso, filtroEstadoIngreso]);
+
+  useEffect(() => {
+    setPaginaEgresos(1);
+  }, [busquedaEgresos, filtroTipoEgreso, filtroEstadoEgreso]);
   
   // Formulario de ingreso
   const [ingresoForm, setIngresoForm] = useState<Ingreso>({
@@ -196,7 +268,7 @@ const FinanzasManagement: React.FC = () => {
   const cargarIngresos = async () => {
     try {
       console.log('📥 Cargando ingresos desde BD...');
-      const response = await api.get('/api/public/ingresos');
+      const response = await api.get('/public/ingresos');
       setIngresos(response.data || []);
       console.log('✅ Ingresos cargados desde BD:', response.data?.length || 0);
     } catch (error) {
@@ -208,7 +280,7 @@ const FinanzasManagement: React.FC = () => {
   const cargarEgresos = async () => {
     try {
       console.log('📥 Cargando egresos desde BD...');
-      const response = await api.get('/api/public/egresos');
+      const response = await api.get('/public/egresos');
       setEgresos(response.data || []);
       console.log('✅ Egresos cargados desde BD:', response.data?.length || 0);
     } catch (error) {
@@ -219,7 +291,7 @@ const FinanzasManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/api/public/campos');
+      const response = await api.get('/public/campos');
       setLotes(response.data || []);
       console.log('Lotes cargados:', response.data);
     } catch (error) {
@@ -230,7 +302,7 @@ const FinanzasManagement: React.FC = () => {
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/api/public/insumos');
+      const response = await api.get('/public/insumos');
       setInsumos(response.data || []);
       console.log('Insumos cargados:', response.data);
     } catch (error) {
@@ -298,7 +370,7 @@ const FinanzasManagement: React.FC = () => {
       console.log('📤 Enviando ingreso al backend:', ingresoData);
       
       // Guardar en la base de datos
-      const response = await api.post('/api/public/ingresos', ingresoData);
+      const response = await api.post('/public/ingresos', ingresoData);
       const ingresoGuardado = response.data;
       
       console.log('✅ Ingreso guardado en BD:', ingresoGuardado);
@@ -358,7 +430,7 @@ const FinanzasManagement: React.FC = () => {
       console.log('📤 Enviando egreso al backend:', egresoData);
       
       // Guardar en la base de datos
-      const response = await api.post('/api/public/egresos', egresoData);
+      const response = await api.post('/public/egresos', egresoData);
       const egresoGuardado = response.data;
       
       console.log('✅ Egreso guardado en BD:', egresoGuardado);
@@ -387,7 +459,7 @@ const FinanzasManagement: React.FC = () => {
           };
 
           try {
-            const response = await api.post('/api/public/insumos', nuevoInsumo);
+            const response = await api.post('/public/insumos', nuevoInsumo);
             const insumoCreado = response.data;
             setInsumos(prev => [...prev, insumoCreado]);
             alert(`✅ Nuevo insumo "${insumoCreado.nombre}" creado y agregado al inventario`);
@@ -816,25 +888,125 @@ const FinanzasManagement: React.FC = () => {
 
       {/* Contenido de las pestañas */}
       {activeTab === 'ingresos' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>📈 Lista de Ingresos</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <>
+          {/* Filtros para Ingresos */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>🔍 Filtros y Búsqueda - Ingresos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Búsqueda */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Buscar
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Buscar por concepto, descripción o cliente..."
+                    value={busquedaIngresos}
+                    onChange={(e) => setBusquedaIngresos(e.target.value)}
+                    className="w-full h-10"
+                  />
+                </div>
+
+                {/* Filtro por Tipo */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Ingreso
+                  </label>
+                  <Select value={filtroTipoIngreso} onValueChange={setFiltroTipoIngreso}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TODOS">Todos</SelectItem>
+                      {tiposIngreso.map(tipo => (
+                        <SelectItem key={tipo.value} value={tipo.value}>
+                          {tipo.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro por Estado */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Estado
+                  </label>
+                  <Select value={filtroEstadoIngreso} onValueChange={setFiltroEstadoIngreso}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TODOS">Todos</SelectItem>
+                      {estados.map(estado => (
+                        <SelectItem key={estado.value} value={estado.value}>
+                          {estado.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Botón Limpiar Filtros */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    &nbsp;
+                  </label>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setBusquedaIngresos('');
+                      setFiltroTipoIngreso('TODOS');
+                      setFiltroEstadoIngreso('TODOS');
+                    }}
+                    className="w-full h-10 text-sm"
+                    size="sm"
+                  >
+                    🗑️ Limpiar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>📈 Lista de Ingresos</span>
+                <span className="text-sm text-gray-500">
+                  {obtenerIngresosFiltrados().length} elemento{obtenerIngresosFiltrados().length !== 1 ? 's' : ''}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
             {loading ? (
               <div className="text-center py-8">
                 <p>⏳ Cargando ingresos...</p>
               </div>
-            ) : ingresos.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No hay ingresos registrados</p>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  {ingresos
-                    .slice((paginaIngresos - 1) * registrosPorPagina, paginaIngresos * registrosPorPagina)
-                    .map((ingreso) => (
+            ) : (() => {
+              const ingresosFiltrados = obtenerIngresosFiltrados();
+              const totalPaginas = Math.ceil(ingresosFiltrados.length / registrosPorPagina);
+              const inicio = (paginaIngresos - 1) * registrosPorPagina;
+              const fin = inicio + registrosPorPagina;
+              const ingresosPaginados = ingresosFiltrados.slice(inicio, fin);
+
+              if (ingresosFiltrados.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">
+                      {ingresos.length === 0 ? 'No hay ingresos registrados' : 'No se encontraron ingresos con los filtros aplicados'}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  <div className="space-y-4">
+                    {ingresosPaginados.map((ingreso) => (
                     <div key={ingreso.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
@@ -888,59 +1060,179 @@ const FinanzasManagement: React.FC = () => {
                   ))}
                 </div>
                 
-                {/* Paginación de Ingresos */}
-                {ingresos.length > registrosPorPagina && (
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                    <p className="text-sm text-gray-600">
-                      Mostrando {((paginaIngresos - 1) * registrosPorPagina) + 1} - {Math.min(paginaIngresos * registrosPorPagina, ingresos.length)} de {ingresos.length}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setPaginaIngresos(p => Math.max(1, p - 1))}
-                        disabled={paginaIngresos === 1}
-                        className="text-sm"
-                      >
-                        ← Anterior
-                      </Button>
-                      <span className="px-3 py-2 text-sm">
-                        Página {paginaIngresos} de {Math.ceil(ingresos.length / registrosPorPagina)}
-                      </span>
-                      <Button
-                        onClick={() => setPaginaIngresos(p => Math.min(Math.ceil(ingresos.length / registrosPorPagina), p + 1))}
-                        disabled={paginaIngresos >= Math.ceil(ingresos.length / registrosPorPagina)}
-                        className="text-sm"
-                      >
-                        Siguiente →
-                      </Button>
+                  {/* Paginación de Ingresos */}
+                  {totalPaginas > 1 && (
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                      <p className="text-sm text-gray-600">
+                        Mostrando {inicio + 1} - {Math.min(fin, ingresosFiltrados.length)} de {ingresosFiltrados.length}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setPaginaIngresos(1)}
+                          disabled={paginaIngresos === 1}
+                          variant="outline"
+                          size="sm"
+                        >
+                          ⏮️ Primera
+                        </Button>
+                        <Button
+                          onClick={() => setPaginaIngresos(p => Math.max(1, p - 1))}
+                          disabled={paginaIngresos === 1}
+                          variant="outline"
+                          size="sm"
+                        >
+                          ⬅️ Anterior
+                        </Button>
+                        <span className="px-3 py-1 text-sm">
+                          Página {paginaIngresos} de {totalPaginas}
+                        </span>
+                        <Button
+                          onClick={() => setPaginaIngresos(p => Math.min(totalPaginas, p + 1))}
+                          disabled={paginaIngresos >= totalPaginas}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Siguiente ➡️
+                        </Button>
+                        <Button
+                          onClick={() => setPaginaIngresos(totalPaginas)}
+                          disabled={paginaIngresos >= totalPaginas}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Última ⏭️
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>
-            )}
+                  )}
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
+        </>
       )}
 
       {activeTab === 'egresos' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>📉 Lista de Egresos</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <>
+          {/* Filtros para Egresos */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>🔍 Filtros y Búsqueda - Egresos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Búsqueda */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Buscar
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Buscar por concepto, descripción o proveedor..."
+                    value={busquedaEgresos}
+                    onChange={(e) => setBusquedaEgresos(e.target.value)}
+                    className="w-full h-10"
+                  />
+                </div>
+
+                {/* Filtro por Tipo */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Egreso
+                  </label>
+                  <Select value={filtroTipoEgreso} onValueChange={setFiltroTipoEgreso}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TODOS">Todos</SelectItem>
+                      {tiposEgreso.map(tipo => (
+                        <SelectItem key={tipo.value} value={tipo.value}>
+                          {tipo.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro por Estado */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Estado
+                  </label>
+                  <Select value={filtroEstadoEgreso} onValueChange={setFiltroEstadoEgreso}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TODOS">Todos</SelectItem>
+                      {estados.map(estado => (
+                        <SelectItem key={estado.value} value={estado.value}>
+                          {estado.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Botón Limpiar Filtros */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    &nbsp;
+                  </label>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setBusquedaEgresos('');
+                      setFiltroTipoEgreso('TODOS');
+                      setFiltroEstadoEgreso('TODOS');
+                    }}
+                    className="w-full h-10 text-sm"
+                    size="sm"
+                  >
+                    🗑️ Limpiar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>📉 Lista de Egresos</span>
+                <span className="text-sm text-gray-500">
+                  {obtenerEgresosFiltrados().length} elemento{obtenerEgresosFiltrados().length !== 1 ? 's' : ''}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
             {loading ? (
               <div className="text-center py-8">
                 <p>⏳ Cargando egresos...</p>
               </div>
-            ) : egresos.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No hay egresos registrados</p>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  {egresos
-                    .slice((paginaEgresos - 1) * registrosPorPagina, paginaEgresos * registrosPorPagina)
-                    .map((egreso) => (
+            ) : (() => {
+              const egresosFiltrados = obtenerEgresosFiltrados();
+              const totalPaginas = Math.ceil(egresosFiltrados.length / registrosPorPagina);
+              const inicio = (paginaEgresos - 1) * registrosPorPagina;
+              const fin = inicio + registrosPorPagina;
+              const egresosPaginados = egresosFiltrados.slice(inicio, fin);
+
+              if (egresosFiltrados.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">
+                      {egresos.length === 0 ? 'No hay egresos registrados' : 'No se encontraron egresos con los filtros aplicados'}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  <div className="space-y-4">
+                    {egresosPaginados.map((egreso) => (
                     <div key={egreso.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
@@ -1000,37 +1292,57 @@ const FinanzasManagement: React.FC = () => {
                   ))}
                 </div>
                 
-                {/* Paginación de Egresos */}
-                {egresos.length > registrosPorPagina && (
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                    <p className="text-sm text-gray-600">
-                      Mostrando {((paginaEgresos - 1) * registrosPorPagina) + 1} - {Math.min(paginaEgresos * registrosPorPagina, egresos.length)} de {egresos.length}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setPaginaEgresos(p => Math.max(1, p - 1))}
-                        disabled={paginaEgresos === 1}
-                        className="text-sm"
-                      >
-                        ← Anterior
-                      </Button>
-                      <span className="px-3 py-2 text-sm">
-                        Página {paginaEgresos} de {Math.ceil(egresos.length / registrosPorPagina)}
-                      </span>
-                      <Button
-                        onClick={() => setPaginaEgresos(p => Math.min(Math.ceil(egresos.length / registrosPorPagina), p + 1))}
-                        disabled={paginaEgresos >= Math.ceil(egresos.length / registrosPorPagina)}
-                        className="text-sm"
-                      >
-                        Siguiente →
-                      </Button>
+                  {/* Paginación de Egresos */}
+                  {totalPaginas > 1 && (
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                      <p className="text-sm text-gray-600">
+                        Mostrando {inicio + 1} - {Math.min(fin, egresosFiltrados.length)} de {egresosFiltrados.length}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setPaginaEgresos(1)}
+                          disabled={paginaEgresos === 1}
+                          variant="outline"
+                          size="sm"
+                        >
+                          ⏮️ Primera
+                        </Button>
+                        <Button
+                          onClick={() => setPaginaEgresos(p => Math.max(1, p - 1))}
+                          disabled={paginaEgresos === 1}
+                          variant="outline"
+                          size="sm"
+                        >
+                          ⬅️ Anterior
+                        </Button>
+                        <span className="px-3 py-1 text-sm">
+                          Página {paginaEgresos} de {totalPaginas}
+                        </span>
+                        <Button
+                          onClick={() => setPaginaEgresos(p => Math.min(totalPaginas, p + 1))}
+                          disabled={paginaEgresos >= totalPaginas}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Siguiente ➡️
+                        </Button>
+                        <Button
+                          onClick={() => setPaginaEgresos(totalPaginas)}
+                          disabled={paginaEgresos >= totalPaginas}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Última ⏭️
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>
-            )}
+                  )}
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
+        </>
       )}
 
 

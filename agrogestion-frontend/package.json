@@ -7,7 +7,11 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check-api-routes": "node scripts/check-api-routes.js",
+    "check-api-routes:win": "powershell -ExecutionPolicy Bypass -File scripts/check-api-routes.ps1",
+    "check-api-routes:unix": "bash scripts/check-api-routes.sh",
+    "lint:api": "npm run check-api-routes"
   },
   "devDependencies": {
     "@types/react": "^19.1.10",

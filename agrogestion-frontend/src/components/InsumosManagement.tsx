@@ -31,6 +31,10 @@ const InsumosManagement: React.FC = () => {
   const [filterType, setFilterType] = useState('todos');
   const [loading, setLoading] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<'ARS' | 'USD' | 'EUR'>('ARS');
+  
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [elementosPorPagina] = useState(10);
   const [formData, setFormData] = useState<Insumo>({
     nombre: '',
     tipo: '',
@@ -124,7 +128,7 @@ const InsumosManagement: React.FC = () => {
     const loadInsumos = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/api/insumos');
+        const response = await api.get('/insumos');
         
         
         // Mapear datos del backend al frontend con valores por defecto
@@ -280,6 +284,21 @@ const InsumosManagement: React.FC = () => {
     
     return matchesSearch && matchesType;
   });
+
+  // Función para obtener insumos paginados
+  const obtenerInsumosPaginados = () => {
+    const totalPaginas = Math.ceil(filteredInsumos.length / elementosPorPagina);
+    const inicio = (paginaActual - 1) * elementosPorPagina;
+    const fin = inicio + elementosPorPagina;
+    const insumosPaginados = filteredInsumos.slice(inicio, fin);
+    
+    return { insumosPaginados, totalPaginas };
+  };
+
+  // Resetear paginación cuando cambien los filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filterType]);
 
   // Obtener estadísticas
   const estadisticas = {
@@ -677,30 +696,38 @@ const InsumosManagement: React.FC = () => {
           <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
             🔄 Cargando insumos...
           </div>
-        ) : filteredInsumos.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-            {searchTerm || filterType !== 'todos' ? 'No se encontraron insumos que coincidan con los filtros' : 'No hay insumos registrados'}
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ 
-              width: '100%', 
-              borderCollapse: 'collapse',
-              fontSize: '14px'
-            }}>
-              <thead>
-                <tr style={{ background: '#f8f9fa' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Insumo</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Tipo</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Stock</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Precio</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Proveedor</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Vencimiento</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInsumos.map(insumo => (
+        ) : (() => {
+          const { insumosPaginados, totalPaginas } = obtenerInsumosPaginados();
+          
+          if (filteredInsumos.length === 0) {
+            return (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                {searchTerm || filterType !== 'todos' ? 'No se encontraron insumos que coincidan con los filtros' : 'No hay insumos registrados'}
+              </div>
+            );
+          }
+
+          return (
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ 
+                  width: '100%', 
+                  borderCollapse: 'collapse',
+                  fontSize: '14px'
+                }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Insumo</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Tipo</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Stock</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Precio</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Proveedor</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Vencimiento</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {insumosPaginados.map(insumo => (
                   <tr key={insumo.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
                     <td style={{ padding: '12px' }}>
                       <div>
@@ -806,11 +833,104 @@ const InsumosManagement: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Paginación */}
+              {totalPaginas > 1 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  padding: '20px',
+                  borderTop: '1px solid #e5e7eb',
+                  background: '#f8f9fa'
+                }}>
+                  <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                    Mostrando {((paginaActual - 1) * elementosPorPagina) + 1} - {Math.min(paginaActual * elementosPorPagina, filteredInsumos.length)} de {filteredInsumos.length} insumos
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setPaginaActual(1)}
+                      disabled={paginaActual === 1}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                        color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ⏮️ Primera
+                    </button>
+                    
+                    <button
+                      onClick={() => setPaginaActual(paginaActual - 1)}
+                      disabled={paginaActual === 1}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                        color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ⬅️ Anterior
+                    </button>
+                    
+                    <span style={{ 
+                      padding: '8px 12px', 
+                      fontSize: '14px',
+                      color: '#374151',
+                      fontWeight: 'bold'
+                    }}>
+                      Página {paginaActual} de {totalPaginas}
+                    </span>
+                    
+                    <button
+                      onClick={() => setPaginaActual(paginaActual + 1)}
+                      disabled={paginaActual === totalPaginas}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                        color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Siguiente ➡️
+                    </button>
+                    
+                    <button
+                      onClick={() => setPaginaActual(totalPaginas)}
+                      disabled={paginaActual === totalPaginas}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                        color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                        cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Última ⏭️
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

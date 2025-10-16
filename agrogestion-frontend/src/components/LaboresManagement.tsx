@@ -198,6 +198,10 @@ const LaboresManagement: React.FC = () => {
   const [showDetallesCostos, setShowDetallesCostos] = useState(false);
   const [laborSeleccionada, setLaborSeleccionada] = useState<Labor | null>(null);
   
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [elementosPorPagina] = useState(10);
+  
   // Estados para formularios de maquinaria y mano de obra
   const [showFormMaquinaria, setShowFormMaquinaria] = useState(false);
   const [showFormMaquinariaAlquilada, setShowFormMaquinariaAlquilada] = useState(false);
@@ -294,7 +298,7 @@ const LaboresManagement: React.FC = () => {
       }
 
       // Cargar lotes
-      const lotesResponse = await api.get('/api/v1/lotes');
+      const lotesResponse = await api.get('/v1/lotes');
       if (lotesResponse.status >= 200 && lotesResponse.status < 300) {
         const lotesData = lotesResponse.data;
         const lotesMapeados: Lote[] = lotesData.map((lote: any) => ({
@@ -308,7 +312,7 @@ const LaboresManagement: React.FC = () => {
       }
 
       // Cargar insumos
-      const insumosResponse = await api.get('/api/insumos');
+      const insumosResponse = await api.get('/insumos');
       if (insumosResponse.status >= 200 && insumosResponse.status < 300) {
         const insumosData = insumosResponse.data;
         const insumosMapeados: Insumo[] = insumosData.map((insumo: any) => ({
@@ -323,7 +327,7 @@ const LaboresManagement: React.FC = () => {
       }
 
       // Cargar maquinaria
-      const maquinariaResponse = await api.get('/api/maquinaria');
+      const maquinariaResponse = await api.get('/maquinaria');
       if (maquinariaResponse.status >= 200 && maquinariaResponse.status < 300) {
         const maquinariaData = maquinariaResponse.data;
         const maquinariaMapeada: Maquinaria[] = maquinariaData.map((maq: any) => ({
@@ -388,7 +392,7 @@ const LaboresManagement: React.FC = () => {
 
     try {
       console.log('🔍 Cargando tareas disponibles para estado:', estadoLote);
-      const response = await api.get(`/api/labores/tareas-disponibles/${estadoLote}`);
+      const response = await api.get(`/labores/tareas-disponibles/${estadoLote}`);
 
       console.log('📡 Response status:', response.status);
       
@@ -791,10 +795,10 @@ const LaboresManagement: React.FC = () => {
       let response;
       if (editingLabor) {
         // Editar labor existente
-        response = await api.put(`/api/labores/${editingLabor.id}`, laborCompleta);
+        response = await api.put(`/labores/${editingLabor.id}`, laborCompleta);
       } else {
         // Crear nueva labor
-        response = await api.post('/api/labores', laborCompleta);
+        response = await api.post('/labores', laborCompleta);
       }
 
       if (response.status >= 200 && response.status < 300) {
@@ -1015,6 +1019,21 @@ const LaboresManagement: React.FC = () => {
     return matchesSearch && matchesEstado;
   });
 
+  // Función para obtener labores paginadas
+  const obtenerLaboresPaginadas = () => {
+    const totalPaginas = Math.ceil(filteredLabores.length / elementosPorPagina);
+    const inicio = (paginaActual - 1) * elementosPorPagina;
+    const fin = inicio + elementosPorPagina;
+    const laboresPaginadas = filteredLabores.slice(inicio, fin);
+    
+    return { laboresPaginadas, totalPaginas };
+  };
+
+  // Resetear paginación cuando cambien los filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filterEstado]);
+
   return (
     <div style={{ 
       padding: isMobile ? '10px' : '20px', 
@@ -1199,7 +1218,20 @@ const LaboresManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredLabores.map((labor: Labor) => (
+                {(() => {
+                  const { laboresPaginadas, totalPaginas } = obtenerLaboresPaginadas();
+                  
+                  if (filteredLabores.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                          {searchTerm || filterEstado !== 'todos' ? 'No se encontraron labores que coincidan con los filtros' : 'No hay labores registradas'}
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return laboresPaginadas.map((labor: Labor) => (
                   <tr key={labor.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
                     <td style={{ padding: '12px' }}>
                       <div>
@@ -1314,11 +1346,110 @@ const LaboresManagement: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                ));
+                })()}
               </tbody>
             </table>
           </div>
         )}
+
+        {/* Paginación */}
+        {(() => {
+          const { totalPaginas } = obtenerLaboresPaginadas();
+          
+          if (totalPaginas > 1) {
+            return (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                padding: '20px',
+                borderTop: '1px solid #e5e7eb',
+                background: '#f8f9fa'
+              }}>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                  Mostrando {((paginaActual - 1) * elementosPorPagina) + 1} - {Math.min(paginaActual * elementosPorPagina, filteredLabores.length)} de {filteredLabores.length} labores
+                </div>
+                
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setPaginaActual(1)}
+                    disabled={paginaActual === 1}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                      color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                      cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ⏮️ Primera
+                  </button>
+                  
+                  <button
+                    onClick={() => setPaginaActual(paginaActual - 1)}
+                    disabled={paginaActual === 1}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: paginaActual === 1 ? '#f3f4f6' : 'white',
+                      color: paginaActual === 1 ? '#9ca3af' : '#374151',
+                      cursor: paginaActual === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ⬅️ Anterior
+                  </button>
+                  
+                  <span style={{ 
+                    padding: '8px 12px', 
+                    fontSize: '14px',
+                    color: '#374151',
+                    fontWeight: 'bold'
+                  }}>
+                    Página {paginaActual} de {totalPaginas}
+                  </span>
+                  
+                  <button
+                    onClick={() => setPaginaActual(paginaActual + 1)}
+                    disabled={paginaActual === totalPaginas}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                      color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                      cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Siguiente ➡️
+                  </button>
+                  
+                  <button
+                    onClick={() => setPaginaActual(totalPaginas)}
+                    disabled={paginaActual === totalPaginas}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: paginaActual === totalPaginas ? '#f3f4f6' : 'white',
+                      color: paginaActual === totalPaginas ? '#9ca3af' : '#374151',
+                      cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Última ⏭️
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
 
       {/* Modal para crear/editar labor */}

@@ -69,7 +69,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
            requestURI.contains("/api/admin-global/usuarios-basic") ||
            requestURI.contains("/api/admin-global/estadisticas-uso") ||
             requestURI.contains("/api/v1/weather-simple/") ||
-            requestURI.contains("/api/v1/weather/")) {
+            requestURI.contains("/api/v1/weather/") ||
+            requestURI.contains("/actuator/")) {
             logger.info("✅ [JwtFilter] Endpoint público detectado, permitiendo paso: {}", requestURI);
             filterChain.doFilter(request, response);
             return;

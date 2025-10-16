@@ -86,7 +86,7 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
       setLoading(true);
       setError(null);
       
-      const response = await api.get('/api/v1/empresas/mis-empresas');
+      const response = await api.get('/v1/empresas/mis-empresas');
       const empresas = response.data;
       
       console.log('🔍 [EmpresaContext] Datos recibidos de mis-empresas:', empresas);

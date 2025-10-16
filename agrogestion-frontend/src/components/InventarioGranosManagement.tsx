@@ -38,6 +38,10 @@ const InventarioGranosManagement: React.FC = () => {
   const [showVentaModal, setShowVentaModal] = useState(false);
   const [inventarioSeleccionado, setInventarioSeleccionado] = useState<InventarioGrano | null>(null);
   const { formatCurrency } = useCurrencyContext();
+  
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [elementosPorPagina] = useState(10);
 
   useEffect(() => {
     cargarInventario();
@@ -47,10 +51,25 @@ const InventarioGranosManagement: React.FC = () => {
     aplicarFiltros();
   }, [inventario, filtro, searchTerm]);
 
+  // Función para obtener inventario paginado
+  const obtenerInventarioPaginado = () => {
+    const totalPaginas = Math.ceil(inventarioFiltrado.length / elementosPorPagina);
+    const inicio = (paginaActual - 1) * elementosPorPagina;
+    const fin = inicio + elementosPorPagina;
+    const inventarioPaginado = inventarioFiltrado.slice(inicio, fin);
+    
+    return { inventarioPaginado, totalPaginas };
+  };
+
+  // Resetear paginación cuando cambien los filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtro, searchTerm]);
+
   const cargarInventario = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/v1/inventario-granos');
+      const response = await api.get('/v1/inventario-granos');
       setInventario(response.data);
     } catch (error) {
       console.error('Error cargando inventario:', error);
@@ -220,9 +239,24 @@ const InventarioGranosManagement: React.FC = () => {
                 El inventario se crea automáticamente cuando cosechas un lote
               </p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {inventarioFiltrado.map((item) => (
+          ) : (() => {
+            const { inventarioPaginado, totalPaginas } = obtenerInventarioPaginado();
+            
+            if (inventarioFiltrado.length === 0) {
+              return (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No hay registros de inventario</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    El inventario se crea automáticamente cuando cosechas un lote
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <>
+                <div className="space-y-4">
+                  {inventarioPaginado.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
@@ -273,10 +307,61 @@ const InventarioGranosManagement: React.FC = () => {
                       </Button>
                     )}
                   </div>
+                  </div>
+                ))}
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Paginación */}
+                {totalPaginas > 1 && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPaginaActual(1)}
+                        disabled={paginaActual === 1}
+                      >
+                        ⏮️ Primera
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPaginaActual(paginaActual - 1)}
+                        disabled={paginaActual === 1}
+                      >
+                        ⬅️ Anterior
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
+                        Página {paginaActual} de {totalPaginas}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPaginaActual(paginaActual + 1)}
+                        disabled={paginaActual === totalPaginas}
+                      >
+                        Siguiente ➡️
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPaginaActual(totalPaginas)}
+                        disabled={paginaActual === totalPaginas}
+                      >
+                        Última ⏭️
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 
