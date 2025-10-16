@@ -24,7 +24,7 @@ RUN mvn clean package -DskipTests
 EXPOSE 8080
 
 # Variables de entorno por defecto
-ENV SPRING_PROFILES_ACTIVE=testing
+ENV SPRING_PROFILES_ACTIVE=railway-mysql
 ENV JAVA_OPTS="-Xmx512m -Xms256m"
 
 # Comando de arranque
