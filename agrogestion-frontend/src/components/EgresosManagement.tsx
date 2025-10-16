@@ -94,7 +94,7 @@ const EgresosManagement: React.FC = () => {
   const cargarEgresos = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/v1/egresos');
+      const response = await api.get('/v1/egresos');
       setEgresos(response.data);
     } catch (error) {
       console.error('Error cargando egresos:', error);
@@ -105,7 +105,7 @@ const EgresosManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/api/campos');
+      const response = await api.get('/campos');
       setLotes(response.data);
     } catch (error) {
       console.error('Error cargando lotes:', error);
@@ -114,7 +114,7 @@ const EgresosManagement: React.FC = () => {
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/api/insumos');
+      const response = await api.get('/insumos');
       setInsumos(response.data);
     } catch (error) {
       console.error('Error cargando insumos:', error);
@@ -160,7 +160,7 @@ const EgresosManagement: React.FC = () => {
       }
 
       // Usar el endpoint integrado
-      await api.post('/api/v1/egresos/integrado', egresoData);
+      await api.post('/v1/egresos/integrado', egresoData);
       
       // Limpiar formulario
       setFormData({

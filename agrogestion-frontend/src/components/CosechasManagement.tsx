@@ -195,7 +195,7 @@ const CosechasManagement: React.FC = () => {
       }
 
       // Cargar lotes
-      const lotesResponse = await api.get('/api/v1/lotes');
+      const lotesResponse = await api.get('/v1/lotes');
       const lotesData = lotesResponse.data;
         const lotesMapeados: Lote[] = lotesData
           .filter((lote: any) => {
@@ -222,7 +222,7 @@ const CosechasManagement: React.FC = () => {
         setLotes(lotesMapeados);
 
       // Cargar cultivos
-      const cultivosResponse = await api.get('/api/v1/cultivos');
+      const cultivosResponse = await api.get('/v1/cultivos');
       const cultivosData = cultivosResponse.data;
         const cultivosMapeados: Cultivo[] = cultivosData.map((cultivo: any) => ({
           id: cultivo.id,
@@ -234,7 +234,7 @@ const CosechasManagement: React.FC = () => {
         setCultivos(cultivosMapeados);
 
       // Cargar cosechas usando el servicio api que tiene el interceptor configurado
-      const cosechasResponse = await api.get('/api/v1/cosechas');
+      const cosechasResponse = await api.get('/v1/cosechas');
       const cosechasData = cosechasResponse.data;
         console.log('Cosechas recibidas del backend:', cosechasData);
         

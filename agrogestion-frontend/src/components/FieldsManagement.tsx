@@ -394,7 +394,7 @@ const FieldsManagement: React.FC = () => {
       }
 
       // Llamar a la API real para obtener los campos del usuario
-      const response = await api.get('/api/campos');
+      const response = await api.get('/campos');
       const data = response.data;
       
       // Mapear los datos de la API al formato del frontend
@@ -816,10 +816,10 @@ const FieldsManagement: React.FC = () => {
       let response;
     if (isEditing && selectedField) {
       // Editar campo existente
-        response = await api.put(`/api/campos/${selectedField.id}`, fieldData);
+        response = await api.put(`/campos/${selectedField.id}`, fieldData);
     } else {
         // Crear nuevo campo
-        response = await api.post('/api/campos', fieldData);
+        response = await api.post('/campos', fieldData);
     }
 
       if (response.status >= 200 && response.status < 300) {

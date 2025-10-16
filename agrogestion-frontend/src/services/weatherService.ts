@@ -50,7 +50,7 @@ class WeatherService {
       console.log(`🌤️ [WeatherService] Obteniendo clima REAL para lat: ${latitude}, lon: ${longitude}`);
       
       // Llamar al endpoint real de Open-Meteo
-      const response = await api.get(`/api/v1/weather-simple/coordinates?latitude=${latitude}&longitude=${longitude}`);
+      const response = await api.get(`/v1/weather-simple/coordinates?latitude=${latitude}&longitude=${longitude}`);
       console.log('🌤️ [WeatherService] Datos meteorológicos REALES obtenidos:', response.data);
       
       // Guardar en cache
@@ -65,7 +65,7 @@ class WeatherService {
       // Fallback: intentar con el endpoint simple
       try {
         console.log('🔄 [WeatherService] Intentando con endpoint simple...');
-        const fallbackResponse = await api.get(`/api/v1/weather-simple/coordinates-simple?latitude=${latitude}&longitude=${longitude}`);
+        const fallbackResponse = await api.get(`/v1/weather-simple/coordinates-simple?latitude=${latitude}&longitude=${longitude}`);
         console.log('🌤️ [WeatherService] Datos meteorológicos obtenidos con fallback:', fallbackResponse.data);
         
         // Guardar en cache también el fallback
@@ -136,7 +136,7 @@ class WeatherService {
     try {
       console.log(`🌤️ [WeatherService] Obteniendo clima para campo ID: ${fieldId}`);
       
-      const response = await api.get(`/api/v1/weather-simple/field/${fieldId}`);
+      const response = await api.get(`/v1/weather-simple/field/${fieldId}`);
       
       console.log('🌤️ [WeatherService] Datos meteorológicos obtenidos:', response.data);
       
@@ -157,7 +157,7 @@ class WeatherService {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      const response = await api.get('/api/v1/weather-simple/health');
+      const response = await api.get('/v1/weather-simple/health');
       return response.status === 200;
     } catch (error) {
       console.error('❌ [WeatherService] Error verificando salud del servicio:', error);

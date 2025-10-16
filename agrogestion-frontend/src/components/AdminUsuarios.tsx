@@ -147,7 +147,7 @@ const AdminUsuarios: React.FC = () => {
       
       // Cargar usuarios usando el servicio de API
       try {
-        const responseUsuarios = await api.get('/api/admin/usuarios');
+        const responseUsuarios = await api.get('/admin/usuarios');
         const usuariosData = Array.isArray(responseUsuarios.data) ? responseUsuarios.data : [];
         console.log('📊 [AdminUsuarios] Usuarios cargados del backend:', usuariosData);
         if (usuariosData.length > 0) {
@@ -161,7 +161,7 @@ const AdminUsuarios: React.FC = () => {
 
       // Cargar roles usando el servicio de API
       try {
-        const responseRoles = await api.get('/api/admin/usuarios/roles');
+        const responseRoles = await api.get('/admin/usuarios/roles');
         const rolesData = Array.isArray(responseRoles.data) ? responseRoles.data : [];
         setRoles(rolesData);
       } catch (error) {
@@ -170,7 +170,7 @@ const AdminUsuarios: React.FC = () => {
       }
 
       // Cargar estadísticas usando el servicio de API
-      const responseEstadisticas = await api.get('/api/admin/usuarios/estadisticas');
+      const responseEstadisticas = await api.get('/admin/usuarios/estadisticas');
       setEstadisticas(responseEstadisticas.data);
 
     } catch (error) {
@@ -205,7 +205,7 @@ const AdminUsuarios: React.FC = () => {
       };
 
       // Usar el servicio de API
-      await api.post('/api/admin/usuarios', usuarioData);
+      await api.post('/admin/usuarios', usuarioData);
 
       showNotification('Usuario creado exitosamente', 'success');
       setDialogCrear(false);

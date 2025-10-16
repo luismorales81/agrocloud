@@ -59,7 +59,7 @@ const IngresosManagement: React.FC = () => {
   const cargarIngresos = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/api/v1/ingresos');
+      const response = await api.get('/v1/ingresos');
       setIngresos(response.data);
     } catch (error) {
       console.error('Error cargando ingresos:', error);
@@ -70,7 +70,7 @@ const IngresosManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/api/v1/campos');
+      const response = await api.get('/v1/campos');
       setLotes(response.data);
     } catch (error) {
       console.error('Error cargando lotes:', error);
@@ -84,7 +84,7 @@ const IngresosManagement: React.FC = () => {
       if (editingIngreso?.id) {
         await api.put(`/api/v1/ingresos/${editingIngreso.id}`, formData);
       } else {
-        await api.post('/api/v1/ingresos', formData);
+        await api.post('/v1/ingresos', formData);
       }
       cargarIngresos();
       resetForm();

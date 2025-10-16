@@ -117,7 +117,7 @@ const VentaGranoModal: React.FC<VentaGranoModalProps> = ({ inventario, onClose, 
         observaciones: formData.observaciones || null
       };
 
-      const response = await api.post('/api/v1/inventario-granos/vender', requestData);
+      const response = await api.post('/v1/inventario-granos/vender', requestData);
 
       if (response.data.success) {
         alert(`✅ Venta procesada exitosamente\n\n` +

@@ -68,7 +68,7 @@ const CultivosManagement: React.FC = () => {
       }
 
       // Llamada real a la API
-      const response = await api.get('/api/v1/cultivos');
+      const response = await api.get('/v1/cultivos');
       const data = response.data;
       console.log('Cultivos cargados desde API:', data);
       setCultivos(data);
@@ -99,8 +99,8 @@ const CultivosManagement: React.FC = () => {
       }
 
       const response = editingCultivo
-        ? await api.put(`/api/v1/cultivos/${editingCultivo.id}`, formData)
-        : await api.post('/api/v1/cultivos', formData);
+        ? await api.put(`/v1/cultivos/${editingCultivo.id}`, formData)
+        : await api.post('/v1/cultivos', formData);
 
       const savedCultivo = response.data;
       console.log('Cultivo guardado:', savedCultivo);

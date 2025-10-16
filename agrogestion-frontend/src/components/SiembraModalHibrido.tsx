@@ -122,7 +122,7 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarCultivos = async () => {
     try {
-      const response = await api.get('/api/v1/cultivos');
+      const response = await api.get('/v1/cultivos');
 
       if (response.status >= 200 && response.status < 300) {
         console.log('Cultivos cargados:', response.data);
@@ -137,7 +137,7 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/api/insumos');
+      const response = await api.get('/insumos');
 
       if (response.status >= 200 && response.status < 300) {
         setInsumos(response.data);
@@ -149,7 +149,7 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarMaquinarias = async () => {
     try {
-      const response = await api.get('/api/maquinaria');
+      const response = await api.get('/maquinaria');
 
       if (response.status >= 200 && response.status < 300) {
         const maquinariasMapeadas = response.data.map((maq: any) => ({

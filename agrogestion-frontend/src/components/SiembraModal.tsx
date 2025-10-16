@@ -37,7 +37,7 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
 
   const cargarCultivos = async () => {
     try {
-      const response = await api.get('/api/cultivos');
+      const response = await api.get('/v1/cultivos');
 
       if (response.status >= 200 && response.status < 300) {
         setCultivos(response.data);

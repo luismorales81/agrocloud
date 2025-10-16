@@ -65,7 +65,7 @@ const UsersManagement: React.FC = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/auth/users');
+      const response = await api.get('/auth/users');
       
       if (response.status >= 200 && response.status < 300) {
         setUsers(response.data);
@@ -82,7 +82,7 @@ const UsersManagement: React.FC = () => {
   // Cargar roles
   const loadRoles = async () => {
     try {
-      const response = await api.get('/api/auth/roles');
+      const response = await api.get('/auth/roles');
       
       if (response.status >= 200 && response.status < 300) {
         setRoles(response.data);
@@ -95,7 +95,7 @@ const UsersManagement: React.FC = () => {
   // Cargar estadísticas
   const loadStats = async () => {
     try {
-      const response = await api.get('/api/auth/stats');
+      const response = await api.get('/auth/stats');
       
       if (response.status >= 200 && response.status < 300) {
         setStats(response.data);
@@ -112,7 +112,7 @@ const UsersManagement: React.FC = () => {
     console.log('📋 [UsersManagement] formData:', formData);
     try {
       setFormLoading(true);
-      const response = await api.post('/api/auth/register', formData);
+      const response = await api.post('/auth/register', formData);
       
       console.log('📡 [UsersManagement] Respuesta del servidor:', response.status, response.data);
       

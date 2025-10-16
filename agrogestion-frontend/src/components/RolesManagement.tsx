@@ -40,7 +40,7 @@ const RolesManagement: React.FC = () => {
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/roles');
+      const response = await api.get('/roles');
       
       if (response.status >= 200 && response.status < 300) {
         setRoles(response.data);
@@ -57,7 +57,7 @@ const RolesManagement: React.FC = () => {
   // Cargar permisos disponibles
   const loadAvailablePermissions = async () => {
     try {
-      const response = await api.get('/api/roles/permissions/available');
+      const response = await api.get('/roles/permissions/available');
       
       if (response.status >= 200 && response.status < 300) {
         setAvailablePermissions(response.data);
@@ -70,7 +70,7 @@ const RolesManagement: React.FC = () => {
   // Cargar estadísticas
   const loadStats = async () => {
     try {
-      const response = await api.get('/api/roles/stats');
+      const response = await api.get('/roles/stats');
       
       if (response.status >= 200 && response.status < 300) {
         setStats(response.data);
@@ -84,7 +84,7 @@ const RolesManagement: React.FC = () => {
   const createRole = async () => {
     try {
       setLoading(true);
-      const response = await api.post('/api/roles', formData);
+      const response = await api.post('/roles', formData);
       
       if (response.status >= 200 && response.status < 300) {
         setFormData({ name: '', description: '', permissions: [] });

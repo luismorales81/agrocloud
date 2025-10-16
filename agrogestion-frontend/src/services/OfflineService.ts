@@ -233,21 +233,21 @@ class OfflineService {
 
   public async getLabores(): Promise<any[]> {
     return this.get('labores', async () => {
-      const response = await api.get('/api/labores');
+      const response = await api.get('/labores');
       return response.data;
     }, 2 * 60 * 1000); // 2 minutos TTL (más frecuente)
   }
 
   public async getInsumos(): Promise<any[]> {
     return this.get('insumos', async () => {
-      const response = await api.get('/api/insumos');
+      const response = await api.get('/insumos');
       return response.data;
     }, 10 * 60 * 1000); // 10 minutos TTL
   }
 
   public async getMaquinaria(): Promise<any[]> {
     return this.get('maquinaria', async () => {
-      const response = await api.get('/api/maquinaria');
+      const response = await api.get('/maquinaria');
       return response.data;
     }, 10 * 60 * 1000);
   }
