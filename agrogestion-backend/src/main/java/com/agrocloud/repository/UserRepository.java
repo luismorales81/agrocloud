@@ -18,6 +18,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     Optional<User> findByEmail(String email);
     
+    // Método para cargar el usuario con sus relaciones (usuarioEmpresas y userCompanyRoles)
+    @Query("SELECT DISTINCT u FROM User u " +
+           "LEFT JOIN FETCH u.usuarioEmpresas ue " +
+           "LEFT JOIN FETCH ue.empresa " +
+           "LEFT JOIN FETCH ue.rol " +
+           "LEFT JOIN FETCH u.userCompanyRoles ucr " +
+           "LEFT JOIN FETCH ucr.empresa " +
+           "LEFT JOIN FETCH ucr.rol " +
+           "WHERE u.email = :email")
+    Optional<User> findByEmailWithRelations(@Param("email") String email);
+    
     // Método para cargar todos los usuarios con sus roles
     @EntityGraph(attributePaths = {"roles"})
     @Query("SELECT u FROM User u")

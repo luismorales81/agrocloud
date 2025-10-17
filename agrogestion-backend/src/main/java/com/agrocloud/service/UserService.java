@@ -31,6 +31,11 @@ public class UserService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
     }
+    
+    public User findByEmailWithRelations(String email) {
+        return userRepository.findByEmailWithRelations(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
+    }
 
     public Optional<User> findById(Long id) {
         return userRepository.findById(id);

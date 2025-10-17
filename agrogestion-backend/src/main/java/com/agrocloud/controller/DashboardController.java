@@ -69,7 +69,7 @@ public class DashboardController {
             }
 
             String username = authentication.getName();
-            User usuario = userService.findByEmail(username);
+            User usuario = userService.findByEmailWithRelations(username);
             
             if (usuario == null) {
                 return ResponseEntity.notFound().build();
