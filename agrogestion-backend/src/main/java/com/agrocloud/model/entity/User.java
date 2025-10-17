@@ -1,5 +1,6 @@
 package com.agrocloud.model.entity;
 
+import com.agrocloud.model.enums.RolEmpresa;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -15,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -123,10 +125,41 @@ public class User implements UserDetails {
     // Implementación de UserDetails para Spring Security
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Set<String> authorities = userCompanyRoles.stream()
-                .flatMap(ucr -> ucr.getRol().getRolePermissions().stream())
-                .map(rp -> rp.getPermiso().getNombre())
-                .collect(Collectors.toSet());
+        Set<String> authorities = new HashSet<>();
+        
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            for (UsuarioEmpresa ue : usuarioEmpresas) {
+                if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
+                    com.agrocloud.model.enums.RolEmpresa rol = ue.getRol();
+                    if (rol != null) {
+                        // Agregar el rol como autoridad
+                        authorities.add("ROLE_" + rol.name());
+                    }
+                }
+            }
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            for (UserCompanyRole ucr : userCompanyRoles) {
+                Role role = ucr.getRol();
+                if (role != null) {
+                    // Agregar el rol como autoridad
+                    authorities.add("ROLE_" + role.getNombre());
+                    
+                    // Agregar permisos del rol
+                    if (role.getRolePermissions() != null) {
+                        for (RolePermission rp : role.getRolePermissions()) {
+                            Permiso permiso = rp.getPermiso();
+                            if (permiso != null && permiso.getNombre() != null) {
+                                authorities.add(permiso.getNombre());
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         return authorities.stream()
                 .map(SimpleGrantedAuthority::new)
@@ -170,23 +203,92 @@ public class User implements UserDetails {
 
     // Métodos de utilidad
     public boolean hasRoleInCompany(String roleName, Long companyId) {
-        return userCompanyRoles.stream()
-                .anyMatch(ucr -> ucr.getRol().getNombre().equals(roleName) && 
-                               ucr.getEmpresa().getId().equals(companyId));
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            boolean encontradoEnNuevo = usuarioEmpresas.stream()
+                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                    .anyMatch(ue -> {
+                        RolEmpresa rol = ue.getRol();
+                        if (rol == null) return false;
+                        RolEmpresa rolActualizado = rol.getRolActualizado();
+                        return (rolActualizado != null && rolActualizado.name().equals(roleName)) ||
+                               (rol != null && rol.name().equals(roleName));
+                    });
+            if (encontradoEnNuevo) return true;
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            return userCompanyRoles.stream()
+                    .anyMatch(ucr -> {
+                        Role role = ucr.getRol();
+                        Empresa empresa = ucr.getEmpresa();
+                        return role != null && role.getNombre().equals(roleName) && 
+                               empresa != null && empresa.getId().equals(companyId);
+                    });
+        }
+        
+        return false;
     }
 
     public List<Empresa> getCompanies() {
-        return userCompanyRoles.stream()
-                .map(UserCompanyRole::getEmpresa)
-                .distinct()
-                .collect(Collectors.toList());
+        List<Empresa> empresas = new ArrayList<>();
+        
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            for (UsuarioEmpresa ue : usuarioEmpresas) {
+                if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
+                    Empresa empresa = ue.getEmpresa();
+                    if (empresa != null && !empresas.contains(empresa)) {
+                        empresas.add(empresa);
+                    }
+                }
+            }
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            for (UserCompanyRole ucr : userCompanyRoles) {
+                Empresa empresa = ucr.getEmpresa();
+                if (empresa != null && !empresas.contains(empresa)) {
+                    empresas.add(empresa);
+                }
+            }
+        }
+        
+        return empresas;
     }
 
     public List<Role> getRolesInCompany(Long companyId) {
-        return userCompanyRoles.stream()
-                .filter(ucr -> ucr.getEmpresa().getId().equals(companyId))
-                .map(UserCompanyRole::getRol)
-                .collect(Collectors.toList());
+        List<Role> roles = new ArrayList<>();
+        
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            for (UsuarioEmpresa ue : usuarioEmpresas) {
+                if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
+                    Empresa empresa = ue.getEmpresa();
+                    if (empresa != null && empresa.getId().equals(companyId)) {
+                        // Nota: El sistema nuevo usa RolEmpresa (enum), no Role (entidad)
+                        // Este método es para compatibilidad con el sistema antiguo
+                    }
+                }
+            }
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            for (UserCompanyRole ucr : userCompanyRoles) {
+                Empresa empresa = ucr.getEmpresa();
+                if (empresa != null && empresa.getId().equals(companyId)) {
+                    Role role = ucr.getRol();
+                    if (role != null && !roles.contains(role)) {
+                        roles.add(role);
+                    }
+                }
+            }
+        }
+        
+        return roles;
     }
 
     // Getters and Setters
@@ -338,21 +440,78 @@ public class User implements UserDetails {
     // Métodos de compatibilidad con el código existente
     @JsonIgnore
     public Set<Role> getRoles() {
-        // Retorna todos los roles únicos del usuario a través de las empresas
-        return userCompanyRoles.stream()
-                .map(UserCompanyRole::getRol)
-                .collect(Collectors.toSet());
+        Set<Role> roles = new HashSet<>();
+        
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        // Nota: El sistema nuevo usa RolEmpresa (enum), no Role (entidad)
+        // Este método es para compatibilidad con el sistema antiguo
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            for (UserCompanyRole ucr : userCompanyRoles) {
+                Role role = ucr.getRol();
+                if (role != null && !roles.contains(role)) {
+                    roles.add(role);
+                }
+            }
+        }
+        
+        return roles;
     }
 
     public boolean isAdmin() {
-        return getRoles().stream()
-                .anyMatch(role -> role.getNombre().equals("ADMINISTRADOR") || 
-                                role.getNombre().equals("SUPERADMIN"));
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            boolean esAdmin = usuarioEmpresas.stream()
+                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                    .anyMatch(ue -> {
+                        RolEmpresa rol = ue.getRol();
+                        if (rol == null) return false;
+                        RolEmpresa rolActualizado = rol.getRolActualizado();
+                        return rolActualizado == RolEmpresa.ADMINISTRADOR || 
+                               rolActualizado == RolEmpresa.SUPERADMIN;
+                    });
+            if (esAdmin) return true;
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            return userCompanyRoles.stream()
+                    .anyMatch(ucr -> {
+                        Role role = ucr.getRol();
+                        return role != null && 
+                               ("ADMINISTRADOR".equals(role.getNombre()) || 
+                                "SUPERADMIN".equals(role.getNombre()));
+                    });
+        }
+        
+        return false;
     }
 
     public boolean isSuperAdmin() {
-        return getRoles().stream()
-                .anyMatch(role -> role.getNombre().equals("SUPERADMIN"));
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            boolean esSuperAdmin = usuarioEmpresas.stream()
+                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                    .anyMatch(ue -> {
+                        RolEmpresa rol = ue.getRol();
+                        if (rol == null) return false;
+                        RolEmpresa rolActualizado = rol.getRolActualizado();
+                        return rolActualizado == RolEmpresa.SUPERADMIN;
+                    });
+            if (esSuperAdmin) return true;
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            return userCompanyRoles.stream()
+                    .anyMatch(ucr -> {
+                        Role role = ucr.getRol();
+                        return role != null && "SUPERADMIN".equals(role.getNombre());
+                    });
+        }
+        
+        return false;
     }
 
     public boolean canAccessUser(User targetUser) {
@@ -362,10 +521,30 @@ public class User implements UserDetails {
 
     public Empresa getEmpresa() {
         // Retorna la primera empresa del usuario (para compatibilidad)
-        return userCompanyRoles.stream()
-                .findFirst()
-                .map(UserCompanyRole::getEmpresa)
-                .orElse(null);
+        
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            for (UsuarioEmpresa ue : usuarioEmpresas) {
+                if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
+                    Empresa empresa = ue.getEmpresa();
+                    if (empresa != null) {
+                        return empresa;
+                    }
+                }
+            }
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            for (UserCompanyRole ucr : userCompanyRoles) {
+                Empresa empresa = ucr.getEmpresa();
+                if (empresa != null) {
+                    return empresa;
+                }
+            }
+        }
+        
+        return null;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -381,22 +560,36 @@ public class User implements UserDetails {
         System.out.println("🔧 [User.setRoles] Actualizando roles del usuario (sin empresa específica)");
         System.out.println("🔧 [User.setRoles] Roles a establecer: " + roles);
         
-        // Obtener la primera empresa del usuario, si existe
-        final Empresa empresaParaRol;
-        if (!userCompanyRoles.isEmpty()) {
-            empresaParaRol = userCompanyRoles.get(0).getEmpresa();
-            System.out.println("📍 [User.setRoles] Usando empresa existente: " + (empresaParaRol != null ? empresaParaRol.getId() : "null"));
-        } else {
-            empresaParaRol = null;
+        Empresa empresaParaRol = null;
+        
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            for (UsuarioEmpresa ue : usuarioEmpresas) {
+                if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
+                    empresaParaRol = ue.getEmpresa();
+                    System.out.println("📍 [User.setRoles] Usando empresa existente (sistema nuevo): " + (empresaParaRol != null ? empresaParaRol.getId() : "null"));
+                    if (empresaParaRol != null) {
+                        setRolesConEmpresa(roles, empresaParaRol);
+                        return;
+                    }
+                }
+            }
         }
         
-        // Si no tiene empresa, necesitamos obtenerla del contexto (esto debería manejarse desde el servicio)
-        // Por ahora, simplemente limpiamos y agregamos roles para las empresas existentes
-        if (empresaParaRol != null) {
-            setRolesConEmpresa(roles, empresaParaRol);
-        } else {
-            System.out.println("⚠️ [User.setRoles] No se puede asignar rol sin empresa. El usuario debe estar asociado a al menos una empresa.");
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            for (UserCompanyRole ucr : userCompanyRoles) {
+                Empresa empresa = ucr.getEmpresa();
+                if (empresa != null) {
+                    empresaParaRol = empresa;
+                    System.out.println("📍 [User.setRoles] Usando empresa existente (sistema antiguo): " + empresaParaRol.getId());
+                    setRolesConEmpresa(roles, empresaParaRol);
+                    return;
+                }
+            }
         }
+        
+        System.out.println("⚠️ [User.setRoles] No se puede asignar rol sin empresa. El usuario debe estar asociado a al menos una empresa.");
     }
     
     /**
@@ -412,11 +605,16 @@ public class User implements UserDetails {
             return;
         }
         
-        // Limpiar roles existentes para esta empresa
-        userCompanyRoles.removeIf(ucr -> ucr.getEmpresa() != null && ucr.getEmpresa().equals(empresa));
-        System.out.println("🗑️ [User.setRolesConEmpresa] Roles anteriores eliminados para empresa: " + empresa.getId());
+        // Limpiar roles existentes para esta empresa en el sistema antiguo
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            userCompanyRoles.removeIf(ucr -> {
+                Empresa emp = ucr.getEmpresa();
+                return emp != null && emp.equals(empresa);
+            });
+            System.out.println("🗑️ [User.setRolesConEmpresa] Roles anteriores eliminados para empresa: " + empresa.getId());
+        }
         
-        // Agregar nuevos roles
+        // Agregar nuevos roles (solo en el sistema antiguo)
         if (roles != null) {
             for (Role role : roles) {
                 UserCompanyRole ucr = new UserCompanyRole();
@@ -431,7 +629,7 @@ public class User implements UserDetails {
             }
         }
         
-        System.out.println("✅ [User.setRolesConEmpresa] Total userCompanyRoles: " + userCompanyRoles.size());
+        System.out.println("✅ [User.setRolesConEmpresa] Total userCompanyRoles: " + (userCompanyRoles != null ? userCompanyRoles.size() : 0));
     }
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
@@ -444,14 +642,54 @@ public class User implements UserDetails {
     }
 
     public boolean perteneceAEmpresa(Long empresaId) {
-        return userCompanyRoles.stream()
-                .anyMatch(ucr -> ucr.getEmpresa().getId().equals(empresaId));
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            boolean encontradoEnNuevo = usuarioEmpresas.stream()
+                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                    .anyMatch(ue -> ue.getEmpresa().getId().equals(empresaId));
+            if (encontradoEnNuevo) {
+                return true;
+            }
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            return userCompanyRoles.stream()
+                    .anyMatch(ucr -> ucr.getEmpresa().getId().equals(empresaId));
+        }
+        
+        return false;
     }
 
     public boolean esAdministradorEmpresa(Long empresaId) {
-        return userCompanyRoles.stream()
-                .anyMatch(ucr -> ucr.getEmpresa().getId().equals(empresaId) && 
-                                ucr.getRol().getNombre().equals("ADMINISTRADOR"));
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
+        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
+            boolean esAdmin = usuarioEmpresas.stream()
+                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                    .anyMatch(ue -> {
+                        Empresa empresa = ue.getEmpresa();
+                        if (empresa == null || !empresa.getId().equals(empresaId)) return false;
+                        RolEmpresa rol = ue.getRol();
+                        if (rol == null) return false;
+                        RolEmpresa rolActualizado = rol.getRolActualizado();
+                        return rolActualizado == RolEmpresa.ADMINISTRADOR || 
+                               rolActualizado == RolEmpresa.SUPERADMIN;
+                    });
+            if (esAdmin) return true;
+        }
+        
+        // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
+        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
+            return userCompanyRoles.stream()
+                    .anyMatch(ucr -> {
+                        Empresa empresa = ucr.getEmpresa();
+                        Role role = ucr.getRol();
+                        return empresa != null && empresa.getId().equals(empresaId) && 
+                               role != null && role.getNombre().equals("ADMINISTRADOR");
+                    });
+        }
+        
+        return false;
     }
     
     /**
