@@ -18,13 +18,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     Optional<User> findByEmail(String email);
     
-    // Método para cargar el usuario con sus relaciones (usuarioEmpresas y userCompanyRoles)
+    // Método para cargar el usuario con sus relaciones (usuarioEmpresas)
+    // NOTA: No podemos hacer JOIN FETCH en múltiples bags al mismo tiempo
+    // Cargamos solo usuarioEmpresas (sistema nuevo) con JOIN FETCH
+    // userCompanyRoles (sistema antiguo) se cargará lazy si es necesario
     @Query("SELECT DISTINCT u FROM User u " +
            "LEFT JOIN FETCH u.usuarioEmpresas ue " +
            "LEFT JOIN FETCH ue.empresa " +
-           "LEFT JOIN FETCH u.userCompanyRoles ucr " +
-           "LEFT JOIN FETCH ucr.empresa " +
-           "LEFT JOIN FETCH ucr.rol " +
            "WHERE u.email = :email")
     Optional<User> findByEmailWithRelations(@Param("email") String email);
     
