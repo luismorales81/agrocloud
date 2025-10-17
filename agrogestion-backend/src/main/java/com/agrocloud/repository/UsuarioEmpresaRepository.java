@@ -49,8 +49,9 @@ public interface UsuarioEmpresaRepository extends JpaRepository<UsuarioEmpresa, 
 
     /**
      * Busca todas las empresas activas de un usuario
+     * Usa JOIN FETCH para cargar las relaciones Empresa y Usuario
      */
-    @Query("SELECT ue FROM UsuarioEmpresa ue WHERE ue.usuario.id = :usuarioId AND ue.estado = 'ACTIVO'")
+    @Query("SELECT ue FROM UsuarioEmpresa ue JOIN FETCH ue.empresa JOIN FETCH ue.usuario WHERE ue.usuario.id = :usuarioId AND ue.estado = 'ACTIVO'")
     List<UsuarioEmpresa> findEmpresasActivasByUsuarioId(@Param("usuarioId") Long usuarioId);
 
     /**
