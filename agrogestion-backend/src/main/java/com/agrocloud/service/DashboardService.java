@@ -244,17 +244,10 @@ public class DashboardService {
             return false;
         }
         
-        if (usuario.getRoles() == null) {
-            System.out.println("❌ [DashboardService] Roles del usuario son null para: " + usuario.getUsername());
-            return false;
-        }
-        
         System.out.println("🔍 [DashboardService] Verificando roles para usuario: " + usuario.getUsername());
-        System.out.println("🔍 [DashboardService] Roles encontrados: " + usuario.getRoles().stream().map(role -> role.getNombre()).collect(Collectors.joining(", ")));
         
-        boolean esAdmin = usuario.getRoles().stream()
-                .anyMatch(role -> "ADMINISTRADOR".equals(role.getNombre()) || 
-                                 "SUPERADMIN".equals(role.getNombre()));
+        // Usar el método isAdmin() del modelo User que ya maneja ambos sistemas
+        boolean esAdmin = usuario.isAdmin();
         
         System.out.println("✅ [DashboardService] Usuario " + usuario.getUsername() + " es admin: " + esAdmin);
         
