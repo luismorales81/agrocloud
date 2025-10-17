@@ -467,28 +467,36 @@ public class User implements UserDetails {
 
     public boolean isAdmin() {
         // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
-        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
-            boolean esAdmin = usuarioEmpresas.stream()
-                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
-                    .anyMatch(ue -> {
-                        RolEmpresa rol = ue.getRol();
-                        if (rol == null) return false;
-                        RolEmpresa rolActualizado = rol.getRolActualizado();
-                        return rolActualizado == RolEmpresa.ADMINISTRADOR || 
-                               rolActualizado == RolEmpresa.SUPERADMIN;
-                    });
-            if (esAdmin) return true;
+        if (usuarioEmpresas != null) {
+            try {
+                boolean esAdmin = usuarioEmpresas.stream()
+                        .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                        .anyMatch(ue -> {
+                            RolEmpresa rol = ue.getRol();
+                            if (rol == null) return false;
+                            RolEmpresa rolActualizado = rol.getRolActualizado();
+                            return rolActualizado == RolEmpresa.ADMINISTRADOR || 
+                                   rolActualizado == RolEmpresa.SUPERADMIN;
+                        });
+                if (esAdmin) return true;
+            } catch (org.hibernate.LazyInitializationException e) {
+                System.out.println("⚠️ [User.isAdmin] LazyInitializationException en usuarioEmpresas: " + e.getMessage());
+            }
         }
         
         // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
-        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
-            return userCompanyRoles.stream()
-                    .anyMatch(ucr -> {
-                        Role role = ucr.getRol();
-                        return role != null && 
-                               ("ADMINISTRADOR".equals(role.getNombre()) || 
-                                "SUPERADMIN".equals(role.getNombre()));
-                    });
+        if (userCompanyRoles != null) {
+            try {
+                return userCompanyRoles.stream()
+                        .anyMatch(ucr -> {
+                            Role role = ucr.getRol();
+                            return role != null && 
+                                   ("ADMINISTRADOR".equals(role.getNombre()) || 
+                                    "SUPERADMIN".equals(role.getNombre()));
+                        });
+            } catch (org.hibernate.LazyInitializationException e) {
+                System.out.println("⚠️ [User.isAdmin] LazyInitializationException en userCompanyRoles: " + e.getMessage());
+            }
         }
         
         return false;
@@ -496,25 +504,33 @@ public class User implements UserDetails {
 
     public boolean isSuperAdmin() {
         // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
-        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
-            boolean esSuperAdmin = usuarioEmpresas.stream()
-                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
-                    .anyMatch(ue -> {
-                        RolEmpresa rol = ue.getRol();
-                        if (rol == null) return false;
-                        RolEmpresa rolActualizado = rol.getRolActualizado();
-                        return rolActualizado == RolEmpresa.SUPERADMIN;
-                    });
-            if (esSuperAdmin) return true;
+        if (usuarioEmpresas != null) {
+            try {
+                boolean esSuperAdmin = usuarioEmpresas.stream()
+                        .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                        .anyMatch(ue -> {
+                            RolEmpresa rol = ue.getRol();
+                            if (rol == null) return false;
+                            RolEmpresa rolActualizado = rol.getRolActualizado();
+                            return rolActualizado == RolEmpresa.SUPERADMIN;
+                        });
+                if (esSuperAdmin) return true;
+            } catch (org.hibernate.LazyInitializationException e) {
+                System.out.println("⚠️ [User.isSuperAdmin] LazyInitializationException en usuarioEmpresas: " + e.getMessage());
+            }
         }
         
         // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
-        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
-            return userCompanyRoles.stream()
-                    .anyMatch(ucr -> {
-                        Role role = ucr.getRol();
-                        return role != null && "SUPERADMIN".equals(role.getNombre());
-                    });
+        if (userCompanyRoles != null) {
+            try {
+                return userCompanyRoles.stream()
+                        .anyMatch(ucr -> {
+                            Role role = ucr.getRol();
+                            return role != null && "SUPERADMIN".equals(role.getNombre());
+                        });
+            } catch (org.hibernate.LazyInitializationException e) {
+                System.out.println("⚠️ [User.isSuperAdmin] LazyInitializationException en userCompanyRoles: " + e.getMessage());
+            }
         }
         
         return false;
