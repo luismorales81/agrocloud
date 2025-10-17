@@ -123,9 +123,10 @@ public class EmpresaController {
                         .map(relacion -> {
                             UsuarioEmpresaDTO dto = new UsuarioEmpresaDTO();
                             dto.setId(relacion.getId());
-                            dto.setUsuarioId(relacion.getUsuario().getId());
-                            dto.setUsuarioEmail(relacion.getUsuario().getEmail());
-                            dto.setUsuarioNombre(relacion.getUsuario().getFirstName() + " " + relacion.getUsuario().getLastName());
+                            // Usar datos del usuario autenticado en lugar de la relación lazy
+                            dto.setUsuarioId(usuario.getId());
+                            dto.setUsuarioEmail(usuario.getEmail());
+                            dto.setUsuarioNombre(usuario.getFirstName() + " " + usuario.getLastName());
                             dto.setEmpresaId(relacion.getEmpresa().getId());
                             dto.setEmpresaNombre(relacion.getEmpresa().getNombre());
                             dto.setEmpresaCuit(relacion.getEmpresa().getCuit());
