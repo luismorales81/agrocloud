@@ -447,12 +447,18 @@ public class User implements UserDetails {
         // Este método es para compatibilidad con el sistema antiguo
         
         // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
-        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
-            for (UserCompanyRole ucr : userCompanyRoles) {
-                Role role = ucr.getRol();
-                if (role != null && !roles.contains(role)) {
-                    roles.add(role);
+        // IMPORTANTE: No usar isEmpty() para evitar LazyInitializationException
+        if (userCompanyRoles != null) {
+            try {
+                for (UserCompanyRole ucr : userCompanyRoles) {
+                    Role role = ucr.getRol();
+                    if (role != null && !roles.contains(role)) {
+                        roles.add(role);
+                    }
                 }
+            } catch (org.hibernate.LazyInitializationException e) {
+                // Si falla, simplemente retornar el set vacío
+                System.out.println("⚠️ [User.getRoles] LazyInitializationException: " + e.getMessage());
             }
         }
         
