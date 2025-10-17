@@ -22,7 +22,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT DISTINCT u FROM User u " +
            "LEFT JOIN FETCH u.usuarioEmpresas ue " +
            "LEFT JOIN FETCH ue.empresa " +
-           "LEFT JOIN FETCH ue.rol " +
            "LEFT JOIN FETCH u.userCompanyRoles ucr " +
            "LEFT JOIN FETCH ucr.empresa " +
            "LEFT JOIN FETCH ucr.rol " +
