@@ -151,7 +151,7 @@ public class User implements UserDetails {
                     // Agregar permisos del rol
                     if (role.getRolePermissions() != null) {
                         for (RolePermission rp : role.getRolePermissions()) {
-                            Permiso permiso = rp.getPermiso();
+                            com.agrocloud.model.entity.Permiso permiso = rp.getPermiso();
                             if (permiso != null && permiso.getNombre() != null) {
                                 authorities.add(permiso.getNombre());
                             }
