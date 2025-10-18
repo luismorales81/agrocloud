@@ -43,12 +43,21 @@ public class PlotService {
             if (user.isSuperAdmin()) {
                 // Solo SuperAdmin ve todos los lotes activos
                 System.out.println("[PLOT_SERVICE] Usuario es SuperAdmin, mostrando todos los lotes");
-                return plotRepository.findAll().stream()
+                List<Plot> lotes = plotRepository.findAll().stream()
                         .filter(plot -> {
                             Boolean activo = plot.getActivo();
                             return activo != null && activo;
                         })
                         .toList();
+                
+                // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+                lotes.forEach(plot -> {
+                    if (plot.getCampo() != null) {
+                        plot.getCampo().getNombre(); // Inicializar campo
+                    }
+                });
+                
+                return lotes;
             } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null) ||
                         user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) ||
                         user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
@@ -83,6 +92,14 @@ public class PlotService {
                 }
                 
                 System.out.println("[PLOT_SERVICE] Total lotes de la empresa: " + todosLosLotes.size());
+                
+                // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+                todosLosLotes.forEach(plot -> {
+                    if (plot.getCampo() != null) {
+                        plot.getCampo().getNombre(); // Inicializar campo
+                    }
+                });
+                
                 return todosLosLotes;
             } else {
                 // Otros usuarios ven solo sus lotes y los de sus sub-usuarios
@@ -110,6 +127,14 @@ public class PlotService {
                 }
                 
                 System.out.println("[PLOT_SERVICE] Total lotes accesibles: " + userPlots.size());
+                
+                // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+                userPlots.forEach(plot -> {
+                    if (plot.getCampo() != null) {
+                        plot.getCampo().getNombre(); // Inicializar campo
+                    }
+                });
+                
                 return userPlots;
             }
         } catch (Exception e) {
