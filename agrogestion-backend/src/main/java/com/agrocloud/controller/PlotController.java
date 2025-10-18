@@ -56,7 +56,7 @@ public class PlotController {
                 return ResponseEntity.status(401).build();
             }
             
-            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
             if (user == null) {
                 System.err.println("[PLOT_CONTROLLER] ERROR: Usuario no encontrado: " + userDetails.getUsername());
                 return ResponseEntity.status(404).build();
@@ -79,7 +79,7 @@ public class PlotController {
     @GetMapping("/{id}")
     public ResponseEntity<Plot> getLoteById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
             Optional<Plot> lote = plotService.getLoteById(id, user);
             
             return lote.map(ResponseEntity::ok)
@@ -93,7 +93,7 @@ public class PlotController {
     @PostMapping
     public ResponseEntity<?> createLote(@RequestBody Plot lote, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
             lote.setUser(user);
             Plot savedLote = plotService.saveLote(lote);
             return ResponseEntity.ok(savedLote);
@@ -117,7 +117,7 @@ public class PlotController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateLote(@PathVariable Long id, @RequestBody Plot lote, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
             Optional<Plot> existingLote = plotService.getLoteById(id, user);
             
             if (existingLote.isPresent()) {
@@ -148,7 +148,7 @@ public class PlotController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteLote(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
             boolean deleted = plotService.deleteLote(id, user);
             
             if (deleted) {
@@ -165,7 +165,7 @@ public class PlotController {
     @DeleteMapping("/{id}/fisico")
     public ResponseEntity<Void> deleteLoteFisicamente(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
             boolean deleted = plotService.deleteLoteFisicamente(id, user);
             
             if (deleted) {
@@ -182,7 +182,7 @@ public class PlotController {
     @GetMapping("/todos")
     public ResponseEntity<List<Plot>> getAllLotesIncludingInactive(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
             List<Plot> lotes = plotService.getAllLotesIncludingInactive(user);
             return ResponseEntity.ok(lotes);
         } catch (Exception e) {
@@ -194,7 +194,7 @@ public class PlotController {
     @GetMapping("/buscar")
     public ResponseEntity<List<Plot>> searchLotes(@RequestParam String nombre, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
             List<Plot> lotes = plotService.searchLotesByNombre(nombre, user);
             return ResponseEntity.ok(lotes);
         } catch (Exception e) {

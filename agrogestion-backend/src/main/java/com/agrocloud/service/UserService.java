@@ -41,6 +41,25 @@ public class UserService {
         return userRepository.findByEmailWithAllRelations(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
     }
+    
+    /**
+     * Obtener usuario con todas las relaciones cargadas (usuarioEmpresas y userCompanyRoles)
+     * Usa dos consultas separadas para evitar MultipleBagFetchException
+     */
+    public User findByEmailWithAllRelationsCombined(String email) {
+        // Primera consulta: cargar usuarioEmpresas
+        User user = userRepository.findByEmailWithAllRelations(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
+        
+        // Segunda consulta: cargar userCompanyRoles
+        User userWithRoles = userRepository.findByEmailWithUserCompanyRoles(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
+        
+        // Copiar userCompanyRoles del segundo resultado al primero
+        user.setUserCompanyRoles(userWithRoles.getUserCompanyRoles());
+        
+        return user;
+    }
 
     public Optional<User> findById(Long id) {
         return userRepository.findById(id);

@@ -38,6 +38,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "WHERE u.email = :email")
     Optional<User> findByEmailWithAllRelations(@Param("email") String email);
     
+    // Método para cargar userCompanyRoles de manera separada (para evitar MultipleBagFetchException)
+    @Query("SELECT DISTINCT u FROM User u " +
+           "LEFT JOIN FETCH u.userCompanyRoles ucr " +
+           "LEFT JOIN FETCH ucr.rol " +
+           "LEFT JOIN FETCH ucr.empresa " +
+           "WHERE u.email = :email")
+    Optional<User> findByEmailWithUserCompanyRoles(@Param("email") String email);
+    
     // Método para obtener usuarios de una empresa específica
     @Query("SELECT DISTINCT u FROM User u " +
            "JOIN u.usuarioEmpresas ue " +
