@@ -170,6 +170,22 @@ public class LaborService {
             // Buscar labores por los IDs de lotes
             List<Labor> labores = laborRepository.findByLoteIdInOrderByFechaInicioDesc(loteIds);
             System.out.println("[LABOR_SERVICE] Labores encontradas: " + labores.size());
+            
+            // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+            if (labores != null) {
+                labores.forEach(labor -> {
+                    if (labor.getLote() != null) {
+                        labor.getLote().getId(); // Inicializar lote
+                    }
+                    if (labor.getUsuario() != null) {
+                        labor.getUsuario().getId(); // Inicializar usuario
+                    }
+                    if (labor.getUsuarioAnulacion() != null) {
+                        labor.getUsuarioAnulacion().getId(); // Inicializar usuarioAnulacion
+                    }
+                });
+            }
+            
             return labores;
             
         } catch (Exception e) {
