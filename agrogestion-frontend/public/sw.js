@@ -34,7 +34,15 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then((cache) => {
         console.log('📦 [SW] Cacheando archivos estáticos...');
-        return cache.addAll(STATIC_FILES);
+        // Cachear archivos uno por uno para manejar errores individuales
+        return Promise.allSettled(
+          STATIC_FILES.map(file => 
+            cache.add(file).catch(err => {
+              console.warn(`⚠️ [SW] No se pudo cachear ${file}:`, err.message);
+              return null; // Continuar aunque falle un archivo
+            })
+          )
+        );
       })
       .then(() => {
         console.log('✅ [SW] Service Worker instalado correctamente');
