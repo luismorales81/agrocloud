@@ -29,12 +29,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmailWithRelations(@Param("email") String email);
     
     // Método alternativo para cargar usuario con todas las relaciones necesarias
-    // NOTA: No podemos cargar múltiples bags al mismo tiempo, así que usamos EntityGraphType.LOAD
-    @EntityGraph(
-        type = org.springframework.data.jpa.repository.EntityGraph.EntityGraphType.LOAD,
-        attributePaths = {"usuarioEmpresas", "usuarioEmpresas.empresa", "userCompanyRoles", "userCompanyRoles.rol", "userCompanyRoles.empresa"}
-    )
-    @Query("SELECT u FROM User u WHERE u.email = :email")
+    // NOTA: No podemos cargar múltiples bags al mismo tiempo
+    // Cargamos solo usuarioEmpresas (sistema nuevo) con JOIN FETCH
+    // userCompanyRoles (sistema antiguo) se cargará lazy si es necesario
+    @Query("SELECT DISTINCT u FROM User u " +
+           "LEFT JOIN FETCH u.usuarioEmpresas ue " +
+           "LEFT JOIN FETCH ue.empresa " +
+           "WHERE u.email = :email")
     Optional<User> findByEmailWithAllRelations(@Param("email") String email);
     
     // Método para obtener usuarios de una empresa específica
@@ -44,12 +45,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByUsuarioEmpresasEmpresaId(@Param("empresaId") Long empresaId);
     
     // Método para cargar todos los usuarios con sus roles
-    // NOTA: Usamos EntityGraphType.LOAD para evitar MultipleBagFetchException
-    @EntityGraph(
-        type = org.springframework.data.jpa.repository.EntityGraph.EntityGraphType.LOAD,
-        attributePaths = {"usuarioEmpresas", "usuarioEmpresas.empresa", "userCompanyRoles", "userCompanyRoles.rol", "userCompanyRoles.empresa"}
-    )
-    @Query("SELECT u FROM User u")
+    // NOTA: No podemos cargar múltiples bags al mismo tiempo
+    // Cargamos solo usuarioEmpresas (sistema nuevo) con JOIN FETCH
+    @Query("SELECT DISTINCT u FROM User u " +
+           "LEFT JOIN FETCH u.usuarioEmpresas ue " +
+           "LEFT JOIN FETCH ue.empresa")
     List<User> findAllWithRoles();
     
     List<User> findByActivoTrue();
