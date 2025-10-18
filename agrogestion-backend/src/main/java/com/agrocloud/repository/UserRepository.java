@@ -29,8 +29,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmailWithRelations(@Param("email") String email);
     
     // Método alternativo para cargar usuario con todas las relaciones necesarias
-    // Usa EntityGraph para cargar ambas colecciones
-    @EntityGraph(attributePaths = {"usuarioEmpresas", "usuarioEmpresas.empresa", "userCompanyRoles", "userCompanyRoles.rol", "userCompanyRoles.empresa"})
+    // NOTA: No podemos cargar múltiples bags al mismo tiempo, así que usamos EntityGraphType.LOAD
+    @EntityGraph(
+        type = org.springframework.data.jpa.repository.EntityGraph.EntityGraphType.LOAD,
+        attributePaths = {"usuarioEmpresas", "usuarioEmpresas.empresa", "userCompanyRoles", "userCompanyRoles.rol", "userCompanyRoles.empresa"}
+    )
     @Query("SELECT u FROM User u WHERE u.email = :email")
     Optional<User> findByEmailWithAllRelations(@Param("email") String email);
     
@@ -41,7 +44,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByUsuarioEmpresasEmpresaId(@Param("empresaId") Long empresaId);
     
     // Método para cargar todos los usuarios con sus roles
-    @EntityGraph(attributePaths = {"roles"})
+    // NOTA: Usamos EntityGraphType.LOAD para evitar MultipleBagFetchException
+    @EntityGraph(
+        type = org.springframework.data.jpa.repository.EntityGraph.EntityGraphType.LOAD,
+        attributePaths = {"usuarioEmpresas", "usuarioEmpresas.empresa", "userCompanyRoles", "userCompanyRoles.rol", "userCompanyRoles.empresa"}
+    )
     @Query("SELECT u FROM User u")
     List<User> findAllWithRoles();
     
