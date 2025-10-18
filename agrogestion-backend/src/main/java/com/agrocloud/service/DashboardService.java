@@ -359,8 +359,17 @@ public class DashboardService {
         try {
             System.out.println("🔍 [DashboardService] Obteniendo estadísticas de la empresa para ADMIN");
             
-            // Obtener la empresa del usuario administrador
-            Empresa empresa = usuario.getEmpresa();
+            // Obtener la empresa del usuario administrador desde usuarioEmpresas (ya cargada con JOIN FETCH)
+            Empresa empresa = null;
+            if (usuario.getUsuarioEmpresas() != null && !usuario.getUsuarioEmpresas().isEmpty()) {
+                for (UsuarioEmpresa ue : usuario.getUsuarioEmpresas()) {
+                    if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
+                        empresa = ue.getEmpresa();
+                        break;
+                    }
+                }
+            }
+            
             if (empresa == null) {
                 System.out.println("❌ [DashboardService] Usuario ADMIN no tiene empresa asignada");
                 return estadisticas;

@@ -33,9 +33,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -52,9 +52,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -75,9 +75,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -98,9 +98,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -125,9 +125,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -148,9 +148,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -171,9 +171,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -190,9 +190,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -209,9 +209,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -228,9 +228,9 @@ public class InsumoController {
         User user;
         if (userDetails == null) {
             // En contexto de test, usar usuario mock
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -256,9 +256,9 @@ public class InsumoController {
         
         User user;
         if (userDetails == null) {
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {
@@ -293,9 +293,9 @@ public class InsumoController {
         
         User user;
         if (userDetails == null) {
-            user = userService.findByEmail("test@test.com");
+            user = userService.findByEmailWithRelations("test@test.com");
         } else {
-            user = userService.findByEmail(userDetails.getUsername());
+            user = userService.findByEmailWithRelations(userDetails.getUsername());
         }
         
         if (user == null) {

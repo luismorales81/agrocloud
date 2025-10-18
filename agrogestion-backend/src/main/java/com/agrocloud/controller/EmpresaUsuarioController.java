@@ -49,7 +49,7 @@ public class EmpresaUsuarioController {
         try {
             // Obtener usuario actual desde el token
             String username = authentication.getName();
-            User usuarioActual = userService.findByEmail(username);
+            User usuarioActual = userService.findByEmailWithRelations(username);
             
             // Verificar permisos: solo SUPERADMIN puede asignar usuarios a empresas
             if (!esSuperAdmin(usuarioActual)) {
@@ -93,7 +93,7 @@ public class EmpresaUsuarioController {
         try {
             // Obtener usuario actual desde el token
             String username = authentication.getName();
-            User usuarioActual = userService.findByEmail(username);
+            User usuarioActual = userService.findByEmailWithRelations(username);
             
             // Verificar permisos: solo SUPERADMIN puede remover usuarios de empresas
             if (!usuarioActual.isAdmin() && !"SUPERADMIN".equals(usuarioActual.getRoles().iterator().next().getNombre())) {
@@ -240,7 +240,7 @@ public class EmpresaUsuarioController {
         try {
             // Obtener usuario actual desde el token
             String username = authentication.getName();
-            User usuarioActual = userService.findByEmail(username);
+            User usuarioActual = userService.findByEmailWithRelations(username);
             
             // Verificar permisos: solo SUPERADMIN puede cambiar roles
             if (!usuarioActual.isAdmin() && !"SUPERADMIN".equals(usuarioActual.getRoles().iterator().next().getNombre())) {
@@ -282,7 +282,7 @@ public class EmpresaUsuarioController {
         try {
             // Obtener usuario actual desde el token
             String username = authentication.getName();
-            User usuarioActual = userService.findByEmail(username);
+            User usuarioActual = userService.findByEmailWithRelations(username);
             
             // Verificar permisos: solo SUPERADMIN puede cambiar estados
             if (!usuarioActual.isAdmin() && !"SUPERADMIN".equals(usuarioActual.getRoles().iterator().next().getNombre())) {
@@ -321,7 +321,7 @@ public class EmpresaUsuarioController {
         try {
             // Obtener usuario actual desde el token
             String username = authentication.getName();
-            User usuarioActual = userService.findByEmail(username);
+            User usuarioActual = userService.findByEmailWithRelations(username);
             
             // Verificar permisos: solo SUPERADMIN puede ver todas las relaciones
             if (!esSuperAdmin(usuarioActual)) {

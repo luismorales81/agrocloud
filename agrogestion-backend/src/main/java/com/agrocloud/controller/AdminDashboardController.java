@@ -39,7 +39,7 @@ public class AdminDashboardController {
             }
 
             String email = authentication.getName();
-            User usuario = userService.findByEmail(email);
+            User usuario = userService.findByEmailWithRelations(email);
             
             if (usuario == null || !esAdmin(usuario)) {
                 return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado - Solo administradores"));
@@ -66,7 +66,7 @@ public class AdminDashboardController {
             }
 
             String email = authentication.getName();
-            User usuario = userService.findByEmail(email);
+            User usuario = userService.findByEmailWithRelations(email);
             
             if (usuario == null || !esAdmin(usuario)) {
                 return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado - Solo administradores"));
@@ -98,7 +98,7 @@ public class AdminDashboardController {
             }
 
             String email = authentication.getName();
-            User usuario = userService.findByEmail(email);
+            User usuario = userService.findByEmailWithRelations(email);
             
             if (usuario == null || !esAdmin(usuario)) {
                 return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado - Solo administradores"));
@@ -125,7 +125,7 @@ public class AdminDashboardController {
             }
 
             String email = authentication.getName();
-            User usuario = userService.findByEmail(email);
+            User usuario = userService.findByEmailWithRelations(email);
             
             if (usuario == null || !esAdmin(usuario)) {
                 return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado - Solo administradores"));
@@ -152,7 +152,7 @@ public class AdminDashboardController {
             }
 
             String email = authentication.getName();
-            User usuario = userService.findByEmail(email);
+            User usuario = userService.findByEmailWithRelations(email);
             
             if (usuario == null || !esAdmin(usuario)) {
                 return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado - Solo administradores"));
@@ -179,7 +179,7 @@ public class AdminDashboardController {
             }
 
             String email = authentication.getName();
-            User usuario = userService.findByEmail(email);
+            User usuario = userService.findByEmailWithRelations(email);
             
             if (usuario == null || !esAdmin(usuario)) {
                 return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado - Solo administradores"));

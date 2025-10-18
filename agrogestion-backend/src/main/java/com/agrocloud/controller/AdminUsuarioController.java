@@ -89,7 +89,7 @@ public class AdminUsuarioController {
             }
             
             // Obtener el usuario autenticado
-            User usuarioAutenticado = userService.findByEmail(userDetails.getUsername());
+            User usuarioAutenticado = userService.findByEmailWithRelations(userDetails.getUsername());
             if (usuarioAutenticado == null) {
                 System.err.println("❌ [AdminUsuarioController] ERROR: Usuario no encontrado: " + userDetails.getUsername());
                 return ResponseEntity.status(404).build();
@@ -138,7 +138,7 @@ public class AdminUsuarioController {
             }
             
             // Obtener el usuario autenticado
-            User usuarioAutenticado = userService.findByEmail(userDetails.getUsername());
+            User usuarioAutenticado = userService.findByEmailWithRelations(userDetails.getUsername());
             if (usuarioAutenticado == null) {
                 System.err.println("❌ [AdminUsuarioController] ERROR: Usuario no encontrado: " + userDetails.getUsername());
                 return ResponseEntity.status(404).build();
@@ -180,7 +180,7 @@ public class AdminUsuarioController {
             } catch (Exception e) {
                 System.out.println("⚠️ [AdminUsuarioController] Usuario no encontrado por username, intentando por email...");
                 try {
-                    usuarioActual = userService.findByEmail(username);
+                    usuarioActual = userService.findByEmailWithRelations(username);
                     System.out.println("✅ [AdminUsuarioController] Usuario encontrado por email");
                 } catch (Exception e2) {
                     System.err.println("❌ [AdminUsuarioController] Usuario no encontrado ni por username ni por email: " + username);
@@ -221,7 +221,7 @@ public class AdminUsuarioController {
             try {
                 usuarioActual = userService.findByUsername(username);
             } catch (Exception e) {
-                usuarioActual = userService.findByEmail(username);
+                usuarioActual = userService.findByEmailWithRelations(username);
             }
             
             if (usuarioActual == null) {
@@ -264,7 +264,7 @@ public class AdminUsuarioController {
                 System.out.println("✅ Usuario encontrado por username");
             } catch (Exception e) {
                 System.out.println("⚠️ No encontrado por username, intentando por email...");
-                usuarioActual = userService.findByEmail(username);
+                usuarioActual = userService.findByEmailWithRelations(username);
                 System.out.println("✅ Usuario encontrado por email");
             }
             
@@ -307,7 +307,7 @@ public class AdminUsuarioController {
             try {
                 usuarioActual = userService.findByUsername(username);
             } catch (Exception e) {
-                usuarioActual = userService.findByEmail(username);
+                usuarioActual = userService.findByEmailWithRelations(username);
             }
             
             if (usuarioActual == null) {
@@ -338,7 +338,7 @@ public class AdminUsuarioController {
             try {
                 usuarioActual = userService.findByUsername(username);
             } catch (Exception e) {
-                usuarioActual = userService.findByEmail(username);
+                usuarioActual = userService.findByEmailWithRelations(username);
             }
             
             if (usuarioActual == null) {
@@ -370,7 +370,7 @@ public class AdminUsuarioController {
             }
             
             // Obtener el usuario autenticado
-            User usuarioAutenticado = userService.findByEmail(userDetails.getUsername());
+            User usuarioAutenticado = userService.findByEmailWithRelations(userDetails.getUsername());
             if (usuarioAutenticado == null) {
                 System.err.println("❌ [AdminUsuarioController] ERROR: Usuario no encontrado: " + userDetails.getUsername());
                 return ResponseEntity.status(404).build();
@@ -430,7 +430,7 @@ public class AdminUsuarioController {
             } catch (Exception e) {
                 System.out.println("⚠️ [AdminUsuarioController] Usuario no encontrado por username, intentando por email...");
                 try {
-                    usuarioActual = userService.findByEmail(username);
+                    usuarioActual = userService.findByEmailWithRelations(username);
                     System.out.println("✅ [AdminUsuarioController] Usuario encontrado por email");
                 } catch (Exception e2) {
                     System.err.println("❌ [AdminUsuarioController] Usuario no encontrado ni por username ni por email: " + username);
