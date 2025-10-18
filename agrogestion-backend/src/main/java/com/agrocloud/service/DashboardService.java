@@ -4,6 +4,7 @@ import com.agrocloud.model.entity.User;
 import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.Field;
 import com.agrocloud.model.entity.Insumo;
+import com.agrocloud.model.entity.UsuarioEmpresa;
 import com.agrocloud.repository.InsumoRepository;
 import com.agrocloud.repository.FieldRepository;
 import com.agrocloud.repository.PlotRepository;
