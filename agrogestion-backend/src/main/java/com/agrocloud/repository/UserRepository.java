@@ -28,6 +28,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "WHERE u.email = :email")
     Optional<User> findByEmailWithRelations(@Param("email") String email);
     
+    // Método para obtener usuarios de una empresa específica
+    @Query("SELECT DISTINCT u FROM User u " +
+           "JOIN u.usuarioEmpresas ue " +
+           "WHERE ue.empresa.id = :empresaId AND ue.estado = 'ACTIVO'")
+    List<User> findByUsuarioEmpresasEmpresaId(@Param("empresaId") Long empresaId);
+    
     // Método para cargar todos los usuarios con sus roles
     @EntityGraph(attributePaths = {"roles"})
     @Query("SELECT u FROM User u")

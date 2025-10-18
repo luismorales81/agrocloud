@@ -377,11 +377,9 @@ public class DashboardService {
             }
             Long empresaId = empresa.getId();
             
-            // Obtener todos los usuarios de la empresa
-            List<User> todosUsuarios = userService.findAll();
-            List<User> usuariosEmpresa = todosUsuarios.stream()
-                    .filter(user -> user.perteneceAEmpresa(empresaId))
-                    .collect(Collectors.toList());
+            // Obtener todos los usuarios de la empresa usando el repositorio directamente
+            // para evitar LazyInitializationException
+            List<User> usuariosEmpresa = userRepository.findByUsuarioEmpresasEmpresaId(empresaId);
             
             System.out.println("🏢 [DashboardService] Empresa ID: " + empresaId + ", Usuarios: " + usuariosEmpresa.size());
             
