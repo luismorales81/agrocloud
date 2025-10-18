@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -926,17 +927,18 @@ public class LaborService {
      * Verificar si el usuario pertenece a la misma empresa que el lote
      */
     private boolean perteneceAMismaEmpresa(User usuario, Plot lote) {
-        // Obtener empresa del usuario desde UserCompanyRoles
-        if (!usuario.getUserCompanyRoles().isEmpty()) {
-            Long empresaUsuario = usuario.getUserCompanyRoles().iterator().next().getEmpresa().getId();
+        // Obtener empresa del usuario usando el método getEmpresa() que tiene manejo de excepciones
+        Empresa empresaUsuario = usuario.getEmpresa();
+        if (empresaUsuario != null) {
+            Long empresaUsuarioId = empresaUsuario.getId();
             
             // Obtener empresa del lote
             Long empresaLote = obtenerEmpresaDelLote(lote);
             
-            return empresaUsuario.equals(empresaLote);
+            return empresaUsuarioId.equals(empresaLote);
         }
         
-        // Si no tiene UserCompanyRoles, asumir que puede acceder (compatibilidad legacy)
+        // Si no tiene empresa, asumir que puede acceder (compatibilidad legacy)
         return true;
     }
     
@@ -945,8 +947,11 @@ public class LaborService {
      */
     private Long obtenerEmpresaDelLote(Plot lote) {
         // Como la tabla lotes no tiene empresa_id, usar la empresa del usuario propietario
-        if (lote.getUser() != null && !lote.getUser().getUserCompanyRoles().isEmpty()) {
-            return lote.getUser().getUserCompanyRoles().iterator().next().getEmpresa().getId();
+        if (lote.getUser() != null) {
+            Empresa empresa = lote.getUser().getEmpresa();
+            if (empresa != null) {
+                return empresa.getId();
+            }
         }
         
         // Default: empresa ID 1 (para compatibilidad)
@@ -962,15 +967,21 @@ public class LaborService {
         }
         
         // 1. Verificar en UserCompanyRoles (sistema multitenant) primero
-        if (!usuario.getUserCompanyRoles().isEmpty()) {
-            UserCompanyRole ucr = usuario.getUserCompanyRoles().iterator().next();
-            if (ucr.getRol() != null && ucr.getRol().getNombre() != null) {
-                try {
-                    return Rol.valueOf(ucr.getRol().getNombre());
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Rol no válido en UserCompanyRole: " + ucr.getRol().getNombre());
+        // Usar el método getRoles() que tiene manejo de excepciones
+        try {
+            Set<Role> roles = usuario.getRoles();
+            if (roles != null && !roles.isEmpty()) {
+                Role role = roles.iterator().next();
+                if (role != null && role.getNombre() != null) {
+                    try {
+                        return Rol.valueOf(role.getNombre());
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Rol no válido en Role: " + role.getNombre());
+                    }
                 }
             }
+        } catch (Exception e) {
+            System.err.println("Error al obtener roles del usuario: " + e.getMessage());
         }
         
         // 2. Fallback: verificar en el sistema legacy (Roles directos)

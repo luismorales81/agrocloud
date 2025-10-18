@@ -49,11 +49,10 @@ public class PlotService {
                             return activo != null && activo;
                         })
                         .toList();
-            } else if (user.getUserCompanyRoles() != null && !user.getUserCompanyRoles().isEmpty() && 
-                       (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null) ||
+            } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null) ||
                         user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) ||
                         user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
-                        user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO))) {
+                        user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
                 // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven TODOS los lotes de su empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
                 System.out.println("[PLOT_SERVICE] Usuario es Admin/JEFE_CAMPO/OPERARIO/CONSULTOR_EXTERNO de empresa, mostrando TODOS los lotes de la empresa");
                 

@@ -356,19 +356,20 @@ public class AuthService implements UserDetailsService {
         String roleName = "Sin rol";
         List<String> authorities = new ArrayList<>();
         
-        // Verificar en el sistema multitenant (UserCompanyRole) primero
-        if (!user.getUserCompanyRoles().isEmpty()) {
-            roleName = user.getUserCompanyRoles().iterator().next().getRol().getNombre();
-            authorities.addAll(user.getUserCompanyRoles().stream()
-                .map(ucr -> "ROLE_" + ucr.getRol().getNombre())
-                .collect(Collectors.toList()));
-        }
-        // Fallback: verificar en el sistema legacy (Roles directos)
-        else if (!user.getRoles().isEmpty()) {
-            roleName = user.getRoles().iterator().next().getNombre();
-            authorities.addAll(user.getRoles().stream()
-                .map(role -> "ROLE_" + role.getNombre())
-                .collect(Collectors.toList()));
+        // Usar el método getRoles() que tiene manejo de excepciones
+        try {
+            Set<Role> roles = user.getRoles();
+            if (roles != null && !roles.isEmpty()) {
+                Role role = roles.iterator().next();
+                if (role != null && role.getNombre() != null) {
+                    roleName = role.getNombre();
+                    authorities.addAll(roles.stream()
+                        .map(r -> "ROLE_" + r.getNombre())
+                        .collect(Collectors.toList()));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al obtener roles del usuario: " + e.getMessage());
         }
         
         Set<String> permissions = permissionService.getPermissionsByRole(roleName);
