@@ -73,7 +73,7 @@ public class EmpresaController {
             
             User usuario;
             try {
-                usuario = userService.findByEmailWithRelations(email);
+                usuario = userService.findByEmailWithAllRelations(email);
             } catch (RuntimeException e) {
                 logger.error("Usuario no encontrado: {}", email);
                 return ResponseEntity.badRequest().build();
@@ -202,7 +202,7 @@ public class EmpresaController {
     public ResponseEntity<Empresa> obtenerEmpresa(@PathVariable Long id, Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();
@@ -230,7 +230,7 @@ public class EmpresaController {
                                                     Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();
@@ -263,7 +263,7 @@ public class EmpresaController {
                                                                         Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();
@@ -293,7 +293,7 @@ public class EmpresaController {
                                                                 Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();
@@ -321,7 +321,7 @@ public class EmpresaController {
                                                         Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();
@@ -349,7 +349,7 @@ public class EmpresaController {
                                                            Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();
@@ -376,7 +376,7 @@ public class EmpresaController {
                                                               Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();
@@ -405,7 +405,7 @@ public class EmpresaController {
                                                       Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();
@@ -431,7 +431,7 @@ public class EmpresaController {
                                                     Authentication authentication) {
         try {
             String email = authentication.getName();
-            User usuario = userService.findByEmailWithRelations(email)
+            User usuario = userService.findByEmailWithAllRelations(email)
 ;
             if (usuario == null) {
                 return ResponseEntity.badRequest().build();

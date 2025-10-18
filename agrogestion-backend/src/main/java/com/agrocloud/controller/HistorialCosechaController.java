@@ -38,7 +38,7 @@ public class HistorialCosechaController {
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<HistorialCosecha> historial = historialCosechaService.getHistorialPorLote(loteId, user);
             
             // Convertir a DTOs para evitar problemas de lazy loading
@@ -61,7 +61,7 @@ public class HistorialCosechaController {
     public ResponseEntity<List<CosechaDTO>> getHistorialPorUsuario(
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<HistorialCosecha> historial = historialCosechaService.getHistorialPorUsuario(user);
             
             // Convertir a DTOs para evitar problemas de lazy loading
@@ -85,7 +85,7 @@ public class HistorialCosechaController {
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Optional<HistorialCosecha> ultimaCosecha = historialCosechaService.getUltimaCosechaPorLote(loteId);
             
             if (ultimaCosecha.isPresent()) {
@@ -109,7 +109,7 @@ public class HistorialCosechaController {
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             
             // Verificar si puede ser liberado
             if (!historialCosechaService.puedeLiberarLote(loteId)) {
@@ -140,7 +140,7 @@ public class HistorialCosechaController {
             @RequestBody Map<String, String> request,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             String justificacion = request.get("justificacion");
             
             if (justificacion == null || justificacion.trim().isEmpty()) {
@@ -199,7 +199,7 @@ public class HistorialCosechaController {
     public ResponseEntity<List<Object[]>> getEstadisticasRendimientoPorCultivo(
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<Object[]> estadisticas = historialCosechaService.getEstadisticasRendimientoPorCultivo(user);
             return ResponseEntity.ok(estadisticas);
         } catch (Exception e) {
@@ -214,7 +214,7 @@ public class HistorialCosechaController {
     public ResponseEntity<List<HistorialCosecha>> getCosechasRecientes(
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<HistorialCosecha> cosechasRecientes = historialCosechaService.getCosechasRecientes(user);
             return ResponseEntity.ok(cosechasRecientes);
         } catch (Exception e) {
@@ -230,7 +230,7 @@ public class HistorialCosechaController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Optional<HistorialCosecha> historial = historialCosechaService.getHistorialById(id, user);
             
             return historial.map(ResponseEntity::ok)
@@ -248,7 +248,7 @@ public class HistorialCosechaController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             boolean eliminado = historialCosechaService.eliminarHistorial(id, user);
             
             if (eliminado) {

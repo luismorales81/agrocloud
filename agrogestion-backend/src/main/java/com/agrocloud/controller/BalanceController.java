@@ -57,7 +57,7 @@ public class BalanceController {
             
             // Obtener el usuario por email desde la autenticación
             String email = authentication.getName();
-            User user = userService.findByEmailWithRelations(email);
+            User user = userService.findByEmailWithAllRelations(email);
             if (user == null) {
                 return ResponseEntity.badRequest().build();
             }
@@ -89,7 +89,7 @@ public class BalanceController {
             validarRangoFechas(fechaInicio, fechaFin);
             
             String email = authentication.getName();
-            User user = userService.findByEmailWithRelations(email);
+            User user = userService.findByEmailWithAllRelations(email);
             if (user == null) {
                 return ResponseEntity.badRequest().build();
             }
@@ -115,7 +115,7 @@ public class BalanceController {
         
         try {
             String email = authentication.getName();
-            User user = userService.findByEmailWithRelations(email);
+            User user = userService.findByEmailWithAllRelations(email);
             if (user == null) {
                 return ResponseEntity.badRequest().build();
             }
@@ -135,7 +135,7 @@ public class BalanceController {
     public ResponseEntity<BalanceDTO> obtenerBalanceMesActual(Authentication authentication) {
         try {
             String email = authentication.getName();
-            User user = userService.findByEmailWithRelations(email);
+            User user = userService.findByEmailWithAllRelations(email);
             if (user == null) {
                 return ResponseEntity.badRequest().build();
             }
@@ -158,7 +158,7 @@ public class BalanceController {
     public ResponseEntity<BalanceDTO> obtenerBalanceAñoActual(Authentication authentication) {
         try {
             String email = authentication.getName();
-            User user = userService.findByEmailWithRelations(email);
+            User user = userService.findByEmailWithAllRelations(email);
             if (user == null) {
                 return ResponseEntity.badRequest().build();
             }
@@ -225,7 +225,7 @@ public class BalanceController {
     public ResponseEntity<BalanceDTO> obtenerBalanceUltimoAño(Authentication authentication) {
         try {
             String email = authentication.getName();
-            User user = userService.findByEmailWithRelations(email);
+            User user = userService.findByEmailWithAllRelations(email);
             if (user == null) {
                 return ResponseEntity.badRequest().build();
             }

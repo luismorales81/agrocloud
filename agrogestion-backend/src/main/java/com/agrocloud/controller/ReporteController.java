@@ -67,7 +67,7 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] - usuarioEmail: " + authentication.getName());
             
             // Obtener el usuario por email y luego su ID
-            User user = userService.findByEmailWithRelations(authentication.getName());
+            User user = userService.findByEmailWithAllRelations(authentication.getName());
             if (user == null) {
                 System.err.println("[REPORTE_CONTROLLER] ERROR: Usuario no encontrado: " + authentication.getName());
                 return ResponseEntity.status(404).build();
@@ -116,7 +116,7 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] - usuarioEmail: " + authentication.getName());
             
             // Obtener el usuario por email y luego su ID
-            User user = userService.findByEmailWithRelations(authentication.getName());
+            User user = userService.findByEmailWithAllRelations(authentication.getName());
             if (user == null) {
                 System.err.println("[REPORTE_CONTROLLER] ERROR: Usuario no encontrado: " + authentication.getName());
                 return ResponseEntity.status(404).build();
@@ -167,7 +167,7 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] - usuarioEmail: " + authentication.getName());
             
             // Obtener el usuario por email y luego su ID
-            User user = userService.findByEmailWithRelations(authentication.getName());
+            User user = userService.findByEmailWithAllRelations(authentication.getName());
             if (user == null) {
                 System.err.println("[REPORTE_CONTROLLER] ERROR: Usuario no encontrado: " + authentication.getName());
                 return ResponseEntity.status(404).build();
@@ -213,7 +213,7 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] - usuarioEmail: " + authentication.getName());
             
             // Obtener el usuario por email y luego su ID
-            User user = userService.findByEmailWithRelations(authentication.getName());
+            User user = userService.findByEmailWithAllRelations(authentication.getName());
             if (user == null) {
                 System.err.println("[REPORTE_CONTROLLER] ERROR: Usuario no encontrado: " + authentication.getName());
                 return ResponseEntity.status(404).build();

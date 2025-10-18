@@ -34,7 +34,7 @@ public class InventarioGranoController {
     @GetMapping
     public ResponseEntity<List<InventarioGranoDTO>> obtenerInventario(Authentication authentication) {
         try {
-            User usuario = userService.findByEmailWithRelations(authentication.getName());
+            User usuario = userService.findByEmailWithAllRelations(authentication.getName());
             List<InventarioGranoDTO> inventario = inventarioService.obtenerInventarioPorUsuario(usuario.getId());
             return ResponseEntity.ok(inventario);
         } catch (Exception e) {
@@ -51,7 +51,7 @@ public class InventarioGranoController {
     @GetMapping("/disponible")
     public ResponseEntity<List<InventarioGranoDTO>> obtenerInventarioDisponible(Authentication authentication) {
         try {
-            User usuario = userService.findByEmailWithRelations(authentication.getName());
+            User usuario = userService.findByEmailWithAllRelations(authentication.getName());
             List<InventarioGranoDTO> inventario = inventarioService.obtenerInventarioDisponible(usuario.getId());
             return ResponseEntity.ok(inventario);
         } catch (Exception e) {
@@ -70,7 +70,7 @@ public class InventarioGranoController {
                                         Authentication authentication) {
         try {
             System.out.println("[INVENTARIO_CONTROLLER] Procesando venta de grano");
-            User usuario = userService.findByEmailWithRelations(authentication.getName());
+            User usuario = userService.findByEmailWithAllRelations(authentication.getName());
             
             Long ingresoId = inventarioService.venderGrano(request, usuario);
             

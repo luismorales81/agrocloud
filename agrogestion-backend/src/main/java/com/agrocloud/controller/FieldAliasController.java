@@ -69,7 +69,7 @@ public class FieldAliasController {
     @GetMapping
     public ResponseEntity<List<FieldDTO>> getAllFields(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<Field> fields = fieldService.getFieldsByUser(user);
             List<FieldDTO> dtos = fields.stream().map(this::convertToDTO).toList();
             return ResponseEntity.ok(dtos);
@@ -84,7 +84,7 @@ public class FieldAliasController {
     @GetMapping("/{id}")
     public ResponseEntity<FieldDTO> getFieldById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Optional<Field> field = fieldService.getFieldById(id, user);
             
             return field.map(this::convertToDTO)
@@ -101,7 +101,7 @@ public class FieldAliasController {
     @PostMapping
     public ResponseEntity<FieldDTO> createField(@RequestBody FieldDTO fieldDTO, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Field field = convertToEntity(fieldDTO);
             Field createdField = fieldService.createField(field, user);
             return ResponseEntity.ok(convertToDTO(createdField));
@@ -116,7 +116,7 @@ public class FieldAliasController {
     @PutMapping("/{id}")
     public ResponseEntity<FieldDTO> updateField(@PathVariable Long id, @RequestBody FieldDTO fieldDTO, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Field field = convertToEntity(fieldDTO);
             Optional<Field> updatedField = fieldService.updateField(id, field, user);
             
@@ -134,7 +134,7 @@ public class FieldAliasController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteField(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             boolean deleted = fieldService.deleteField(id, user);
             
             if (deleted) {
@@ -153,7 +153,7 @@ public class FieldAliasController {
     @GetMapping("/search")
     public ResponseEntity<List<FieldDTO>> searchField(@RequestParam String nombre, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<Field> fields = fieldService.searchFieldByName(nombre, user);
             List<FieldDTO> dtos = fields.stream().map(this::convertToDTO).toList();
             return ResponseEntity.ok(dtos);

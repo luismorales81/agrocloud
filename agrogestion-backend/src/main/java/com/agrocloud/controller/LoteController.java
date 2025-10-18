@@ -38,13 +38,13 @@ public class LoteController {
                 return ResponseEntity.status(401).build();
             }
             
-            com.agrocloud.model.entity.User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.model.entity.User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             if (user == null) {
                 System.err.println("[LOTE_CONTROLLER] ERROR: Usuario no encontrado: " + userDetails.getUsername());
                 return ResponseEntity.status(404).build();
             }
             
-            System.out.println("[LOTE_CONTROLLER] Usuario encontrado: " + user.getEmail() + ", roles: " + user.getRoles().size());
+            System.out.println("[LOTE_CONTROLLER] Usuario encontrado: " + user.getEmail());
             
             List<Plot> lotes = plotService.getLotesByUser(user);
             System.out.println("[LOTE_CONTROLLER] Lotes obtenidos: " + (lotes != null ? lotes.size() : "null"));
@@ -61,7 +61,7 @@ public class LoteController {
     @GetMapping("/{id}")
     public ResponseEntity<Plot> getLoteById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            com.agrocloud.model.entity.User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.model.entity.User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Optional<Plot> lote = plotService.getLoteById(id, user);
             
             return lote.map(ResponseEntity::ok)
@@ -75,7 +75,7 @@ public class LoteController {
     @PostMapping
     public ResponseEntity<Plot> createLote(@RequestBody Plot lote, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            com.agrocloud.model.entity.User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.model.entity.User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             lote.setUser(user);
             Plot savedLote = plotService.saveLote(lote);
             return ResponseEntity.ok(savedLote);
@@ -88,7 +88,7 @@ public class LoteController {
     @PutMapping("/{id}")
     public ResponseEntity<Plot> updateLote(@PathVariable Long id, @RequestBody Plot lote, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            com.agrocloud.model.entity.User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.model.entity.User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Optional<Plot> existingLote = plotService.getLoteById(id, user);
             
             if (existingLote.isPresent()) {
@@ -108,7 +108,7 @@ public class LoteController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteLote(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            com.agrocloud.model.entity.User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.model.entity.User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             boolean deleted = plotService.deleteLote(id, user);
             
             if (deleted) {

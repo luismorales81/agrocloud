@@ -501,7 +501,7 @@ public class TestController {
             response.put("authorities", authentication.getAuthorities().toString());
             
             // Buscar usuario por username
-            User user = userService.findByEmailWithRelations(username);
+            User user = userService.findByEmailWithAllRelations(username);
             if (user == null) {
                 response.put("error", "Usuario no encontrado");
                 return ResponseEntity.ok(response);

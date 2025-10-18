@@ -39,7 +39,7 @@ public class LaborController {
     @GetMapping
     public ResponseEntity<List<LaborDetalladoDTO>> getAllLabores(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<LaborDetalladoDTO> labores = laborService.getLaboresDetalladasByUser(user);
             return ResponseEntity.ok(labores);
         } catch (Exception e) {
@@ -53,7 +53,7 @@ public class LaborController {
     @GetMapping("/{id}")
     public ResponseEntity<Labor> getLaborById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Optional<Labor> labor = laborService.getLaborById(id, user);
             
             return labor.map(ResponseEntity::ok)
@@ -75,7 +75,7 @@ public class LaborController {
             System.out.println("Maquinaria asignada: " + request.getMaquinariaAsignada());
             System.out.println("Mano de obra: " + request.getManoObra());
             
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Labor laborCreada = laborService.crearLaborDesdeRequest(request, user);
             return ResponseEntity.ok(laborCreada);
         } catch (Exception e) {
@@ -91,7 +91,7 @@ public class LaborController {
     @PutMapping("/{id}")
     public ResponseEntity<Labor> updateLabor(@PathVariable Long id, @RequestBody Labor labor, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Labor laborActualizada = laborService.actualizarLabor(id, labor, user);
             return ResponseEntity.ok(laborActualizada);
         } catch (Exception e) {
@@ -105,7 +105,7 @@ public class LaborController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteLabor(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             laborService.eliminarLabor(id, user);
             return ResponseEntity.ok(Map.of("mensaje", "Labor eliminada exitosamente"));
         } catch (Exception e) {
@@ -125,7 +125,7 @@ public class LaborController {
             @RequestBody Map<String, Object> request,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             
             String justificacion = (String) request.get("justificacion");
             Boolean restaurarInsumos = request.get("restaurarInsumos") != null 
@@ -149,7 +149,7 @@ public class LaborController {
     @GetMapping("/lote/{loteId}")
     public ResponseEntity<List<Labor>> getLaboresByLote(@PathVariable Long loteId, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<Labor> labores = laborService.getLaboresByLote(loteId, user);
             return ResponseEntity.ok(labores);
         } catch (Exception e) {
@@ -163,7 +163,7 @@ public class LaborController {
     @PostMapping("/{laborId}/maquinaria")
     public ResponseEntity<LaborMaquinaria> agregarMaquinaria(@PathVariable Long laborId, @RequestBody LaborMaquinaria maquinaria, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             LaborMaquinaria maquinariaCreada = laborService.agregarMaquinaria(laborId, maquinaria, user);
             return ResponseEntity.ok(maquinariaCreada);
         } catch (Exception e) {
@@ -177,7 +177,7 @@ public class LaborController {
     @PostMapping("/{laborId}/mano-obra")
     public ResponseEntity<LaborManoObra> agregarManoObra(@PathVariable Long laborId, @RequestBody LaborManoObra manoObra, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             LaborManoObra manoObraCreada = laborService.agregarManoObra(laborId, manoObra, user);
             return ResponseEntity.ok(manoObraCreada);
         } catch (Exception e) {
@@ -191,7 +191,7 @@ public class LaborController {
     @PostMapping("/siembra")
     public ResponseEntity<RespuestaCambioEstado> crearLaborSiembra(@RequestBody Labor labor, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             RespuestaCambioEstado respuesta = laborService.crearLaborSiembraConConfirmacion(labor, user);
             return ResponseEntity.ok(respuesta);
         } catch (Exception e) {
@@ -206,7 +206,7 @@ public class LaborController {
     @PostMapping("/cosecha")
     public ResponseEntity<RespuestaCambioEstado> crearLaborCosecha(@RequestBody Labor labor, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             RespuestaCambioEstado respuesta = laborService.crearLaborCosechaConConfirmacion(labor, user);
             return ResponseEntity.ok(respuesta);
         } catch (Exception e) {
@@ -221,7 +221,7 @@ public class LaborController {
     @PostMapping("/{laborId}/confirmar-siembra")
     public ResponseEntity<Map<String, Object>> confirmarLaborSiembra(@PathVariable Long laborId, @RequestBody ConfirmacionCambioEstado confirmacion, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             laborService.confirmarLaborSiembra(laborId, confirmacion, user);
             
             Map<String, Object> respuesta = new java.util.HashMap<>();
@@ -245,7 +245,7 @@ public class LaborController {
     @PostMapping("/{laborId}/confirmar-cosecha")
     public ResponseEntity<Map<String, Object>> confirmarLaborCosecha(@PathVariable Long laborId, @RequestBody ConfirmacionCambioEstado confirmacion, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             laborService.confirmarLaborCosecha(laborId, confirmacion, user);
             
             Map<String, Object> respuesta = new java.util.HashMap<>();
@@ -269,7 +269,7 @@ public class LaborController {
     @GetMapping("/reporte-cosecha/{loteId}")
     public ResponseEntity<ReporteCosechaDTO> generarReporteCosecha(@PathVariable Long loteId, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             ReporteCosechaDTO reporte = laborService.generarReporteCosecha(loteId, user);
             return ResponseEntity.ok(reporte);
         } catch (Exception e) {
@@ -283,7 +283,7 @@ public class LaborController {
     @GetMapping("/reportes-cosecha")
     public ResponseEntity<List<ReporteCosechaDTO>> generarReportesCosecha(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<ReporteCosechaDTO> reportes = laborService.generarReportesCosechaPorUsuario(user);
             return ResponseEntity.ok(reportes);
         } catch (Exception e) {
@@ -297,7 +297,7 @@ public class LaborController {
     @GetMapping("/estadisticas-cosecha")
     public ResponseEntity<Map<String, Object>> obtenerEstadisticasCosecha(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Map<String, Object> estadisticas = laborService.obtenerEstadisticasCosechaPorCultivo(user);
             return ResponseEntity.ok(estadisticas);
         } catch (Exception e) {

@@ -35,14 +35,13 @@ public class MaquinariaController {
                 return ResponseEntity.status(401).build();
             }
             
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             if (user == null) {
                 System.err.println("[MAQUINARIA_CONTROLLER] ERROR: Usuario no encontrado: " + userDetails.getUsername());
                 return ResponseEntity.status(404).build();
             }
             
             System.out.println("[MAQUINARIA_CONTROLLER] Usuario encontrado: " + user.getEmail() + ", esAdmin: " + user.isAdmin());
-            System.out.println("[MAQUINARIA_CONTROLLER] Roles del usuario: " + user.getRoles().stream().map(r -> r.getNombre()).toList());
             
             List<Maquinaria> maquinarias = maquinariaService.getMaquinariasByUser(user);
             System.out.println("[MAQUINARIA_CONTROLLER] Maquinarias encontradas: " + maquinarias.size());
@@ -59,7 +58,7 @@ public class MaquinariaController {
     // Obtener maquinaria por ID
     @GetMapping("/{id}")
     public ResponseEntity<Maquinaria> getMaquinariaById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByEmailWithRelations(userDetails.getUsername());
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         Optional<Maquinaria> maquinaria = maquinariaService.getMaquinariaById(id, user);
         
         return maquinaria.map(ResponseEntity::ok)
@@ -69,7 +68,7 @@ public class MaquinariaController {
     // Crear nueva maquinaria
     @PostMapping
     public ResponseEntity<Maquinaria> createMaquinaria(@RequestBody Maquinaria maquinaria, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByEmailWithRelations(userDetails.getUsername());
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         Maquinaria createdMaquinaria = maquinariaService.createMaquinaria(maquinaria, user);
         return ResponseEntity.ok(createdMaquinaria);
     }
@@ -77,7 +76,7 @@ public class MaquinariaController {
     // Actualizar maquinaria
     @PutMapping("/{id}")
     public ResponseEntity<Maquinaria> updateMaquinaria(@PathVariable Long id, @RequestBody Maquinaria maquinaria, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByEmailWithRelations(userDetails.getUsername());
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         Optional<Maquinaria> updatedMaquinaria = maquinariaService.updateMaquinaria(id, maquinaria, user);
         
         return updatedMaquinaria.map(ResponseEntity::ok)
@@ -87,7 +86,7 @@ public class MaquinariaController {
     // Eliminar maquinaria
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteMaquinaria(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByEmailWithRelations(userDetails.getUsername());
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         boolean deleted = maquinariaService.deleteMaquinaria(id, user);
         
         if (deleted) {
@@ -100,7 +99,7 @@ public class MaquinariaController {
     // Buscar maquinaria por nombre
     @GetMapping("/search")
     public ResponseEntity<List<Maquinaria>> searchMaquinaria(@RequestParam String nombre, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByEmailWithRelations(userDetails.getUsername());
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         List<Maquinaria> maquinarias = maquinariaService.searchMaquinariaByName(nombre, user);
         return ResponseEntity.ok(maquinarias);
     }
@@ -108,7 +107,7 @@ public class MaquinariaController {
     // Obtener estadísticas de maquinaria
     @GetMapping("/stats")
     public ResponseEntity<MaquinariaService.MaquinariaStats> getMaquinariaStats(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByEmailWithRelations(userDetails.getUsername());
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         MaquinariaService.MaquinariaStats stats = maquinariaService.getMaquinariaStats(user);
         return ResponseEntity.ok(stats);
     }
@@ -118,7 +117,7 @@ public class MaquinariaController {
     // Obtener maquinarias por estado
     @GetMapping("/estado/{estado}")
     public ResponseEntity<List<Maquinaria>> getMaquinariasByEstado(@PathVariable Maquinaria.EstadoMaquinaria estado, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.findByEmailWithRelations(userDetails.getUsername());
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         List<Maquinaria> maquinarias = maquinariaService.getMaquinariasByUser(user).stream()
                 .filter(m -> estado.equals(m.getEstado()))
                 .toList();

@@ -45,7 +45,7 @@ public class DiagnosticoController {
     public ResponseEntity<Map<String, Object>> obtenerMiInfo(Authentication authentication) {
         try {
             String email = authentication.getName();
-            User user = userService.findByEmailWithRelations(email);
+            User user = userService.findByEmailWithAllRelations(email);
 
             Map<String, Object> info = new HashMap<>();
             info.put("email", user.getEmail());
@@ -105,7 +105,7 @@ public class DiagnosticoController {
     public ResponseEntity<Map<String, Object>> verificarAccesoInsumos(Authentication authentication) {
         try {
             String email = authentication.getName();
-            User user = userService.findByEmailWithRelations(email);
+            User user = userService.findByEmailWithAllRelations(email);
 
             Map<String, Object> resultado = new HashMap<>();
             resultado.put("email", user.getEmail());

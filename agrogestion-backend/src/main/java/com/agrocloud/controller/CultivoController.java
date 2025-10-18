@@ -35,14 +35,13 @@ public class CultivoController {
                 return ResponseEntity.status(401).build();
             }
             
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             if (user == null) {
                 System.err.println("[CULTIVO_CONTROLLER] ERROR: Usuario no encontrado: " + userDetails.getUsername());
                 return ResponseEntity.status(404).build();
             }
             
             System.out.println("[CULTIVO_CONTROLLER] Usuario encontrado: " + user.getEmail() + ", esAdmin: " + user.isAdmin());
-            System.out.println("[CULTIVO_CONTROLLER] Roles del usuario: " + user.getRoles().stream().map(r -> r.getNombre()).toList());
             
             List<Cultivo> cultivos = cultivoService.getCultivosByUser(user);
             System.out.println("[CULTIVO_CONTROLLER] Cultivos encontrados: " + cultivos.size());
@@ -60,7 +59,7 @@ public class CultivoController {
     @GetMapping("/{id}")
     public ResponseEntity<Cultivo> getCultivoById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Optional<Cultivo> cultivo = cultivoService.getCultivoById(id, user);
             
             return cultivo.map(ResponseEntity::ok)
@@ -74,7 +73,7 @@ public class CultivoController {
     @PostMapping
     public ResponseEntity<Cultivo> createCultivo(@RequestBody Cultivo cultivo, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             cultivo.setUsuario(user);
             
             // Establecer la empresa del usuario si no está establecida
@@ -95,7 +94,7 @@ public class CultivoController {
     @PutMapping("/{id}")
     public ResponseEntity<Cultivo> updateCultivo(@PathVariable Long id, @RequestBody Cultivo cultivo, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             Optional<Cultivo> updatedCultivo = cultivoService.updateCultivo(id, cultivo, user);
             
             if (updatedCultivo.isPresent()) {
@@ -113,7 +112,7 @@ public class CultivoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteCultivo(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             boolean eliminado = cultivoService.deleteCultivo(id, user);
             
             if (eliminado) {
@@ -130,7 +129,7 @@ public class CultivoController {
     @DeleteMapping("/{id}/fisico")
     public ResponseEntity<String> deleteCultivoFisicamente(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             boolean eliminado = cultivoService.deleteCultivoFisicamente(id, user);
             
             if (eliminado) {
@@ -147,7 +146,7 @@ public class CultivoController {
     @GetMapping("/buscar")
     public ResponseEntity<List<Cultivo>> searchCultivos(@RequestParam String nombre, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<Cultivo> cultivos = cultivoService.searchCultivosByNombre(nombre, user);
             return ResponseEntity.ok(cultivos);
         } catch (Exception e) {
@@ -159,7 +158,7 @@ public class CultivoController {
     @GetMapping("/eliminados")
     public ResponseEntity<List<Cultivo>> getCultivosEliminados(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             List<Cultivo> cultivos = cultivoService.getCultivosEliminados(user);
             return ResponseEntity.ok(cultivos);
         } catch (Exception e) {
@@ -171,7 +170,7 @@ public class CultivoController {
     @PutMapping("/{id}/restaurar")
     public ResponseEntity<String> restaurarCultivo(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
+            User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             boolean restaurado = cultivoService.restaurarCultivo(id, user);
             
             if (restaurado) {
