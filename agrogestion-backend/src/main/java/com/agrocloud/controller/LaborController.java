@@ -357,7 +357,6 @@ public class LaborController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
             java.math.BigDecimal costoTotal = laborService.calcularCostoTotalLabor(id);
             
             Map<String, Object> respuesta = Map.of(
@@ -390,7 +389,6 @@ public class LaborController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
             Map<String, java.math.BigDecimal> desglose = laborService.calcularDesgloseCostosLabor(id);
             
             Map<String, Object> respuesta = new java.util.HashMap<>();
@@ -421,7 +419,6 @@ public class LaborController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            User user = userService.findByEmailWithRelations(userDetails.getUsername());
             Labor laborActualizada = laborService.actualizarCostoTotalLabor(id);
             
             Map<String, Object> respuesta = Map.of(

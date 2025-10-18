@@ -1503,8 +1503,6 @@ public class LaborService {
             throw new RuntimeException("Labor no encontrada con ID: " + laborId);
         }
         
-        Labor labor = laborOpt.get();
-        
         // Calcular costo de insumos
         BigDecimal costoInsumos = laborInsumoRepository.findByLaborId(laborId).stream()
                 .map(LaborInsumo::getCostoTotal)
@@ -1540,8 +1538,6 @@ public class LaborService {
         if (!laborOpt.isPresent()) {
             throw new RuntimeException("Labor no encontrada con ID: " + laborId);
         }
-        
-        Labor labor = laborOpt.get();
         
         // Calcular costo de insumos
         BigDecimal costoInsumos = laborInsumoRepository.findByLaborId(laborId).stream()
