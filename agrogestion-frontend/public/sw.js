@@ -8,7 +8,6 @@ const API_CACHE = 'agrocloud-api-v1.0.0';
 const STATIC_FILES = [
   '/',
   '/index.html',
-  '/manifest.json',
   '/offline.html',
   '/icons/agrocloud-logo.svg',
   '/icons/icon-192x192.png',
