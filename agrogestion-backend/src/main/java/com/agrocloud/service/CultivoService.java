@@ -20,16 +20,32 @@ public class CultivoService {
 
     // Obtener todos los cultivos accesibles por un usuario (solo activos)
     public List<Cultivo> getCultivosByUser(User user) {
+        List<Cultivo> cultivos;
+        
         if (user.isAdmin() || 
             user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || 
             user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
             user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
             // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven todos los cultivos activos de la empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
-            return cultivoRepository.findByActivoTrue();
+            cultivos = cultivoRepository.findByActivoTrue();
         } else {
             // Usuario ve sus cultivos activos
-            return cultivoRepository.findByUsuarioIdAndActivoTrue(user.getId());
+            cultivos = cultivoRepository.findByUsuarioIdAndActivoTrue(user.getId());
         }
+        
+        // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+        if (cultivos != null) {
+            cultivos.forEach(cultivo -> {
+                if (cultivo.getEmpresa() != null) {
+                    cultivo.getEmpresa().getId(); // Inicializar empresa
+                }
+                if (cultivo.getUsuario() != null) {
+                    cultivo.getUsuario().getId(); // Inicializar usuario
+                }
+            });
+        }
+        
+        return cultivos;
     }
 
     // Obtener cultivo por ID (con validación de acceso y solo activos)

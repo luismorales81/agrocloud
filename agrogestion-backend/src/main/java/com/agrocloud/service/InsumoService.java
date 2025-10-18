@@ -39,16 +39,32 @@ public class InsumoService {
 
     // Obtener todos los insumos accesibles por un usuario
     public List<Insumo> getInsumosByUser(User user) {
+        List<Insumo> insumos;
+        
         if (user.isAdmin() || 
             user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || 
             user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
             user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
             // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven todos los insumos de la empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
-            return insumoRepository.findAll();
+            insumos = insumoRepository.findAll();
         } else {
             // Usuario ve sus insumos y los de sus sub-usuarios
-            return insumoRepository.findAccessibleByUser(user);
+            insumos = insumoRepository.findAccessibleByUser(user);
         }
+        
+        // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+        if (insumos != null) {
+            insumos.forEach(insumo -> {
+                if (insumo.getEmpresa() != null) {
+                    insumo.getEmpresa().getId(); // Inicializar empresa
+                }
+                if (insumo.getUser() != null) {
+                    insumo.getUser().getId(); // Inicializar usuario
+                }
+            });
+        }
+        
+        return insumos;
     }
 
     // Obtener insumo por ID (con validación de acceso)

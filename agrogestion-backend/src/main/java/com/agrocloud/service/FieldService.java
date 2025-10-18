@@ -51,12 +51,21 @@ public class FieldService {
             if (user.isSuperAdmin()) {
                 // Solo SuperAdmin ve todos los campos activos
                 System.out.println("[FIELD_SERVICE] Usuario es SuperAdmin, mostrando todos los campos");
-                return fieldRepository.findAll().stream()
+                List<Field> campos = fieldRepository.findAll().stream()
                         .filter(field -> {
                             Boolean activo = field.getActivo();
                             return activo != null && activo;
                         })
                         .toList();
+                
+                // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+                campos.forEach(field -> {
+                    if (field.getEmpresa() != null) {
+                        field.getEmpresa().getId(); // Inicializar empresa
+                    }
+                });
+                
+                return campos;
             } else if (user.esAdministradorEmpresa(user.getEmpresa() != null ? user.getEmpresa().getId() : null) || 
                        user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) ||
                        user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
@@ -89,6 +98,14 @@ public class FieldService {
                 }
                 
                 System.out.println("[FIELD_SERVICE] Total campos de la empresa: " + todosLosCampos.size());
+                
+                // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+                todosLosCampos.forEach(field -> {
+                    if (field.getEmpresa() != null) {
+                        field.getEmpresa().getId(); // Inicializar empresa
+                    }
+                });
+                
                 return todosLosCampos;
             } else {
                 // Otros usuarios ven solo sus campos y los de sus sub-usuarios
@@ -116,6 +133,14 @@ public class FieldService {
                 }
                 
                 System.out.println("[FIELD_SERVICE] Total campos accesibles: " + userFields.size());
+                
+                // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+                userFields.forEach(field -> {
+                    if (field.getEmpresa() != null) {
+                        field.getEmpresa().getId(); // Inicializar empresa
+                    }
+                });
+                
                 return userFields;
             }
         } catch (Exception e) {

@@ -29,7 +29,8 @@ public class MaquinariaService {
         try {
             System.out.println("[MAQUINARIA_SERVICE] Iniciando getMaquinariasByUser para usuario: " + user.getEmail());
             System.out.println("[MAQUINARIA_SERVICE] Usuario esAdmin: " + user.isAdmin());
-            System.out.println("[MAQUINARIA_SERVICE] Roles del usuario: " + user.getRoles().stream().map(r -> r.getNombre()).toList());
+            
+            List<Maquinaria> maquinarias;
             
             if (user.isAdmin() || 
                 user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || 
@@ -37,16 +38,28 @@ public class MaquinariaService {
                 user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
                 // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven todas las maquinarias de la empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
                 System.out.println("[MAQUINARIA_SERVICE] Usuario es admin/JEFE_CAMPO/OPERARIO/CONSULTOR_EXTERNO, obteniendo todas las maquinarias");
-                List<Maquinaria> allMaquinarias = maquinariaRepository.findAll();
-                System.out.println("[MAQUINARIA_SERVICE] Total de maquinarias encontradas: " + allMaquinarias.size());
-                return allMaquinarias;
+                maquinarias = maquinariaRepository.findAll();
+                System.out.println("[MAQUINARIA_SERVICE] Total de maquinarias encontradas: " + maquinarias.size());
             } else {
                 // Usuario ve sus maquinarias y las de sus sub-usuarios
                 System.out.println("[MAQUINARIA_SERVICE] Usuario no es admin, obteniendo maquinarias accesibles");
-                List<Maquinaria> accessibleMaquinarias = maquinariaRepository.findAccessibleByUser(user);
-                System.out.println("[MAQUINARIA_SERVICE] Maquinarias accesibles encontradas: " + accessibleMaquinarias.size());
-                return accessibleMaquinarias;
+                maquinarias = maquinariaRepository.findAccessibleByUser(user);
+                System.out.println("[MAQUINARIA_SERVICE] Maquinarias accesibles encontradas: " + maquinarias.size());
             }
+            
+            // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
+            if (maquinarias != null) {
+                maquinarias.forEach(maquinaria -> {
+                    if (maquinaria.getEmpresa() != null) {
+                        maquinaria.getEmpresa().getId(); // Inicializar empresa
+                    }
+                    if (maquinaria.getUser() != null) {
+                        maquinaria.getUser().getId(); // Inicializar usuario
+                    }
+                });
+            }
+            
+            return maquinarias;
         } catch (Exception e) {
             System.err.println("[MAQUINARIA_SERVICE] ERROR en getMaquinariasByUser: " + e.getMessage());
             System.err.println("[MAQUINARIA_SERVICE] Stack trace completo:");
