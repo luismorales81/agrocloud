@@ -53,6 +53,9 @@ public class DashboardService {
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private com.agrocloud.repository.UserRepository userRepository;
 
     @Autowired
     private CultivoRepository cultivoRepository;
