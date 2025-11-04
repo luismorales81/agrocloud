@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { API_ENDPOINTS } from '../services/apiEndpoints';
 
 interface Empresa {
   id: number;
@@ -104,7 +105,7 @@ const AdminGlobalDashboard: React.FC = () => {
       // Cargar estadísticas globales usando endpoint simplificado
       try {
         console.log('🔍 [AdminGlobalDashboard] Iniciando petición a /api/admin-global/dashboard-simple');
-        const statsResponse = await api.get('/admin-global/dashboard-simple');
+        const statsResponse = await api.get(API_ENDPOINTS.ADMIN_GLOBAL.DASHBOARD_SIMPLE);
         console.log('✅ [AdminGlobalDashboard] Respuesta recibida:', statsResponse);
         console.log('✅ [AdminGlobalDashboard] Datos de estadísticas:', statsResponse.data);
         setEstadisticas(statsResponse.data);
@@ -123,7 +124,7 @@ const AdminGlobalDashboard: React.FC = () => {
       
       // Cargar empresas usando endpoint simplificado
       try {
-        const empresasResponse = await api.get('/admin-global/empresas-basic');
+        const empresasResponse = await api.get(API_ENDPOINTS.ADMIN_GLOBAL.EMPRESAS_BASIC);
         setEmpresas(empresasResponse.data);
         console.log('✅ Empresas cargadas:', empresasResponse.data);
       } catch (error) {
@@ -133,7 +134,7 @@ const AdminGlobalDashboard: React.FC = () => {
       
       // Cargar usuarios usando endpoint simplificado
       try {
-        const usuariosResponse = await api.get('/admin-global/usuarios-basic');
+        const usuariosResponse = await api.get(API_ENDPOINTS.ADMIN_GLOBAL.USUARIOS_BASIC);
         setUsuarios(usuariosResponse.data);
         console.log('✅ Usuarios cargados:', usuariosResponse.data);
       } catch (error) {
@@ -143,7 +144,7 @@ const AdminGlobalDashboard: React.FC = () => {
       
       // Cargar estadísticas de uso del sistema
       try {
-        const responseEstadisticasUso = await api.get('/admin-global/estadisticas-uso');
+        const responseEstadisticasUso = await api.get(API_ENDPOINTS.ADMIN_GLOBAL.ESTADISTICAS_USO);
         console.log('✅ [AdminGlobalDashboard] Estadísticas de uso cargadas:', responseEstadisticasUso.data);
         setEstadisticasUso(responseEstadisticasUso.data);
       } catch (error) {
@@ -162,7 +163,7 @@ const AdminGlobalDashboard: React.FC = () => {
       
       // Cargar estadísticas del plugin del clima
       try {
-        const responseEstadisticasClima = await api.get('/admin-global/estadisticas-clima');
+        const responseEstadisticasClima = await api.get(API_ENDPOINTS.ADMIN_GLOBAL.ESTADISTICAS_CLIMA);
         console.log('✅ [AdminGlobalDashboard] Estadísticas del clima cargadas:', responseEstadisticasClima.data);
         setEstadisticasClima(responseEstadisticasClima.data);
       } catch (error) {
@@ -195,7 +196,7 @@ const AdminGlobalDashboard: React.FC = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      await api.post('/admin-global/empresas', formularioEmpresa);
+      await api.post(API_ENDPOINTS.ADMIN_GLOBAL.EMPRESAS, formularioEmpresa);
       setShowCrearEmpresa(false);
       setFormularioEmpresa({
         nombre: '',
@@ -228,7 +229,7 @@ const AdminGlobalDashboard: React.FC = () => {
 
   const handleGenerarReporteEmpresas = async () => {
     try {
-      const response = await api.get('/admin-global/empresas-basic');
+      const response = await api.get(API_ENDPOINTS.ADMIN_GLOBAL.EMPRESAS_BASIC);
       const empresas = response.data;
       
       // Crear contenido del reporte
@@ -269,7 +270,7 @@ ${index + 1}. ${empresa.nombre}
 
   const handleGenerarReporteUsuarios = async () => {
     try {
-      const response = await api.get('/admin-global/usuarios-basic');
+      const response = await api.get(API_ENDPOINTS.ADMIN_GLOBAL.USUARIOS_BASIC);
       const usuarios = response.data;
       
       // Crear contenido del reporte
@@ -312,7 +313,7 @@ ${index + 1}. ${usuario.firstName} ${usuario.lastName}
 
   const handleGenerarReporteFinanciero = async () => {
     try {
-      const response = await api.get('/admin-global/dashboard-simple');
+      const response = await api.get(API_ENDPOINTS.ADMIN_GLOBAL.DASHBOARD_SIMPLE);
       const estadisticas = response.data;
       
       // Crear contenido del reporte

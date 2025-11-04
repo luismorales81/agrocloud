@@ -459,6 +459,381 @@ const AyudaSistema: React.FC = () => {
           </div>
         </div>
 
+        {/* Opciones de Cosecha */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            🌾 Opciones de Cosecha y sus Comportamientos
+          </h4>
+          <p className="text-gray-600 mb-4">
+            El sistema ofrece diferentes opciones al momento de cosechar un lote, cada una con un comportamiento específico. 
+            Es importante entender cuándo usar cada opción para registrar correctamente la información.
+          </p>
+          
+          <div className="space-y-6">
+            {/* Cosechar Normal */}
+            <div className="border-l-4 border-orange-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                🌾 1. Cosechar Normal
+              </h5>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <strong className="text-gray-700">Cuándo usar:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1 text-gray-600">
+                    <li>Lote en estado <strong>LISTO_PARA_COSECHA</strong> (momento óptimo)</li>
+                    <li>Cosecha anticipada desde estados <strong>SEMBRADO, EN_CRECIMIENTO, EN_FLORACION, EN_FRUTIFICACION</strong></li>
+                    <li>Cosecha normal del cultivo cuando está maduro</li>
+                  </ul>
+                </div>
+                <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                  <strong className="text-orange-800">Comportamiento del sistema:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-orange-700">
+                    <li>✅ Registra la <strong>labor de cosecha</strong> con todos los detalles (cantidad, fecha, estado del suelo, etc.)</li>
+                    <li>✅ Crea un registro en <strong>historial de cosechas</strong> con rendimiento real calculado</li>
+                    <li>✅ Crea automáticamente un registro en <strong>inventario de granos</strong></li>
+                    <li>✅ Cambia el estado del lote a <strong>COSECHADO</strong></li>
+                    <li>✅ Calcula el <strong>costo total de producción</strong> (suma todas las labores del lote)</li>
+                    <li>✅ Permite ingresar <strong>precio de venta</strong> para calcular rentabilidad</li>
+                    <li>✅ Permite marcar si el suelo <strong>requiere descanso</strong> y días recomendados</li>
+                    <li>✅ Calcula y guarda el <strong>rendimiento real</strong> (cantidad / superficie en ha)</li>
+                  </ul>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <strong className="text-blue-800">💡 Información que puedes registrar:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-blue-700">
+                    <li>Cantidad cosechada (kg, toneladas, quintales)</li>
+                    <li>Fecha de cosecha</li>
+                    <li>Variedad de semilla</li>
+                    <li>Estado del suelo (Bueno, Descansando, Agotado)</li>
+                    <li>Si requiere descanso y cuántos días</li>
+                    <li>Precio de venta (opcional)</li>
+                    <li>Observaciones sobre la cosecha</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Convertir a Forraje */}
+            <div className="border-l-4 border-brown-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                🐄 2. Convertir a Forraje
+              </h5>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <strong className="text-gray-700">Cuándo usar:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1 text-gray-600">
+                    <li>Cosecha anticipada del cultivo para alimentación animal</li>
+                    <li>Cultivo inmaduro que se convertirá en forraje</li>
+                    <li>Necesidad de forraje para ganado</li>
+                  </ul>
+                </div>
+                <div className="bg-brown-50 p-3 rounded-lg border border-brown-200">
+                  <strong className="text-brown-800">Comportamiento del sistema:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-brown-700">
+                    <li>✅ Similar a <strong>Cosechar Normal</strong>, pero marca como forraje</li>
+                    <li>✅ Agrega automáticamente la observación <strong>"CONVERSIÓN A FORRAJE | Cosecha anticipada para alimentación animal"</strong></li>
+                    <li>✅ Marca el estado del suelo como <strong>BUENO</strong> (el forraje no agota el suelo)</li>
+                    <li>✅ Si no ingresas cantidad, usa <strong>1 tonelada por defecto</strong></li>
+                    <li>✅ Cambia el estado del lote a <strong>COSECHADO</strong></li>
+                    <li>✅ Crea historial de cosecha e inventario de granos</li>
+                    <li>✅ Calcula rendimiento y costos de producción</li>
+                  </ul>
+                </div>
+                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                  <strong className="text-yellow-800">⚠️ Diferencia clave:</strong>
+                  <p className="text-yellow-700 mt-1">
+                    Esta opción está diseñada para cultivos que se cosechan anticipadamente para forraje, 
+                    no para grano. El sistema lo marca especialmente para que quede registrado el destino del cultivo.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Limpiar Cultivo */}
+            <div className="border-l-4 border-gray-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                🚜 3. Limpiar Cultivo
+              </h5>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <strong className="text-gray-700">Cuándo usar:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1 text-gray-600">
+                    <li>Eliminar un cultivo sin cosechar (cambio de planes)</li>
+                    <li>Preparar el lote para otro cultivo</li>
+                    <li>Errores en la siembra o cultivo incorrecto</li>
+                  </ul>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <strong className="text-gray-800">Comportamiento del sistema:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-gray-700">
+                    <li>❌ <strong>NO crea historial de cosecha</strong> (no hay producción)</li>
+                    <li>❌ <strong>NO crea inventario de granos</strong> (no hay producción para almacenar)</li>
+                    <li>✅ Crea una <strong>labor de tipo "OTROS"</strong> con observación "LIMPIEZA DE CULTIVO"</li>
+                    <li>✅ <strong>Resetea el lote completamente</strong> a estado <strong>DISPONIBLE</strong></li>
+                    <li>✅ <strong>Elimina todos los datos del cultivo</strong>:
+                      <ul className="list-disc list-inside ml-4 mt-1">
+                        <li>Cultivo actual → null</li>
+                        <li>Fecha de siembra → null</li>
+                        <li>Fecha de cosecha esperada → null</li>
+                        <li>Fecha de cosecha real → null</li>
+                        <li>Rendimiento real → null</li>
+                      </ul>
+                    </li>
+                    <li>✅ Guarda el motivo de limpieza para referencia</li>
+                    <li>✅ El lote queda listo para comenzar un nuevo ciclo</li>
+                  </ul>
+                </div>
+                <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                  <strong className="text-red-800">⚠️ Advertencia importante:</strong>
+                  <p className="text-red-700 mt-1">
+                    Esta acción es <strong>irreversible</strong>. Una vez que limpias un cultivo, 
+                    toda la información del cultivo se elimina del lote. El lote vuelve a estado DISPONIBLE 
+                    como si nunca hubiera tenido un cultivo.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Abandonar Cultivo */}
+            <div className="border-l-4 border-red-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                ⚠️ 4. Abandonar Cultivo
+              </h5>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <strong className="text-gray-700">Cuándo usar:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1 text-gray-600">
+                    <li>Problemas graves que impiden continuar el cultivo (plagas, sequía, heladas)</li>
+                    <li>Pérdida total del cultivo</li>
+                    <li>Condiciones que hacen inviable continuar</li>
+                  </ul>
+                </div>
+                <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                  <strong className="text-red-800">Comportamiento del sistema:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-red-700">
+                    <li>❌ <strong>NO crea historial de cosecha</strong> (no hubo producción)</li>
+                    <li>❌ <strong>NO crea inventario de granos</strong> (no hay producción)</li>
+                    <li>✅ Crea una <strong>labor de tipo "OTROS"</strong> con observación "CULTIVO ABANDONADO"</li>
+                    <li>✅ Cambia el estado del lote a <strong>ABANDONADO</strong></li>
+                    <li>✅ <strong>NO elimina el cultivo</strong> (queda registrado como abandonado para referencia histórica)</li>
+                    <li>✅ Guarda el <strong>motivo del abandono</strong> para análisis futuro</li>
+                    <li>✅ El lote queda marcado como abandonado hasta que se reactive manualmente</li>
+                    <li>✅ Para reactivar, debes hacer una labor de preparación que cambiará el estado</li>
+                  </ul>
+                </div>
+                <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                  <strong className="text-orange-800">💡 Diferencia con Limpiar Cultivo:</strong>
+                  <p className="text-orange-700 mt-1">
+                    <strong>Abandonar</strong> mantiene el registro del cultivo (para análisis histórico) pero marca el lote como abandonado. 
+                    <strong>Limpiar</strong> elimina completamente el cultivo y deja el lote disponible inmediatamente.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Comparación */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 className="font-semibold text-blue-800 mb-3">📊 Resumen Comparativo</h5>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-blue-100">
+                      <th className="border border-blue-300 px-3 py-2 text-left">Opción</th>
+                      <th className="border border-blue-300 px-3 py-2 text-center">Historial Cosecha</th>
+                      <th className="border border-blue-300 px-3 py-2 text-center">Inventario</th>
+                      <th className="border border-blue-300 px-3 py-2 text-center">Estado Final</th>
+                      <th className="border border-blue-300 px-3 py-2 text-center">Cultivo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-700">
+                    <tr>
+                      <td className="border border-blue-300 px-3 py-2 font-medium">Cosechar Normal</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">✅ Sí</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">✅ Sí</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">COSECHADO</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">Se mantiene</td>
+                    </tr>
+                    <tr className="bg-gray-50">
+                      <td className="border border-blue-300 px-3 py-2 font-medium">Convertir a Forraje</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">✅ Sí</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">✅ Sí</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">COSECHADO</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">Se mantiene</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-blue-300 px-3 py-2 font-medium">Limpiar Cultivo</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">❌ No</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">❌ No</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">DISPONIBLE</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">Se elimina</td>
+                    </tr>
+                    <tr className="bg-gray-50">
+                      <td className="border border-blue-300 px-3 py-2 font-medium">Abandonar Cultivo</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">❌ No</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">❌ No</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">ABANDONADO</td>
+                      <td className="border border-blue-300 px-3 py-2 text-center">Se mantiene</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Flujos del Sistema */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            🔄 Flujos del Sistema y su Comportamiento
+          </h4>
+          <p className="text-gray-600 mb-4">
+            El sistema gestiona automáticamente varios flujos importantes. Entender cómo funcionan te ayudará a usar el sistema correctamente.
+          </p>
+          
+          <div className="space-y-6">
+            {/* Flujo de Siembra */}
+            <div className="border-l-4 border-green-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-3">🌱 Flujo de Siembra</h5>
+              <div className="space-y-3 text-sm">
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                  <strong className="text-green-800">Proceso paso a paso:</strong>
+                  <ol className="list-decimal list-inside ml-4 mt-2 space-y-1 text-green-700">
+                    <li>El lote debe estar en estado <strong>PREPARADO</strong> o <strong>DISPONIBLE</strong></li>
+                    <li>Se crea una labor de tipo <strong>SIEMBRA</strong> con todos los detalles (cultivo, variedad, densidad, etc.)</li>
+                    <li>El sistema <strong>propone cambiar el estado</strong> a <strong>SEMBRADO</strong></li>
+                    <li>Se muestra un <strong>mensaje de confirmación</strong> antes de cambiar el estado</li>
+                    <li>Al confirmar, el lote cambia a estado <strong>SEMBRADO</strong></li>
+                    <li>Se registra la <strong>fecha de siembra</strong> y el <strong>cultivo actual</strong></li>
+                    <li>Se calcula automáticamente la <strong>fecha de cosecha esperada</strong> basada en el ciclo del cultivo</li>
+                    <li>Se actualiza el <strong>inventario de insumos</strong> (se descuentan las semillas utilizadas)</li>
+                  </ol>
+                </div>
+                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                  <strong className="text-yellow-800">⚠️ Validaciones:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1 text-yellow-700">
+                    <li>El lote debe estar en estado válido para siembra (PREPARADO o DISPONIBLE)</li>
+                    <li>Debe haber stock suficiente de semillas en inventario</li>
+                    <li>Debe estar seleccionado un cultivo válido</li>
+                    <li>La fecha de siembra debe ser válida</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Flujo de Labores y Cambios de Estado */}
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-3">⚒️ Flujo de Labores y Cambios de Estado Automáticos</h5>
+              <div className="space-y-3 text-sm">
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <strong className="text-blue-800">Cómo funcionan los cambios automáticos:</strong>
+                  <ol className="list-decimal list-inside ml-4 mt-2 space-y-1 text-blue-700">
+                    <li>Al crear una labor, el sistema <strong>evalúa automáticamente</strong> si debe cambiar el estado del lote</li>
+                    <li>Los cambios se basan en:
+                      <ul className="list-disc list-inside ml-4 mt-1">
+                        <li><strong>Tipo de labor realizada</strong> (arado, rastra, fertilización, etc.)</li>
+                        <li><strong>Estado actual del lote</strong></li>
+                        <li><strong>Historial de labores previas</strong> del lote</li>
+                        <li><strong>Días transcurridos desde la siembra</strong> (para estados de desarrollo)</li>
+                      </ul>
+                    </li>
+                    <li>El sistema <strong>propone el cambio</strong> y muestra un mensaje de confirmación</li>
+                    <li>Al confirmar, el estado se actualiza automáticamente</li>
+                  </ol>
+                </div>
+                <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                  <strong className="text-purple-800">Ejemplos de transiciones automáticas:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-2 space-y-2 text-purple-700">
+                    <li><strong>DISPONIBLE + Arado</strong> → Cambia a <strong>EN_PREPARACION</strong></li>
+                    <li><strong>EN_PREPARACION + Rastra</strong> (si ya hay 2 labores de preparación) → Cambia a <strong>PREPARADO</strong></li>
+                    <li><strong>SEMBRADO</strong> (después de 15 días) → Cambia automáticamente a <strong>EN_CRECIMIENTO</strong></li>
+                    <li><strong>EN_CRECIMIENTO</strong> (después de 45 días desde siembra) → Cambia a <strong>EN_FLORACION</strong></li>
+                    <li><strong>EN_FLORACION</strong> (después de 65 días) → Cambia a <strong>EN_FRUTIFICACION</strong></li>
+                    <li><strong>EN_FRUTIFICACION</strong> (después de 100 días) → Cambia a <strong>LISTO_PARA_COSECHA</strong></li>
+                    <li><strong>COSECHADO + Arado</strong> → Cambia a <strong>EN_PREPARACION</strong> (nuevo ciclo)</li>
+                  </ul>
+                </div>
+                <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                  <strong className="text-orange-800">💡 Nota importante:</strong>
+                  <p className="text-orange-700 mt-1">
+                    Los cambios automáticos basados en días son <strong>aproximados</strong> y dependen del ciclo del cultivo registrado. 
+                    El sistema también puede cambiar estados basándose en las labores realizadas, no solo en el tiempo transcurrido.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Flujo de Inventario de Granos */}
+            <div className="border-l-4 border-yellow-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-3">🌾 Flujo de Inventario de Granos</h5>
+              <div className="space-y-3 text-sm">
+                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                  <strong className="text-yellow-800">Proceso automático al cosechar:</strong>
+                  <ol className="list-decimal list-inside ml-4 mt-2 space-y-1 text-yellow-700">
+                    <li>Al realizar <strong>Cosechar Normal</strong> o <strong>Convertir a Forraje</strong></li>
+                    <li>El sistema <strong>crea automáticamente</strong> un registro en el inventario de granos</li>
+                    <li>El registro incluye:
+                      <ul className="list-disc list-inside ml-4 mt-1">
+                        <li>Cantidad cosechada</li>
+                        <li>Cultivo y variedad</li>
+                        <li>Fecha de cosecha</li>
+                        <li>Lote de origen</li>
+                        <li>Estado del suelo</li>
+                      </ul>
+                    </li>
+                    <li>El grano queda marcado como <strong>disponible</strong> para venta</li>
+                    <li>Puedes agregar información adicional (humedad, calidad, almacén) manualmente</li>
+                  </ol>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                  <strong className="text-green-800">Venta de granos:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1 text-green-700">
+                    <li>Al vender granos, puedes asociar la venta al inventario</li>
+                    <li>El sistema actualiza automáticamente el stock disponible</li>
+                    <li>Se registra el ingreso en el módulo de finanzas</li>
+                    <li>Se puede calcular la rentabilidad de la venta</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Flujo de Costos y Rentabilidad */}
+            <div className="border-l-4 border-purple-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-3">💰 Flujo de Costos y Rentabilidad</h5>
+              <div className="space-y-3 text-sm">
+                <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                  <strong className="text-purple-800">Cálculo automático de costos:</strong>
+                  <ol className="list-decimal list-inside ml-4 mt-2 space-y-1 text-purple-700">
+                    <li>Cada labor registrada <strong>calcula su costo total</strong>:
+                      <ul className="list-disc list-inside ml-4 mt-1">
+                        <li>Costo de insumos utilizados</li>
+                        <li>Costo de maquinaria (horas × costo/hora)</li>
+                        <li>Costo de mano de obra (horas × costo/hora)</li>
+                      </ul>
+                    </li>
+                    <li>Al cosechar, el sistema <strong>suma todos los costos</strong> de todas las labores del lote</li>
+                    <li>Este costo total se guarda en el <strong>historial de cosecha</strong></li>
+                    <li>Si ingresas precio de venta, se calcula automáticamente:
+                      <ul className="list-disc list-inside ml-4 mt-1">
+                        <li>Ingreso total = Cantidad × Precio de venta</li>
+                        <li>Beneficio neto = Ingreso total - Costo total de producción</li>
+                        <li>Margen de rentabilidad = (Beneficio / Ingreso) × 100</li>
+                      </ul>
+                    </li>
+                  </ol>
+                </div>
+                <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                  <strong className="text-indigo-800">Reportes de rentabilidad:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1 text-indigo-700">
+                    <li>Puedes generar reportes de rentabilidad por cultivo, lote o período</li>
+                    <li>El sistema compara costos vs ingresos automáticamente</li>
+                    <li>Se puede analizar el rendimiento económico ($/hectárea)</li>
+                    <li>Se pueden comparar diferentes lotes o campañas</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Flujo de Trabajo Integrado */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -560,6 +935,176 @@ const AyudaSistema: React.FC = () => {
                 <li><strong>Última Actualización:</strong> Fecha del cambio</li>
                 <li><strong>Próximo Vencimiento:</strong> Productos por vencer</li>
                 <li><strong>Costo Total:</strong> Valor del inventario</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Agroquímicos y Dosis */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            🧪 Configuración y Uso de Agroquímicos
+          </h4>
+          <p className="text-gray-600 mb-4">
+            El sistema permite configurar dosis recomendadas para agroquímicos y calcular automáticamente 
+            las cantidades necesarias al crear labores, simplificando la gestión y asegurando el uso correcto.
+          </p>
+          
+          <div className="space-y-6">
+            <div className="border-l-4 border-purple-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-3">📝 Paso 1: Configurar un Agroquímico</h5>
+              <p className="text-sm text-gray-600 mb-2">
+                Cuando creas o editas un insumo, puedes marcarlo como agroquímico y configurar sus dosis recomendadas.
+              </p>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 ml-2">
+                <li>Ve a <strong>Recursos & Stock → Insumos</strong></li>
+                <li>Haz clic en <strong>"Agregar Insumo"</strong> o edita uno existente</li>
+                <li>Selecciona el <strong>Tipo</strong> como uno de los agroquímicos:
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    <li>Herbicida</li>
+                    <li>Insecticida</li>
+                    <li>Fungicida</li>
+                    <li>Fertilizante</li>
+                    <li>Acaricida</li>
+                    <li>Otros tipos de agroquímicos</li>
+                  </ul>
+                </li>
+                <li>Completa los <strong>Propiedades del Agroquímico</strong>:
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    <li>Principio activo</li>
+                    <li>Concentración</li>
+                    <li>Clase química</li>
+                    <li>Categoría toxicológica</li>
+                    <li>Período de carencia (días)</li>
+                    <li>Dosis mínima y máxima por hectárea</li>
+                  </ul>
+                </li>
+                <li>En la sección <strong>"Dosis por Tipo de Aplicación"</strong>, haz clic en <strong>"Agregar Dosis"</strong></li>
+                <li>Para cada dosis, configura:
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    <li><strong>Tipo de Aplicación:</strong> Pre-emergencia, Pos-emergencia, Cobertura</li>
+                    <li><strong>Forma de Aplicación:</strong> Terrestre, Aérea, Manual</li>
+                    <li><strong>Dosis Recomendada por Hectárea:</strong> Cantidad en L/ha, kg/ha o ml/ha</li>
+                  </ul>
+                </li>
+                <li>Puedes agregar múltiples configuraciones de dosis según diferentes tipos y formas de aplicación</li>
+                <li>Guarda el insumo</li>
+              </ol>
+            </div>
+
+            <div className="border-l-4 border-blue-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-3">⚒️ Paso 2: Usar Agroquímicos en Labores</h5>
+              <p className="text-sm text-gray-600 mb-2">
+                Al crear una labor que involucra agroquímicos (fertilización, pulverización, control de plagas, etc.), 
+                el sistema detecta automáticamente los agroquímicos configurados.
+              </p>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 ml-2">
+                <li>Ve a <strong>Producción → Labores</strong></li>
+                <li>Haz clic en <strong>"Nueva Labor"</strong></li>
+                <li>Selecciona un <strong>Tipo de Labor</strong> que involucra agroquímicos:
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    <li>Fertilización</li>
+                    <li>Pulverización</li>
+                    <li>Aplicación de herbicida</li>
+                    <li>Aplicación de insecticida</li>
+                    <li>Control de plagas</li>
+                    <li>Control de malezas</li>
+                  </ul>
+                </li>
+                <li>Selecciona el <strong>Lote</strong> donde se realizará la labor</li>
+                <li>En la sección <strong>"Insumos Utilizados"</strong>, haz clic en <strong>"Agregar Insumo"</strong></li>
+                <li>Selecciona un <strong>agroquímico configurado</strong> del listado</li>
+                <li>Si el agroquímico tiene dosis configuradas:
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    <li>El sistema mostrará un <strong>selector de tipo de aplicación</strong></li>
+                    <li>Selecciona el <strong>Tipo de Aplicación</strong> y <strong>Forma de Aplicación</strong> que realizarás</li>
+                    <li>El sistema <strong>calculará automáticamente</strong> la cantidad necesaria basándose en:
+                      <ul className="list-disc list-inside ml-4 mt-1">
+                        <li>Las hectáreas del lote seleccionado</li>
+                        <li>La dosis recomendada por hectárea configurada</li>
+                        <li>Fórmula: <strong>Cantidad = Hectáreas × Dosis Recomendada (por ha)</strong></li>
+                      </ul>
+                    </li>
+                    <li>La cantidad se <strong>completa automáticamente</strong> en el campo "Cantidad"</li>
+                    <li>Aparecerá un mensaje informativo con el cálculo realizado</li>
+                  </ul>
+                </li>
+                <li>Si el agroquímico <strong>no tiene dosis configuradas</strong>, puedes ingresar la cantidad manualmente</li>
+              </ol>
+            </div>
+
+            <div className="border-l-4 border-green-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-3">✅ Validaciones Automáticas</h5>
+              <p className="text-sm text-gray-600 mb-2">
+                El sistema realiza validaciones automáticas para asegurar un uso correcto y seguro de los agroquímicos.
+              </p>
+              <div className="space-y-3">
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <h6 className="font-semibold text-green-800 mb-1">✓ Validación de Stock</h6>
+                  <p className="text-sm text-green-700">
+                    El sistema verifica automáticamente si hay stock suficiente del agroquímico antes de permitir 
+                    agregarlo a la labor. Si no hay stock suficiente, muestra una advertencia pero permite continuar 
+                    (el stock se descontará al confirmar la labor si es suficiente).
+                  </p>
+                </div>
+                <div className="bg-yellow-50 p-3 rounded-lg">
+                  <h6 className="font-semibold text-yellow-800 mb-1">⚠ Validación de Dosis</h6>
+                  <p className="text-sm text-yellow-700">
+                    Si modificas manualmente la cantidad calculada, el sistema valida que la diferencia no exceda 
+                    ±20% de la dosis recomendada. Si excede este margen, el sistema rechazará la solicitud con un 
+                    mensaje claro indicando que la cantidad está fuera del rango permitido.
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-1 italic">
+                    Ejemplo: Si la dosis recomendada es 2 L/ha para 100 ha (200 L), puedes usar entre 160 L y 240 L (±20%).
+                  </p>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <h6 className="font-semibold text-blue-800 mb-1">📊 Descuento Automático de Stock</h6>
+                  <p className="text-sm text-blue-700">
+                    Al confirmar la labor, el sistema descuenta automáticamente el stock del agroquímico utilizado 
+                    y registra el movimiento en el inventario para mantener un control preciso.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-l-4 border-orange-500 pl-4">
+              <h5 className="font-semibold text-gray-800 mb-3">📋 Cómo se Refleja en la Labor</h5>
+              <p className="text-sm text-gray-600 mb-2">
+                Los agroquímicos utilizados aparecen en el detalle de costos de la labor junto con los demás insumos.
+              </p>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p><strong>Al ver el detalle de costos de una labor:</strong></p>
+                <ul className="list-disc list-inside space-y-1 ml-4">
+                  <li>En el <strong>resumen de costos</strong>, verás una caja separada para <strong>"Insumos"</strong> que incluye todos los agroquímicos utilizados</li>
+                  <li>En la sección <strong>"Insumos Utilizados"</strong>, cada agroquímico aparece con:
+                    <ul className="list-disc list-inside ml-4 mt-1">
+                      <li>Nombre del agroquímico</li>
+                      <li>Cantidad utilizada con su unidad de medida</li>
+                      <li>Precio unitario</li>
+                      <li>Costo total (cantidad × precio unitario)</li>
+                    </ul>
+                  </li>
+                  <li>El <strong>costo total</strong> de la labor incluye automáticamente:
+                    <ul className="list-disc list-inside ml-4 mt-1">
+                      <li>Costo de insumos (incluyendo agroquímicos)</li>
+                      <li>Costo de maquinaria</li>
+                      <li>Costo de mano de obra</li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h5 className="font-semibold text-blue-800 mb-2">💡 Consejos y Mejores Prácticas</h5>
+              <ul className="list-disc list-inside space-y-1 text-sm text-blue-700">
+                <li><strong>Configura dosis temprano:</strong> Configura las dosis recomendadas al registrar los agroquímicos para aprovechar el cálculo automático</li>
+                <li><strong>Revisa las dosis calculadas:</strong> Siempre revisa que la cantidad calculada sea la correcta antes de confirmar la labor</li>
+                <li><strong>Actualiza stock regularmente:</strong> Mantén el stock actualizado para evitar advertencias y asegurar disponibilidad</li>
+                <li><strong>Múltiples configuraciones:</strong> Puedes configurar diferentes dosis para el mismo agroquímico según el tipo y forma de aplicación</li>
+                <li><strong>Sin dosis configuradas:</strong> Si un agroquímico no tiene dosis configuradas, funciona como un insumo normal permitiendo entrada manual</li>
+                <li><strong>Validación de dosis:</strong> El margen de ±20% te permite ajustar la dosis según condiciones específicas del lote</li>
               </ul>
             </div>
           </div>

@@ -15,17 +15,22 @@ import com.agrocloud.model.entity.LaborInsumo;
 import com.agrocloud.model.entity.Plot;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.model.entity.Empresa;
-import com.agrocloud.model.entity.UserCompanyRole;
 import com.agrocloud.model.entity.Role;
+import com.agrocloud.model.entity.Insumo;
+import com.agrocloud.model.entity.DosisAgroquimico;
 import com.agrocloud.model.enums.TipoMaquinaria;
 import com.agrocloud.model.enums.EstadoLote;
 import com.agrocloud.model.enums.Rol;
 import com.agrocloud.model.enums.RolEmpresa;
+import com.agrocloud.model.enums.TipoAplicacion;
+import com.agrocloud.model.enums.FormaAplicacion;
 import com.agrocloud.repository.LaborRepository;
 import com.agrocloud.repository.LaborMaquinariaRepository;
 import com.agrocloud.repository.LaborManoObraRepository;
 import com.agrocloud.repository.LaborInsumoRepository;
 import com.agrocloud.repository.PlotRepository;
+import com.agrocloud.repository.InsumoRepository;
+import com.agrocloud.repository.DosisAgroquimicoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +64,12 @@ public class LaborService {
     
     @Autowired
     private LaborInsumoRepository laborInsumoRepository;
+    
+    @Autowired
+    private InsumoRepository insumoRepository;
+    
+    @Autowired
+    private DosisAgroquimicoRepository dosisAgroquimicoRepository;
     
     @Autowired
     private InventarioService inventarioService;
@@ -387,9 +398,208 @@ public class LaborService {
         // Procesar insumos usados
         if (request.getInsumosUsados() != null && !request.getInsumosUsados().isEmpty()) {
             System.out.println("Procesando " + request.getInsumosUsados().size() + " insumos");
+            
+            // Obtener hectáreas del lote
+            BigDecimal hectareas = BigDecimal.ZERO;
+            if (laborGuardada.getLote() != null) {
+                Plot lote = plotRepository.findById(laborGuardada.getLote().getId())
+                    .orElse(null);
+                if (lote != null && lote.getAreaHectareas() != null) {
+                    hectareas = lote.getAreaHectareas();
+                    System.out.println("Hectáreas del lote: " + hectareas);
+                }
+            }
+            
+            List<LaborInsumo> insumosGuardados = new ArrayList<>();
+            List<String> advertenciasStock = new ArrayList<>();
+            
             for (Map<String, Object> insumoData : request.getInsumosUsados()) {
                 System.out.println("Procesando insumo: " + insumoData);
-                // TODO: Implementar procesamiento de insumos
+                
+                try {
+                    // Obtener ID del insumo
+                    final Long insumoId;
+                    if (insumoData.get("insumo_id") != null) {
+                        insumoId = Long.parseLong(insumoData.get("insumo_id").toString());
+                    } else if (insumoData.get("id") != null) {
+                        insumoId = Long.parseLong(insumoData.get("id").toString());
+                    } else {
+                        System.err.println("⚠️ Insumo sin ID, omitiendo");
+                        continue;
+                    }
+                    
+                    // Buscar el insumo
+                    Insumo insumo = insumoRepository.findById(insumoId)
+                        .orElseThrow(() -> new RuntimeException("Insumo no encontrado con ID: " + insumoId));
+                    
+                    // Obtener cantidad usada del request
+                    BigDecimal cantidadUsada = BigDecimal.ZERO;
+                    if (insumoData.get("cantidad_usada") != null) {
+                        cantidadUsada = BigDecimal.valueOf(Double.parseDouble(insumoData.get("cantidad_usada").toString()));
+                    } else if (insumoData.get("cantidad") != null) {
+                        cantidadUsada = BigDecimal.valueOf(Double.parseDouble(insumoData.get("cantidad").toString()));
+                    }
+                    
+                    BigDecimal cantidadPlanificada = cantidadUsada;
+                    if (insumoData.get("cantidad_planificada") != null) {
+                        cantidadPlanificada = BigDecimal.valueOf(Double.parseDouble(insumoData.get("cantidad_planificada").toString()));
+                    }
+                    
+                    // Verificar si es agroquímico
+                    if (insumo.esAgroquimico() && hectareas.compareTo(BigDecimal.ZERO) > 0) {
+                        System.out.println("🦠 Detectado agroquímico: " + insumo.getNombre());
+                        
+                        // Buscar tipoAplicacion y formaAplicacion del request (si están presentes)
+                        TipoAplicacion tipoAplicacion = null;
+                        FormaAplicacion formaAplicacion = null;
+                        
+                        if (insumoData.get("tipo_aplicacion") != null) {
+                            try {
+                                tipoAplicacion = TipoAplicacion.valueOf(insumoData.get("tipo_aplicacion").toString());
+                            } catch (IllegalArgumentException e) {
+                                System.err.println("⚠️ Tipo de aplicación inválido: " + insumoData.get("tipo_aplicacion"));
+                            }
+                        }
+                        
+                        if (insumoData.get("forma_aplicacion") != null) {
+                            try {
+                                formaAplicacion = FormaAplicacion.valueOf(insumoData.get("forma_aplicacion").toString());
+                            } catch (IllegalArgumentException e) {
+                                System.err.println("⚠️ Forma de aplicación inválida: " + insumoData.get("forma_aplicacion"));
+                            }
+                        }
+                        
+                        // Buscar configuración de dosis
+                        DosisAgroquimico dosis = null;
+                        if (tipoAplicacion != null && formaAplicacion != null) {
+                            dosis = dosisAgroquimicoRepository
+                                .findByInsumoIdAndTipoAplicacionAndFormaAplicacionAndActivoTrue(
+                                    insumoId, tipoAplicacion, formaAplicacion)
+                                .orElse(null);
+                        }
+                        
+                        // Si no se encontró dosis específica, buscar la primera disponible
+                        if (dosis == null) {
+                            List<DosisAgroquimico> dosisDisponibles = dosisAgroquimicoRepository
+                                .findByInsumoIdAndActivoTrue(insumoId);
+                            if (!dosisDisponibles.isEmpty()) {
+                                dosis = dosisDisponibles.get(0);
+                                System.out.println("📋 Usando primera dosis disponible: " + 
+                                    dosis.getTipoAplicacion() + " - " + dosis.getFormaAplicacion());
+                            }
+                        }
+                        
+                        // Calcular cantidad necesaria basada en dosis recomendada
+                        if (dosis != null && dosis.getDosisRecomendadaPorHa() != null) {
+                            BigDecimal dosisRecomendada = BigDecimal.valueOf(dosis.getDosisRecomendadaPorHa());
+                            BigDecimal cantidadNecesaria = hectareas.multiply(dosisRecomendada);
+                            
+                            System.out.println("📊 Cálculo de dosis:");
+                            System.out.println("  - Hectáreas: " + hectareas);
+                            System.out.println("  - Dosis recomendada por ha: " + dosisRecomendada);
+                            System.out.println("  - Cantidad necesaria: " + cantidadNecesaria);
+                            System.out.println("  - Cantidad especificada por usuario: " + cantidadUsada);
+                            
+                            // Validar variación ±20%
+                            BigDecimal variacionPorcentual = cantidadUsada
+                                .subtract(cantidadNecesaria)
+                                .divide(cantidadNecesaria, 4, RoundingMode.HALF_UP)
+                                .multiply(BigDecimal.valueOf(100));
+                            
+                            BigDecimal variacionAbsoluta = variacionPorcentual.abs();
+                            BigDecimal limiteVariacion = BigDecimal.valueOf(20);
+                            
+                            System.out.println("  - Variación: " + variacionPorcentual + "%");
+                            
+                            if (variacionAbsoluta.compareTo(limiteVariacion) > 0) {
+                                throw new RuntimeException(
+                                    "La dosis especificada (" + cantidadUsada + ") excede el límite permitido (±20%) de la dosis recomendada (" + 
+                                    cantidadNecesaria + "). Variación: " + variacionPorcentual.abs() + "%"
+                                );
+                            }
+                            
+                            // Si el usuario no especificó cantidad, usar la calculada
+                            if (cantidadUsada.compareTo(BigDecimal.ZERO) == 0) {
+                                cantidadUsada = cantidadNecesaria;
+                                cantidadPlanificada = cantidadNecesaria;
+                                System.out.println("✅ Usando cantidad calculada automáticamente: " + cantidadUsada);
+                            }
+                        }
+                        
+                        // Verificar stock suficiente
+                        if (insumo.getStockActual().compareTo(cantidadUsada) < 0) {
+                            BigDecimal faltante = cantidadUsada.subtract(insumo.getStockActual());
+                            String advertencia = String.format(
+                                "⚠️ Stock insuficiente para %s. Disponible: %s %s, Requerido: %s %s, Faltante: %s %s",
+                                insumo.getNombre(),
+                                insumo.getStockActual(),
+                                insumo.getUnidadMedida(),
+                                cantidadUsada,
+                                insumo.getUnidadMedida(),
+                                faltante,
+                                insumo.getUnidadMedida()
+                            );
+                            advertenciasStock.add(advertencia);
+                            System.err.println(advertencia);
+                            // No rechazamos, solo advertimos para que el usuario decida
+                        }
+                    }
+                    
+                    // Crear LaborInsumo
+                    LaborInsumo laborInsumo = new LaborInsumo();
+                    laborInsumo.setLabor(laborGuardada);
+                    laborInsumo.setInsumo(insumo);
+                    laborInsumo.setCantidadUsada(cantidadUsada);
+                    laborInsumo.setCantidadPlanificada(cantidadPlanificada);
+                    
+                    // Obtener costo unitario
+                    BigDecimal costoUnitario = insumo.getPrecioUnitario() != null ? insumo.getPrecioUnitario() : BigDecimal.ZERO;
+                    if (insumoData.get("costo_unitario") != null) {
+                        costoUnitario = BigDecimal.valueOf(Double.parseDouble(insumoData.get("costo_unitario").toString()));
+                    } else if (insumoData.get("precio_unitario") != null) {
+                        costoUnitario = BigDecimal.valueOf(Double.parseDouble(insumoData.get("precio_unitario").toString()));
+                    }
+                    
+                    laborInsumo.setCostoUnitario(costoUnitario);
+                    laborInsumo.setCostoTotal(cantidadUsada.multiply(costoUnitario));
+                    laborInsumo.setObservaciones(insumoData.get("observaciones") != null ? 
+                        insumoData.get("observaciones").toString() : null);
+                    
+                    // Guardar LaborInsumo
+                    laborInsumo = laborInsumoRepository.save(laborInsumo);
+                    insumosGuardados.add(laborInsumo);
+                    
+                    // Actualizar inventario (descontar stock) - solo si hay suficiente stock
+                    if (insumo.getStockActual().compareTo(cantidadUsada) >= 0) {
+                        inventarioService.actualizarInventarioLabor(
+                            laborGuardada.getId(), 
+                            List.of(laborInsumo), 
+                            null, 
+                            usuario
+                        );
+                    }
+                    
+                    System.out.println("✅ Insumo procesado exitosamente: " + insumo.getNombre());
+                    
+                } catch (Exception e) {
+                    System.err.println("❌ Error al procesar insumo: " + e.getMessage());
+                    e.printStackTrace();
+                    // Si es error de validación (variación > 20%), rechazar todo el request
+                    if (e.getMessage() != null && e.getMessage().contains("excede el límite permitido")) {
+                        throw e;
+                    }
+                    // Otros errores: continuar con los demás insumos pero registrar el error
+                }
+            }
+            
+            // Si hay advertencias de stock, registrarlas pero no rechazar la creación
+            // El frontend puede decidir si continuar o no
+            if (!advertenciasStock.isEmpty()) {
+                String mensajeAdvertencias = "Problemas de stock detectados:\n" + 
+                    String.join("\n", advertenciasStock);
+                System.err.println("⚠️ " + mensajeAdvertencias);
+                // Registrar en observaciones de la labor o log
+                // Las advertencias se pueden recuperar del frontend si es necesario
             }
         }
         
@@ -440,6 +650,39 @@ public class LaborService {
                 laborManoObraRepository.save(laborMo);
             }
         }
+        
+        // Recalcular costo total sumando todos los componentes
+        BigDecimal costoTotal = BigDecimal.ZERO;
+        
+        // Sumar costo de insumos
+        List<LaborInsumo> insumosLabor = laborInsumoRepository.findByLaborId(laborGuardada.getId());
+        for (LaborInsumo li : insumosLabor) {
+            if (li.getCostoTotal() != null) {
+                costoTotal = costoTotal.add(li.getCostoTotal());
+            }
+        }
+        
+        // Sumar costo de maquinaria
+        List<LaborMaquinaria> maquinariasLabor = laborMaquinariaRepository.findByLaborId(laborGuardada.getId());
+        for (LaborMaquinaria lm : maquinariasLabor) {
+            if (lm.getCosto() != null) {
+                costoTotal = costoTotal.add(lm.getCosto());
+            }
+        }
+        
+        // Sumar costo de mano de obra
+        List<LaborManoObra> manoObraLabor = laborManoObraRepository.findByLaborId(laborGuardada.getId());
+        for (LaborManoObra lmo : manoObraLabor) {
+            if (lmo.getCostoTotal() != null) {
+                costoTotal = costoTotal.add(lmo.getCostoTotal());
+            }
+        }
+        
+        // Establecer costo total en la labor y actualizar
+        laborGuardada.setCostoTotal(costoTotal);
+        laborGuardada = laborRepository.save(laborGuardada);
+        
+        System.out.println("💰 Costo total calculado para labor ID " + laborGuardada.getId() + ": $" + costoTotal);
         
         return laborGuardada;
     }
@@ -1141,7 +1384,7 @@ public class LaborService {
         return new LaborMaquinariaDTO(
             maquinaria.getIdLaborMaquinaria(),
             maquinaria.getLabor().getId(),
-            "PROPIA", // Tipo por defecto ya que se eliminó la columna
+            maquinaria.getTipoMaquinaria() != null ? maquinaria.getTipoMaquinaria().toString() : "PROPIA",
             maquinaria.getDescripcion(),
             maquinaria.getProveedor(),
             maquinaria.getCosto(),

@@ -126,6 +126,7 @@ public class SiembraService {
             for (MaquinariaAsignadaDTO maqDTO : request.getMaquinaria()) {
                 LaborMaquinaria laborMaquinaria = new LaborMaquinaria();
                 laborMaquinaria.setLabor(laborSiembra);
+                
                 laborMaquinaria.setDescripcion(maqDTO.getDescripcion());
                 laborMaquinaria.setProveedor(maqDTO.getProveedor());
                 laborMaquinaria.setTipoMaquinaria(maqDTO.getTipoMaquinaria());
@@ -268,6 +269,7 @@ public class SiembraService {
             for (MaquinariaAsignadaDTO maqDTO : request.getMaquinaria()) {
                 LaborMaquinaria laborMaquinaria = new LaborMaquinaria();
                 laborMaquinaria.setLabor(laborCosecha);
+                
                 laborMaquinaria.setDescripcion(maqDTO.getDescripcion());
                 laborMaquinaria.setProveedor(maqDTO.getProveedor());
                 laborMaquinaria.setTipoMaquinaria(maqDTO.getTipoMaquinaria());

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { cultivosService, insumosService, maquinariaService, lotesService } from '../services/apiServices';
 
 interface Lote {
   id?: number;
@@ -122,14 +122,9 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarCultivos = async () => {
     try {
-      const response = await api.get('/v1/cultivos');
-
-      if (response.status >= 200 && response.status < 300) {
-        console.log('Cultivos cargados:', response.data);
-        setCultivos(response.data);
-      } else {
-        console.error('Error al cargar cultivos, status:', response.status);
-      }
+      const data = await cultivosService.listar();
+      console.log('Cultivos cargados:', data);
+      setCultivos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando cultivos:', error);
     }
@@ -137,11 +132,8 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/insumos');
-
-      if (response.status >= 200 && response.status < 300) {
-        setInsumos(response.data);
-      }
+      const data = await insumosService.listar();
+      setInsumos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando insumos:', error);
     }
@@ -149,17 +141,14 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
   const cargarMaquinarias = async () => {
     try {
-      const response = await api.get('/maquinaria');
-
-      if (response.status >= 200 && response.status < 300) {
-        const maquinariasMapeadas = response.data.map((maq: any) => ({
-          id: maq.id,
-          nombre: maq.nombre,
-          tipo: maq.tipo || 'No especificado',
-          costoPorHora: maq.costoPorHora || 0
-        }));
-        setMaquinariasInventario(maquinariasMapeadas);
-      }
+      const data = await maquinariaService.listar();
+      const maquinariasMapeadas = (Array.isArray(data) ? data : []).map((maq: any) => ({
+        id: maq.id,
+        nombre: maq.nombre,
+        tipo: maq.tipo || 'No especificado',
+        costoPorHora: maq.costoPorHora || 0
+      }));
+      setMaquinariasInventario(maquinariasMapeadas);
     } catch (error) {
       console.error('Error cargando maquinarias:', error);
     }
@@ -323,20 +312,15 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
         manoObra: manoObraData
       };
       
-      const response = await api.post(`/api/v1/lotes/${lote.id}/sembrar`, siembraData);
+      const data = await lotesService.sembrar(lote.id!, siembraData);
 
-      if (response.status >= 200 && response.status < 300) {
-        const data = response.data;
-        const costos = calcularCostos();
-        const mensaje = costos.total > 0 
-          ? `✅ ${data.message || 'Lote sembrado exitosamente'}\n💰 Costo total registrado: $${costos.total.toLocaleString()}`
-          : `✅ ${data.message || 'Lote sembrado exitosamente'}`;
-        alert(mensaje);
-        onSuccess();
-        onClose();
-      } else {
-        alert(`❌ Error: ${response.data?.message || 'No se pudo sembrar el lote'}`);
-      }
+      const costos = calcularCostos();
+      const mensaje = costos.total > 0 
+        ? `✅ ${data.message || 'Lote sembrado exitosamente'}\n💰 Costo total registrado: $${costos.total.toLocaleString()}`
+        : `✅ ${data.message || 'Lote sembrado exitosamente'}`;
+      alert(mensaje);
+      onSuccess();
+      onClose();
     } catch (error) {
       console.error('Error al sembrar:', error);
       alert('❌ Error de conexión. Por favor, intente nuevamente.');

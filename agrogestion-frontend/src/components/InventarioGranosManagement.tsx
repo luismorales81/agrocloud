@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { inventarioGranosService } from '../services/apiServices';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
 import { Button } from './ui/Button';
 import Badge from './ui/Badge';
@@ -69,8 +69,8 @@ const InventarioGranosManagement: React.FC = () => {
   const cargarInventario = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/v1/inventario-granos');
-      setInventario(response.data);
+      const inventarioData = await inventarioGranosService.listar();
+      setInventario(Array.isArray(inventarioData) ? inventarioData : []);
     } catch (error) {
       console.error('Error cargando inventario:', error);
       alert('Error al cargar el inventario');

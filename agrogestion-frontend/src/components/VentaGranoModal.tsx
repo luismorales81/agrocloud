@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api from '../services/api';
+import { inventarioGranosService } from '../services/apiServices';
 import Button from './ui/Button';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 
@@ -117,9 +117,9 @@ const VentaGranoModal: React.FC<VentaGranoModalProps> = ({ inventario, onClose, 
         observaciones: formData.observaciones || null
       };
 
-      const response = await api.post('/v1/inventario-granos/vender', requestData);
+      const resultado = await inventarioGranosService.vender(requestData);
 
-      if (response.data.success) {
+      if (resultado?.success) {
         alert(`✅ Venta procesada exitosamente\n\n` +
               `Cantidad: ${cantidad} ${inventario.unidadMedida}\n` +
               `Monto Total: ${formatCurrency(calcularMontoTotal())}\n` +
@@ -127,7 +127,7 @@ const VentaGranoModal: React.FC<VentaGranoModalProps> = ({ inventario, onClose, 
               `Se creó un ingreso en Finanzas automáticamente`);
         onSuccess();
       } else {
-        alert('❌ ' + response.data.message);
+        alert('❌ ' + (resultado?.message || 'Error al procesar la venta'));
       }
     } catch (error: any) {
       console.error('Error procesando venta:', error);

@@ -46,6 +46,7 @@ public class UserService {
      * Obtener usuario con todas las relaciones cargadas (usuarioEmpresas y userCompanyRoles)
      * Usa dos consultas separadas para evitar MultipleBagFetchException
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public User findByEmailWithAllRelationsCombined(String email) {
         // Primera consulta: cargar usuarioEmpresas
         User user = userRepository.findByEmailWithAllRelations(email)

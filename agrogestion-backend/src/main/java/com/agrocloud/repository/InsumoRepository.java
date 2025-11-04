@@ -56,4 +56,27 @@ public interface InsumoRepository extends JpaRepository<Insumo, Long> {
     List<Insumo> findByNombreContainingIgnoreCase(String nombre);
     List<Insumo> findByTipo(Insumo.TipoInsumo tipo);
     List<Insumo> findByProveedor(String proveedor);
+    
+    // NUEVOS MÉTODOS PARA AGROQUÍMICOS
+    // Buscar insumos agroquímicos activos
+    @Query("SELECT i FROM Insumo i WHERE i.activo = true AND i.tipo IN ('HERBICIDA', 'FUNGICIDA', 'INSECTICIDA', 'FERTILIZANTE')")
+    List<Insumo> findAgroquimicosActivos();
+    
+    // Buscar insumos agroquímicos por tipo
+    List<Insumo> findByTipoInAndActivoTrue(Insumo.TipoInsumo... tipos);
+    
+    // Buscar insumos agroquímicos con propiedades específicas
+    @Query("SELECT i FROM Insumo i WHERE i.activo = true AND i.principioActivo IS NOT NULL AND i.principioActivo != ''")
+    List<Insumo> findAgroquimicosConPropiedades();
+    
+    // Buscar insumos agroquímicos por principio activo
+    List<Insumo> findByPrincipioActivoContainingIgnoreCaseAndActivoTrue(String principioActivo);
+    
+    // Buscar insumos agroquímicos por clase química
+    List<Insumo> findByClaseQuimicaContainingIgnoreCaseAndActivoTrue(String claseQuimica);
+    
+    // Buscar insumos agroquímicos con stock suficiente
+    @Query("SELECT i FROM Insumo i WHERE i.activo = true AND i.tipo IN ('HERBICIDA', 'FUNGICIDA', 'INSECTICIDA', 'FERTILIZANTE') " +
+           "AND i.stockActual >= :cantidadMinima")
+    List<Insumo> findAgroquimicosConStockSuficiente(@Param("cantidadMinima") Double cantidadMinima);
 }

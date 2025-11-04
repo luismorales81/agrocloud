@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { authService } from '../services/apiServices';
 
 interface User {
   id: number;
@@ -65,13 +65,8 @@ const UsersManagement: React.FC = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/auth/users');
-      
-      if (response.status >= 200 && response.status < 300) {
-        setUsers(response.data);
-      } else {
-        console.error('Error cargando usuarios');
-      }
+      const data = await authService.obtenerUsuarios();
+      setUsers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -82,11 +77,8 @@ const UsersManagement: React.FC = () => {
   // Cargar roles
   const loadRoles = async () => {
     try {
-      const response = await api.get('/auth/roles');
-      
-      if (response.status >= 200 && response.status < 300) {
-        setRoles(response.data);
-      }
+      const data = await authService.obtenerRoles();
+      setRoles(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando roles:', error);
     }
@@ -95,11 +87,8 @@ const UsersManagement: React.FC = () => {
   // Cargar estadísticas
   const loadStats = async () => {
     try {
-      const response = await api.get('/auth/stats');
-      
-      if (response.status >= 200 && response.status < 300) {
-        setStats(response.data);
-      }
+      const data = await authService.obtenerEstadisticas();
+      setStats(data);
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
     }
@@ -112,22 +101,14 @@ const UsersManagement: React.FC = () => {
     console.log('📋 [UsersManagement] formData:', formData);
     try {
       setFormLoading(true);
-      const response = await api.post('/auth/register', formData);
+      await authService.register(formData);
       
-      console.log('📡 [UsersManagement] Respuesta del servidor:', response.status, response.data);
-      
-      if (response.status >= 200 && response.status < 300) {
-        console.log('✅ [UsersManagement] Usuario creado exitosamente');
-        alert('✅ Usuario creado exitosamente');
-        setFormData({ name: '', email: '', password: '', roleId: 0, sendInvitationEmail: true });
-        setShowForm(false);
-        loadUsers();
-        loadStats();
-      } else {
-        const error = await response.text();
-        console.error('❌ [UsersManagement] Error del servidor:', error);
-        alert('Error creando usuario: ' + error);
-      }
+      console.log('✅ [UsersManagement] Usuario creado exitosamente');
+      alert('✅ Usuario creado exitosamente');
+      setFormData({ name: '', email: '', password: '', roleId: 0, sendInvitationEmail: true });
+      setShowForm(false);
+      loadUsers();
+      loadStats();
     } catch (error) {
       console.error('❌ [UsersManagement] Error en catch:', error);
       if (error.response) {
@@ -148,17 +129,11 @@ const UsersManagement: React.FC = () => {
     
     try {
       setFormLoading(true);
-      const response = await api.put(`/api/auth/users/${selectedUser.id}`, formData);
-      
-      if (response.status >= 200 && response.status < 300) {
-        setFormData({ name: '', email: '', password: '', roleId: 0, sendInvitationEmail: true });
-        setSelectedUser(null);
-        setShowForm(false);
-        loadUsers();
-      } else {
-        const error = await response.text();
-        alert('Error actualizando usuario: ' + error);
-      }
+      await authService.actualizarUsuario(selectedUser.id, formData);
+      setFormData({ name: '', email: '', password: '', roleId: 0, sendInvitationEmail: true });
+      setSelectedUser(null);
+      setShowForm(false);
+      loadUsers();
     } catch (error) {
       console.error('Error:', error);
       alert('Error actualizando usuario');
@@ -170,14 +145,9 @@ const UsersManagement: React.FC = () => {
   // Cambiar estado de usuario
   const toggleUserStatus = async (userId: number) => {
     try {
-      const response = await api.patch(`/api/auth/users/${userId}/toggle-status`);
-      
-      if (response.status >= 200 && response.status < 300) {
-        loadUsers();
-        loadStats();
-      } else {
-        alert('Error cambiando estado del usuario');
-      }
+      await authService.toggleEstadoUsuario(userId);
+      loadUsers();
+      loadStats();
     } catch (error) {
       console.error('Error:', error);
       alert('Error cambiando estado del usuario');
@@ -189,14 +159,9 @@ const UsersManagement: React.FC = () => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este usuario?')) return;
     
     try {
-      const response = await api.delete(`/api/auth/users/${userId}`);
-      
-      if (response.status >= 200 && response.status < 300) {
-        loadUsers();
-        loadStats();
-      } else {
-        alert('Error eliminando usuario');
-      }
+      await authService.eliminarUsuario(userId);
+      loadUsers();
+      loadStats();
     } catch (error) {
       console.error('Error:', error);
       alert('Error eliminando usuario');

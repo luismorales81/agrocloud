@@ -29,7 +29,6 @@ public interface LaborMaquinariaRepository extends JpaRepository<LaborMaquinaria
     @Query("SELECT COALESCE(SUM(lm.costo), 0) FROM LaborMaquinaria lm WHERE lm.labor.id = :laborId")
     Double calcularCostoTotalMaquinaria(@Param("laborId") Long laborId);
     
-    
     /**
      * Buscar maquinarias por proveedor
      */

@@ -3,7 +3,7 @@ import FieldWeatherButton from './FieldWeatherButton';
 import OpenMeteoWeatherWidget from './OpenMeteoWeatherWidget';
 import PermissionGate from './PermissionGate';
 import { loadGoogleMaps, GOOGLE_MAPS_CONFIG } from '../config/googleMaps';
-import api from '../services/api';
+import { camposService } from '../services/apiServices';
 
 // Declaraciones de tipos para Google Maps
 declare global {
@@ -394,8 +394,7 @@ const FieldsManagement: React.FC = () => {
       }
 
       // Llamar a la API real para obtener los campos del usuario
-      const response = await api.get('/campos');
-      const data = response.data;
+      const data = await camposService.listar();
       
       // Mapear los datos de la API al formato del frontend
       const camposMapeados: Campo[] = data.map((field: any) => ({
@@ -813,17 +812,16 @@ const FieldsManagement: React.FC = () => {
         poligono: formData.coordenadas.map(coord => `${coord.lat},${coord.lng}`).join(';')
       };
 
-      let response;
-    if (isEditing && selectedField) {
-      // Editar campo existente
-        response = await api.put(`/campos/${selectedField.id}`, fieldData);
-    } else {
+      let updatedField;
+      if (isEditing && selectedField) {
+        // Editar campo existente
+        updatedField = await camposService.actualizar(selectedField.id, fieldData);
+      } else {
         // Crear nuevo campo
-        response = await api.post('/campos', fieldData);
-    }
+        updatedField = await camposService.crear(fieldData);
+      }
 
-      if (response.status >= 200 && response.status < 300) {
-        const updatedField = response.data;
+      if (updatedField) {
         
         if (isEditing && selectedField) {
           // Actualizar campo existente en el estado local
@@ -854,11 +852,7 @@ const FieldsManagement: React.FC = () => {
         }
         
         alert(`✅ Campo ${isEditing ? 'actualizado' : 'creado'} exitosamente`);
-    closeModal();
-      } else {
-        const errorData = await response.text();
-        console.error('Error guardando campo:', errorData);
-        alert(`❌ Error al ${isEditing ? 'actualizar' : 'crear'} el campo. Por favor, inténtalo de nuevo.`);
+        closeModal();
       }
     } catch (error) {
       console.error('Error de conexión al guardar el campo:', error);
@@ -880,33 +874,15 @@ const FieldsManagement: React.FC = () => {
 
         console.log('Intentando eliminar campo con ID:', campoId);
         
-        const response = await api.delete(`/api/campos/${campoId}`);
+        await camposService.eliminar(campoId);
 
-        console.log('Respuesta del servidor:', {
-          status: response.status,
-          statusText: response.statusText
-        });
-
-        if (response.status >= 200 && response.status < 300) {
-          // Con eliminación lógica, recargar la lista de campos para reflejar el cambio
-          console.log('Campo eliminado exitosamente (eliminación lógica)');
-          alert('Campo eliminado correctamente');
-          // Recargar la lista de campos para mostrar solo los activos
-          cargarCampos();
-        } else {
-          // Intentar obtener el mensaje de error del servidor
-          let errorMessage = 'Error desconocido';
-          try {
-            const errorData = await response.text();
-            console.error('Error del servidor:', errorData);
-            errorMessage = errorData || `Error ${response.status}: ${response.statusText}`;
-          } catch (e) {
-            console.error('No se pudo leer el mensaje de error del servidor');
-          }
-          
-          console.error('Error al eliminar el campo:', response.status, response.statusText);
-          alert(`Error al eliminar el campo: ${errorMessage}`);
-        }
+        console.log('Campo eliminado exitosamente');
+        
+        // Con eliminación lógica, recargar la lista de campos para reflejar el cambio
+        console.log('Campo eliminado exitosamente (eliminación lógica)');
+        alert('Campo eliminado correctamente');
+        // Recargar la lista de campos para mostrar solo los activos
+        cargarCampos();
       } catch (error) {
         console.error('Error de conexión al eliminar el campo:', error);
         alert('Error de conexión al eliminar el campo. Por favor, verifica tu conexión e intenta nuevamente.');

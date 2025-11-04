@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { cultivosService, lotesService } from '../services/apiServices';
 
 interface Lote {
   id?: number;
@@ -37,11 +37,8 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
 
   const cargarCultivos = async () => {
     try {
-      const response = await api.get('/v1/cultivos');
-
-      if (response.status >= 200 && response.status < 300) {
-        setCultivos(response.data);
-      }
+      const data = await cultivosService.listar();
+      setCultivos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando cultivos:', error);
     }
@@ -71,16 +68,10 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
         manoObra: []
       };
       
-      const response = await api.post(`/api/v1/lotes/${lote.id}/sembrar`, siembraData);
-
-      if (response.status >= 200 && response.status < 300) {
-        const data = response.data;
-        alert(`✅ ${data.message || 'Lote sembrado exitosamente'}`);
-        onSuccess();
-        onClose();
-      } else {
-        alert(`❌ Error: ${response.data?.message || 'No se pudo sembrar el lote'}`);
-      }
+      const data = await lotesService.sembrar(lote.id!, siembraData);
+      alert(`✅ ${data.message || 'Lote sembrado exitosamente'}`);
+      onSuccess();
+      onClose();
     } catch (error) {
       console.error('Error al sembrar:', error);
       alert('❌ Error de conexión. Por favor, intente nuevamente.');

@@ -4,7 +4,7 @@ import Input from './ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Badge from './ui/Badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
-import api from '../services/api';
+import { egresosService, camposService, insumosService } from '../services/apiServices';
 
 interface Egreso {
   id: number;
@@ -94,8 +94,8 @@ const EgresosManagement: React.FC = () => {
   const cargarEgresos = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/v1/egresos');
-      setEgresos(response.data);
+      const data = await egresosService.listarV1();
+      setEgresos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando egresos:', error);
     } finally {
@@ -105,8 +105,8 @@ const EgresosManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/campos');
-      setLotes(response.data);
+      const data = await camposService.listar();
+      setLotes(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando lotes:', error);
     }
@@ -114,8 +114,8 @@ const EgresosManagement: React.FC = () => {
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/insumos');
-      setInsumos(response.data);
+      const data = await insumosService.listar();
+      setInsumos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando insumos:', error);
     }
@@ -160,7 +160,7 @@ const EgresosManagement: React.FC = () => {
       }
 
       // Usar el endpoint integrado
-      await api.post('/v1/egresos/integrado', egresoData);
+      await egresosService.crearIntegrado(egresoData);
       
       // Limpiar formulario
       setFormData({
@@ -201,7 +201,7 @@ const EgresosManagement: React.FC = () => {
     }
     
     try {
-      await api.delete(`/api/v1/egresos/${id}`);
+      await egresosService.eliminarV1(id);
       cargarEgresos();
     } catch (error) {
       console.error('Error eliminando egreso:', error);

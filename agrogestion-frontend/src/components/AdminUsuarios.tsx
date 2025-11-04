@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { showNotification } from '../utils/notification';
-import api from '../services/api';
+import { usuariosService } from '../services/apiServices';
 import '../styles/admin-forms.css';
 
 interface Usuario {
@@ -74,28 +74,9 @@ const AdminUsuarios: React.FC = () => {
 
   const [nuevaContraseña, setNuevaContraseña] = useState('');
 
-  // Persistencia de estado del modal y formulario para evitar cierre por remount
-  useEffect(() => {
-    try {
-      const persistedCrear = localStorage.getItem('adminUsuarios.dialogCrear');
-      const persistedForm = localStorage.getItem('adminUsuarios.nuevoUsuario');
-      if (persistedCrear === '1') {
-        setDialogCrear(true);
-      }
-      if (persistedForm) {
-        const parsed = JSON.parse(persistedForm);
-        if (parsed && typeof parsed === 'object') {
-          setNuevoUsuario(prev => ({
-            ...prev,
-            ...parsed,
-            roleIds: Array.isArray(parsed.roleIds) ? parsed.roleIds : []
-          }));
-        }
-      }
-    } catch (e) {
-      console.warn('⚠️ [AdminUsuarios] No se pudo restaurar estado persistido', e);
-    }
-  }, []);
+  // NO restaurar automáticamente el estado del modal desde localStorage
+  // Solo mantener la persistencia durante la sesión activa
+  // El modal siempre debe iniciar cerrado
 
   useEffect(() => {
     try {
@@ -147,13 +128,13 @@ const AdminUsuarios: React.FC = () => {
       
       // Cargar usuarios usando el servicio de API
       try {
-        const responseUsuarios = await api.get('/admin/usuarios');
-        const usuariosData = Array.isArray(responseUsuarios.data) ? responseUsuarios.data : [];
-        console.log('📊 [AdminUsuarios] Usuarios cargados del backend:', usuariosData);
-        if (usuariosData.length > 0) {
-          console.log('📊 [AdminUsuarios] Primer usuario con roles:', usuariosData[0]);
+        const usuariosData = await usuariosService.listar();
+        const usuariosArray = Array.isArray(usuariosData) ? usuariosData : [];
+        console.log('📊 [AdminUsuarios] Usuarios cargados del backend:', usuariosArray);
+        if (usuariosArray.length > 0) {
+          console.log('📊 [AdminUsuarios] Primer usuario con roles:', usuariosArray[0]);
         }
-        setUsuarios(usuariosData);
+        setUsuarios(usuariosArray);
       } catch (error) {
         console.error('❌ [AdminUsuarios] Error cargando usuarios:', error);
         setUsuarios([]);
@@ -161,22 +142,35 @@ const AdminUsuarios: React.FC = () => {
 
       // Cargar roles usando el servicio de API
       try {
-        const responseRoles = await api.get('/admin/usuarios/roles');
-        const rolesData = Array.isArray(responseRoles.data) ? responseRoles.data : [];
-        setRoles(rolesData);
+        const rolesData = await usuariosService.obtenerRoles();
+        const rolesArray = Array.isArray(rolesData) ? rolesData : [];
+        setRoles(rolesArray);
       } catch (error) {
         console.error('❌ [AdminUsuarios] Error cargando roles:', error);
         setRoles([]);
       }
 
       // Cargar estadísticas usando el servicio de API
-      const responseEstadisticas = await api.get('/admin/usuarios/estadisticas');
-      setEstadisticas(responseEstadisticas.data);
+      try {
+        const estadisticasData = await usuariosService.obtenerEstadisticas();
+        setEstadisticas(estadisticasData);
+      } catch (error) {
+        console.error('❌ [AdminUsuarios] Error cargando estadísticas:', error);
+      }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cargando datos:', error);
-      setError('Error al cargar los datos');
-      showNotification('Error al cargar los datos', 'error');
+      
+      // Si el error es 403, mostrar mensaje específico sobre permisos
+      if (error.response && error.response.status === 403) {
+        const errorData = error.response.data;
+        const mensaje = errorData?.mensaje || 'No tienes permisos para ver estadísticas de usuarios. Solo usuarios con rol SUPERADMIN o ADMINISTRADOR pueden acceder a esta información.';
+        setError(mensaje);
+        showNotification(mensaje, 'error');
+      } else {
+        setError('Error al cargar los datos');
+        showNotification('Error al cargar los datos', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -205,11 +199,18 @@ const AdminUsuarios: React.FC = () => {
       };
 
       // Usar el servicio de API
-      await api.post('/admin/usuarios', usuarioData);
+      await usuariosService.crear(usuarioData);
 
       showNotification('Usuario creado exitosamente', 'success');
       setDialogCrear(false);
       limpiarFormulario();
+      // Limpiar localStorage cuando se cierra el modal exitosamente
+      try {
+        localStorage.removeItem('adminUsuarios.dialogCrear');
+        localStorage.removeItem('adminUsuarios.nuevoUsuario');
+      } catch (e) {
+        console.warn('⚠️ Error limpiando localStorage:', e);
+      }
       cargarDatos();
     } catch (error) {
       console.error('Error creando usuario:', error);
@@ -233,7 +234,7 @@ const AdminUsuarios: React.FC = () => {
       };
 
       // Usar el servicio de API
-      await api.put(`/api/admin/usuarios/${usuarioSeleccionado.id}`, usuarioData);
+      await usuariosService.actualizar(usuarioSeleccionado.id, usuarioData);
 
       showNotification('Usuario actualizado exitosamente', 'success');
       setDialogEditar(false);
@@ -246,9 +247,7 @@ const AdminUsuarios: React.FC = () => {
 
   const cambiarEstadoUsuario = async (id: number, nuevoEstado: string) => {
     try {
-      // Usar el servicio de API
-      await api.patch(`/api/admin/usuarios/${id}/estado?estado=${nuevoEstado}`);
-
+      await usuariosService.cambiarEstado(id, nuevoEstado);
       showNotification(`Estado cambiado a ${nuevoEstado}`, 'success');
       cargarDatos();
     } catch (error) {
@@ -259,9 +258,7 @@ const AdminUsuarios: React.FC = () => {
 
   const cambiarEstadoActivo = async (id: number, activo: boolean) => {
     try {
-      // Usar el servicio de API
-      await api.patch(`/api/admin/usuarios/${id}/activo?activo=${activo}`);
-
+      await usuariosService.cambiarActivo(id, activo);
       showNotification(`Usuario ${activo ? 'activado' : 'desactivado'}`, 'success');
       cargarDatos();
     } catch (error) {
@@ -279,8 +276,7 @@ const AdminUsuarios: React.FC = () => {
     }
 
     try {
-      // Usar el servicio de API
-      await api.patch(`/api/admin/usuarios/${usuarioSeleccionado.id}/reset-password?nuevaContraseña=${nuevaContraseña}`);
+      await usuariosService.resetPassword(usuarioSeleccionado.id, nuevaContraseña);
 
       showNotification('Contraseña reseteada exitosamente', 'success');
       setDialogResetPassword(false);
@@ -564,7 +560,17 @@ const AdminUsuarios: React.FC = () => {
               <div className="admin-modal-header">
                 <h3 className="admin-modal-title">👤 Crear Nuevo Usuario</h3>
                 <button
-                  onClick={() => setDialogCrear(false)}
+                  onClick={() => {
+                    setDialogCrear(false);
+                    limpiarFormulario();
+                    // Limpiar localStorage al cerrar manualmente
+                    try {
+                      localStorage.removeItem('adminUsuarios.dialogCrear');
+                      localStorage.removeItem('adminUsuarios.nuevoUsuario');
+                    } catch (e) {
+                      console.warn('⚠️ Error limpiando localStorage:', e);
+                    }
+                  }}
                   className="admin-modal-close"
                 >
                   ✕
@@ -671,7 +677,17 @@ const AdminUsuarios: React.FC = () => {
 
               <div className="admin-btn-group">
                 <button
-                  onClick={() => setDialogCrear(false)}
+                  onClick={() => {
+                    setDialogCrear(false);
+                    limpiarFormulario();
+                    // Limpiar localStorage al cancelar
+                    try {
+                      localStorage.removeItem('adminUsuarios.dialogCrear');
+                      localStorage.removeItem('adminUsuarios.nuevoUsuario');
+                    } catch (e) {
+                      console.warn('⚠️ Error limpiando localStorage:', e);
+                    }
+                  }}
                   className="admin-btn admin-btn-cancel"
                 >
                   Cancelar

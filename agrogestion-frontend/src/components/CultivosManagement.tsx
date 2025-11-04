@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { cultivosService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
 
 interface Cultivo {
@@ -59,17 +59,7 @@ const CultivosManagement: React.FC = () => {
   const loadCultivos = async () => {
     try {
       setLoading(true);
-      
-      // Obtener token del localStorage
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No hay token de autenticación');
-        return;
-      }
-
-      // Llamada real a la API
-      const response = await api.get('/v1/cultivos');
-      const data = response.data;
+      const data = await cultivosService.listar();
       console.log('Cultivos cargados desde API:', data);
       setCultivos(data);
     } catch (error) {
@@ -90,20 +80,13 @@ const CultivosManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      // Obtener token del localStorage
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No hay token de autenticación');
-        alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
-        return;
+      if (editingCultivo) {
+        await cultivosService.actualizar(editingCultivo.id!, formData);
+      } else {
+        await cultivosService.crear(formData);
       }
-
-      const response = editingCultivo
-        ? await api.put(`/v1/cultivos/${editingCultivo.id}`, formData)
-        : await api.post('/v1/cultivos', formData);
-
-      const savedCultivo = response.data;
-      console.log('Cultivo guardado:', savedCultivo);
+      
+      console.log('Cultivo guardado exitosamente');
       
       // Recargar la lista de cultivos desde la API
       await loadCultivos();
@@ -133,21 +116,7 @@ const CultivosManagement: React.FC = () => {
 
     try {
       setLoading(true);
-      
-      // Obtener token del localStorage
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No hay token de autenticación');
-        alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
-        return;
-      }
-
-      const response = await api.delete(`/api/v1/cultivos/${cultivoId}`);
-
-      if (response.status < 200 || response.status >= 300) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
+      await cultivosService.eliminar(cultivoId);
       console.log('Cultivo eliminado exitosamente');
       
       // Recargar la lista de cultivos desde la API

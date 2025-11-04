@@ -45,7 +45,7 @@ public class Labor {
     private LocalDate fechaFin;
 
     @PositiveOrZero(message = "El costo debe ser un valor positivo o cero")
-    @Column(name = "costo_total", precision = 10, scale = 2)
+    @Column(name = "costo_total", precision = 15, scale = 2)
     private BigDecimal costoTotal;
 
     @Enumerated(EnumType.STRING)

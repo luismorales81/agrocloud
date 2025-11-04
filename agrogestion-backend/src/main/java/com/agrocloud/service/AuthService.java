@@ -54,6 +54,9 @@ public class AuthService implements UserDetailsService {
     private PermissionService permissionService;
     
     @Autowired
+    private UserService userService;
+    
+    @Autowired
     private JdbcTemplate jdbcTemplate;
     
     /**
@@ -348,32 +351,71 @@ public class AuthService implements UserDetailsService {
      * Implementación de UserDetailsService
      */
     @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
+        // Cargar usuario con todas las relaciones para poder verificar ambos sistemas de roles
+        User user = userService.findByEmailWithAllRelationsCombined(email);
+        
+        if (user == null) {
+            throw new UsernameNotFoundException("Usuario no encontrado: " + email);
+        }
         
         // Obtener permisos según el rol (sistema multitenant o legacy)
         String roleName = "Sin rol";
         List<String> authorities = new ArrayList<>();
         
-        // Usar el método getRoles() que tiene manejo de excepciones
+        // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
         try {
-            Set<Role> roles = user.getRoles();
-            if (roles != null && !roles.isEmpty()) {
-                Role role = roles.iterator().next();
-                if (role != null && role.getNombre() != null) {
-                    roleName = role.getNombre();
-                    authorities.addAll(roles.stream()
-                        .map(r -> "ROLE_" + r.getNombre())
-                        .collect(Collectors.toList()));
+            if (user.getUsuarioEmpresas() != null && !user.getUsuarioEmpresas().isEmpty()) {
+                for (com.agrocloud.model.entity.UsuarioEmpresa ue : user.getUsuarioEmpresas()) {
+                    if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO && ue.getRol() != null) {
+                        com.agrocloud.model.enums.RolEmpresa rol = ue.getRol();
+                        String rolNombre = rol.name(); // ADMINISTRADOR, SUPERADMIN, etc.
+                        roleName = rolNombre;
+                        authorities.add("ROLE_" + rolNombre);
+                        
+                        // Si es ADMINISTRADOR, también agregar ROLE_ADMINISTRADOR (sin prefijo)
+                        if (rolNombre.equals("ADMINISTRADOR")) {
+                            authorities.add("ROLE_ADMINISTRADOR");
+                        }
+                        // Si es SUPERADMIN, también agregar ROLE_SUPERADMIN
+                        if (rolNombre.equals("SUPERADMIN")) {
+                            authorities.add("ROLE_SUPERADMIN");
+                        }
+                        
+                        System.out.println("🔍 [AuthService] Rol encontrado en usuario_empresas: " + rolNombre + " para usuario: " + email);
+                        break; // Usar el primer rol ACTIVO encontrado
+                    }
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error al obtener roles del usuario: " + e.getMessage());
+            System.err.println("⚠️ [AuthService] Error al obtener roles del sistema nuevo: " + e.getMessage());
+        }
+        
+        // SEGUNDO: Si no se encontró rol en el sistema nuevo, buscar en el sistema legacy
+        if ("Sin rol".equals(roleName)) {
+            try {
+                Set<Role> roles = user.getRoles();
+                if (roles != null && !roles.isEmpty()) {
+                    Role role = roles.iterator().next();
+                    if (role != null && role.getNombre() != null) {
+                        roleName = role.getNombre();
+                        authorities.addAll(roles.stream()
+                            .map(r -> "ROLE_" + r.getNombre())
+                            .collect(Collectors.toList()));
+                        
+                        System.out.println("🔍 [AuthService] Rol encontrado en sistema legacy: " + roleName + " para usuario: " + email);
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ [AuthService] Error al obtener roles del sistema legacy: " + e.getMessage());
+            }
         }
         
         Set<String> permissions = permissionService.getPermissionsByRole(roleName);
         authorities.addAll(permissions);
+        
+        System.out.println("🔍 [AuthService] Autoridades asignadas para " + email + ": " + authorities);
         
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())

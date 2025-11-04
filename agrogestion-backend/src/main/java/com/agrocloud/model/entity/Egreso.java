@@ -42,6 +42,11 @@ public class Egreso {
     @Column(name = "costo_total", precision = 10, scale = 2, nullable = false)
     private BigDecimal costoTotal;
     
+    // Campo monto para compatibilidad con la estructura de BD
+    // Se actualiza automáticamente cuando se establece costoTotal
+    @Column(name = "monto", precision = 15, scale = 2, nullable = false)
+    private BigDecimal monto;
+    
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;
     
@@ -98,6 +103,8 @@ public class Egreso {
         this.fechaActualizacion = LocalDateTime.now();
         this.estado = EstadoEgreso.REGISTRADO;
         this.activo = true;
+        this.monto = BigDecimal.ZERO;
+        this.costoTotal = BigDecimal.ZERO;
     }
     
     // Constructor con campos obligatorios
@@ -105,6 +112,7 @@ public class Egreso {
         this();
         this.tipo = tipo;
         this.costoTotal = costoTotal;
+        this.monto = costoTotal != null ? costoTotal : BigDecimal.ZERO;
         this.fecha = fecha;
         this.user = user;
     }
@@ -180,6 +188,8 @@ public class Egreso {
     
     public void setCostoTotal(BigDecimal costoTotal) {
         this.costoTotal = costoTotal;
+        // Sincronizar monto con costoTotal para compatibilidad con BD
+        this.monto = costoTotal;
     }
     
     public LocalDate getFecha() {
@@ -273,11 +283,14 @@ public class Egreso {
     }
     
     public void setMonto(BigDecimal monto) {
+        this.monto = monto;
+        // Sincronizar costoTotal con monto para mantener consistencia
         this.costoTotal = monto;
     }
     
     public BigDecimal getMonto() {
-        return this.costoTotal;
+        // Retornar monto si está establecido, sino costoTotal
+        return this.monto != null ? this.monto : this.costoTotal;
     }
     
     public void setUsuario(User usuario) {

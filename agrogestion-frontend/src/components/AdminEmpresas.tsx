@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { API_ENDPOINTS } from '../services/apiEndpoints';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/admin-forms.css';
 
@@ -124,7 +125,7 @@ const AdminEmpresas: React.FC = () => {
       setLoading(true);
       
       // Cargar empresas del usuario
-      const responseEmpresas = await api.get('/v1/empresas/mis-empresas');
+      const responseEmpresas = await api.get(API_ENDPOINTS.EMPRESAS.MIS_EMPRESAS);
       // Transformar UsuarioEmpresaDTO a formato de empresa
       const empresasTransformadas = responseEmpresas.data.map((relacion: any) => ({
         id: relacion.empresaId,
@@ -136,7 +137,7 @@ const AdminEmpresas: React.FC = () => {
       setEmpresas(empresasTransformadas);
 
       // Cargar usuarios - usar endpoint básico
-      const responseUsuarios = await api.get('/admin/usuarios/basic');
+      const responseUsuarios = await api.get(API_ENDPOINTS.USUARIOS_BASIC.LISTAR);
       setUsuarios(responseUsuarios.data);
 
       // Cargar roles de empresa dinámicamente
@@ -155,7 +156,7 @@ const AdminEmpresas: React.FC = () => {
 
   const cargarRolesEmpresa = async () => {
     try {
-      const response = await api.get('/roles-empresa');
+      const response = await api.get(API_ENDPOINTS.EMPRESA_USUARIO.ROLES_EMPRESA);
       setRolesEmpresa(response.data);
     } catch (error) {
       console.error('Error cargando roles de empresa:', error);
@@ -166,7 +167,7 @@ const AdminEmpresas: React.FC = () => {
   const cargarUsuariosEmpresas = async () => {
     try {
       // Cargar todas las relaciones usuario-empresa
-      const response = await api.get('/empresa-usuario/todas-relaciones');
+      const response = await api.get(API_ENDPOINTS.EMPRESA_USUARIO.TODAS_RELACIONES);
       if (response.data.success) {
         setUsuariosEmpresas(response.data.data);
       }
@@ -174,7 +175,7 @@ const AdminEmpresas: React.FC = () => {
       console.error('Error cargando usuarios de empresas:', error);
       // Si no existe el endpoint, intentar con la empresa por defecto
       try {
-        const response = await api.get('/empresa-usuario/empresa/1/usuarios');
+        const response = await api.get(API_ENDPOINTS.EMPRESA_USUARIO.USUARIOS_EMPRESA(1));
         if (response.data.success) {
           setUsuariosEmpresas(response.data.data);
         }
@@ -194,7 +195,7 @@ const AdminEmpresas: React.FC = () => {
         direccion: nuevaEmpresaForm.direccion
       };
 
-      const response = await api.post('/admin-global/empresas', empresaData);
+      const response = await api.post(API_ENDPOINTS.ADMIN_GLOBAL.EMPRESAS, empresaData);
       
       if (response.data) {
         alert('Empresa creada exitosamente');
@@ -219,7 +220,7 @@ const AdminEmpresas: React.FC = () => {
 
   const asignarUsuarioAEmpresa = async () => {
     try {
-      const response = await api.post('/empresa-usuario/asignar', asignacionForm);
+      const response = await api.post(API_ENDPOINTS.EMPRESA_USUARIO.ASIGNAR, asignacionForm);
       
       if (response.data.success) {
         alert('Usuario asignado a empresa correctamente');
@@ -246,7 +247,7 @@ const AdminEmpresas: React.FC = () => {
 
   const cambiarRolUsuario = async () => {
     try {
-      const response = await api.put('/empresa-usuario/cambiar-rol', {
+      const response = await api.put(API_ENDPOINTS.EMPRESA_USUARIO.CAMBIAR_ROL, {
         usuarioId: cambioRolForm.usuarioId,
         empresaId: cambioRolForm.empresaId,
         rol: cambioRolForm.nuevoRol
@@ -272,7 +273,7 @@ const AdminEmpresas: React.FC = () => {
     }
 
     try {
-      const response = await api.delete(`/empresa-usuario/remover/${usuarioId}/${empresaId}`);
+      const response = await api.delete(API_ENDPOINTS.EMPRESA_USUARIO.REMOVER(usuarioId, empresaId));
       
       if (response.data.success) {
         alert('Usuario removido de la empresa correctamente');

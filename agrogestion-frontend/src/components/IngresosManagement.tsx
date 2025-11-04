@@ -10,7 +10,7 @@ const Edit = () => <span>✏️</span>;
 const Trash2 = () => <span>🗑️</span>;
 const DollarSign = () => <span>💰</span>;
 const Calendar = () => <span>📅</span>;
-import api from '../services/api';
+import { ingresosService, camposService } from '../services/apiServices';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 
 interface Ingreso {
@@ -59,8 +59,8 @@ const IngresosManagement: React.FC = () => {
   const cargarIngresos = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/v1/ingresos');
-      setIngresos(response.data);
+      const data = await ingresosService.listarV1();
+      setIngresos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando ingresos:', error);
     } finally {
@@ -70,8 +70,8 @@ const IngresosManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/v1/campos');
-      setLotes(response.data);
+      const data = await camposService.listarV1();
+      setLotes(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando lotes:', error);
     }
@@ -82,9 +82,9 @@ const IngresosManagement: React.FC = () => {
     setLoading(true);
     try {
       if (editingIngreso?.id) {
-        await api.put(`/api/v1/ingresos/${editingIngreso.id}`, formData);
+        await ingresosService.actualizarV1(editingIngreso.id, formData);
       } else {
-        await api.post('/v1/ingresos', formData);
+        await ingresosService.crearV1(formData);
       }
       cargarIngresos();
       resetForm();
@@ -119,9 +119,9 @@ const IngresosManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('¿Estás seguro de que quieres eliminar este ingreso?')) {
+      if (confirm('¿Estás seguro de que quieres eliminar este ingreso?')) {
       try {
-        await api.delete(`/api/v1/ingresos/${id}`);
+        await ingresosService.eliminarV1(id);
         cargarIngresos();
       } catch (error) {
         console.error('Error eliminando ingreso:', error);

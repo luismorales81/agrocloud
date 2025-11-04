@@ -1,12 +1,14 @@
 package com.agrocloud.service;
 
 import com.agrocloud.model.entity.*;
+import com.agrocloud.model.enums.TipoMovimiento;
 import com.agrocloud.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -77,7 +79,7 @@ public class InventarioService {
         
         // Registrar movimiento
         registrarMovimiento(insumo, laborInsumo.getLabor(), 
-                          MovimientoInventario.TipoMovimiento.SALIDA, 
+                          TipoMovimiento.SALIDA, 
                           laborInsumo.getCantidadUsada(), 
                           motivo + ": " + laborInsumo.getLabor().getDescripcion(),
                           usuario);
@@ -116,7 +118,7 @@ public class InventarioService {
         
         // Registrar movimiento
         registrarMovimiento(insumo, laborInsumo.getLabor(), 
-                          MovimientoInventario.TipoMovimiento.ENTRADA, 
+                          TipoMovimiento.ENTRADA, 
                           laborInsumo.getCantidadUsada(), 
                           motivo + ": " + laborInsumo.getLabor().getDescripcion(),
                           usuario);
@@ -133,12 +135,17 @@ public class InventarioService {
      * @param usuario Usuario que realiza la operación
      */
     private void registrarMovimiento(Insumo insumo, Labor labor, 
-                                   MovimientoInventario.TipoMovimiento tipoMovimiento,
+                                   TipoMovimiento tipoMovimiento,
                                    BigDecimal cantidad, String motivo, User usuario) {
         
-        MovimientoInventario movimiento = new MovimientoInventario(
-            insumo, labor, tipoMovimiento, cantidad, motivo, usuario
-        );
+        MovimientoInventario movimiento = new MovimientoInventario();
+        movimiento.setFechaMovimiento(LocalDateTime.now());
+        movimiento.setTipoMovimiento(tipoMovimiento);
+        movimiento.setCantidad(cantidad);
+        movimiento.setInsumo(insumo);
+        movimiento.setLabor(labor);
+        movimiento.setMotivo(motivo);
+        movimiento.setUsuario(usuario);
         
         movimientoInventarioRepository.save(movimiento);
     }
@@ -150,8 +157,8 @@ public class InventarioService {
      * @return Lista de movimientos
      */
     @Transactional(readOnly = true)
-    public List<MovimientoInventario> obtenerHistorialInsumo(Long insumoId) {
-        return movimientoInventarioRepository.findByInsumoId(insumoId);
+    public List<MovimientoInventario> obtenerHistorialAgroquimico(Long insumoId) {
+        return movimientoInventarioRepository.findByInsumoIdOrderByFechaMovimientoDesc(insumoId);
     }
     
     /**
@@ -172,7 +179,7 @@ public class InventarioService {
      * @return Saldo calculado
      */
     @Transactional(readOnly = true)
-    public BigDecimal calcularSaldoInsumo(Long insumoId) {
+    public BigDecimal calcularSaldoAgroquimico(Long insumoId) {
         return movimientoInventarioRepository.calcularSaldoByInsumoId(insumoId);
     }
     

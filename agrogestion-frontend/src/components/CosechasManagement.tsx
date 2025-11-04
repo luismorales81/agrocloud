@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HistorialCosechasModal from './HistorialCosechasModal';
-import api from '../services/api';
+import { cosechasService, lotesService, cultivosService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
 // import humidityService from '../services/humidityService';
 
@@ -128,15 +128,11 @@ const CosechasManagement: React.FC = () => {
   // Función para liberar lote para nueva siembra
   const liberarLoteParaNuevaSiembra = async (loteId: number, forzado: boolean = false, justificacion: string = '') => {
     try {
-      const url = forzado 
-        ? `/historial-cosechas/lote/${loteId}/liberar-forzado`
-        : `/historial-cosechas/lote/${loteId}/liberar`;
-      
-      const response = forzado
-        ? await api.put(url, { justificacion })
-        : await api.put(url);
+      const resultado = forzado
+        ? await cosechasService.liberarLoteForzado(loteId, justificacion)
+        : await cosechasService.liberarLote(loteId);
         
-      alert(response.data);
+      alert(typeof resultado === 'string' ? resultado : 'Lote liberado exitosamente');
     } catch (error: any) {
       console.error('Error liberando lote:', error);
       if (error.response?.data) {
@@ -195,8 +191,7 @@ const CosechasManagement: React.FC = () => {
       }
 
       // Cargar lotes
-      const lotesResponse = await api.get('/v1/lotes');
-      const lotesData = lotesResponse.data;
+      const lotesData = await lotesService.listar();
         const lotesMapeados: Lote[] = lotesData
           .filter((lote: any) => {
             // Incluir todos los lotes activos (no solo los que tienen cultivo actual)
@@ -222,8 +217,7 @@ const CosechasManagement: React.FC = () => {
         setLotes(lotesMapeados);
 
       // Cargar cultivos
-      const cultivosResponse = await api.get('/v1/cultivos');
-      const cultivosData = cultivosResponse.data;
+      const cultivosData = await cultivosService.listar();
         const cultivosMapeados: Cultivo[] = cultivosData.map((cultivo: any) => ({
           id: cultivo.id,
           nombre: cultivo.nombre,
@@ -233,9 +227,8 @@ const CosechasManagement: React.FC = () => {
         }));
         setCultivos(cultivosMapeados);
 
-      // Cargar cosechas usando el servicio api que tiene el interceptor configurado
-      const cosechasResponse = await api.get('/v1/cosechas');
-      const cosechasData = cosechasResponse.data;
+      // Cargar cosechas
+      const cosechasData = await cosechasService.listar();
         console.log('Cosechas recibidas del backend:', cosechasData);
         
         const cosechasMapeadas: Cosecha[] = cosechasData.map((cosecha: any) => {
@@ -363,8 +356,7 @@ const CosechasManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.post('/cosechas', cosechaData);
-      const savedCosecha = response.data;
+      const savedCosecha = await cosechasService.crear(cosechaData);
       console.log('Cosecha guardada:', savedCosecha);
       
       // Preguntar si desea liberar el lote para nueva siembra

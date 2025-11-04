@@ -57,6 +57,7 @@ public class EgresoService {
         // Lógica específica según el tipo de egreso
         switch (request.getTipoEgreso()) {
             case INSUMO:
+            case INSUMOS:
                 return crearEgresoInsumo(egreso, request);
             case MAQUINARIA_COMPRA:
                 return crearEgresoMaquinariaCompra(egreso, request);

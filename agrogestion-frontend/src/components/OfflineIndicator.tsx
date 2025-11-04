@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useOffline } from '../hooks/useOffline';
 
-const OfflineIndicator: React.FC = () => {
+interface OfflineIndicatorProps {
+  variant?: 'floating' | 'inline';
+}
+
+const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({ variant = 'floating' }) => {
   const {
     isOnline,
     offlineStats,
@@ -58,6 +62,53 @@ const OfflineIndicator: React.FC = () => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  // Si es variante inline, renderizar versión simplificada
+  if (variant === 'inline') {
+    const statusColor = statusInfo.color === 'bg-green-500' ? '#10b981' :
+                        statusInfo.color === 'bg-red-500' ? '#ef4444' :
+                        statusInfo.color === 'bg-yellow-500' ? '#f59e0b' :
+                        statusInfo.color === 'bg-blue-500' ? '#3b82f6' : '#6b7280';
+    
+    return (
+      <div style={{ marginBottom: '1rem' }}>
+        <div style={{
+          width: '100%',
+          padding: '0.5rem',
+          backgroundColor: statusColor,
+          color: 'white',
+          border: 'none',
+          borderRadius: '0.375rem',
+          fontSize: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.25rem',
+          fontWeight: '500'
+        }}>
+          <span>{statusInfo.icon}</span>
+          <span>{statusInfo.text}</span>
+          {hasPendingData && (
+            <span style={{
+              backgroundColor: 'white',
+              color: '#ef4444',
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.625rem',
+              fontWeight: 'bold',
+              marginLeft: '0.25rem'
+            }}>
+              {offlineStats.offlineActionsCount}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

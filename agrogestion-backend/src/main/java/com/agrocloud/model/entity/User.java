@@ -466,39 +466,87 @@ public class User implements UserDetails {
     }
 
     public boolean isAdmin() {
+        System.out.println("🔍 [User.isAdmin] Verificando si usuario " + email + " es admin");
+        System.out.println("🔍 [User.isAdmin] usuarioEmpresas es null: " + (usuarioEmpresas == null));
+        System.out.println("🔍 [User.isAdmin] userCompanyRoles es null: " + (userCompanyRoles == null));
+        
         // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
         if (usuarioEmpresas != null) {
             try {
+                int size = usuarioEmpresas.size();
+                System.out.println("🔍 [User.isAdmin] usuarioEmpresas.size() = " + size);
+                
                 boolean esAdmin = usuarioEmpresas.stream()
+                        .peek(ue -> {
+                            System.out.println("🔍 [User.isAdmin] UsuarioEmpresa - Estado: " + ue.getEstado() + ", Rol: " + ue.getRol());
+                        })
                         .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                        .peek(ue -> {
+                            System.out.println("🔍 [User.isAdmin] UsuarioEmpresa ACTIVO encontrado - Rol: " + ue.getRol());
+                        })
                         .anyMatch(ue -> {
                             RolEmpresa rol = ue.getRol();
-                            if (rol == null) return false;
+                            if (rol == null) {
+                                System.out.println("⚠️ [User.isAdmin] Rol es null en UsuarioEmpresa");
+                                return false;
+                            }
                             RolEmpresa rolActualizado = rol.getRolActualizado();
-                            return rolActualizado == RolEmpresa.ADMINISTRADOR || 
+                            System.out.println("🔍 [User.isAdmin] Rol original: " + rol + ", Rol actualizado: " + rolActualizado);
+                            boolean esAdminEmpresa = rolActualizado == RolEmpresa.ADMINISTRADOR || 
                                    rolActualizado == RolEmpresa.SUPERADMIN;
+                            System.out.println("🔍 [User.isAdmin] esAdminEmpresa: " + esAdminEmpresa);
+                            return esAdminEmpresa;
                         });
-                if (esAdmin) return true;
+                if (esAdmin) {
+                    System.out.println("✅ [User.isAdmin] Usuario es ADMINISTRADOR (sistema nuevo)");
+                    return true;
+                } else {
+                    System.out.println("❌ [User.isAdmin] Usuario NO es ADMINISTRADOR (sistema nuevo)");
+                }
             } catch (org.hibernate.LazyInitializationException e) {
-                System.out.println("⚠️ [User.isAdmin] LazyInitializationException en usuarioEmpresas: " + e.getMessage());
+                System.err.println("⚠️ [User.isAdmin] LazyInitializationException en usuarioEmpresas: " + e.getMessage());
+                e.printStackTrace();
+            } catch (Exception e) {
+                System.err.println("⚠️ [User.isAdmin] Error inesperado al verificar usuarioEmpresas: " + e.getMessage());
+                e.printStackTrace();
             }
         }
         
         // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
         if (userCompanyRoles != null) {
             try {
-                return userCompanyRoles.stream()
+                int size = userCompanyRoles.size();
+                System.out.println("🔍 [User.isAdmin] userCompanyRoles.size() = " + size);
+                
+                boolean esAdmin = userCompanyRoles.stream()
                         .anyMatch(ucr -> {
                             Role role = ucr.getRol();
-                            return role != null && 
-                                   ("ADMINISTRADOR".equals(role.getNombre()) || 
-                                    "SUPERADMIN".equals(role.getNombre()));
+                            if (role == null) {
+                                System.out.println("⚠️ [User.isAdmin] Role es null en UserCompanyRole");
+                                return false;
+                            }
+                            System.out.println("🔍 [User.isAdmin] UserCompanyRole - Rol nombre: " + role.getNombre());
+                            boolean esAdminLegacy = "ADMINISTRADOR".equals(role.getNombre()) || 
+                                   "SUPERADMIN".equals(role.getNombre());
+                            System.out.println("🔍 [User.isAdmin] esAdminLegacy: " + esAdminLegacy);
+                            return esAdminLegacy;
                         });
+                if (esAdmin) {
+                    System.out.println("✅ [User.isAdmin] Usuario es ADMINISTRADOR (sistema legacy)");
+                    return true;
+                } else {
+                    System.out.println("❌ [User.isAdmin] Usuario NO es ADMINISTRADOR (sistema legacy)");
+                }
             } catch (org.hibernate.LazyInitializationException e) {
-                System.out.println("⚠️ [User.isAdmin] LazyInitializationException en userCompanyRoles: " + e.getMessage());
+                System.err.println("⚠️ [User.isAdmin] LazyInitializationException en userCompanyRoles: " + e.getMessage());
+                e.printStackTrace();
+            } catch (Exception e) {
+                System.err.println("⚠️ [User.isAdmin] Error inesperado al verificar userCompanyRoles: " + e.getMessage());
+                e.printStackTrace();
             }
         }
         
+        System.out.println("❌ [User.isAdmin] Usuario NO es ADMINISTRADOR (retornando false)");
         return false;
     }
 

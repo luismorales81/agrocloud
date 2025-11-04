@@ -2,17 +2,36 @@ import axios from 'axios';
 import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
 // Configuración base de Axios - Vite
-// Soporta tanto VITE_API_URL como VITE_API_BASE_URL para compatibilidad
-const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-const BASE_URL = API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`;
+// Priorizar VITE_API_BASE_URL si ya incluye /api, sino usar VITE_API_URL
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
+let BASE_URL;
+if (VITE_API_BASE_URL && VITE_API_BASE_URL.includes('/api')) {
+  // VITE_API_BASE_URL ya incluye /api (como en Vercel)
+  BASE_URL = VITE_API_BASE_URL;
+} else if (VITE_API_URL) {
+  // VITE_API_URL no incluye /api, agregarlo
+  BASE_URL = VITE_API_URL.includes('/api') ? VITE_API_URL : `${VITE_API_URL}/api`;
+} else if (VITE_API_BASE_URL) {
+  // VITE_API_BASE_URL no incluye /api, agregarlo
+  BASE_URL = VITE_API_BASE_URL.includes('/api') ? VITE_API_BASE_URL : `${VITE_API_BASE_URL}/api`;
+} else {
+  // Fallback a localhost
+  BASE_URL = 'http://localhost:8080/api';
+}
 
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
 console.log('%c🚀 API SERVICE INITIALIZED - VERSION 2.1', 'color: #00ff00; font-weight: bold; font-size: 16px');
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
-console.log('%c📡 API_URL:', 'color: #ffaa00; font-weight: bold', API_URL);
-console.log('%c📡 BASE_URL:', 'color: #ffaa00; font-weight: bold', BASE_URL);
+console.log('%c📡 VITE_API_URL:', 'color: #ffaa00; font-weight: bold', VITE_API_URL || 'NOT SET');
+console.log('%c📡 VITE_API_BASE_URL:', 'color: #ffaa00; font-weight: bold', VITE_API_BASE_URL || 'NOT SET');
+console.log('%c📡 BASE_URL final:', 'color: #ffaa00; font-weight: bold', BASE_URL);
 console.log('%c✅ /api prefix included:', 'color: #00ff00; font-weight: bold', BASE_URL.includes('/api'));
-console.log('%c🔧 VITE_API_URL:', 'color: #ffaa00', import.meta.env.VITE_API_URL || 'NOT SET');
+console.log('%c🔍 URL Analysis:', 'color: #00ff00; font-weight: bold');
+console.log('  - VITE_API_URL includes /api:', VITE_API_URL?.includes('/api') || false);
+console.log('  - VITE_API_BASE_URL includes /api:', VITE_API_BASE_URL?.includes('/api') || false);
+console.log('  - BASE_URL final:', BASE_URL);
 console.log('%c🔧 MODE:', 'color: #ffaa00', import.meta.env.MODE);
 console.log('%c🌍 ENV:', 'color: #ffaa00', import.meta.env.VITE_ENVIRONMENT || 'development');
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
@@ -32,31 +51,36 @@ const api = axios.create({
     if (typeof config.url === 'string') {
       let url = config.url;
       
+      console.log('🔍 [API Interceptor] URL original:', url);
+      console.log('🔍 [API Interceptor] BASE_URL:', BASE_URL);
+      
+      // CORRECCIÓN AGRESIVA: Eliminar TODAS las duplicaciones de /api
+      // Patrón 1: /api/api/ -> /api/
+      url = url.replace(/\/api\/api\//g, '/api/');
+      
+      // Patrón 2: /api/v1/api/ -> /api/v1/
+      url = url.replace(/\/api\/v1\/api\//g, '/api/v1/');
+      
+      // Patrón 3: /api/auth/api/ -> /api/auth/
+      url = url.replace(/\/api\/auth\/api\//g, '/api/auth/');
+      
+      // Patrón 4: Cualquier duplicación restante
+      while (url.includes('/api/api/')) {
+        url = url.replace(/\/api\/api\//g, '/api/');
+        console.warn('🚨 [API] Duplicación adicional corregida:', url);
+      }
+      
       // Normalizar barras múltiples
       url = url.replace(/\/+/g, '/');
       
-      // Detectar y corregir duplicaciones de /api
-      if (url.includes('/api/api/')) {
-        console.warn('🚨 [API] URL duplicada detectada:', url);
-        url = url.replace(/\/api\/api\//g, '/api/');
-        console.log('🔧 [API] URL corregida:', url);
-      }
-      
-      // Detectar y corregir /api/v1/api/
-      if (url.includes('/api/v1/api/')) {
-        console.warn('🚨 [API] URL v1 duplicada detectada:', url);
-        url = url.replace(/\/api\/v1\/api\//g, '/api/v1/');
-        console.log('🔧 [API] URL v1 corregida:', url);
-      }
-      
-      // Detectar y corregir /api/auth/api/
-      if (url.includes('/api/auth/api/')) {
-        console.warn('🚨 [API] URL auth duplicada detectada:', url);
-        url = url.replace(/\/api\/auth\/api\//g, '/api/auth/');
-        console.log('🔧 [API] URL auth corregida:', url);
+      // Log de corrección
+      if (config.url !== url) {
+        console.warn('🚨 [API] URL corregida de:', config.url);
+        console.warn('🚨 [API] URL corregida a:', url);
       }
       
       config.url = url;
+      console.log('✅ [API Interceptor] URL final:', url);
     }
     return config;
   },
@@ -271,6 +295,182 @@ export const machineryService = {
       return response.data;
     } catch (error) {
       console.error('❌ [MachineryService] Error obteniendo maquinaria:', error);
+      throw error;
+    }
+  }
+};
+
+// Servicio para el wizard de insumos
+export const insumoWizardService = {
+  async crearInsumo(datosInsumo: any) {
+    console.log('🔧 [InsumoWizardService] Creando insumo...');
+    console.log('🔧 [InsumoWizardService] URL que se usará:', '/insumos');
+    try {
+      const response = await api.post('/insumos', datosInsumo);
+      console.log('✅ [InsumoWizardService] Insumo creado exitosamente');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [InsumoWizardService] Error creando insumo:', error);
+      throw error;
+    }
+  },
+
+  // Método eliminado - usar solo crearInsumo para todos los tipos
+
+  async actualizarInsumo(id: number, datosInsumo: any) {
+    console.log('🔧 [InsumoWizardService] Actualizando insumo...');
+    console.log('🔧 [InsumoWizardService] ID:', id);
+    console.log('🔧 [InsumoWizardService] URL que se usará:', `/insumos/${id}`);
+    try {
+      const response = await api.put(`/insumos/${id}`, datosInsumo);
+      console.log('✅ [InsumoWizardService] Insumo actualizado exitosamente');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [InsumoWizardService] Error actualizando insumo:', error);
+      throw error;
+    }
+  },
+
+  // Método eliminado - usar solo actualizarInsumo para todos los tipos
+
+  async eliminarInsumo(id: number) {
+    console.log('🔧 [InsumoWizardService] Eliminando insumo...');
+    console.log('🔧 [InsumoWizardService] ID:', id);
+    console.log('🔧 [InsumoWizardService] URL que se usará:', `/insumos/${id}`);
+    try {
+      const response = await api.delete(`/insumos/${id}`);
+      console.log('✅ [InsumoWizardService] Insumo eliminado exitosamente');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [InsumoWizardService] Error eliminando insumo:', error);
+      throw error;
+    }
+  },
+
+  // Método eliminado - usar solo eliminarInsumo para todos los tipos
+
+  // Métodos para manejar dosis de agroquímicos
+  async obtenerDosisPorInsumo(insumoId: number) {
+    console.log('🔧 [InsumoWizardService] Obteniendo dosis del insumo...');
+    try {
+      const response = await api.get(`/dosis-agroquimicos/insumo/${insumoId}`);
+      console.log('✅ [InsumoWizardService] Dosis obtenidas:', response.data?.length ?? 0);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [InsumoWizardService] Error obteniendo dosis:', error);
+      throw error;
+    }
+  },
+  async crearDosisAgroquimico(insumoId: number, datosDosis: any) {
+    console.log('🔧 [InsumoWizardService] Creando dosis de agroquímico...');
+    try {
+      const response = await api.post(`/dosis-agroquimicos`, {
+        insumoId,
+        ...datosDosis
+      });
+      console.log('✅ [InsumoWizardService] Dosis creada exitosamente');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [InsumoWizardService] Error creando dosis:', error);
+      throw error;
+    }
+  },
+
+  async eliminarDosisAgroquimico(insumoId: number) {
+    console.log('🔧 [InsumoWizardService] Eliminando dosis de insumo...');
+    try {
+      const response = await api.delete(`/dosis-agroquimicos/insumo/${insumoId}`);
+      console.log('✅ [InsumoWizardService] Dosis eliminadas exitosamente');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [InsumoWizardService] Error eliminando dosis:', error);
+      throw error;
+    }
+  }
+};
+
+// Servicio para agroquímicos integrados
+export const agroquimicoIntegradoService = {
+  async getAllAgroquimicos() {
+    console.log('🔧 [AgroquimicoIntegradoService] Obteniendo agroquímicos...');
+    try {
+      const response = await api.get('/v1/agroquimicos-integrados/agroquimicos');
+      console.log('✅ [AgroquimicoIntegradoService] Agroquímicos obtenidos:', response.data.length);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [AgroquimicoIntegradoService] Error obteniendo agroquímicos:', error);
+      throw error;
+    }
+  },
+
+  async convertirInsumoAAgroquimico(insumoId: number, datosAgroquimico: any) {
+    console.log('🔧 [AgroquimicoIntegradoService] Convirtiendo insumo a agroquímico...');
+    try {
+      const response = await api.post(`/v1/agroquimicos-integrados/${insumoId}/convertir-agroquimico`, datosAgroquimico);
+      console.log('✅ [AgroquimicoIntegradoService] Insumo convertido exitosamente');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [AgroquimicoIntegradoService] Error convirtiendo insumo:', error);
+      throw error;
+    }
+  },
+
+  async sugerirDosis(datosSugerencia: any) {
+    console.log('🔧 [AgroquimicoIntegradoService] Obteniendo sugerencias de dosis...');
+    try {
+      const response = await api.post('/v1/agroquimicos-integrados/sugerir-dosis', datosSugerencia);
+      console.log('✅ [AgroquimicoIntegradoService] Sugerencias obtenidas');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [AgroquimicoIntegradoService] Error obteniendo sugerencias:', error);
+      throw error;
+    }
+  },
+
+  async planificarAplicacion(datosAplicacion: any) {
+    console.log('🔧 [AgroquimicoIntegradoService] Planificando aplicación...');
+    try {
+      const response = await api.post('/v1/agroquimicos-integrados/planificar-aplicacion', datosAplicacion);
+      console.log('✅ [AgroquimicoIntegradoService] Aplicación planificada');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [AgroquimicoIntegradoService] Error planificando aplicación:', error);
+      throw error;
+    }
+  },
+
+  async ejecutarLabor(laborId: number, datosEjecucion: any) {
+    console.log('🔧 [AgroquimicoIntegradoService] Ejecutando labor...');
+    try {
+      const response = await api.post(`/v1/agroquimicos-integrados/ejecutar-labor/${laborId}`, datosEjecucion);
+      console.log('✅ [AgroquimicoIntegradoService] Labor ejecutada');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [AgroquimicoIntegradoService] Error ejecutando labor:', error);
+      throw error;
+    }
+  },
+
+  async getAgroquimicosPorTipoAplicacion(tipoAplicacion: string) {
+    console.log('🔧 [AgroquimicoIntegradoService] Obteniendo agroquímicos por tipo de aplicación...');
+    try {
+      const response = await api.get(`/v1/agroquimicos-integrados/agroquimicos/tipo-aplicacion/${tipoAplicacion}`);
+      console.log('✅ [AgroquimicoIntegradoService] Agroquímicos obtenidos por tipo');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [AgroquimicoIntegradoService] Error obteniendo agroquímicos por tipo:', error);
+      throw error;
+    }
+  },
+
+  async getCondicionesRecomendadas() {
+    console.log('🔧 [AgroquimicoIntegradoService] Obteniendo condiciones recomendadas...');
+    try {
+      const response = await api.get('/v1/agroquimicos-integrados/condiciones-recomendadas');
+      console.log('✅ [AgroquimicoIntegradoService] Condiciones recomendadas obtenidas');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [AgroquimicoIntegradoService] Error obteniendo condiciones:', error);
       throw error;
     }
   }

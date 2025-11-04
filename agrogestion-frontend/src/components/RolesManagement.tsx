@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { rolesService } from '../services/apiServices';
 
 interface Role {
   id: number;
@@ -40,13 +40,8 @@ const RolesManagement: React.FC = () => {
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/roles');
-      
-      if (response.status >= 200 && response.status < 300) {
-        setRoles(response.data);
-      } else {
-        console.error('Error cargando roles');
-      }
+      const data = await rolesService.listar();
+      setRoles(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -57,11 +52,8 @@ const RolesManagement: React.FC = () => {
   // Cargar permisos disponibles
   const loadAvailablePermissions = async () => {
     try {
-      const response = await api.get('/roles/permissions/available');
-      
-      if (response.status >= 200 && response.status < 300) {
-        setAvailablePermissions(response.data);
-      }
+      const data = await rolesService.obtenerPermisosDisponibles();
+      setAvailablePermissions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando permisos:', error);
     }
@@ -70,11 +62,8 @@ const RolesManagement: React.FC = () => {
   // Cargar estadísticas
   const loadStats = async () => {
     try {
-      const response = await api.get('/roles/stats');
-      
-      if (response.status >= 200 && response.status < 300) {
-        setStats(response.data);
-      }
+      const data = await rolesService.obtenerEstadisticas();
+      setStats(data);
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
     }
@@ -84,17 +73,11 @@ const RolesManagement: React.FC = () => {
   const createRole = async () => {
     try {
       setLoading(true);
-      const response = await api.post('/roles', formData);
-      
-      if (response.status >= 200 && response.status < 300) {
-        setFormData({ name: '', description: '', permissions: [] });
-        setShowForm(false);
-        loadRoles();
-        loadStats();
-      } else {
-        const error = await response.text();
-        alert('Error creando rol: ' + error);
-      }
+      await rolesService.crear(formData);
+      setFormData({ name: '', description: '', permissions: [] });
+      setShowForm(false);
+      loadRoles();
+      loadStats();
     } catch (error) {
       console.error('Error:', error);
       alert('Error creando rol');
@@ -109,18 +92,12 @@ const RolesManagement: React.FC = () => {
     
     try {
       setLoading(true);
-      const response = await api.put(`/api/roles/${selectedRole.id}`, formData);
-      
-      if (response.status >= 200 && response.status < 300) {
-        setFormData({ name: '', description: '', permissions: [] });
-        setSelectedRole(null);
-        setShowForm(false);
-        loadRoles();
-        loadStats();
-      } else {
-        const error = await response.text();
-        alert('Error actualizando rol: ' + error);
-      }
+      await rolesService.actualizar(selectedRole.id, formData);
+      setFormData({ name: '', description: '', permissions: [] });
+      setSelectedRole(null);
+      setShowForm(false);
+      loadRoles();
+      loadStats();
     } catch (error) {
       console.error('Error:', error);
       alert('Error actualizando rol');
@@ -134,14 +111,9 @@ const RolesManagement: React.FC = () => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este rol?')) return;
     
     try {
-      const response = await api.delete(`/api/roles/${roleId}`);
-      
-      if (response.status >= 200 && response.status < 300) {
-        loadRoles();
-        loadStats();
-      } else {
-        alert('Error eliminando rol');
-      }
+      await rolesService.eliminar(roleId);
+      loadRoles();
+      loadStats();
     } catch (error) {
       console.error('Error:', error);
       alert('Error eliminando rol');
@@ -162,13 +134,8 @@ const RolesManagement: React.FC = () => {
   // Agregar permiso
   const addPermission = async (roleId: number, permission: string) => {
     try {
-      const response = await api.post(`/api/roles/${roleId}/permissions`, { permission });
-      
-      if (response.status >= 200 && response.status < 300) {
-        loadRoles();
-      } else {
-        alert('Error agregando permiso');
-      }
+      await rolesService.agregarPermiso(roleId, permission);
+      loadRoles();
     } catch (error) {
       console.error('Error:', error);
       alert('Error agregando permiso');
@@ -178,13 +145,8 @@ const RolesManagement: React.FC = () => {
   // Remover permiso
   const removePermission = async (roleId: number, permission: string) => {
     try {
-      const response = await api.delete(`/api/roles/${roleId}/permissions`, { data: { permission } });
-      
-      if (response.status >= 200 && response.status < 300) {
-        loadRoles();
-      } else {
-        alert('Error removiendo permiso');
-      }
+      await rolesService.eliminarPermiso(roleId, permission);
+      loadRoles();
     } catch (error) {
       console.error('Error:', error);
       alert('Error removiendo permiso');

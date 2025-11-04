@@ -5,7 +5,7 @@ import SiembraModal from './SiembraModalHibrido';
 import CosechaModal from './CosechaModal';
 import AccionLoteModal from './AccionLoteModal';
 import EstadosLoteAyuda from './EstadosLoteAyuda';
-import api from '../services/api';
+import { camposService, lotesService, laboresService, cultivosService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
 
 interface Campo {
@@ -375,8 +375,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.get('/campos');
-      const data = response.data;
+      const data = await camposService.listar();
       
       // Mapear los datos de la API al formato del frontend
       const camposMapeados: Campo[] = data.map((field: any) => {
@@ -426,8 +425,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.get('/v1/lotes');
-      const data = response.data;
+      const data = await lotesService.listar();
       
       // Mapear los datos de la API al formato del frontend
       const lotesMapeados: Lote[] = data.map((lote: any) => ({
@@ -459,8 +457,7 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.get('/labores');
-      const data = response.data;
+      const data = await laboresService.listar();
       
       // Mapear los datos de la API al formato del frontend
       const laboresMapeadas: Labor[] = data.map((labor: any) => ({
@@ -500,9 +497,9 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const response = await api.get('/v1/cultivos');
+      const cultivosData = await cultivosService.listar();
       // Extraer nombres únicos de cultivos
-      const nombresCultivos = [...new Set(response.data.map((cultivo: any) => cultivo.nombre))];
+      const nombresCultivos = [...new Set(cultivosData.map((cultivo: any) => cultivo.nombre))];
       setCultivos(nombresCultivos);
     } catch (error) {
       console.error('Error cargando cultivos:', error);
@@ -626,26 +623,19 @@ const LotesManagement: React.FC = () => {
         campo: { id: formData.campo_id }
       };
 
-      let response;
       if (isEditing && selectedLote) {
         // Editar lote existente
-        response = await api.put(`/v1/lotes/${selectedLote.id}`, loteData);
+        await lotesService.actualizar(selectedLote.id!, loteData);
       } else {
         // Crear nuevo lote
-        response = await api.post('/v1/lotes', loteData);
+        await lotesService.crear(loteData);
       }
 
-      if (response.status >= 200 && response.status < 300) {
-        alert(isEditing ? 'Lote actualizado exitosamente' : 'Lote creado exitosamente');
-        closeModal();
-        
-        // Recargar lotes del backend
-        await cargarLotes();
-      } else {
-        const errorData = await response.text();
-        console.error('Error del servidor:', errorData);
-        alert('Error al guardar el lote. Por favor, inténtalo de nuevo.');
-      }
+      alert(isEditing ? 'Lote actualizado exitosamente' : 'Lote creado exitosamente');
+      closeModal();
+      
+      // Recargar lotes del backend
+      await cargarLotes();
     } catch (error: any) {
       console.error('Error al guardar lote:', error);
       
@@ -677,16 +667,11 @@ const LotesManagement: React.FC = () => {
           return;
         }
 
-        const response = await api.delete(`/api/v1/lotes/${id}`);
-
-        if (response.status >= 200 && response.status < 300) {
-          // Eliminar del estado local solo si la API confirma la eliminación
-          setLotes(prev => prev.filter(lote => lote.id !== id));
-          alert('Lote eliminado exitosamente');
-        } else {
-          console.error('Error al eliminar el lote:', response.status, response.statusText);
-          alert('Error al eliminar el lote. Por favor, inténtalo de nuevo.');
-        }
+        await lotesService.eliminar(id);
+        
+        // Eliminar del estado local solo si la API confirma la eliminación
+        setLotes(prev => prev.filter(lote => lote.id !== id));
+        alert('Lote eliminado exitosamente');
       } catch (error) {
         console.error('Error de conexión al eliminar el lote:', error);
         alert('Error de conexión al eliminar el lote. Por favor, verifica tu conexión e intenta nuevamente.');

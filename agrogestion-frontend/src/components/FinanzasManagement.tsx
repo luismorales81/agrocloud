@@ -4,7 +4,7 @@ import Input from './ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Badge from './ui/Badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
-import api from '../services/api';
+import { ingresosService, egresosService, camposService, insumosService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
 
 interface Ingreso {
@@ -142,9 +142,13 @@ const FinanzasManagement: React.FC = () => {
 
     // Aplicar filtro de tipo
     if (filtroTipoEgreso !== 'TODOS') {
-      egresosFiltrados = egresosFiltrados.filter(egreso => 
-        egreso.tipoEgreso === filtroTipoEgreso || egreso.tipo === filtroTipoEgreso
-      );
+      egresosFiltrados = egresosFiltrados.filter(egreso => {
+        // Normalizar 'INSUMO' a 'INSUMOS' para compatibilidad con datos existentes
+        const tipoNormalizado = (egreso.tipoEgreso === 'INSUMO' || egreso.tipo === 'INSUMO') 
+          ? 'INSUMOS' 
+          : (egreso.tipoEgreso || egreso.tipo);
+        return tipoNormalizado === filtroTipoEgreso;
+      });
     }
 
     // Aplicar filtro de estado
@@ -202,7 +206,6 @@ const FinanzasManagement: React.FC = () => {
   ];
 
   const tiposEgreso = [
-    { value: 'INSUMO', label: 'Insumo' },
     { value: 'INSUMOS', label: 'Insumos' },
     { value: 'MAQUINARIA_COMPRA', label: 'Compra de Maquinaria' },
     { value: 'MAQUINARIA_ALQUILER', label: 'Alquiler de Maquinaria' },
@@ -268,9 +271,9 @@ const FinanzasManagement: React.FC = () => {
   const cargarIngresos = async () => {
     try {
       console.log('📥 Cargando ingresos desde BD...');
-      const response = await api.get('/public/ingresos');
-      setIngresos(response.data || []);
-      console.log('✅ Ingresos cargados desde BD:', response.data?.length || 0);
+      const data = await ingresosService.listar();
+      setIngresos(Array.isArray(data) ? data : []);
+      console.log('✅ Ingresos cargados desde BD:', Array.isArray(data) ? data.length : 0);
     } catch (error) {
       console.error('❌ Error cargando ingresos:', error);
       setIngresos([]);
@@ -280,9 +283,9 @@ const FinanzasManagement: React.FC = () => {
   const cargarEgresos = async () => {
     try {
       console.log('📥 Cargando egresos desde BD...');
-      const response = await api.get('/public/egresos');
-      setEgresos(response.data || []);
-      console.log('✅ Egresos cargados desde BD:', response.data?.length || 0);
+      const data = await egresosService.listar();
+      setEgresos(Array.isArray(data) ? data : []);
+      console.log('✅ Egresos cargados desde BD:', Array.isArray(data) ? data.length : 0);
     } catch (error) {
       console.error('❌ Error cargando egresos:', error);
       setEgresos([]);
@@ -291,9 +294,9 @@ const FinanzasManagement: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/public/campos');
-      setLotes(response.data || []);
-      console.log('Lotes cargados:', response.data);
+      const data = await camposService.listarPublicos();
+      setLotes(Array.isArray(data) ? data : []);
+      console.log('Lotes cargados:', data);
     } catch (error) {
       console.error('Error cargando lotes:', error);
       setLotes([]);
@@ -302,9 +305,9 @@ const FinanzasManagement: React.FC = () => {
 
   const cargarInsumos = async () => {
     try {
-      const response = await api.get('/public/insumos');
-      setInsumos(response.data || []);
-      console.log('Insumos cargados:', response.data);
+      const data = await insumosService.listarPublicos();
+      setInsumos(Array.isArray(data) ? data : []);
+      console.log('Insumos cargados:', data);
     } catch (error) {
       console.error('Error cargando insumos:', error);
       setInsumos([]);
@@ -370,8 +373,7 @@ const FinanzasManagement: React.FC = () => {
       console.log('📤 Enviando ingreso al backend:', ingresoData);
       
       // Guardar en la base de datos
-      const response = await api.post('/public/ingresos', ingresoData);
-      const ingresoGuardado = response.data;
+      const ingresoGuardado = await ingresosService.crear(ingresoData);
       
       console.log('✅ Ingreso guardado en BD:', ingresoGuardado);
       
@@ -430,8 +432,7 @@ const FinanzasManagement: React.FC = () => {
       console.log('📤 Enviando egreso al backend:', egresoData);
       
       // Guardar en la base de datos
-      const response = await api.post('/public/egresos', egresoData);
-      const egresoGuardado = response.data;
+      const egresoGuardado = await egresosService.crear(egresoData);
       
       console.log('✅ Egreso guardado en BD:', egresoGuardado);
       
@@ -459,8 +460,7 @@ const FinanzasManagement: React.FC = () => {
           };
 
           try {
-            const response = await api.post('/public/insumos', nuevoInsumo);
-            const insumoCreado = response.data;
+            const insumoCreado = await insumosService.crear(nuevoInsumo);
             setInsumos(prev => [...prev, insumoCreado]);
             alert(`✅ Nuevo insumo "${insumoCreado.nombre}" creado y agregado al inventario`);
           } catch (error) {
@@ -493,11 +493,30 @@ const FinanzasManagement: React.FC = () => {
 
       const nuevoStock = insumoExistente.stockActual + cantidad;
       
+      // Obtener unidad de medida (puede venir como 'unidad', 'unidadMedida' o 'unidad_medida')
+      const unidadMedida = insumoExistente.unidad || 
+                           (insumoExistente as any).unidadMedida || 
+                           (insumoExistente as any).unidad_medida || 
+                           'UNIDAD'; // Valor por defecto si no se encuentra
+      
+      // Construir objeto completo con todos los campos obligatorios
+      const insumoActualizado = {
+        nombre: insumoExistente.nombre,
+        descripcion: insumoExistente.descripcion || '',
+        tipo: insumoExistente.tipo || 'OTROS',
+        unidadMedida: unidadMedida, // Campo obligatorio
+        precioUnitario: insumoExistente.precioUnitario || 0,
+        stockMinimo: insumoExistente.stockMinimo || 0,
+        stockActual: nuevoStock,
+        proveedor: insumoExistente.proveedor || '',
+        fechaVencimiento: insumoExistente.fechaVencimiento || null,
+        activo: insumoExistente.activo !== undefined ? insumoExistente.activo : true
+      };
+      
+      console.log('📤 Actualizando insumo con datos completos:', insumoActualizado);
+      
       // Actualizar en el backend
-      await api.put(`/api/public/insumos/${insumoId}`, {
-        ...insumoExistente,
-        stockActual: nuevoStock
-      });
+      await insumosService.actualizarPublico(insumoId, insumoActualizado);
 
       // Actualizar en el estado local
       setInsumos(prev => prev.map(insumo => 
@@ -525,16 +544,11 @@ const FinanzasManagement: React.FC = () => {
           return;
         }
 
-        const response = await api.delete(`/api/ingresos/${id}`);
-
-        if (response.status >= 200 && response.status < 300) {
-          // Eliminar del estado local solo si la API confirma la eliminación
-          setIngresos(prev => prev.filter(ingreso => ingreso.id !== id));
-          alert('Ingreso eliminado exitosamente');
-        } else {
-          console.error('Error al eliminar el ingreso:', response.status, response.statusText);
-          alert('Error al eliminar el ingreso. Por favor, inténtalo de nuevo.');
-        }
+        await ingresosService.eliminar(id);
+        
+        // Eliminar del estado local solo si la API confirma la eliminación
+        setIngresos(prev => prev.filter(ingreso => ingreso.id !== id));
+        alert('Ingreso eliminado exitosamente');
       } catch (error) {
         console.error('Error de conexión al eliminar el ingreso:', error);
         alert('Error de conexión al eliminar el ingreso. Por favor, verifica tu conexión e intenta nuevamente.');
@@ -555,16 +569,11 @@ const FinanzasManagement: React.FC = () => {
           return;
         }
 
-        const response = await api.delete(`/api/egresos/${id}`);
-
-        if (response.status >= 200 && response.status < 300) {
-          // Eliminar del estado local solo si la API confirma la eliminación
-          setEgresos(prev => prev.filter(egreso => egreso.id !== id));
-          alert('Egreso eliminado exitosamente');
-        } else {
-          console.error('Error al eliminar el egreso:', response.status, response.statusText);
-          alert('Error al eliminar el egreso. Por favor, inténtalo de nuevo.');
-        }
+        await egresosService.eliminar(id);
+        
+        // Eliminar del estado local solo si la API confirma la eliminación
+        setEgresos(prev => prev.filter(egreso => egreso.id !== id));
+        alert('Egreso eliminado exitosamente');
       } catch (error) {
         console.error('Error de conexión al eliminar el egreso:', error);
         alert('Error de conexión al eliminar el egreso. Por favor, verifica tu conexión e intenta nuevamente.');
@@ -625,7 +634,7 @@ const FinanzasManagement: React.FC = () => {
       };
       
       // Actualizar en el backend
-      await api.put(`/api/public/ingresos/${id}`, ingresoActualizado);
+      await ingresosService.actualizar(id, ingresoActualizado);
       
       // Actualizar en el estado local
       setIngresos(prev => prev.map(ingreso => 
@@ -671,7 +680,7 @@ const FinanzasManagement: React.FC = () => {
       };
       
       // Actualizar en el backend
-      await api.put(`/api/public/egresos/${id}`, egresoActualizado);
+      await egresosService.actualizar(id, egresoActualizado);
       
       // Actualizar en el estado local
       setEgresos(prev => prev.map(egreso => 
@@ -689,7 +698,6 @@ const FinanzasManagement: React.FC = () => {
 
   const obtenerColorTipo = (tipo: string) => {
     switch (tipo) {
-      case 'INSUMO':
       case 'INSUMOS': return 'blue';
       case 'MAQUINARIA_COMPRA': return 'red';
       case 'MAQUINARIA_ALQUILER': return 'orange';
@@ -817,7 +825,11 @@ const FinanzasManagement: React.FC = () => {
            <CardContent>
              {(() => {
                const egresosPorTipo = egresos.reduce((acc, egreso) => {
-                 const tipo = egreso.tipo || egreso.tipoEgreso || 'OTROS';
+                 // Normalizar 'INSUMO' a 'INSUMOS' para estadísticas
+                 let tipo = egreso.tipo || egreso.tipoEgreso || 'OTROS';
+                 if (tipo === 'INSUMO') {
+                   tipo = 'INSUMOS';
+                 }
                  const monto = egreso.costoTotal || egreso.monto || 0;
                  acc[tipo] = (acc[tipo] || 0) + monto;
                  return acc;
@@ -1237,11 +1249,17 @@ const FinanzasManagement: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-semibold">{egreso.concepto}</h3>
-                        {(egreso.tipo || egreso.tipoEgreso) && (
-                          <Badge color={obtenerColorTipo(egreso.tipo || egreso.tipoEgreso || '')}>
-                            {(egreso.tipo || egreso.tipoEgreso || '').replace('_', ' ')}
-                          </Badge>
-                        )}
+                        {(egreso.tipo || egreso.tipoEgreso) && (() => {
+                          // Normalizar 'INSUMO' a 'INSUMOS' para mostrar
+                          const tipoMostrar = (egreso.tipo === 'INSUMO' || egreso.tipoEgreso === 'INSUMO')
+                            ? 'INSUMOS'
+                            : (egreso.tipo || egreso.tipoEgreso || '');
+                          return (
+                            <Badge color={obtenerColorTipo(tipoMostrar)}>
+                              {tipoMostrar.replace('_', ' ')}
+                            </Badge>
+                          );
+                        })()}
                         <Badge color={obtenerColorEstado(egreso.estado)}>
                           {egreso.estado}
                         </Badge>
@@ -1580,15 +1598,22 @@ const FinanzasManagement: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Concepto *
+                    Concepto * {egresoForm.insumo?.id ? '(bloqueado - desde insumo)' : ''}
                   </label>
-                                     <Input
-                     type="text"
-                     value={egresoForm.concepto || ''}
-                     onChange={(value) => setEgresoForm({...egresoForm, concepto: value})}
-                     placeholder="Ej: Compra de fertilizante"
-                     required
-                   />
+                  <Input
+                    type="text"
+                    value={egresoForm.concepto || ''}
+                    onChange={(value) => setEgresoForm({...egresoForm, concepto: value})}
+                    placeholder={egresoForm.insumo?.id ? egresoForm.insumo.nombre : "Ej: Compra de fertilizante"}
+                    disabled={!!egresoForm.insumo?.id} // Bloquear si hay insumo seleccionado
+                    className={egresoForm.insumo?.id ? 'bg-gray-100 cursor-not-allowed' : ''}
+                    required
+                  />
+                  {egresoForm.insumo?.id && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      ℹ️ Concepto bloqueado - usa el nombre del insumo seleccionado. Para modificarlo, edita el insumo desde Administración de Insumos
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1697,26 +1722,81 @@ const FinanzasManagement: React.FC = () => {
                                 const insumoSeleccionado = insumos.find(insumo => insumo.id.toString() === value);
                                 if (insumoSeleccionado) {
                                   // Cargar automáticamente todos los campos del insumo seleccionado
+                                  // Obtener unidad de medida (puede venir como 'unidad', 'unidadMedida' o 'unidad_medida')
+                                  const unidadMedidaRaw = insumoSeleccionado.unidad || 
+                                                          (insumoSeleccionado as any).unidadMedida || 
+                                                          (insumoSeleccionado as any).unidad_medida || '';
+                                  
+                                  // Normalizar unidad de medida para que coincida con los valores del Select
+                                  // Buscar si existe en unidadesMedida, si no, usar el valor raw o mapear común
+                                  let unidadMedida = unidadMedidaRaw.toLowerCase();
+                                  
+                                  // Mapeo común de unidades
+                                  const mapeoUnidades: Record<string, string> = {
+                                    'kg': 'kg',
+                                    'kilogramo': 'kg',
+                                    'kilogramos': 'kg',
+                                    'l': 'litro',
+                                    'litros': 'litro',
+                                    'litro': 'litro',
+                                    'lt': 'litro',
+                                    'lts': 'litro',
+                                    'unidad': 'unidad',
+                                    'unidades': 'unidad',
+                                    'un': 'unidad',
+                                    'ton': 'ton',
+                                    'tonelada': 'ton',
+                                    'toneladas': 'ton',
+                                    'ha': 'hectarea',
+                                    'hectarea': 'hectarea',
+                                    'hectareas': 'hectarea',
+                                    'bolsa': 'bolsa',
+                                    'bolsas': 'bolsa',
+                                    'caja': 'caja',
+                                    'cajas': 'caja'
+                                  };
+                                  
+                                  // Intentar encontrar en el mapeo o buscar en unidadesMedida
+                                  const unidadNormalizada = mapeoUnidades[unidadMedida] || unidadMedida;
+                                  
+                                  // Verificar si existe en unidadesMedida
+                                  const unidadEncontrada = unidadesMedida.find(u => 
+                                    u.value.toLowerCase() === unidadNormalizada ||
+                                    u.label.toLowerCase().includes(unidadNormalizada) ||
+                                    unidadNormalizada.includes(u.value.toLowerCase())
+                                  );
+                                  
+                                  const unidadMedidaFinal = unidadEncontrada ? unidadEncontrada.value : unidadNormalizada;
+                                  
+                                  console.log('🔍 Unidad de medida procesada:', {
+                                    raw: unidadMedidaRaw,
+                                    normalizada: unidadNormalizada,
+                                    final: unidadMedidaFinal,
+                                    encontradaEnSelect: !!unidadEncontrada
+                                  });
+                                  
                                   setEgresoForm({
                                     ...egresoForm, 
                                     insumo: {
                                       id: insumoSeleccionado.id, 
                                       nombre: insumoSeleccionado.nombre
                                     },
-                                    // Cargar campos del insumo seleccionado
-                                    unidadMedida: insumoSeleccionado.unidad || '',
+                                    // Cargar campos del insumo seleccionado - estos quedarán bloqueados
+                                    unidadMedida: unidadMedidaFinal, // Usar la unidad normalizada
                                     cantidad: 0, // La cantidad se mantiene en 0 para que el usuario la especifique
                                     proveedor: insumoSeleccionado.proveedor || '',
-                                    descripcion: insumoSeleccionado.descripcion || egresoForm.descripcion,
+                                    descripcion: insumoSeleccionado.descripcion || '',
+                                    concepto: insumoSeleccionado.nombre, // Usar el nombre del insumo como concepto
                                     // Si no hay monto, calcular basado en precio unitario
                                     monto: egresoForm.monto || 0
                                   });
                                   
                                   console.log('✅ Insumo seleccionado:', insumoSeleccionado.nombre);
                                   console.log('📊 Campos cargados automáticamente:', {
-                                    unidad: insumoSeleccionado.unidad,
+                                    unidadMedida: unidadMedidaFinal,
                                     proveedor: insumoSeleccionado.proveedor,
-                                    descripcion: insumoSeleccionado.descripcion
+                                    descripcion: insumoSeleccionado.descripcion,
+                                    precioUnitario: insumoSeleccionado.precioUnitario
                                   });
                                 }
                               }
@@ -1764,13 +1844,14 @@ const FinanzasManagement: React.FC = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Unidad de Medida
+                        Unidad de Medida {egresoForm.insumo?.id ? '(bloqueado - desde insumo)' : ''}
                       </label>
                       <Select
                         value={egresoForm.unidadMedida || ''}
                         onValueChange={(value: string) => setEgresoForm({...egresoForm, unidadMedida: value})}
+                        disabled={!!egresoForm.insumo?.id} // Bloquear si hay insumo seleccionado
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={egresoForm.insumo?.id ? 'bg-gray-100 cursor-not-allowed' : ''}>
                           <SelectValue placeholder="Seleccionar unidad" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1781,29 +1862,44 @@ const FinanzasManagement: React.FC = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {egresoForm.insumo?.id && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          ℹ️ Para modificar la unidad de medida, edita el insumo desde Administración de Insumos
+                        </p>
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Cantidad
+                        Cantidad *
                       </label>
-                                             <Input
-                         type="number"
-                         value={(egresoForm.cantidad || 0).toString()}
-                         onChange={(value) => setEgresoForm({...egresoForm, cantidad: parseFloat(value) || 0})}
-                         placeholder="0.00"
-                       />
+                      <Input
+                        type="number"
+                        value={(egresoForm.cantidad || 0).toString()}
+                        onChange={(value) => setEgresoForm({...egresoForm, cantidad: parseFloat(value) || 0})}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        required
+                      />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Proveedor
+                        Proveedor {egresoForm.insumo?.id ? '(bloqueado - desde insumo)' : ''}
                       </label>
-                                             <Input
-                         type="text"
-                         value={egresoForm.proveedor || ''}
-                         onChange={(value) => setEgresoForm({...egresoForm, proveedor: value})}
-                       />
+                      <Input
+                        type="text"
+                        value={egresoForm.proveedor || ''}
+                        onChange={(value) => setEgresoForm({...egresoForm, proveedor: value})}
+                        disabled={!!egresoForm.insumo?.id} // Bloquear si hay insumo seleccionado
+                        className={egresoForm.insumo?.id ? 'bg-gray-100 cursor-not-allowed' : ''}
+                      />
+                      {egresoForm.insumo?.id && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          ℹ️ Para modificar el proveedor, edita el insumo desde Administración de Insumos
+                        </p>
+                      )}
                     </div>
 
                     <div>

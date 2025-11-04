@@ -1,17 +1,16 @@
 package com.agrocloud.model.entity;
 
+import com.agrocloud.model.enums.TipoMovimiento;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Entidad para registrar movimientos de inventario de INSUMOS.
- * Separada de MovimientoInventarioGrano (granos cosechados).
+ * Entidad para registrar movimientos de inventario de agroquímicos
  */
 @Entity
 @Table(name = "movimientos_inventario")
@@ -22,7 +21,16 @@ public class MovimientoInventario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
+    @NotNull(message = "El tipo de movimiento es obligatorio")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_movimiento", nullable = false)
+    private TipoMovimiento tipoMovimiento;
+
+    @NotNull(message = "La cantidad es obligatoria")
+    @DecimalMin(value = "0.01", message = "La cantidad debe ser mayor que 0")
+    @Column(name = "cantidad", nullable = false, precision = 10, scale = 2)
+    private java.math.BigDecimal cantidad;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "insumo_id", nullable = false)
     private Insumo insumo;
@@ -31,77 +39,44 @@ public class MovimientoInventario {
     @JoinColumn(name = "labor_id")
     private Labor labor;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_movimiento", nullable = false)
-    private TipoMovimiento tipoMovimiento;
-
-    @NotNull
-    @Column(name = "cantidad", precision = 10, scale = 2, nullable = false)
-    private BigDecimal cantidad;
-
-    @Column(name = "motivo")
+    @Column(name = "motivo", length = 255)
     private String motivo;
 
-    @Column(name = "fecha_movimiento")
+    @NotNull(message = "La fecha de movimiento es obligatoria")
+    @Column(name = "fecha_movimiento", nullable = false)
     private LocalDateTime fechaMovimiento;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")
     private User usuario;
 
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Enum para movimientos de INSUMOS
-    public enum TipoMovimiento {
-        ENTRADA,
-        SALIDA,
-        AJUSTE
-    }
-
-    // Constructors
-    public MovimientoInventario() {}
-
-    public MovimientoInventario(Insumo insumo, Labor labor, TipoMovimiento tipoMovimiento, 
-                               BigDecimal cantidad, String motivo, User usuario) {
-        this.insumo = insumo;
-        this.labor = labor;
-        this.tipoMovimiento = tipoMovimiento;
-        this.cantidad = cantidad;
-        this.motivo = motivo;
-        this.usuario = usuario;
-        this.fechaMovimiento = LocalDateTime.now();
-    }
-
     // Getters y Setters
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (fechaMovimiento == null) {
+            fechaMovimiento = LocalDateTime.now();
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
     public Long getId() {
         return id;
     }
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Insumo getInsumo() {
-        return insumo;
-    }
-
-    public void setInsumo(Insumo insumo) {
-        this.insumo = insumo;
-    }
-
-    public Labor getLabor() {
-        return labor;
-    }
-
-    public void setLabor(Labor labor) {
-        this.labor = labor;
     }
 
     public TipoMovimiento getTipoMovimiento() {
@@ -118,6 +93,22 @@ public class MovimientoInventario {
 
     public void setCantidad(BigDecimal cantidad) {
         this.cantidad = cantidad;
+    }
+
+    public Insumo getInsumo() {
+        return insumo;
+    }
+
+    public void setInsumo(Insumo insumo) {
+        this.insumo = insumo;
+    }
+
+    public Labor getLabor() {
+        return labor;
+    }
+
+    public void setLabor(Labor labor) {
+        this.labor = labor;
     }
 
     public String getMotivo() {
@@ -159,5 +150,46 @@ public class MovimientoInventario {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
-}
+    
+    // Métodos de compatibilidad para mantener referencias antiguas
+    @Deprecated
+    public LocalDateTime getFecha() {
+        return fechaMovimiento;
+    }
 
+    @Deprecated
+    public void setFecha(LocalDateTime fecha) {
+        this.fechaMovimiento = fecha;
+    }
+
+    @Deprecated
+    public String getObservaciones() {
+        return motivo;
+    }
+
+    @Deprecated
+    public void setObservaciones(String observaciones) {
+        this.motivo = observaciones;
+    }
+
+    @Deprecated
+    public Long getReferenciaTareaId() {
+        return labor != null ? labor.getId() : null;
+    }
+
+    @Deprecated
+    public void setReferenciaTareaId(Long referenciaTareaId) {
+        // Este método está deprecado, usar setLabor() en su lugar
+        // Si se necesita, se debe obtener la labor desde el repositorio
+    }
+
+    @Deprecated
+    public LocalDateTime getFechaCreacion() {
+        return createdAt;
+    }
+
+    @Deprecated
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.createdAt = fechaCreacion;
+    }
+}

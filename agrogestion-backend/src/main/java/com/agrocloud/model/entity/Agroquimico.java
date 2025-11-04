@@ -1,0 +1,1 @@
+// Eliminado: Entidad obsoleta integrada en Insumo

@@ -1,16 +1,23 @@
 package com.agrocloud.service;
 
+import com.agrocloud.dto.CrearInsumoConDosisRequest;
+import com.agrocloud.dto.InsumoConDosisDTO;
+import com.agrocloud.dto.InsumoDTO;
+import com.agrocloud.model.entity.DosisAplicacion;
 import com.agrocloud.model.entity.Insumo;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.model.enums.RolEmpresa;
+import com.agrocloud.repository.DosisAplicacionRepository;
 import com.agrocloud.repository.InsumoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -18,6 +25,9 @@ public class InsumoService {
 
     @Autowired
     private InsumoRepository insumoRepository;
+    
+    @Autowired
+    private DosisAplicacionRepository dosisAplicacionRepository;
 
 
     // Obtener todos los insumos (público)
@@ -52,19 +62,25 @@ public class InsumoService {
             insumos = insumoRepository.findAccessibleByUser(user);
         }
         
-        // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
-        if (insumos != null) {
-            insumos.forEach(insumo -> {
-                if (insumo.getEmpresa() != null) {
-                    insumo.getEmpresa().getId(); // Inicializar empresa
-                }
-                if (insumo.getUser() != null) {
-                    insumo.getUser().getId(); // Inicializar usuario
-                }
-            });
+        // Filtrar solo activos y inicializar relaciones lazy
+        if (insumos == null) {
+            return java.util.Collections.emptyList();
         }
-        
-        return insumos;
+
+        List<Insumo> activos = insumos.stream()
+                .filter(i -> Boolean.TRUE.equals(i.getActivo()))
+                .collect(java.util.stream.Collectors.toList());
+
+        activos.forEach(insumo -> {
+            if (insumo.getEmpresa() != null) {
+                insumo.getEmpresa().getId();
+            }
+            if (insumo.getUser() != null) {
+                insumo.getUser().getId();
+            }
+        });
+
+        return activos;
     }
 
     // Obtener insumo por ID (con validación de acceso)
@@ -111,6 +127,16 @@ public class InsumoService {
                 insumo.setProveedor(insumoData.getProveedor());
                 insumo.setFechaVencimiento(insumoData.getFechaVencimiento());
                 insumo.setActivo(insumoData.getActivo());
+
+                // Actualizar campos específicos de agroquímicos
+                insumo.setPrincipioActivo(insumoData.getPrincipioActivo());
+                insumo.setConcentracion(insumoData.getConcentracion());
+                insumo.setClaseQuimica(insumoData.getClaseQuimica());
+                insumo.setCategoriaToxicologica(insumoData.getCategoriaToxicologica());
+                insumo.setPeriodoCarenciaDias(insumoData.getPeriodoCarenciaDias());
+                insumo.setDosisMinimaPorHa(insumoData.getDosisMinimaPorHa());
+                insumo.setDosisMaximaPorHa(insumoData.getDosisMaximaPorHa());
+                insumo.setUnidadDosis(insumoData.getUnidadDosis());
                 
                 return Optional.of(insumoRepository.save(insumo));
             }
@@ -361,5 +387,301 @@ public class InsumoService {
         public boolean isValido() { return valido; }
         public String getMensaje() { return mensaje; }
         public java.math.BigDecimal getStockDisponible() { return stockDisponible; }
+    }
+    
+    // ========== NUEVOS MÉTODOS PARA GESTIÓN DE DOSIS ==========
+    
+    /**
+     * Crear un insumo con sus dosis de aplicación
+     */
+    public InsumoConDosisDTO createInsumoConDosis(CrearInsumoConDosisRequest request, User user) {
+        System.out.println("[INSUMO_SERVICE] Creando insumo con dosis: " + request.getNombre());
+        
+        // 1. Crear el insumo
+        Insumo insumo = new Insumo();
+        insumo.setNombre(request.getNombre());
+        insumo.setDescripcion(request.getDescripcion());
+        insumo.setTipo(request.getTipo());
+        insumo.setUnidadMedida(request.getUnidadMedida());
+        insumo.setPrecioUnitario(request.getPrecioUnitario());
+        insumo.setStockMinimo(request.getStockMinimo() != null ? request.getStockMinimo() : BigDecimal.ZERO);
+        insumo.setStockActual(request.getStockActual() != null ? request.getStockActual() : BigDecimal.ZERO);
+        insumo.setProveedor(request.getProveedor());
+        insumo.setFechaVencimiento(request.getFechaVencimiento());
+        insumo.setUser(user);
+        insumo.setEmpresa(user.getEmpresa());
+        insumo.setActivo(true);
+        
+        Insumo savedInsumo = insumoRepository.save(insumo);
+        System.out.println("[INSUMO_SERVICE] Insumo creado: " + savedInsumo.getId());
+        
+        // 2. Crear las dosis si se proporcionaron
+        if (request.getDosisAplicaciones() != null && !request.getDosisAplicaciones().isEmpty()) {
+            for (CrearInsumoConDosisRequest.DosisInsumoRequest dosisRequest : request.getDosisAplicaciones()) {
+                DosisAplicacion dosis = new DosisAplicacion();
+                dosis.setInsumo(savedInsumo);
+                dosis.setTipoAplicacion(dosisRequest.getTipoAplicacion());
+                dosis.setDosisPorHa(dosisRequest.getDosisPorHa());
+                dosis.setUnidadMedida(dosisRequest.getUnidadMedida() != null ? dosisRequest.getUnidadMedida() : savedInsumo.getUnidadMedida());
+                dosis.setDescripcion(dosisRequest.getDescripcion());
+                dosis.setActivo(true);
+                
+                dosisAplicacionRepository.save(dosis);
+                System.out.println("[INSUMO_SERVICE] Dosis creada: " + dosisRequest.getTipoAplicacion());
+            }
+        }
+        
+        // 3. Retornar el insumo con sus dosis
+        return convertToInsumoConDosisDTO(savedInsumo);
+    }
+    
+    /**
+     * Actualizar un insumo con sus dosis de aplicación
+     */
+    public InsumoConDosisDTO updateInsumoConDosis(Long id, CrearInsumoConDosisRequest request, User user) {
+        System.out.println("[INSUMO_SERVICE] Actualizando insumo con dosis: " + id);
+        
+        // 1. Obtener el insumo existente
+        Insumo insumo = insumoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Insumo no encontrado con ID: " + id));
+        
+        // 2. Actualizar los campos del insumo
+        insumo.setNombre(request.getNombre());
+        insumo.setDescripcion(request.getDescripcion());
+        insumo.setTipo(request.getTipo());
+        insumo.setUnidadMedida(request.getUnidadMedida());
+        insumo.setPrecioUnitario(request.getPrecioUnitario());
+        insumo.setStockMinimo(request.getStockMinimo() != null ? request.getStockMinimo() : BigDecimal.ZERO);
+        insumo.setStockActual(request.getStockActual() != null ? request.getStockActual() : BigDecimal.ZERO);
+        insumo.setProveedor(request.getProveedor());
+        insumo.setFechaVencimiento(request.getFechaVencimiento());
+        
+        Insumo savedInsumo = insumoRepository.save(insumo);
+        
+        // 3. Eliminar dosis existentes
+        List<DosisAplicacion> dosisExistentes = dosisAplicacionRepository.findByInsumo(insumo);
+        for (DosisAplicacion dosis : dosisExistentes) {
+            dosis.setActivo(false);
+            dosisAplicacionRepository.save(dosis);
+        }
+        
+        // 4. Crear las nuevas dosis
+        if (request.getDosisAplicaciones() != null && !request.getDosisAplicaciones().isEmpty()) {
+            for (CrearInsumoConDosisRequest.DosisInsumoRequest dosisRequest : request.getDosisAplicaciones()) {
+                DosisAplicacion dosis = new DosisAplicacion();
+                dosis.setInsumo(savedInsumo);
+                dosis.setTipoAplicacion(dosisRequest.getTipoAplicacion());
+                dosis.setDosisPorHa(dosisRequest.getDosisPorHa());
+                dosis.setUnidadMedida(dosisRequest.getUnidadMedida() != null ? dosisRequest.getUnidadMedida() : savedInsumo.getUnidadMedida());
+                dosis.setDescripcion(dosisRequest.getDescripcion());
+                dosis.setActivo(true);
+                
+                dosisAplicacionRepository.save(dosis);
+            }
+        }
+        
+        return convertToInsumoConDosisDTO(savedInsumo);
+    }
+    
+    /**
+     * Obtener un insumo con sus dosis de aplicación
+     */
+    public InsumoConDosisDTO getInsumoConDosis(Long id) {
+        Insumo insumo = insumoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Insumo no encontrado con ID: " + id));
+        
+        return convertToInsumoConDosisDTO(insumo);
+    }
+    
+    /**
+     * Verificar si un insumo tiene dosis configuradas
+     */
+    public boolean tieneDosisConfiguradas(Long insumoId) {
+        Insumo insumo = insumoRepository.findById(insumoId)
+                .orElseThrow(() -> new RuntimeException("Insumo no encontrado con ID: " + insumoId));
+        
+        long count = dosisAplicacionRepository.countByInsumoAndActivoTrue(insumo);
+        return count > 0;
+    }
+    
+    /**
+     * Convertir Insumo a InsumoConDosisDTO
+     */
+    private InsumoConDosisDTO convertToInsumoConDosisDTO(Insumo insumo) {
+        InsumoConDosisDTO dto = new InsumoConDosisDTO();
+        dto.setId(insumo.getId());
+        dto.setNombre(insumo.getNombre());
+        dto.setDescripcion(insumo.getDescripcion());
+        dto.setTipo(insumo.getTipo());
+        dto.setUnidadMedida(insumo.getUnidadMedida());
+        dto.setPrecioUnitario(insumo.getPrecioUnitario());
+        dto.setStockMinimo(insumo.getStockMinimo());
+        dto.setStockActual(insumo.getStockActual());
+        dto.setProveedor(insumo.getProveedor());
+        dto.setFechaVencimiento(insumo.getFechaVencimiento());
+        dto.setActivo(insumo.getActivo());
+        dto.setFechaCreacion(insumo.getFechaCreacion());
+        dto.setFechaActualizacion(insumo.getFechaActualizacion());
+        
+        // Obtener las dosis activas
+        List<DosisAplicacion> dosis = dosisAplicacionRepository.findByInsumoAndActivoTrue(insumo);
+        dto.setTieneDosisConfiguradas(!dosis.isEmpty());
+        
+        if (dosis.isEmpty()) {
+            dto.setMensajeSugerencia("Este insumo no tiene dosis configuradas. Se recomienda configurar dosis sugeridas para facilitar las aplicaciones.");
+        } else {
+            dto.setMensajeSugerencia("Insumo con " + dosis.size() + " dosis configuradas.");
+        }
+        
+        // Convertir las dosis a DTOs
+        List<com.agrocloud.dto.DosisAplicacionDTO> dosisDTOs = dosis.stream()
+                .map(this::convertDosisToDTO)
+                .toList();
+        dto.setDosisAplicaciones(dosisDTOs);
+        
+        return dto;
+    }
+    
+    /**
+     * Convertir DosisAplicacion a DTO
+     */
+    private com.agrocloud.dto.DosisAplicacionDTO convertDosisToDTO(DosisAplicacion dosis) {
+        com.agrocloud.dto.DosisAplicacionDTO dto = new com.agrocloud.dto.DosisAplicacionDTO();
+        dto.setId(dosis.getId());
+        dto.setInsumoId(dosis.getInsumo().getId());
+        dto.setInsumoNombre(dosis.getInsumo().getNombre());
+        dto.setTipoAplicacion(dosis.getTipoAplicacion());
+        dto.setDosisPorHa(dosis.getDosisPorHa());
+        dto.setUnidadMedida(dosis.getUnidadMedida());
+        dto.setDescripcion(dosis.getDescripcion());
+        dto.setActivo(dosis.getActivo());
+        return dto;
+    }
+
+    // ========================================
+    // MÉTODOS PARA EL WIZARD DE INSUMOS
+    // ========================================
+
+    /**
+     * Crear insumo desde DTO
+     */
+    public Insumo crearInsumo(InsumoDTO insumoDTO) {
+        Insumo insumo = new Insumo();
+        insumo.setNombre(insumoDTO.getNombre());
+        insumo.setDescripcion(insumoDTO.getDescripcion());
+        insumo.setTipo(Insumo.TipoInsumo.valueOf(insumoDTO.getTipo()));
+        insumo.setUnidadMedida(insumoDTO.getUnidadMedida());
+        insumo.setPrecioUnitario(insumoDTO.getPrecioUnitario());
+        insumo.setStockActual(insumoDTO.getStockActual());
+        insumo.setStockMinimo(insumoDTO.getStockMinimo());
+        insumo.setProveedor(insumoDTO.getProveedor());
+        if (insumoDTO.getFechaVencimiento() != null && !insumoDTO.getFechaVencimiento().isEmpty()) {
+            insumo.setFechaVencimiento(LocalDate.parse(insumoDTO.getFechaVencimiento()));
+        }
+        insumo.setActivo(true);
+        
+        // Campos específicos de agroquímicos
+        insumo.setPrincipioActivo(insumoDTO.getPrincipioActivo());
+        insumo.setConcentracion(insumoDTO.getConcentracion());
+        insumo.setClaseQuimica(insumoDTO.getClaseQuimica());
+        insumo.setCategoriaToxicologica(insumoDTO.getCategoriaToxicologica());
+        insumo.setPeriodoCarenciaDias(insumoDTO.getPeriodoCarenciaDias());
+        insumo.setDosisMinimaPorHa(insumoDTO.getDosisMinimaPorHa());
+        insumo.setDosisMaximaPorHa(insumoDTO.getDosisMaximaPorHa());
+        insumo.setUnidadDosis(insumoDTO.getUnidadDosis());
+        
+        return insumoRepository.save(insumo);
+    }
+
+    /**
+     * Actualizar insumo desde DTO
+     */
+    public Insumo actualizarInsumo(Long id, InsumoDTO insumoDTO) {
+        Insumo insumo = insumoRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Insumo no encontrado"));
+        
+        insumo.setNombre(insumoDTO.getNombre());
+        insumo.setDescripcion(insumoDTO.getDescripcion());
+        insumo.setTipo(Insumo.TipoInsumo.valueOf(insumoDTO.getTipo()));
+        insumo.setUnidadMedida(insumoDTO.getUnidadMedida());
+        insumo.setPrecioUnitario(insumoDTO.getPrecioUnitario());
+        insumo.setStockActual(insumoDTO.getStockActual());
+        insumo.setStockMinimo(insumoDTO.getStockMinimo());
+        insumo.setProveedor(insumoDTO.getProveedor());
+        if (insumoDTO.getFechaVencimiento() != null && !insumoDTO.getFechaVencimiento().isEmpty()) {
+            insumo.setFechaVencimiento(LocalDate.parse(insumoDTO.getFechaVencimiento()));
+        }
+        
+        // Campos específicos de agroquímicos
+        insumo.setPrincipioActivo(insumoDTO.getPrincipioActivo());
+        insumo.setConcentracion(insumoDTO.getConcentracion());
+        insumo.setClaseQuimica(insumoDTO.getClaseQuimica());
+        insumo.setCategoriaToxicologica(insumoDTO.getCategoriaToxicologica());
+        insumo.setPeriodoCarenciaDias(insumoDTO.getPeriodoCarenciaDias());
+        insumo.setDosisMinimaPorHa(insumoDTO.getDosisMinimaPorHa());
+        insumo.setDosisMaximaPorHa(insumoDTO.getDosisMaximaPorHa());
+        insumo.setUnidadDosis(insumoDTO.getUnidadDosis());
+        
+        return insumoRepository.save(insumo);
+    }
+
+    /**
+     * Eliminar insumo (lógica)
+     */
+    public void eliminarInsumo(Long id) {
+        Insumo insumo = insumoRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Insumo no encontrado"));
+        
+        insumo.setActivo(false);
+        insumoRepository.save(insumo);
+    }
+
+    /**
+     * Obtener todos los insumos como DTO
+     */
+    public List<InsumoDTO> obtenerTodosLosInsumos() {
+        return insumoRepository.findAll().stream()
+            .map(this::convertirInsumoADTO)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Obtener insumo por ID como DTO
+     */
+    public InsumoDTO obtenerInsumoPorId(Long id) {
+        Insumo insumo = insumoRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Insumo no encontrado"));
+        
+        return convertirInsumoADTO(insumo);
+    }
+
+    /**
+     * Convertir entidad Insumo a DTO
+     */
+    private InsumoDTO convertirInsumoADTO(Insumo insumo) {
+        InsumoDTO dto = new InsumoDTO();
+        dto.setId(insumo.getId());
+        dto.setNombre(insumo.getNombre());
+        dto.setDescripcion(insumo.getDescripcion());
+        dto.setTipo(insumo.getTipo().toString());
+        dto.setUnidadMedida(insumo.getUnidadMedida());
+        dto.setPrecioUnitario(insumo.getPrecioUnitario());
+        dto.setStockActual(insumo.getStockActual());
+        dto.setStockMinimo(insumo.getStockMinimo());
+        dto.setProveedor(insumo.getProveedor());
+        dto.setFechaVencimiento(insumo.getFechaVencimiento() != null ? insumo.getFechaVencimiento().toString() : null);
+        dto.setActivo(insumo.getActivo());
+        
+        // Campos específicos de agroquímicos
+        dto.setPrincipioActivo(insumo.getPrincipioActivo());
+        dto.setConcentracion(insumo.getConcentracion());
+        dto.setClaseQuimica(insumo.getClaseQuimica());
+        dto.setCategoriaToxicologica(insumo.getCategoriaToxicologica());
+        dto.setPeriodoCarenciaDias(insumo.getPeriodoCarenciaDias());
+        dto.setDosisMinimaPorHa(insumo.getDosisMinimaPorHa());
+        dto.setDosisMaximaPorHa(insumo.getDosisMaximaPorHa());
+        dto.setUnidadDosis(insumo.getUnidadDosis());
+        
+        return dto;
     }
 }

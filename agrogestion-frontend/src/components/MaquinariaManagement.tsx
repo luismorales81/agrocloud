@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
-import api from '../services/api';
+import { maquinariaService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
 
 interface Maquinaria {
@@ -78,10 +78,10 @@ const MaquinariaManagement: React.FC = () => {
   const loadMaquinaria = async () => {
     try {
       setLoading(true);
-        const response = await api.get('/maquinaria');
+      const data = await maquinariaService.listar();
       
       // Mapear datos del backend al formato esperado por el frontend
-      const maquinariaMapeada = response.data.map((maq: any) => ({
+      const maquinariaMapeada = (Array.isArray(data) ? data : []).map((maq: any) => ({
         id: maq.id,
         nombre: maq.nombre || '',
         tipo: maq.tipo || 'No especificado',
@@ -142,12 +142,12 @@ const MaquinariaManagement: React.FC = () => {
 
       if (editingMaquinaria) {
         // Actualizar maquinaria existente
-        await api.put(`/maquinaria/${editingMaquinaria.id}`, datosParaEnvio);
+        const updatedMaq = await maquinariaService.actualizar(editingMaquinaria.id!, datosParaEnvio);
         setMaquinaria(prev => prev.map(m => m.id === editingMaquinaria.id ? { ...formData, id: m.id } : m));
       } else {
         // Crear nueva maquinaria
-        const response = await api.post('/maquinaria', datosParaEnvio);
-        setMaquinaria(prev => [...prev, { ...formData, id: response.data.id }]);
+        const nuevaMaq = await maquinariaService.crear(datosParaEnvio);
+        setMaquinaria(prev => [...prev, { ...formData, id: nuevaMaq.id }]);
       }
       resetForm();
     } catch (error) {

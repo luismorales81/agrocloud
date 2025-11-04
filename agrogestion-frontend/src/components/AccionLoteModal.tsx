@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api from '../services/api';
+import { lotesService } from '../services/apiServices';
 
 interface Lote {
   id?: number;
@@ -78,23 +78,19 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
     setLoading(true);
 
     try {
-      let endpoint = '';
-      let body: any = {};
+      let data: any;
 
       switch (accion) {
         case 'abandonar':
-          endpoint = `/api/v1/lotes/${lote.id}/abandonar`;
-          body = { motivo: formData.motivo };
+          data = await lotesService.abandonar(lote.id!, formData.motivo);
           break;
         
         case 'limpiar':
-          endpoint = `/api/v1/lotes/${lote.id}/limpiar`;
-          body = { motivo: formData.motivo };
+          data = await lotesService.limpiar(lote.id!, formData.motivo);
           break;
         
         case 'forraje':
-          endpoint = `/api/v1/lotes/${lote.id}/convertir-forraje`;
-          body = {
+          const cosechaData = {
             fechaCosecha: new Date().toISOString().split('T')[0],
             cantidadCosechada: parseFloat(formData.cantidadCosechada),
             unidadMedida: formData.unidadMedida,
@@ -103,18 +99,14 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
             maquinaria: [],
             manoObra: []
           };
+          data = await lotesService.convertirForraje(lote.id!, cosechaData);
           break;
       }
 
-      const response = await api.post(endpoint, body);
-
-      if (response.status >= 200 && response.status < 300) {
-        const data = response.data;
+      if (data) {
         alert(`✅ ${data.message || 'Acción completada exitosamente'}`);
         onSuccess();
         onClose();
-      } else {
-        alert(`❌ Error: ${response.data?.message || 'No se pudo completar la acción'}`);
       }
     } catch (error) {
       console.error('Error al ejecutar acción:', error);

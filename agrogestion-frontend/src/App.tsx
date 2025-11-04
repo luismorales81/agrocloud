@@ -7,6 +7,9 @@ import CosechasManagement from './components/CosechasManagement';
 import InsumosManagement from './components/InsumosManagement';
 import MaquinariaManagement from './components/MaquinariaManagement';
 import LaboresManagement from './components/LaboresManagement';
+import AplicacionesAgroquimicas from './components/AplicacionesAgroquimicas';
+import AgroquimicosIntegrados from './components/AgroquimicosIntegrados';
+import InsumosUnificados from './components/InsumosUnificados';
 import ReportsManagement from './components/ReportsManagement';
 import BalanceReport from './components/BalanceReport';
 import FinanzasManagement from './components/FinanzasManagement';
@@ -217,10 +220,10 @@ const Dashboard: React.FC = () => {
             <CosechasManagement />
           </ProtectedRouteComponent>
         );
-      case 'inputs':
+      case 'insumos-unificados':
         return (
           <ProtectedRouteComponent permission="canViewInsumos">
-            <InsumosManagement />
+            <InsumosUnificados />
           </ProtectedRouteComponent>
         );
       case 'machinery':
@@ -810,16 +813,16 @@ const Dashboard: React.FC = () => {
               // { id: 'cosechas', label: 'Cosechas', icon: '🌾', permission: 'canViewCosechas' } // Ahora se gestiona desde Lotes
             ]
           },
-          {
-            id: 'recursos',
-            label: 'Recursos & Stock',
-            icon: '📦',
-            items: [
-              { id: 'inputs', label: 'Insumos', icon: '🧪', permission: 'canViewInsumos' },
-              { id: 'machinery', label: 'Maquinaria', icon: '🚜', permission: 'canViewMaquinaria' },
-              { id: 'inventario', label: 'Inventario Granos', icon: '📦', permission: 'canViewFinances' }
-            ]
-          },
+        {
+          id: 'recursos',
+          label: 'Recursos & Stock',
+          icon: '📦',
+          items: [
+            { id: 'insumos-unificados', label: 'Insumos & Agroquímicos', icon: '🧪', permission: 'canViewInsumos' },
+            { id: 'machinery', label: 'Maquinaria', icon: '🚜', permission: 'canViewMaquinaria' },
+            { id: 'inventario', label: 'Inventario Granos', icon: '📦', permission: 'canViewFinances' }
+          ]
+        },
           {
             id: 'reportes',
             label: 'Reportes y Análisis',
@@ -902,6 +905,8 @@ const Dashboard: React.FC = () => {
             <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '1rem' }}>
               {rolUsuario ? rolUsuario.replace(/_/g, ' ').split(' ').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ') : 'Usuario'}
             </div>
+            {/* Indicador de estado de conexión */}
+            <OfflineIndicator variant="inline" />
             <button
               onClick={() => setShowChangePassword(true)}
               style={{
@@ -1118,9 +1123,6 @@ const Dashboard: React.FC = () => {
 
         {/* Selector de moneda integrado en la cabecera */}
       </div>
-      
-      {/* Indicador de estado offline */}
-      <OfflineIndicator />
         
         {/* Banner de estado offline */}
         {!isOnline && (

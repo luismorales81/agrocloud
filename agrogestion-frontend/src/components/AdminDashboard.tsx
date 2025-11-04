@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { API_ENDPOINTS } from '../services/apiEndpoints';
 
 interface AdminStats {
   totalUsuarios: number;
@@ -60,12 +61,12 @@ const AdminDashboard: React.FC = () => {
       setLoading(true);
       
       // Cargar resumen del sistema
-      const resumenResponse = await api.get('/admin/dashboard/resumen');
-      setStats(resumenResponse.data);
+      const resumenData = await api.get(API_ENDPOINTS.ADMIN_DASHBOARD.RESUMEN);
+      setStats(resumenData.data);
       
       // Cargar lista de usuarios
-      const usuariosResponse = await api.get('/admin/dashboard/usuarios/lista');
-      setUsuarios(usuariosResponse.data.usuarios || []);
+      const usuariosData = await api.get(API_ENDPOINTS.ADMIN_DASHBOARD.USUARIOS_LISTA);
+      setUsuarios(usuariosData.data.usuarios || []);
       
     } catch (error) {
       console.error('Error cargando datos del admin:', error);
@@ -76,9 +77,9 @@ const AdminDashboard: React.FC = () => {
 
   const cargarDatosUsoSistema = async () => {
     try {
-      const response = await api.get('/admin/dashboard/uso-sistema');
-      setUsoData(response.data);
-      return response.data;
+      const data = await api.get(API_ENDPOINTS.ADMIN_DASHBOARD.USO_SISTEMA);
+      setUsoData(data.data);
+      return data.data;
     } catch (error) {
       console.error('Error cargando datos de uso del sistema:', error);
       return null;
@@ -87,9 +88,9 @@ const AdminDashboard: React.FC = () => {
 
   const cargarDatosAuditoria = async () => {
     try {
-      const response = await api.get('/admin/dashboard/auditoria');
-      setAuditoriaData(response.data);
-      return response.data;
+      const data = await api.get(API_ENDPOINTS.ADMIN_DASHBOARD.AUDITORIA);
+      setAuditoriaData(data.data);
+      return data.data;
     } catch (error) {
       console.error('Error cargando datos de auditoría:', error);
       return null;
@@ -98,9 +99,9 @@ const AdminDashboard: React.FC = () => {
 
   const cargarDatosReportes = async () => {
     try {
-      const response = await api.get('/admin/dashboard/reportes');
-      setReportesData(response.data);
-      return response.data;
+      const data = await api.get(API_ENDPOINTS.ADMIN_DASHBOARD.REPORTES);
+      setReportesData(data.data);
+      return data.data;
     } catch (error) {
       console.error('Error cargando datos de reportes:', error);
       return null;

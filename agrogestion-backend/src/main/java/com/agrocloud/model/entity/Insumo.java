@@ -92,6 +92,43 @@ public class Insumo {
     @JsonIgnore
     private Empresa empresa;
 
+    // Relación con las dosis de insumos (tabla dosis_insumos)
+    @OneToMany(mappedBy = "insumo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private java.util.List<DosisAgroquimico> dosisInsumos;
+
+    // CAMPOS ESPECÍFICOS PARA AGROQUÍMICOS
+    @Size(max = 200, message = "El principio activo no puede exceder 200 caracteres")
+    @Column(name = "principio_activo", length = 200)
+    private String principioActivo;
+
+    @Size(max = 100, message = "La concentración no puede exceder 100 caracteres")
+    @Column(name = "concentracion", length = 100)
+    private String concentracion;
+
+    @Size(max = 100, message = "La clase química no puede exceder 100 caracteres")
+    @Column(name = "clase_quimica", length = 100)
+    private String claseQuimica;
+
+    @Size(max = 50, message = "La categoría toxicológica no puede exceder 50 caracteres")
+    @Column(name = "categoria_toxicologica", length = 50)
+    private String categoriaToxicologica;
+
+    @Column(name = "periodo_carencia_dias")
+    private Integer periodoCarenciaDias;
+
+    @Column(name = "dosis_minima_por_ha", precision = 10, scale = 2)
+    private BigDecimal dosisMinimaPorHa;
+
+    @Column(name = "dosis_maxima_por_ha", precision = 10, scale = 2)
+    private BigDecimal dosisMaximaPorHa;
+
+    @Size(max = 50, message = "La unidad de dosis no puede exceder 50 caracteres")
+    @Column(name = "unidad_dosis", length = 50)
+    private String unidadDosis;
+
+    // Relación con dosis por tipo de aplicación para agroquímicos - ELIMINADA (simplificada)
+
     // Enums
     public enum TipoInsumo {
         FERTILIZANTE, HERBICIDA, FUNGICIDA, INSECTICIDA, SEMILLA, COMBUSTIBLE, LUBRICANTE, REPUESTO, HERRAMIENTA, OTROS
@@ -260,6 +297,91 @@ public class Insumo {
         LocalDate hoy = LocalDate.now();
         LocalDate proximoMes = hoy.plusMonths(1);
         return fechaVencimiento.isBefore(proximoMes) && !fechaVencimiento.isBefore(hoy);
+    }
+
+    public java.util.List<DosisAgroquimico> getDosisInsumos() {
+        return dosisInsumos;
+    }
+
+    public void setDosisInsumos(java.util.List<DosisAgroquimico> dosisInsumos) {
+        this.dosisInsumos = dosisInsumos;
+    }
+
+    // Getters y Setters para campos específicos de agroquímicos
+    public String getPrincipioActivo() {
+        return principioActivo;
+    }
+
+    public void setPrincipioActivo(String principioActivo) {
+        this.principioActivo = principioActivo;
+    }
+
+    public String getConcentracion() {
+        return concentracion;
+    }
+
+    public void setConcentracion(String concentracion) {
+        this.concentracion = concentracion;
+    }
+
+    public String getClaseQuimica() {
+        return claseQuimica;
+    }
+
+    public void setClaseQuimica(String claseQuimica) {
+        this.claseQuimica = claseQuimica;
+    }
+
+    public String getCategoriaToxicologica() {
+        return categoriaToxicologica;
+    }
+
+    public void setCategoriaToxicologica(String categoriaToxicologica) {
+        this.categoriaToxicologica = categoriaToxicologica;
+    }
+
+    public Integer getPeriodoCarenciaDias() {
+        return periodoCarenciaDias;
+    }
+
+    public void setPeriodoCarenciaDias(Integer periodoCarenciaDias) {
+        this.periodoCarenciaDias = periodoCarenciaDias;
+    }
+
+    public BigDecimal getDosisMinimaPorHa() {
+        return dosisMinimaPorHa;
+    }
+
+    public void setDosisMinimaPorHa(BigDecimal dosisMinimaPorHa) {
+        this.dosisMinimaPorHa = dosisMinimaPorHa;
+    }
+
+    public BigDecimal getDosisMaximaPorHa() {
+        return dosisMaximaPorHa;
+    }
+
+    public void setDosisMaximaPorHa(BigDecimal dosisMaximaPorHa) {
+        this.dosisMaximaPorHa = dosisMaximaPorHa;
+    }
+
+    public String getUnidadDosis() {
+        return unidadDosis;
+    }
+
+    public void setUnidadDosis(String unidadDosis) {
+        this.unidadDosis = unidadDosis;
+    }
+
+    // Métodos de dosis eliminados - simplificados
+
+    // Métodos helper para agroquímicos
+    public boolean esAgroquimico() {
+        return tipo == TipoInsumo.HERBICIDA || tipo == TipoInsumo.FUNGICIDA || 
+               tipo == TipoInsumo.INSECTICIDA || tipo == TipoInsumo.FERTILIZANTE;
+    }
+
+    public boolean tienePropiedadesAgroquimicas() {
+        return principioActivo != null && !principioActivo.trim().isEmpty();
     }
 
     @Override

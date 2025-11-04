@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import React, { useState, useEffect, useMemo } from 'react';
+import { lotesService } from '../services/apiServices';
 
 interface Lote {
   id?: number;
@@ -46,6 +46,102 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
   const [infoCosecha, setInfoCosecha] = useState<InfoCosecha | null>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
 
+  // Funciones de conversión de unidades
+  const convertirAKilogramos = (cantidad: number, unidad: string): number => {
+    if (!unidad || !cantidad) return cantidad;
+    const unidadLower = unidad.toLowerCase().trim();
+    // Detectar si la unidad tiene /ha al final
+    const unidadBase = unidadLower.replace('/ha', '').trim();
+    
+    if (unidadBase === 'ton' || unidadBase.includes('tonelada') || unidadBase === 'tn') {
+      return cantidad * 1000; // 1 ton = 1000 kg
+    } else if (unidadBase === 'qq' || unidadBase.includes('quintal')) {
+      return cantidad * 46; // 1 qq = 46 kg (aproximadamente)
+    } else if (unidadBase === 'kg' || unidadBase.includes('kilogramo')) {
+      return cantidad;
+    }
+    return cantidad;
+  };
+
+  const convertirDesdeKilogramos = (cantidadKg: number, unidadDestino: string): number => {
+    if (!unidadDestino || !cantidadKg) return cantidadKg;
+    const unidadLower = unidadDestino.toLowerCase().trim();
+    
+    if (unidadLower === 'ton' || unidadLower.includes('tonelada') || unidadLower === 'tn') {
+      return cantidadKg / 1000; // kg a toneladas
+    } else if (unidadLower === 'qq' || unidadLower.includes('quintal')) {
+      return cantidadKg / 46; // kg a quintales
+    } else if (unidadLower === 'kg' || unidadLower.includes('kilogramo')) {
+      return cantidadKg;
+    }
+    return cantidadKg;
+  };
+
+  // Calcular comparación con rendimiento esperado usando useMemo
+  const comparacionRendimiento = useMemo(() => {
+    // Validar que tenemos datos válidos
+    if (!infoCosecha || !infoCosecha.rendimientoEsperadoCultivo || !lote.superficie || typeof lote.superficie !== 'number' || !formData.cantidadCosechada) {
+      return null;
+    }
+    
+    const cantidadCosechada = parseFloat(formData.cantidadCosechada);
+    if (isNaN(cantidadCosechada) || cantidadCosechada <= 0) {
+      return null;
+    }
+    
+    // El rendimiento esperado viene en unidades por hectárea (ej: 4 ton/ha o 4000 kg/ha)
+    // Limpiar la unidad de rendimiento para quitar /ha si existe
+    let unidadRendimientoLimpia = 'ton';
+    if (infoCosecha.unidadRendimiento) {
+      unidadRendimientoLimpia = infoCosecha.unidadRendimiento.toLowerCase().replace('/ha', '').replace('ha', '').trim();
+      // Normalizar variaciones comunes
+      if (unidadRendimientoLimpia === 'tn' || unidadRendimientoLimpia === 'toneladas') {
+        unidadRendimientoLimpia = 'ton';
+      }
+    }
+    
+    const rendimientoEsperadoPorHa = Number(infoCosecha.rendimientoEsperadoCultivo);
+    const superficieHa = Number(lote.superficie);
+    
+    // Convertir el rendimiento esperado (por ha) a kilogramos por ha
+    const rendimientoEsperadoEnKgPorHa = convertirAKilogramos(rendimientoEsperadoPorHa, unidadRendimientoLimpia);
+    
+    // Calcular cantidad total esperada en kilogramos
+    const cantidadTotalEsperadaEnKg = rendimientoEsperadoEnKgPorHa * superficieHa;
+    
+    // Limpiar unidad de medida del usuario (quitar /ha si existe)
+    let unidadUsuarioLimpia = formData.unidadMedida.toLowerCase().replace('/ha', '').replace('ha', '').trim();
+    // Normalizar variaciones comunes
+    if (unidadUsuarioLimpia === 'tn' || unidadUsuarioLimpia === 'toneladas') {
+      unidadUsuarioLimpia = 'ton';
+    }
+    
+    // Convertir cantidad esperada a la unidad seleccionada por el usuario
+    const cantidadEsperadaEnUnidadUsuario = convertirDesdeKilogramos(cantidadTotalEsperadaEnKg, unidadUsuarioLimpia);
+    
+    // Convertir cantidad cosechada a kilogramos para cálculos consistentes
+    const cantidadCosechadaEnKg = convertirAKilogramos(cantidadCosechada, unidadUsuarioLimpia);
+    
+    // Calcular diferencia en la unidad del usuario
+    const diferencia = cantidadCosechada - cantidadEsperadaEnUnidadUsuario;
+    
+    // Calcular porcentaje basado en kilogramos para precisión
+    const porcentaje = cantidadTotalEsperadaEnKg > 0 ? ((cantidadCosechadaEnKg / cantidadTotalEsperadaEnKg) * 100) : 0;
+    
+    // Obtener solo la unidad base (sin /ha) para mostrar cantidades totales
+    const unidadDisplay = unidadUsuarioLimpia === 'ton' || unidadUsuarioLimpia === 'tn' ? 'ton' 
+      : unidadUsuarioLimpia === 'qq' ? 'qq' 
+      : 'kg';
+    
+    return {
+      cantidadEsperadaEnUnidadUsuario,
+      cantidadCosechada,
+      diferencia,
+      porcentaje,
+      unidadDisplay
+    };
+  }, [infoCosecha?.rendimientoEsperadoCultivo, infoCosecha?.unidadRendimiento, lote.superficie, formData.cantidadCosechada, formData.unidadMedida]);
+
   // Cargar información del cultivo automáticamente
   useEffect(() => {
     const cargarInfoCosecha = async () => {
@@ -53,21 +149,30 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
       
       try {
         setLoadingInfo(true);
-        const response = await api.get(`/api/v1/lotes/${lote.id}/info-cosecha`);
-
-        if (response.status >= 200 && response.status < 300) {
-          setInfoCosecha(response.data);
-          
-          // Auto-completar campos con datos del cultivo
-          setFormData(prev => ({
-            ...prev,
-            variedadSemilla: info.variedadSemilla || '',
-            unidadMedida: info.unidadRendimiento || 'ton',
-            precioVenta: info.precioPorTonelada ? info.precioPorTonelada.toString() : ''
-          }));
-        } else {
-          console.error('Error al cargar información de cosecha');
+        const info = await lotesService.obtenerInfoCosecha(lote.id!);
+        setInfoCosecha(info);
+        
+        // Auto-completar campos con datos del cultivo
+        // Limpiar unidad de rendimiento para que no tenga /ha
+        let unidadRendimientoLimpia = 'ton';
+        if (info.unidadRendimiento) {
+          unidadRendimientoLimpia = info.unidadRendimiento.toLowerCase().replace('/ha', '').replace('ha', '').trim();
+          // Normalizar variaciones comunes
+          if (unidadRendimientoLimpia === 'tn' || unidadRendimientoLimpia === 'toneladas') {
+            unidadRendimientoLimpia = 'ton';
+          } else if (unidadRendimientoLimpia === 'qq' || unidadRendimientoLimpia === 'quintales') {
+            unidadRendimientoLimpia = 'qq';
+          } else if (unidadRendimientoLimpia === 'kg' || unidadRendimientoLimpia === 'kilogramos') {
+            unidadRendimientoLimpia = 'kg';
+          }
         }
+        
+        setFormData(prev => ({
+          ...prev,
+          variedadSemilla: info.variedadSemilla || '',
+          unidadMedida: unidadRendimientoLimpia,
+          precioVenta: info.precioPorTonelada ? info.precioPorTonelada.toString() : ''
+        }));
       } catch (error) {
         console.error('Error al cargar información de cosecha:', error);
       } finally {
@@ -101,24 +206,18 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
         manoObra: []
       };
       
-      const response = await api.post(`/api/v1/lotes/${lote.id}/cosechar`, cosechaData);
+      const data = await lotesService.cosechar(lote.id!, cosechaData);
 
-      if (response.status >= 200 && response.status < 300) {
-        const data = response.data;
-        
-        // Calcular rendimiento si es posible
-        let rendimiento = '';
-        if (lote.superficie && typeof lote.superficie === 'number') {
-          const rendimientoPorHa = parseFloat(formData.cantidadCosechada) / lote.superficie;
-          rendimiento = `\n📊 Rendimiento: ${rendimientoPorHa.toFixed(2)} ${formData.unidadMedida}/ha`;
-        }
-        
-        alert(`✅ ${data.message || 'Lote cosechado exitosamente'}${rendimiento}`);
-        onSuccess();
-        onClose();
-      } else {
-        alert(`❌ Error: ${response.data?.message || 'No se pudo cosechar el lote'}`);
+      // Calcular rendimiento si es posible
+      let rendimiento = '';
+      if (lote.superficie && typeof lote.superficie === 'number') {
+        const rendimientoPorHa = parseFloat(formData.cantidadCosechada) / lote.superficie;
+        rendimiento = `\n📊 Rendimiento: ${rendimientoPorHa.toFixed(2)} ${formData.unidadMedida}/ha`;
       }
+      
+      alert(`✅ ${data.message || 'Lote cosechado exitosamente'}${rendimiento}`);
+      onSuccess();
+      onClose();
     } catch (error) {
       console.error('Error al cosechar:', error);
       alert('❌ Error de conexión. Por favor, intente nuevamente.');
@@ -299,14 +398,21 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
                 <option value="qq">Quintales</option>
               </select>
             </div>
-            {lote.superficie && typeof lote.superficie === 'number' && formData.cantidadCosechada && (
+            {lote.superficie && typeof lote.superficie === 'number' && formData.cantidadCosechada && parseFloat(formData.cantidadCosechada) > 0 && (
               <small style={{ color: '#6b7280', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                Rendimiento estimado: {(parseFloat(formData.cantidadCosechada) / lote.superficie).toFixed(2)} {formData.unidadMedida}/ha
+                {(() => {
+                  const cantidad = parseFloat(formData.cantidadCosechada);
+                  const rendimiento = cantidad / lote.superficie;
+                  // Obtener solo la unidad base sin /ha
+                  const unidadBase = formData.unidadMedida.toLowerCase().replace('/ha', '').trim();
+                  const unidadDisplay = unidadBase === 'ton' ? 'ton' : unidadBase === 'qq' ? 'qq' : 'kg';
+                  return `Rendimiento estimado: ${rendimiento.toFixed(2)} ${unidadDisplay}/ha`;
+                })()}
               </small>
             )}
             
             {/* Comparación con cantidad esperada */}
-            {infoCosecha && infoCosecha.rendimientoEsperadoCultivo && lote.superficie && formData.cantidadCosechada && (
+            {comparacionRendimiento && (
               <div style={{
                 background: '#fff3cd',
                 padding: '8px',
@@ -317,26 +423,17 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
                 <div style={{ fontSize: '12px', color: '#856404', marginBottom: '4px' }}>
                   <strong>📊 Comparación con Rendimiento Esperado</strong>
                 </div>
-                {(() => {
-                  const cantidadEsperada = infoCosecha.rendimientoEsperadoCultivo * lote.superficie;
-                  const cantidadCosechada = parseFloat(formData.cantidadCosechada);
-                  const diferencia = cantidadCosechada - cantidadEsperada;
-                  const porcentaje = cantidadEsperada > 0 ? ((cantidadCosechada / cantidadEsperada) * 100) : 0;
-                  
-                  return (
-                    <div style={{ fontSize: '11px', color: '#856404' }}>
-                      <div>Esperado: {cantidadEsperada.toFixed(1)} {infoCosecha.unidadRendimiento}</div>
-                      <div>Cosechado: {cantidadCosechada.toFixed(1)} {formData.unidadMedida}</div>
-                      <div style={{ 
-                        fontWeight: 'bold',
-                        color: diferencia >= 0 ? '#28a745' : '#dc3545'
-                      }}>
-                        Diferencia: {diferencia >= 0 ? '+' : ''}{diferencia.toFixed(1)} {formData.unidadMedida} 
-                        ({porcentaje.toFixed(1)}%)
-                      </div>
-                    </div>
-                  );
-                })()}
+                <div style={{ fontSize: '11px', color: '#856404' }}>
+                  <div>Esperado: {comparacionRendimiento.cantidadEsperadaEnUnidadUsuario.toFixed(1)} {comparacionRendimiento.unidadDisplay}</div>
+                  <div>Cosechado: {comparacionRendimiento.cantidadCosechada.toFixed(1)} {comparacionRendimiento.unidadDisplay}</div>
+                  <div style={{ 
+                    fontWeight: 'bold',
+                    color: comparacionRendimiento.diferencia >= 0 ? '#28a745' : '#dc3545'
+                  }}>
+                    Diferencia: {comparacionRendimiento.diferencia >= 0 ? '+' : ''}{comparacionRendimiento.diferencia.toFixed(1)} {comparacionRendimiento.unidadDisplay} 
+                    ({comparacionRendimiento.porcentaje.toFixed(1)}%)
+                  </div>
+                </div>
               </div>
             )}
           </div>

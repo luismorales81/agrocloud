@@ -323,4 +323,119 @@ public class InsumoController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
+    
+    // ========== NUEVOS ENDPOINTS PARA GESTIÓN DE DOSIS ==========
+    
+    /**
+     * Crear un insumo con sus dosis de aplicación
+     */
+    @PostMapping("/con-dosis")
+    public ResponseEntity<?> createInsumoConDosis(
+            @Valid @RequestBody com.agrocloud.dto.CrearInsumoConDosisRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            System.out.println("[INSUMO_CONTROLLER] Creando insumo con dosis: " + request.getNombre());
+            
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
+            
+            com.agrocloud.dto.InsumoConDosisDTO insumo = insumoService.createInsumoConDosis(request, user);
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("success", true);
+            response.put("message", "Insumo creado exitosamente con " + insumo.getDosisAplicaciones().size() + " dosis configuradas");
+            response.put("data", insumo);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("[INSUMO_CONTROLLER] ERROR: " + e.getMessage());
+            e.printStackTrace();
+            
+            java.util.Map<String, Object> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error al crear insumo: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+    
+    /**
+     * Actualizar un insumo con sus dosis de aplicación
+     */
+    @PutMapping("/{id}/con-dosis")
+    public ResponseEntity<?> updateInsumoConDosis(
+            @PathVariable Long id,
+            @Valid @RequestBody com.agrocloud.dto.CrearInsumoConDosisRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            System.out.println("[INSUMO_CONTROLLER] Actualizando insumo con dosis: " + id);
+            
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
+            
+            com.agrocloud.dto.InsumoConDosisDTO insumo = insumoService.updateInsumoConDosis(id, request, user);
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("success", true);
+            response.put("message", "Insumo actualizado exitosamente con " + insumo.getDosisAplicaciones().size() + " dosis configuradas");
+            response.put("data", insumo);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("[INSUMO_CONTROLLER] ERROR: " + e.getMessage());
+            e.printStackTrace();
+            
+            java.util.Map<String, Object> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error al actualizar insumo: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+    
+    /**
+     * Obtener un insumo con sus dosis de aplicación
+     */
+    @GetMapping("/{id}/con-dosis")
+    public ResponseEntity<?> getInsumoConDosis(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            com.agrocloud.dto.InsumoConDosisDTO insumo = insumoService.getInsumoConDosis(id);
+            
+            return ResponseEntity.ok(insumo);
+        } catch (Exception e) {
+            System.err.println("[INSUMO_CONTROLLER] ERROR: " + e.getMessage());
+            e.printStackTrace();
+            
+            java.util.Map<String, Object> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error al obtener insumo: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+    
+    /**
+     * Verificar si un insumo tiene dosis configuradas
+     */
+    @GetMapping("/{id}/tiene-dosis")
+    public ResponseEntity<?> tieneDosisConfiguradas(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            boolean tieneDosis = insumoService.tieneDosisConfiguradas(id);
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("tieneDosis", tieneDosis);
+            response.put("mensaje", tieneDosis ? 
+                "Este insumo tiene dosis configuradas" : 
+                "Este insumo NO tiene dosis configuradas. Se recomienda configurarlas.");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("[INSUMO_CONTROLLER] ERROR: " + e.getMessage());
+            e.printStackTrace();
+            
+            java.util.Map<String, Object> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error al verificar dosis: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
 }

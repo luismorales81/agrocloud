@@ -3,7 +3,7 @@ import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
 import { exportService } from '../services/ExportService';
 import type { ExportOptions } from '../services/ExportService';
-import api from '../services/api';
+import { reportesService } from '../services/apiServices';
 
 // interface ReportData {
 //   id: number;
@@ -111,52 +111,44 @@ const ReportsManagement: React.FC = () => {
       switch (tipo) {
         case 'rindes':
           console.log('🔍 [REPORTS] Llamando API de rendimiento...');
-          const rendimientoResponse = await api.get('/v1/reportes/rendimiento', {
-            params: params
-          });
-          console.log('✅ [REPORTS] Respuesta de rendimiento:', rendimientoResponse.data);
-          console.log('🔍 [REPORTS] Tipo de datos:', typeof rendimientoResponse.data, 'Es array:', Array.isArray(rendimientoResponse.data));
+          const rendimientoData = await reportesService.obtenerRendimiento(params);
+          console.log('✅ [REPORTS] Respuesta de rendimiento:', rendimientoData);
+          console.log('🔍 [REPORTS] Tipo de datos:', typeof rendimientoData, 'Es array:', Array.isArray(rendimientoData));
           data = {
             titulo: 'Reporte de Rindes por Lote',
             fechaGeneracion: new Date().toLocaleDateString('es-ES'),
-            datos: rendimientoResponse.data,
-            estadisticas: calcularEstadisticasRendimiento(rendimientoResponse.data)
+            datos: rendimientoData,
+            estadisticas: calcularEstadisticasRendimiento(rendimientoData)
           };
           break;
         case 'produccion':
           console.log('🔍 [REPORTS] Llamando API de estadísticas de producción...');
-          const estadisticasResponse = await api.get('/v1/reportes/estadisticas-produccion', {
-            params: params
-          });
-          console.log('✅ [REPORTS] Respuesta de estadísticas:', estadisticasResponse.data);
-          data = estadisticasResponse.data; // El backend ya devuelve la estructura correcta
+          const estadisticasData = await reportesService.obtenerEstadisticasProduccion(params);
+          console.log('✅ [REPORTS] Respuesta de estadísticas:', estadisticasData);
+          data = estadisticasData; // El backend ya devuelve la estructura correcta
           break;
         case 'cosechas':
           console.log('🔍 [REPORTS] Llamando API de cosechas...');
-          const cosechasResponse = await api.get('/v1/reportes/cosechas', {
-            params: params
-          });
-          console.log('✅ [REPORTS] Respuesta de cosechas:', cosechasResponse.data);
-          console.log('🔍 [REPORTS] Tipo de datos cosechas:', typeof cosechasResponse.data, 'Es array:', Array.isArray(cosechasResponse.data));
+          const cosechasData = await reportesService.obtenerCosechas(params);
+          console.log('✅ [REPORTS] Respuesta de cosechas:', cosechasData);
+          console.log('🔍 [REPORTS] Tipo de datos cosechas:', typeof cosechasData, 'Es array:', Array.isArray(cosechasData));
           data = {
             titulo: 'Reporte de Cosechas',
             fechaGeneracion: new Date().toLocaleDateString('es-ES'),
-            datos: cosechasResponse.data,
-            estadisticas: calcularEstadisticasCosechas(cosechasResponse.data)
+            datos: cosechasData,
+            estadisticas: calcularEstadisticasCosechas(cosechasData)
           };
           break;
         case 'rentabilidad':
           console.log('🔍 [REPORTS] Llamando API de rentabilidad...');
-          const rentabilidadResponse = await api.get('/v1/reportes/rentabilidad', {
-            params: params
-          });
-          console.log('✅ [REPORTS] Respuesta de rentabilidad:', rentabilidadResponse.data);
-          console.log('🔍 [REPORTS] Tipo de datos rentabilidad:', typeof rentabilidadResponse.data, 'Es array:', Array.isArray(rentabilidadResponse.data));
+          const rentabilidadData = await reportesService.obtenerRentabilidad(params);
+          console.log('✅ [REPORTS] Respuesta de rentabilidad:', rentabilidadData);
+          console.log('🔍 [REPORTS] Tipo de datos rentabilidad:', typeof rentabilidadData, 'Es array:', Array.isArray(rentabilidadData));
           data = {
             titulo: 'Reporte de Rentabilidad por Cultivo',
             fechaGeneracion: new Date().toLocaleDateString('es-ES'),
-            datos: rentabilidadResponse.data,
-            estadisticas: calcularEstadisticasRentabilidad(rentabilidadResponse.data)
+            datos: rentabilidadData,
+            estadisticas: calcularEstadisticasRentabilidad(rentabilidadData)
           };
           break;
         default:

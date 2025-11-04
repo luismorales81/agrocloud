@@ -5,6 +5,7 @@ import com.agrocloud.dto.RoleDTO;
 import com.agrocloud.model.entity.EstadoUsuario;
 import com.agrocloud.model.entity.Role;
 import com.agrocloud.model.entity.User;
+import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.repository.UserRepository;
 import com.agrocloud.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,22 +38,65 @@ public class AdminUsuarioService {
     
     @Autowired
     private EmpresaUsuarioService empresaUsuarioService;
+    
+    @Autowired
+    private UserService userService;
 
 
     /**
      * Obtener todos los usuarios para administración
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<AdminUsuarioDTO> obtenerTodosLosUsuarios() {
         System.out.println("════════════════════════════════════════════════════════");
-        System.out.println("📋 [AdminUsuarioService] OBTENER TODOS LOS USUARIOS - VERSION 2.0");
+        System.out.println("📋 [AdminUsuarioService] OBTENER TODOS LOS USUARIOS - VERSION 3.0");
         System.out.println("════════════════════════════════════════════════════════");
         List<User> usuarios = userRepository.findAllWithRoles();
         System.out.println("✅ Usuarios encontrados en BD: " + usuarios.size());
         
+        // Inicializar relaciones lazy para todos los usuarios dentro de la transacción
+        for (User usuario : usuarios) {
+            try {
+                // Inicializar usuarioEmpresas (ya debería estar cargado con JOIN FETCH)
+                if (usuario.getUsuarioEmpresas() != null) {
+                    usuario.getUsuarioEmpresas().size();
+                    usuario.getUsuarioEmpresas().forEach(ue -> {
+                        if (ue.getRol() != null) ue.getRol().name();
+                        if (ue.getEmpresa() != null) ue.getEmpresa().getId();
+                    });
+                }
+                // Inicializar roles del sistema legacy
+                if (usuario.getRoles() != null) {
+                    usuario.getRoles().size();
+                    usuario.getRoles().forEach(role -> {
+                        if (role != null) role.getNombre();
+                    });
+                }
+                // Inicializar userCompanyRoles (sistema antiguo)
+                if (usuario.getUserCompanyRoles() != null) {
+                    usuario.getUserCompanyRoles().size();
+                    usuario.getUserCompanyRoles().forEach(ucr -> {
+                        if (ucr.getRol() != null) ucr.getRol().getNombre();
+                        if (ucr.getEmpresa() != null) ucr.getEmpresa().getId();
+                    });
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ [AdminUsuarioService] Error inicializando relaciones lazy para usuario " + usuario.getEmail() + ": " + e.getMessage());
+            }
+        }
+        
         if (!usuarios.isEmpty()) {
             User primerUsuario = usuarios.get(0);
             System.out.println("👤 Primer usuario: " + primerUsuario.getEmail());
-            System.out.println("🎭 Roles del primer usuario: " + primerUsuario.getRoles());
+            System.out.println("🎭 Roles del primer usuario (legacy): " + primerUsuario.getRoles());
+            if (primerUsuario.getUsuarioEmpresas() != null) {
+                System.out.println("🎭 UsuarioEmpresas del primer usuario: " + primerUsuario.getUsuarioEmpresas().size());
+                primerUsuario.getUsuarioEmpresas().forEach(ue -> {
+                    if (ue.getRol() != null) {
+                        System.out.println("  - Rol: " + ue.getRol().name() + ", Estado: " + ue.getEstado());
+                    }
+                });
+            }
         }
         
         List<AdminUsuarioDTO> usuariosDTO = usuarios.stream()
@@ -71,6 +115,7 @@ public class AdminUsuarioService {
     /**
      * Obtener usuarios subordinados de un usuario específico
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<AdminUsuarioDTO> obtenerUsuariosSubordinados(Long usuarioId) {
         System.out.println("🔍 [AdminUsuarioService] Obteniendo usuarios subordinados para usuario ID: " + usuarioId);
         
@@ -92,6 +137,43 @@ public class AdminUsuarioService {
             usuariosSubordinados = new ArrayList<>(usuariosUnicos);
         }
         
+        // Inicializar relaciones lazy para todos los usuarios dentro de la transacción
+        for (User usuario : usuariosSubordinados) {
+            try {
+                // Cargar usuario con todas las relaciones si no están cargadas
+                if (usuario.getUsuarioEmpresas() == null || usuario.getUsuarioEmpresas().isEmpty()) {
+                    User usuarioCompleto = userRepository.findByEmailWithAllRelations(usuario.getEmail()).orElse(usuario);
+                    // Copiar relaciones si están cargadas
+                    if (usuarioCompleto.getUsuarioEmpresas() != null && !usuarioCompleto.getUsuarioEmpresas().isEmpty()) {
+                        // Las relaciones ya están en el objeto original si se usó findAllWithRoles
+                    }
+                }
+                // Inicializar relaciones lazy
+                if (usuario.getUsuarioEmpresas() != null) {
+                    usuario.getUsuarioEmpresas().size();
+                    usuario.getUsuarioEmpresas().forEach(ue -> {
+                        if (ue.getRol() != null) ue.getRol().name();
+                        if (ue.getEmpresa() != null) ue.getEmpresa().getId();
+                    });
+                }
+                if (usuario.getRoles() != null) {
+                    usuario.getRoles().size();
+                    usuario.getRoles().forEach(role -> {
+                        if (role != null) role.getNombre();
+                    });
+                }
+                if (usuario.getUserCompanyRoles() != null) {
+                    usuario.getUserCompanyRoles().size();
+                    usuario.getUserCompanyRoles().forEach(ucr -> {
+                        if (ucr.getRol() != null) ucr.getRol().getNombre();
+                        if (ucr.getEmpresa() != null) ucr.getEmpresa().getId();
+                    });
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ [AdminUsuarioService] Error inicializando relaciones lazy para usuario " + usuario.getEmail() + ": " + e.getMessage());
+            }
+        }
+        
         List<AdminUsuarioDTO> usuariosDTO = usuariosSubordinados.stream()
                 .map(this::convertirAAdminDTO)
                 .collect(Collectors.toList());
@@ -103,9 +185,41 @@ public class AdminUsuarioService {
     /**
      * Obtener usuario por ID para administración
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public AdminUsuarioDTO obtenerUsuarioPorId(Long id) {
-        User usuario = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+        // Cargar usuario con todas las relaciones
+        User usuario = userService.findByEmailWithAllRelationsCombined(
+            userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id))
+                .getEmail()
+        );
+        
+        // Inicializar relaciones lazy dentro de la transacción
+        try {
+            if (usuario.getUsuarioEmpresas() != null) {
+                usuario.getUsuarioEmpresas().size();
+                usuario.getUsuarioEmpresas().forEach(ue -> {
+                    if (ue.getRol() != null) ue.getRol().name();
+                    if (ue.getEmpresa() != null) ue.getEmpresa().getId();
+                });
+            }
+            if (usuario.getRoles() != null) {
+                usuario.getRoles().size();
+                usuario.getRoles().forEach(role -> {
+                    if (role != null) role.getNombre();
+                });
+            }
+            if (usuario.getUserCompanyRoles() != null) {
+                usuario.getUserCompanyRoles().size();
+                usuario.getUserCompanyRoles().forEach(ucr -> {
+                    if (ucr.getRol() != null) ucr.getRol().getNombre();
+                    if (ucr.getEmpresa() != null) ucr.getEmpresa().getId();
+                });
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ [AdminUsuarioService] Error inicializando relaciones lazy para usuario ID " + id + ": " + e.getMessage());
+        }
+        
         return convertirAAdminDTO(usuario);
     }
 
@@ -113,9 +227,24 @@ public class AdminUsuarioService {
      * Crear nuevo usuario con prevención automática de jerarquía
      */
     public AdminUsuarioDTO crearUsuario(AdminUsuarioDTO usuarioDTO, User creadoPor) {
-        // VALIDACIÓN DE PERMISOS: Solo ADMIN puede crear usuarios
-        if (creadoPor == null || !tienePermisoParaCrearUsuarios(creadoPor)) {
-            throw new RuntimeException("No tienes permisos para crear usuarios. Solo los administradores pueden crear nuevos usuarios en el sistema.");
+        // VALIDACIÓN DE PERMISOS: Solo ADMIN o SUPERADMIN pueden crear usuarios
+        if (creadoPor == null) {
+            throw new RuntimeException("No se pudo identificar al usuario que está creando el nuevo usuario.");
+        }
+        
+        // Agregar logging para debug
+        System.out.println("🔍 [AdminUsuarioService] Verificando permisos para crear usuario:");
+        System.out.println("  - Usuario: " + creadoPor.getEmail());
+        System.out.println("  - isSuperAdmin: " + creadoPor.isSuperAdmin());
+        System.out.println("  - isAdmin: " + creadoPor.isAdmin());
+        System.out.println("  - tienePermisoParaCrearUsuarios: " + tienePermisoParaCrearUsuarios(creadoPor));
+        
+        if (!tienePermisoParaCrearUsuarios(creadoPor)) {
+            System.err.println("❌ [AdminUsuarioService] Usuario sin permisos para crear usuarios:");
+            System.err.println("  - Email: " + creadoPor.getEmail());
+            System.err.println("  - isSuperAdmin: " + creadoPor.isSuperAdmin());
+            System.err.println("  - isAdmin: " + creadoPor.isAdmin());
+            throw new RuntimeException("No tienes permisos para crear usuarios. Solo los administradores (ADMINISTRADOR o SUPERADMIN) pueden crear nuevos usuarios en el sistema.");
         }
 
         // Validar que el email y username no existan
@@ -139,8 +268,8 @@ public class AdminUsuarioService {
         nuevoUsuario.setActivo(true);
         nuevoUsuario.setEmailVerified(false);
         
-        // PREVENCIÓN AUTOMÁTICA: Siempre asignar creador
-        nuevoUsuario.setCreadoPor(creadoPor != null ? creadoPor : obtenerUsuarioAdminPorDefecto());
+        // PREVENCIÓN AUTOMÁTICA: Siempre asignar creador (ya validado antes que no sea null)
+        nuevoUsuario.setCreadoPor(creadoPor);
 
         // PREVENCIÓN AUTOMÁTICA: Asignar jerarquía automáticamente
         nuevoUsuario.setParentUser(asignarUsuarioPadreAutomaticamente(usuarioDTO, creadoPor));
@@ -159,7 +288,12 @@ public class AdminUsuarioService {
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
-            System.out.println("✅ Roles encontrados: " + roles);
+            System.out.println("✅ Roles encontrados: " + roles.size() + " roles");
+            
+            if (roles.isEmpty()) {
+                System.err.println("❌ No se encontraron roles válidos para los IDs proporcionados: " + usuarioDTO.getRoleIds());
+                throw new RuntimeException("No se encontraron roles válidos para los IDs proporcionados. Verifica que los roles existan y estén activos.");
+            }
             
             // Obtener la empresa del administrador que está creando el usuario
             var empresaOpt = empresaContextService.obtenerEmpresaPrincipalDelUsuario(creadoPor.getId());
@@ -172,12 +306,16 @@ public class AdminUsuarioService {
                 // Asignar usuario a la empresa en la tabla usuario_empresas
                 System.out.println("🏢 Asignando usuario a empresa en tabla usuario_empresas...");
                 try {
-                    // Mapear el rol del sistema al rol de empresa
-                    com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(roles.iterator().next());
-                    empresaUsuarioService.asignarUsuarioAEmpresa(usuarioCreado.getId(), empresaOpt.get().getId(), rolEmpresa, creadoPor);
-                    System.out.println("✅ Usuario asignado exitosamente a empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    // Mapear el rol del sistema al rol de empresa (usar el primer rol encontrado)
+                    Role primerRol = roles.iterator().next();
+                    if (primerRol != null) {
+                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(primerRol);
+                        empresaUsuarioService.asignarUsuarioAEmpresa(usuarioCreado.getId(), empresaOpt.get().getId(), rolEmpresa, creadoPor);
+                        System.out.println("✅ Usuario asignado exitosamente a empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    }
                 } catch (Exception e) {
                     System.err.println("⚠️ Error asignando usuario a empresa: " + e.getMessage());
+                    e.printStackTrace();
                     // No lanzar excepción para no fallar la creación del usuario
                 }
             } else {
@@ -190,7 +328,12 @@ public class AdminUsuarioService {
                     .map(roleDTO -> roleRepository.findById(roleDTO.getId()).orElse(null))
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
-            System.out.println("✅ Roles encontrados: " + roles);
+            System.out.println("✅ Roles encontrados: " + roles.size() + " roles");
+            
+            if (roles.isEmpty()) {
+                System.err.println("❌ No se encontraron roles válidos para los IDs proporcionados en el DTO");
+                throw new RuntimeException("No se encontraron roles válidos para los IDs proporcionados. Verifica que los roles existan y estén activos.");
+            }
             
             // Obtener la empresa del administrador que está creando el usuario
             var empresaOpt = empresaContextService.obtenerEmpresaPrincipalDelUsuario(creadoPor.getId());
@@ -203,12 +346,16 @@ public class AdminUsuarioService {
                 // Asignar usuario a la empresa en la tabla usuario_empresas
                 System.out.println("🏢 Asignando usuario a empresa en tabla usuario_empresas...");
                 try {
-                    // Mapear el rol del sistema al rol de empresa
-                    com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(roles.iterator().next());
-                    empresaUsuarioService.asignarUsuarioAEmpresa(usuarioCreado.getId(), empresaOpt.get().getId(), rolEmpresa, creadoPor);
-                    System.out.println("✅ Usuario asignado exitosamente a empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    // Mapear el rol del sistema al rol de empresa (usar el primer rol encontrado)
+                    Role primerRol = roles.iterator().next();
+                    if (primerRol != null) {
+                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(primerRol);
+                        empresaUsuarioService.asignarUsuarioAEmpresa(usuarioCreado.getId(), empresaOpt.get().getId(), rolEmpresa, creadoPor);
+                        System.out.println("✅ Usuario asignado exitosamente a empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    }
                 } catch (Exception e) {
                     System.err.println("⚠️ Error asignando usuario a empresa: " + e.getMessage());
+                    e.printStackTrace();
                     // No lanzar excepción para no fallar la creación del usuario
                 }
             } else {
@@ -273,6 +420,21 @@ public class AdminUsuarioService {
             if (empresaOpt.isPresent()) {
                 System.out.println("🏢 Asignando roles para empresa: " + empresaOpt.get().getId());
                 usuario.setRolesConEmpresa(roles, empresaOpt.get());
+                
+                // Actualizar o crear entrada en la tabla usuario_empresas
+                System.out.println("🏢 Actualizando usuario en tabla usuario_empresas...");
+                try {
+                    // Mapear el rol del sistema al rol de empresa
+                    if (!roles.isEmpty()) {
+                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(roles.iterator().next());
+                        empresaUsuarioService.asignarUsuarioAEmpresa(usuario.getId(), empresaOpt.get().getId(), rolEmpresa, actualizadoPor);
+                        System.out.println("✅ Usuario actualizado exitosamente en empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    }
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error actualizando usuario en empresa: " + e.getMessage());
+                    e.printStackTrace();
+                    // No lanzar excepción para no fallar la actualización del usuario
+                }
             } else {
                 System.out.println("❌ No se pudo determinar empresa para asignar roles");
                 throw new RuntimeException("No se puede asignar rol sin empresa. El usuario debe estar asociado a al menos una empresa.");
@@ -300,6 +462,21 @@ public class AdminUsuarioService {
             if (empresaOpt.isPresent()) {
                 System.out.println("🏢 Asignando roles para empresa: " + empresaOpt.get().getId());
                 usuario.setRolesConEmpresa(roles, empresaOpt.get());
+                
+                // Actualizar o crear entrada en la tabla usuario_empresas
+                System.out.println("🏢 Actualizando usuario en tabla usuario_empresas...");
+                try {
+                    // Mapear el rol del sistema al rol de empresa
+                    if (!roles.isEmpty()) {
+                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(roles.iterator().next());
+                        empresaUsuarioService.asignarUsuarioAEmpresa(usuario.getId(), empresaOpt.get().getId(), rolEmpresa, actualizadoPor);
+                        System.out.println("✅ Usuario actualizado exitosamente en empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    }
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error actualizando usuario en empresa: " + e.getMessage());
+                    e.printStackTrace();
+                    // No lanzar excepción para no fallar la actualización del usuario
+                }
             } else {
                 System.out.println("❌ No se pudo determinar empresa para asignar roles");
                 throw new RuntimeException("No se puede asignar rol sin empresa. El usuario debe estar asociado a al menos una empresa.");
@@ -491,13 +668,90 @@ public class AdminUsuarioService {
             dto.setCreadoPorEmail(user.getCreadoPor().getEmail());
         }
 
-        // Roles
-        if (user.getRoles() != null) {
-            Set<RoleDTO> rolesDTO = user.getRoles().stream()
-                    .map(this::convertirARoleDTO)
-                    .collect(Collectors.toSet());
-            dto.setRoles(rolesDTO);
+        // Roles - Buscar en ambos sistemas (nuevo y legacy)
+        Set<RoleDTO> rolesDTO = new HashSet<>();
+        
+        // Lista de roles válidos según el enum RolEmpresa
+        Set<String> rolesValidos = Set.of(
+            "SUPERADMIN", 
+            "ADMINISTRADOR", 
+            "JEFE_CAMPO", 
+            "JEFE_FINANCIERO", 
+            "OPERARIO", 
+            "CONSULTOR_EXTERNO"
+        );
+        
+        // PRIMERO: Buscar roles en el sistema nuevo (usuario_empresas)
+        try {
+            if (user.getUsuarioEmpresas() != null && !user.getUsuarioEmpresas().isEmpty()) {
+                for (com.agrocloud.model.entity.UsuarioEmpresa ue : user.getUsuarioEmpresas()) {
+                    if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO && ue.getRol() != null) {
+                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = ue.getRol();
+                        // Aplicar mapeo de roles deprecated a roles nuevos
+                        com.agrocloud.model.enums.RolEmpresa rolActualizado = rolEmpresa.getRolActualizado();
+                        String nombreRol = rolActualizado.name(); // ADMINISTRADOR, SUPERADMIN, etc.
+                        
+                        // Solo agregar si es un rol válido
+                        if (rolesValidos.contains(nombreRol)) {
+                            // Buscar el Role correspondiente en la base de datos por nombre
+                            Role role = roleRepository.findByNombre(nombreRol).orElse(null);
+                            if (role != null) {
+                                rolesDTO.add(convertirARoleDTO(role));
+                            } else {
+                                // Si no existe el Role en la BD, crear un RoleDTO directamente desde el enum
+                                RoleDTO roleDTO = new RoleDTO();
+                                roleDTO.setName(nombreRol);
+                                roleDTO.setDescription(rolActualizado.getDescripcion());
+                                // ID será null si no existe en BD
+                                rolesDTO.add(roleDTO);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ [AdminUsuarioService] Error obteniendo roles del sistema nuevo: " + e.getMessage());
         }
+        
+        // SEGUNDO: Si no se encontraron roles en el sistema nuevo, buscar en el sistema legacy
+        // Filtrar solo roles válidos según el enum RolEmpresa
+        if (rolesDTO.isEmpty() && user.getRoles() != null && !user.getRoles().isEmpty()) {
+            rolesDTO = user.getRoles().stream()
+                    .filter(role -> {
+                        String nombre = role.getNombre();
+                        // Solo incluir roles válidos o roles que se mapean correctamente
+                        return rolesValidos.contains(nombre) || 
+                               // Mapear roles deprecated a sus equivalentes nuevos
+                               (nombre != null && (
+                                   nombre.equals("PRODUCTOR") || nombre.equals("ASESOR") || nombre.equals("TECNICO") ||
+                                   nombre.equals("CONTADOR") || nombre.equals("LECTURA")
+                               ));
+                    })
+                    .map(role -> {
+                        String nombre = role.getNombre();
+                        // Mapear roles deprecated a roles nuevos
+                        String rolMapeado = nombre;
+                        if (nombre.equals("PRODUCTOR") || nombre.equals("ASESOR") || nombre.equals("TECNICO")) {
+                            rolMapeado = "JEFE_CAMPO";
+                        } else if (nombre.equals("CONTADOR")) {
+                            rolMapeado = "JEFE_FINANCIERO";
+                        } else if (nombre.equals("LECTURA")) {
+                            rolMapeado = "CONSULTOR_EXTERNO";
+                        }
+                        
+                        // Buscar el rol mapeado en la BD
+                        Role roleMapeado = roleRepository.findByNombre(rolMapeado).orElse(role);
+                        RoleDTO roleDto = convertirARoleDTO(roleMapeado);
+                        // Si el nombre original es diferente, mantener el nombre original para referencia
+                        if (!nombre.equals(rolMapeado)) {
+                            roleDto.setName(rolMapeado); // Pero mostrar el nombre del rol nuevo
+                        }
+                        return roleDto;
+                    })
+                    .collect(Collectors.toSet());
+        }
+        
+        dto.setRoles(rolesDTO);
 
         // Información de jerarquía
         if (user.getParentUser() != null) {
@@ -534,11 +788,52 @@ public class AdminUsuarioService {
      */
     private User obtenerUsuarioAdminPorDefecto() {
         // Buscar el primer SUPERADMIN o ADMINISTRADOR disponible
-        return userRepository.findAll().stream()
-                .filter(u -> u.getRoles().stream()
-                        .anyMatch(r -> "SUPERADMIN".equals(r.getNombre()) || "ADMINISTRADOR".equals(r.getNombre())))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No se encontró usuario ADMINISTRADOR para asignaciones automáticas"));
+        // Usar findAllWithRoles() que carga usuarioEmpresas con JOIN FETCH
+        List<User> todosUsuarios = userRepository.findAllWithRoles();
+        
+        System.out.println("🔍 [AdminUsuarioService] Buscando usuario admin por defecto entre " + todosUsuarios.size() + " usuarios");
+        
+        for (User u : todosUsuarios) {
+            try {
+                // Inicializar relaciones lazy que no se cargaron con JOIN FETCH
+                // usuarioEmpresas ya debería estar cargado por findAllWithRoles()
+                if (u.getUsuarioEmpresas() != null) {
+                    u.getUsuarioEmpresas().size(); // Asegurar inicialización
+                    u.getUsuarioEmpresas().forEach(ue -> {
+                        if (ue.getRol() != null) ue.getRol().name();
+                        if (ue.getEmpresa() != null) ue.getEmpresa().getId();
+                    });
+                }
+                
+                // Cargar userCompanyRoles (sistema legacy) si es necesario
+                if (u.getUserCompanyRoles() != null) {
+                    u.getUserCompanyRoles().size();
+                    u.getUserCompanyRoles().forEach(ucr -> {
+                        if (ucr.getRol() != null) ucr.getRol().getNombre();
+                        if (ucr.getEmpresa() != null) ucr.getEmpresa().getId();
+                    });
+                }
+                
+                // Cargar roles (sistema legacy directo)
+                if (u.getRoles() != null) {
+                    u.getRoles().size();
+                    u.getRoles().forEach(role -> {
+                        if (role != null) role.getNombre();
+                    });
+                }
+                
+                // Usar isSuperAdmin() e isAdmin() que revisan ambos sistemas
+                if (u.isSuperAdmin() || u.isAdmin()) {
+                    System.out.println("✅ [AdminUsuarioService] Usuario admin encontrado por defecto: " + u.getEmail());
+                    return u;
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ [AdminUsuarioService] Error verificando usuario " + u.getEmail() + ": " + e.getMessage());
+                // Continuar con el siguiente usuario
+            }
+        }
+        
+        throw new RuntimeException("No se encontró usuario ADMINISTRADOR o SUPERADMIN para asignaciones automáticas");
     }
 
     /**
@@ -552,10 +847,10 @@ public class AdminUsuarioService {
         }
 
         // Si el creador es SUPERADMIN o ADMINISTRADOR, asignarlo como padre
-        if (creadoPor != null && creadoPor.getRoles() != null) {
-            boolean esAdmin = creadoPor.getRoles().stream()
-                    .anyMatch(r -> "SUPERADMIN".equals(r.getNombre()) || "ADMINISTRADOR".equals(r.getNombre()));
-            if (esAdmin) {
+        if (creadoPor != null) {
+            // Usar isAdmin() e isSuperAdmin() que revisan ambos sistemas de roles
+            if (creadoPor.isSuperAdmin() || creadoPor.isAdmin()) {
+                System.out.println("✅ [AdminUsuarioService] Asignando creador como padre (es admin): " + creadoPor.getEmail());
                 return creadoPor;
             }
         }
@@ -621,13 +916,13 @@ public class AdminUsuarioService {
      * Verificar si un usuario tiene permisos para crear otros usuarios
      */
     private boolean tienePermisoParaCrearUsuarios(User usuario) {
-        if (usuario == null || usuario.getRoles() == null) {
+        if (usuario == null) {
             return false;
         }
 
-        // Solo ADMINISTRADOR puede crear usuarios
-        return usuario.getRoles().stream()
-                .anyMatch(role -> "ADMINISTRADOR".equals(role.getNombre()));
+        // Usar isAdmin() y isSuperAdmin() que revisan ambos sistemas de roles (nuevo y legacy)
+        // SUPERADMIN y ADMINISTRADOR pueden crear usuarios
+        return usuario.isSuperAdmin() || usuario.isAdmin();
     }
 
     /**
@@ -674,13 +969,17 @@ public class AdminUsuarioService {
 
     /**
      * Verificar si un usuario es ADMINISTRADOR (no SUPERADMIN)
+     * Usa el método isAdmin() que revisa ambos sistemas (nuevo y legacy)
      */
     private boolean esAdministrador(User usuario) {
-        if (usuario == null || usuario.getRoles() == null) {
+        if (usuario == null) {
             return false;
         }
-        return usuario.getRoles().stream()
-                .anyMatch(role -> "ADMINISTRADOR".equals(role.getNombre()));
+        // Usar isAdmin() que ya revisa ambos sistemas de roles
+        // pero verificar que NO sea SUPERADMIN
+        boolean esAdmin = usuario.isAdmin();
+        boolean esSuperAdmin = usuario.isSuperAdmin();
+        return esAdmin && !esSuperAdmin; // Es admin pero no superadmin
     }
 
     /**
@@ -715,23 +1014,27 @@ public class AdminUsuarioService {
                 return com.agrocloud.model.enums.RolEmpresa.SUPERADMIN;
             case "ADMINISTRADOR":
                 return com.agrocloud.model.enums.RolEmpresa.ADMINISTRADOR;
-            case "ASESOR":
-                return com.agrocloud.model.enums.RolEmpresa.ASESOR;
-            case "TECNICO":
-                return com.agrocloud.model.enums.RolEmpresa.TECNICO;
+            case "JEFE_CAMPO":
+                return com.agrocloud.model.enums.RolEmpresa.JEFE_CAMPO;
+            case "JEFE_FINANCIERO":
+                return com.agrocloud.model.enums.RolEmpresa.JEFE_FINANCIERO;
             case "OPERARIO":
                 return com.agrocloud.model.enums.RolEmpresa.OPERARIO;
+            case "CONSULTOR_EXTERNO":
+                return com.agrocloud.model.enums.RolEmpresa.CONSULTOR_EXTERNO;
+            // Roles deprecated - mapear a roles nuevos
+            case "ASESOR":
+            case "TECNICO":
             case "PRODUCTOR":
-                return com.agrocloud.model.enums.RolEmpresa.PRODUCTOR;
+                return com.agrocloud.model.enums.RolEmpresa.JEFE_CAMPO;
             case "CONTADOR":
-                return com.agrocloud.model.enums.RolEmpresa.CONTADOR;
+                return com.agrocloud.model.enums.RolEmpresa.JEFE_FINANCIERO;
             case "LECTURA":
-                return com.agrocloud.model.enums.RolEmpresa.LECTURA;
             case "INVITADO":
-                return com.agrocloud.model.enums.RolEmpresa.LECTURA; // INVITADO se mapea a LECTURA
+                return com.agrocloud.model.enums.RolEmpresa.CONSULTOR_EXTERNO;
             default:
-                System.out.println("⚠️ Rol no reconocido: " + nombreRol + ", usando LECTURA por defecto");
-                return com.agrocloud.model.enums.RolEmpresa.LECTURA;
+                System.out.println("⚠️ Rol no reconocido: " + nombreRol + ", usando CONSULTOR_EXTERNO por defecto");
+                return com.agrocloud.model.enums.RolEmpresa.CONSULTOR_EXTERNO;
         }
     }
 

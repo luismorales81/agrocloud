@@ -10,7 +10,7 @@ const TrendingUp = () => <span>📈</span>;
 const TrendingDown = () => <span>📉</span>;
 const DollarSign = () => <span>💰</span>;
 const BarChart3 = () => <span>📊</span>;
-import api from '../services/api';
+import { lotesService, balanceService } from '../services/apiServices';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useCurrencyUpdate } from '../hooks/useCurrencyUpdate';
 
@@ -115,8 +115,8 @@ const BalanceReport: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const response = await api.get('/v1/lotes');
-      setLotes(response.data);
+      const lotesData = await lotesService.listar();
+      setLotes(Array.isArray(lotesData) ? lotesData : []);
     } catch (error) {
       console.error('Error cargando lotes:', error);
     }
@@ -138,19 +138,20 @@ const BalanceReport: React.FC = () => {
     setErrorFechas('');
     setLoading(true);
     try {
-      let url = '';
+      let balanceData;
       if (tipoReporte === 'general') {
-        url = `/v1/balance/general?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+        balanceData = await balanceService.obtenerGeneral(fechaInicio, fechaFin);
       } else if (tipoReporte === 'lote') {
-        url = `/v1/balance/lote/${loteId}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+        balanceData = await balanceService.obtenerPorLote(loteId, fechaInicio, fechaFin);
       } else if (tipoReporte === 'mes-actual') {
-        url = '/v1/balance/mes-actual';
+        balanceData = await balanceService.obtenerMesActual();
       } else if (tipoReporte === 'año-actual') {
-        url = '/v1/balance/año-actual';
+        balanceData = await balanceService.obtenerAñoActual();
+      } else {
+        balanceData = null;
       }
 
-      const response = await api.get(url);
-      setBalance(response.data);
+      setBalance(balanceData);
     } catch (error) {
       console.error('Error generando reporte:', error);
       alert('Error al generar el reporte de balance');
