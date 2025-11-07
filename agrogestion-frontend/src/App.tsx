@@ -142,10 +142,7 @@ const Dashboard: React.FC = () => {
           totalEgresos: data.totalEgresos || 0,
           valorActivos: data.valorActivos || 0
         });
-        
-        console.log('✅ [Dashboard] Estadísticas cargadas exitosamente:', data);
       } catch (error) {
-        console.error('❌ [Dashboard] Error cargando estadísticas:', error);
         // Usar valores por defecto si hay error
         setDashboardStats({
           campos: 0,
@@ -178,18 +175,12 @@ const Dashboard: React.FC = () => {
   };
 
   const renderPage = () => {
-    console.log('🔍 [App] Renderizando página. Usuario:', user);
-    console.log('🔍 [App] Rol del usuario:', user?.roleName);
-    console.log('🔍 [App] Página activa:', activePage);
-    
     // Solo SUPERADMIN puede ver AdminGlobalDashboard como dashboard principal
     if (user?.roleName === 'SUPERADMIN') {
-      console.log('✅ [App] Usuario es SUPERADMIN, renderizando AdminGlobalDashboard');
       if (activePage === 'dashboard' || activePage === 'admin-global') {
         return <AdminGlobalDashboard />;
       }
     } else {
-      console.log('❌ [App] Usuario NO es SUPERADMIN, rol:', user?.roleName);
     }
     
     // Los usuarios ADMINISTRADOR deben ver el dashboard normal, no el AdminDashboard
@@ -629,7 +620,7 @@ const Dashboard: React.FC = () => {
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
           }}
-          onClick={() => setActivePage('inputs')}
+          onClick={() => setActivePage('insumos-unificados')}
           >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
               <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🧪</span>

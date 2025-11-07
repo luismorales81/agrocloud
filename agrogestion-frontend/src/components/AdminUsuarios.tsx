@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { showNotification } from '../utils/notification';
 import { usuariosService } from '../services/apiServices';
 import '../styles/admin-forms.css';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Usuario {
   id: number;
@@ -48,6 +49,37 @@ const AdminUsuarios: React.FC = () => {
   const [estadisticas, setEstadisticas] = useState<Estadisticas | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const esSuperAdministrador = user?.roleName === 'SUPERADMIN';
+  const rolesGestionables = useMemo(() => {
+    const listaRoles = Array.isArray(roles) ? roles : [];
+    if (esSuperAdministrador) {
+      return listaRoles;
+    }
+    return listaRoles.filter(rol => rol.name !== 'SUPERADMIN' && rol.name !== 'ADMINISTRADOR');
+  }, [roles, esSuperAdministrador]);
+  const validarRolesPermitidos = useCallback((roleIds: number[]) => {
+    if (esSuperAdministrador) {
+      return true;
+    }
+    return roleIds.every(id => {
+      const rolEncontrado = roles.find(rol => rol.id === id);
+      if (!rolEncontrado) {
+        return true;
+      }
+      return rolEncontrado.name !== 'SUPERADMIN' && rolEncontrado.name !== 'ADMINISTRADOR';
+    });
+  }, [esSuperAdministrador, roles]);
+  const tamanioSelectorRoles = useMemo(() => {
+    const cantidad = rolesGestionables.length;
+    if (cantidad <= 4) {
+      return 4;
+    }
+    if (cantidad >= 8) {
+      return 8;
+    }
+    return cantidad;
+  }, [rolesGestionables]);
 
   // Estados para filtros
   const [filtroEstado, setFiltroEstado] = useState<string>('');
@@ -94,7 +126,6 @@ const AdminUsuarios: React.FC = () => {
   const filtrarUsuarios = useCallback(() => {
     // Verificar que usuarios sea un array
     if (!Array.isArray(usuarios)) {
-      console.error('❌ [AdminUsuarios] usuarios no es un array:', usuarios);
       return [];
     }
     
@@ -130,13 +161,10 @@ const AdminUsuarios: React.FC = () => {
       try {
         const usuariosData = await usuariosService.listar();
         const usuariosArray = Array.isArray(usuariosData) ? usuariosData : [];
-        console.log('📊 [AdminUsuarios] Usuarios cargados del backend:', usuariosArray);
         if (usuariosArray.length > 0) {
-          console.log('📊 [AdminUsuarios] Primer usuario con roles:', usuariosArray[0]);
         }
         setUsuarios(usuariosArray);
       } catch (error) {
-        console.error('❌ [AdminUsuarios] Error cargando usuarios:', error);
         setUsuarios([]);
       }
 
@@ -146,7 +174,6 @@ const AdminUsuarios: React.FC = () => {
         const rolesArray = Array.isArray(rolesData) ? rolesData : [];
         setRoles(rolesArray);
       } catch (error) {
-        console.error('❌ [AdminUsuarios] Error cargando roles:', error);
         setRoles([]);
       }
 
@@ -155,12 +182,9 @@ const AdminUsuarios: React.FC = () => {
         const estadisticasData = await usuariosService.obtenerEstadisticas();
         setEstadisticas(estadisticasData);
       } catch (error) {
-        console.error('❌ [AdminUsuarios] Error cargando estadísticas:', error);
       }
 
     } catch (error: any) {
-      console.error('Error cargando datos:', error);
-      
       // Si el error es 403, mostrar mensaje específico sobre permisos
       if (error.response && error.response.status === 403) {
         const errorData = error.response.data;
@@ -178,12 +202,17 @@ const AdminUsuarios: React.FC = () => {
 
   const crearUsuario = async () => {
     if (!nuevoUsuario.email || !nuevoUsuario.firstName || !nuevoUsuario.lastName || nuevoUsuario.roleIds.length === 0) {
-      showNotification('Por favor complete todos los campos obligatorios', 'error');
+      showNotification('Por favor complete todos los campos obligatorios y seleccione al menos un rol', 'error');
       return;
     }
 
     if (!nuevoUsuario.password || nuevoUsuario.password.length < 6) {
       showNotification('La contraseña debe tener al menos 6 caracteres', 'error');
+      return;
+    }
+
+    if (!validarRolesPermitidos(nuevoUsuario.roleIds)) {
+      showNotification('No tienes permisos para asignar roles de Administrador o Superadministrador', 'error');
       return;
     }
 
@@ -209,17 +238,26 @@ const AdminUsuarios: React.FC = () => {
         localStorage.removeItem('adminUsuarios.dialogCrear');
         localStorage.removeItem('adminUsuarios.nuevoUsuario');
       } catch (e) {
-        console.warn('⚠️ Error limpiando localStorage:', e);
       }
       cargarDatos();
     } catch (error) {
-      console.error('Error creando usuario:', error);
       showNotification('Error al crear usuario', 'error');
     }
   };
 
   const actualizarUsuario = async () => {
     if (!usuarioSeleccionado) return;
+
+    const rolesSeleccionados = usuarioSeleccionado.roleIds ?? [];
+    if (rolesSeleccionados.length === 0) {
+      showNotification('Seleccione al menos un rol para el usuario', 'error');
+      return;
+    }
+
+    if (!validarRolesPermitidos(rolesSeleccionados)) {
+      showNotification('No tienes permisos para asignar roles de Administrador o Superadministrador', 'error');
+      return;
+    }
 
     try {
       const usuarioData = {
@@ -240,7 +278,6 @@ const AdminUsuarios: React.FC = () => {
       setDialogEditar(false);
       cargarDatos();
     } catch (error) {
-      console.error('Error actualizando usuario:', error);
       showNotification('Error al actualizar usuario', 'error');
     }
   };
@@ -251,7 +288,6 @@ const AdminUsuarios: React.FC = () => {
       showNotification(`Estado cambiado a ${nuevoEstado}`, 'success');
       cargarDatos();
     } catch (error) {
-      console.error('Error cambiando estado:', error);
       showNotification('Error al cambiar estado', 'error');
     }
   };
@@ -262,7 +298,6 @@ const AdminUsuarios: React.FC = () => {
       showNotification(`Usuario ${activo ? 'activado' : 'desactivado'}`, 'success');
       cargarDatos();
     } catch (error) {
-      console.error('Error cambiando estado activo:', error);
       showNotification('Error al cambiar estado activo', 'error');
     }
   };
@@ -283,7 +318,6 @@ const AdminUsuarios: React.FC = () => {
       setNuevaContraseña('');
       cargarDatos();
     } catch (error) {
-      console.error('Error reseteando contraseña:', error);
       showNotification('Error al resetear contraseña', 'error');
     }
   };
@@ -515,8 +549,6 @@ const AdminUsuarios: React.FC = () => {
                               ...usuario,
                               roleIds: usuario.roles ? usuario.roles.map(r => r.id) : []
                             };
-                            console.log('📝 [AdminUsuarios] Usuario seleccionado para editar:', usuarioConRoleIds);
-                            console.log('📝 [AdminUsuarios] Roles del usuario:', usuario.roles);
                             setUsuarioSeleccionado(usuarioConRoleIds);
                             setDialogEditar(true);
                           }}
@@ -568,7 +600,6 @@ const AdminUsuarios: React.FC = () => {
                       localStorage.removeItem('adminUsuarios.dialogCrear');
                       localStorage.removeItem('adminUsuarios.nuevoUsuario');
                     } catch (e) {
-                      console.warn('⚠️ Error limpiando localStorage:', e);
                     }
                   }}
                   className="admin-modal-close"
@@ -645,21 +676,25 @@ const AdminUsuarios: React.FC = () => {
                 </div>
 
                 <div className="admin-field-group">
-                  <label className="admin-label">Rol *</label>
+                  <label className="admin-label">Roles *</label>
                   <select
-                    value={nuevoUsuario.roleIds[0] || ''}
-                    onChange={(e) => setNuevoUsuario({...nuevoUsuario, roleIds: [parseInt(e.target.value)]})}
+                    multiple
+                    value={nuevoUsuario.roleIds.map(id => id.toString())}
+                    onChange={(e) => {
+                      const seleccion = Array.from(e.target.selectedOptions).map(option => parseInt(option.value, 10));
+                      setNuevoUsuario({ ...nuevoUsuario, roleIds: seleccion });
+                    }}
                     className="admin-input"
                     required
+                    size={tamanioSelectorRoles}
                   >
-                    <option value="">Seleccionar rol</option>
-                    {Array.isArray(roles) && roles.map(rol => (
+                    {Array.isArray(rolesGestionables) && rolesGestionables.map(rol => (
                       <option key={rol.id} value={rol.id}>
                         {rol.name} - {rol.description}
                       </option>
                     ))}
                   </select>
-                  <div className="admin-help-text">Rol que tendrá el usuario en el sistema</div>
+                  <div className="admin-help-text">Seleccione uno o más roles disponibles. Use Ctrl o Shift para selección múltiple.</div>
                 </div>
 
                 <div className="admin-field-group">
@@ -685,7 +720,6 @@ const AdminUsuarios: React.FC = () => {
                       localStorage.removeItem('adminUsuarios.dialogCrear');
                       localStorage.removeItem('adminUsuarios.nuevoUsuario');
                     } catch (e) {
-                      console.warn('⚠️ Error limpiando localStorage:', e);
                     }
                   }}
                   className="admin-btn admin-btn-cancel"
@@ -741,23 +775,27 @@ const AdminUsuarios: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Roles</label>
                     <select
-                      value={usuarioSeleccionado.roleIds?.[0] || ''}
-                      onChange={(e) => setUsuarioSeleccionado({
-                        ...usuarioSeleccionado, 
-                        roleIds: e.target.value ? [parseInt(e.target.value)] : []
-                      })}
+                      multiple
+                      value={(usuarioSeleccionado.roleIds ?? []).map(id => id.toString())}
+                      onChange={(e) => {
+                        const seleccion = Array.from(e.target.selectedOptions).map(option => parseInt(option.value, 10));
+                        setUsuarioSeleccionado({
+                          ...usuarioSeleccionado,
+                          roleIds: seleccion
+                        });
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      size={tamanioSelectorRoles}
                     >
-                      <option value="">Seleccionar rol</option>
-                      {Array.isArray(roles) && roles.map(rol => (
+                      {Array.isArray(rolesGestionables) && rolesGestionables.map(rol => (
                         <option key={rol.id} value={rol.id}>
                           {rol.name} - {rol.description}
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">Cambiar el rol del usuario en el sistema</p>
+                    <p className="text-xs text-gray-500 mt-1">Seleccione todos los roles que correspondan al usuario</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>

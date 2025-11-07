@@ -2,12 +2,14 @@ package com.agrocloud.service;
 
 import com.agrocloud.dto.AdminUsuarioDTO;
 import com.agrocloud.dto.RoleDTO;
+import com.agrocloud.model.entity.Empresa;
 import com.agrocloud.model.entity.EstadoUsuario;
 import com.agrocloud.model.entity.Role;
 import com.agrocloud.model.entity.User;
-import com.agrocloud.model.enums.RolEmpresa;
+import com.agrocloud.model.entity.UserCompanyRole;
 import com.agrocloud.repository.UserRepository;
 import com.agrocloud.repository.RoleRepository;
+import com.agrocloud.repository.UserCompanyRoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,9 @@ public class AdminUsuarioService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private UserCompanyRoleRepository userCompanyRoleRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -300,7 +305,7 @@ public class AdminUsuarioService {
             
             if (empresaOpt.isPresent()) {
                 System.out.println("🏢 Asignando roles para empresa del administrador: " + empresaOpt.get().getId());
-                usuarioCreado.setRolesConEmpresa(roles, empresaOpt.get());
+                sincronizarRolesLegacy(usuarioCreado, empresaOpt.get(), roles);
                 usuarioCreado = userRepository.save(usuarioCreado);
                 
                 // Asignar usuario a la empresa en la tabla usuario_empresas
@@ -340,7 +345,7 @@ public class AdminUsuarioService {
             
             if (empresaOpt.isPresent()) {
                 System.out.println("🏢 Asignando roles para empresa del administrador: " + empresaOpt.get().getId());
-                usuarioCreado.setRolesConEmpresa(roles, empresaOpt.get());
+                sincronizarRolesLegacy(usuarioCreado, empresaOpt.get(), roles);
                 usuarioCreado = userRepository.save(usuarioCreado);
                 
                 // Asignar usuario a la empresa en la tabla usuario_empresas
@@ -419,7 +424,7 @@ public class AdminUsuarioService {
             
             if (empresaOpt.isPresent()) {
                 System.out.println("🏢 Asignando roles para empresa: " + empresaOpt.get().getId());
-                usuario.setRolesConEmpresa(roles, empresaOpt.get());
+                sincronizarRolesLegacy(usuario, empresaOpt.get(), roles);
                 
                 // Actualizar o crear entrada en la tabla usuario_empresas
                 System.out.println("🏢 Actualizando usuario en tabla usuario_empresas...");
@@ -461,7 +466,7 @@ public class AdminUsuarioService {
             
             if (empresaOpt.isPresent()) {
                 System.out.println("🏢 Asignando roles para empresa: " + empresaOpt.get().getId());
-                usuario.setRolesConEmpresa(roles, empresaOpt.get());
+                sincronizarRolesLegacy(usuario, empresaOpt.get(), roles);
                 
                 // Actualizar o crear entrada en la tabla usuario_empresas
                 System.out.println("🏢 Actualizando usuario en tabla usuario_empresas...");
@@ -777,6 +782,60 @@ public class AdminUsuarioService {
         dto.setCreatedAt(role.getCreatedAt());
         dto.setUpdatedAt(role.getCreatedAt());
         return dto;
+    }
+
+    private void sincronizarRolesLegacy(User usuario, Empresa empresa, Set<Role> rolesSeleccionados) {
+        if (usuario == null || empresa == null) {
+            System.out.println("⚠️ [AdminUsuarioService] No se pudo sincronizar roles legacy: usuario o empresa nulos");
+            return;
+        }
+
+        System.out.println("🔄 [AdminUsuarioService] Sincronizando roles legacy para usuario " + usuario.getEmail() + " en empresa " + empresa.getId());
+
+        List<UserCompanyRole> rolesActuales = userCompanyRoleRepository.findByUsuarioIdAndEmpresaId(usuario.getId(), empresa.getId());
+        Set<Long> idsNuevos = rolesSeleccionados.stream()
+                .filter(Objects::nonNull)
+                .map(Role::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // Eliminar roles que ya no corresponden
+        for (UserCompanyRole rolActual : rolesActuales) {
+            Long idRolActual = rolActual.getRol() != null ? rolActual.getRol().getId() : null;
+            if (idRolActual == null || !idsNuevos.contains(idRolActual)) {
+                userCompanyRoleRepository.delete(rolActual);
+                System.out.println("🗑️ [AdminUsuarioService] Eliminado rol legacy " + (rolActual.getRol() != null ? rolActual.getRol().getNombre() : "null"));
+            }
+        }
+
+        rolesActuales = userCompanyRoleRepository.findByUsuarioIdAndEmpresaId(usuario.getId(), empresa.getId());
+
+        // Agregar roles nuevos
+        for (Role rol : rolesSeleccionados) {
+            if (rol == null || rol.getId() == null) {
+                continue;
+            }
+
+            boolean yaExiste = rolesActuales.stream()
+                    .anyMatch(actual -> actual.getRol() != null && rol.getId().equals(actual.getRol().getId()));
+
+            if (!yaExiste) {
+                UserCompanyRole nuevo = new UserCompanyRole();
+                nuevo.setUsuario(usuario);
+                nuevo.setEmpresa(empresa);
+                nuevo.setRol(rol);
+                nuevo.setActivo(true);
+                nuevo.setFechaCreacion(LocalDateTime.now());
+                nuevo.setFechaActualizacion(LocalDateTime.now());
+                userCompanyRoleRepository.save(nuevo);
+                System.out.println("➕ [AdminUsuarioService] Agregado rol legacy " + rol.getNombre());
+            }
+        }
+
+        // Refrescar colección en memoria para mantener compatibilidad
+        List<UserCompanyRole> rolesSincronizados = userCompanyRoleRepository.findByUsuarioIdAndEmpresaId(usuario.getId(), empresa.getId());
+        usuario.setUserCompanyRoles(rolesSincronizados);
+        System.out.println("✅ [AdminUsuarioService] Roles legacy sincronizados: " + rolesSincronizados.size());
     }
 
     // ========================================
