@@ -5,8 +5,6 @@ import { useEmpresa } from '../contexts/EmpresaContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import EmpresaSelector from '../components/EmpresaSelector';
-import TestUsersSection from '../components/TestUsersSection';
-import { type TestUser } from '../data/testUsers';
 import './Login.css';
 
 const Login: React.FC = () => {
@@ -61,12 +59,6 @@ const Login: React.FC = () => {
   const handleEmpresaSeleccionada = (empresaId: number) => {
     setMostrarSelectorEmpresa(false);
     navigate('/dashboard');
-  };
-
-  const handleTestUserSelect = (user: TestUser) => {
-    setUsername(user.email);
-    setPassword(user.password);
-    setError(''); // Limpiar error al seleccionar usuario de prueba
   };
 
   return (
@@ -154,29 +146,8 @@ const Login: React.FC = () => {
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
             
-            {/* Ayuda rápida con credenciales */}
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs text-blue-800 font-medium mb-2">💡 Credenciales de prueba:</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white p-2 rounded border border-blue-100">
-                  <p className="font-semibold text-gray-700">Email:</p>
-                  <p className="text-blue-600">tecnico.juan@agrocloud.com</p>
-                </div>
-                <div className="bg-white p-2 rounded border border-blue-100">
-                  <p className="font-semibold text-gray-700">Contraseña:</p>
-                  <p className="text-blue-600 font-mono">admin123</p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 mt-2 text-center">
-                Haz clic en "Mostrar usuarios" abajo para ver todos los usuarios de prueba
-              </p>
-            </div>
           </div>
         </form>
-        
-        <div className="text-center text-sm text-white login-users-info rounded-lg p-4">
-          <TestUsersSection onUserSelect={handleTestUserSelect} />
-        </div>
       </div>
 
       {/* Modal de Selección de Empresa */}
