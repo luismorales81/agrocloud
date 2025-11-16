@@ -1,13 +1,17 @@
 package com.agrocloud.model.dto;
 
+import com.agrocloud.config.serializer.MontoMaskingSerializer;
 import com.agrocloud.model.entity.Egreso;
 import com.agrocloud.model.entity.Egreso.TipoEgreso;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
  * DTO para transferir datos de Egreso sin referencias circulares
+ * Los montos se enmascaran automáticamente en las respuestas
  */
 public class EgresoDTO {
     private Long id;
@@ -17,7 +21,11 @@ public class EgresoDTO {
     private Long referenciaId;
     private BigDecimal cantidad;
     private String unidadMedida;
+    
+    @JsonSerialize(using = MontoMaskingSerializer.class)
     private BigDecimal costoUnitario;
+    
+    @JsonSerialize(using = MontoMaskingSerializer.class)
     private BigDecimal costoTotal;
     private LocalDate fecha;
     private String proveedor;

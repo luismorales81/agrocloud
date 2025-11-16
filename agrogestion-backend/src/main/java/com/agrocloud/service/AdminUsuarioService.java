@@ -7,9 +7,11 @@ import com.agrocloud.model.entity.EstadoUsuario;
 import com.agrocloud.model.entity.Role;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.model.entity.UserCompanyRole;
+import com.agrocloud.model.entity.UsuarioEmpresaRol;
 import com.agrocloud.repository.UserRepository;
 import com.agrocloud.repository.RoleRepository;
 import com.agrocloud.repository.UserCompanyRoleRepository;
+import com.agrocloud.repository.UsuarioEmpresaRolRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,9 @@ public class AdminUsuarioService {
 
     @Autowired
     private UserCompanyRoleRepository userCompanyRoleRepository;
+    
+    @Autowired
+    private UsuarioEmpresaRolRepository usuarioEmpresaRolRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -308,15 +313,26 @@ public class AdminUsuarioService {
                 sincronizarRolesLegacy(usuarioCreado, empresaOpt.get(), roles);
                 usuarioCreado = userRepository.save(usuarioCreado);
                 
-                // Asignar usuario a la empresa en la tabla usuario_empresas
-                System.out.println("🏢 Asignando usuario a empresa en tabla usuario_empresas...");
+                // Asignar usuario a la empresa en la tabla usuario_empresas con TODOS los roles
+                System.out.println("🏢 Asignando usuario a empresa en tabla usuario_empresas con múltiples roles...");
                 try {
-                    // Mapear el rol del sistema al rol de empresa (usar el primer rol encontrado)
-                    Role primerRol = roles.iterator().next();
-                    if (primerRol != null) {
-                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(primerRol);
-                        empresaUsuarioService.asignarUsuarioAEmpresa(usuarioCreado.getId(), empresaOpt.get().getId(), rolEmpresa, creadoPor);
-                        System.out.println("✅ Usuario asignado exitosamente a empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    // Mapear TODOS los roles del sistema a roles de empresa
+                    Set<com.agrocloud.model.enums.RolEmpresa> rolesEmpresa = roles.stream()
+                            .map(this::mapearRolSistemaARolEmpresa)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+                    
+                    System.out.println("🎭 Roles de empresa a asignar: " + rolesEmpresa.stream()
+                            .map(com.agrocloud.model.enums.RolEmpresa::name)
+                            .collect(Collectors.joining(", ")));
+                    
+                    if (!rolesEmpresa.isEmpty()) {
+                        empresaUsuarioService.asignarRolesAUsuarioEnEmpresa(
+                                usuarioCreado.getId(), 
+                                empresaOpt.get().getId(), 
+                                rolesEmpresa
+                        );
+                        System.out.println("✅ Usuario asignado exitosamente a empresa: " + empresaOpt.get().getId() + " con " + rolesEmpresa.size() + " roles");
                     }
                 } catch (Exception e) {
                     System.err.println("⚠️ Error asignando usuario a empresa: " + e.getMessage());
@@ -348,15 +364,26 @@ public class AdminUsuarioService {
                 sincronizarRolesLegacy(usuarioCreado, empresaOpt.get(), roles);
                 usuarioCreado = userRepository.save(usuarioCreado);
                 
-                // Asignar usuario a la empresa en la tabla usuario_empresas
-                System.out.println("🏢 Asignando usuario a empresa en tabla usuario_empresas...");
+                // Asignar usuario a la empresa en la tabla usuario_empresas con TODOS los roles
+                System.out.println("🏢 Asignando usuario a empresa en tabla usuario_empresas con múltiples roles...");
                 try {
-                    // Mapear el rol del sistema al rol de empresa (usar el primer rol encontrado)
-                    Role primerRol = roles.iterator().next();
-                    if (primerRol != null) {
-                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(primerRol);
-                        empresaUsuarioService.asignarUsuarioAEmpresa(usuarioCreado.getId(), empresaOpt.get().getId(), rolEmpresa, creadoPor);
-                        System.out.println("✅ Usuario asignado exitosamente a empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    // Mapear TODOS los roles del sistema a roles de empresa
+                    Set<com.agrocloud.model.enums.RolEmpresa> rolesEmpresa = roles.stream()
+                            .map(this::mapearRolSistemaARolEmpresa)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+                    
+                    System.out.println("🎭 Roles de empresa a asignar: " + rolesEmpresa.stream()
+                            .map(com.agrocloud.model.enums.RolEmpresa::name)
+                            .collect(Collectors.joining(", ")));
+                    
+                    if (!rolesEmpresa.isEmpty()) {
+                        empresaUsuarioService.asignarRolesAUsuarioEnEmpresa(
+                                usuarioCreado.getId(), 
+                                empresaOpt.get().getId(), 
+                                rolesEmpresa
+                        );
+                        System.out.println("✅ Usuario asignado exitosamente a empresa: " + empresaOpt.get().getId() + " con " + rolesEmpresa.size() + " roles");
                     }
                 } catch (Exception e) {
                     System.err.println("⚠️ Error asignando usuario a empresa: " + e.getMessage());
@@ -426,14 +453,26 @@ public class AdminUsuarioService {
                 System.out.println("🏢 Asignando roles para empresa: " + empresaOpt.get().getId());
                 sincronizarRolesLegacy(usuario, empresaOpt.get(), roles);
                 
-                // Actualizar o crear entrada en la tabla usuario_empresas
-                System.out.println("🏢 Actualizando usuario en tabla usuario_empresas...");
+                // Actualizar o crear entrada en la tabla usuario_empresas con TODOS los roles
+                System.out.println("🏢 Actualizando usuario en tabla usuario_empresas con múltiples roles...");
                 try {
-                    // Mapear el rol del sistema al rol de empresa
-                    if (!roles.isEmpty()) {
-                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(roles.iterator().next());
-                        empresaUsuarioService.asignarUsuarioAEmpresa(usuario.getId(), empresaOpt.get().getId(), rolEmpresa, actualizadoPor);
-                        System.out.println("✅ Usuario actualizado exitosamente en empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    // Mapear TODOS los roles del sistema a roles de empresa
+                    Set<com.agrocloud.model.enums.RolEmpresa> rolesEmpresa = roles.stream()
+                            .map(this::mapearRolSistemaARolEmpresa)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+                    
+                    System.out.println("🎭 Roles de empresa a asignar: " + rolesEmpresa.stream()
+                            .map(com.agrocloud.model.enums.RolEmpresa::name)
+                            .collect(Collectors.joining(", ")));
+                    
+                    if (!rolesEmpresa.isEmpty()) {
+                        empresaUsuarioService.asignarRolesAUsuarioEnEmpresa(
+                                usuario.getId(), 
+                                empresaOpt.get().getId(), 
+                                rolesEmpresa
+                        );
+                        System.out.println("✅ Usuario actualizado exitosamente en empresa: " + empresaOpt.get().getId() + " con " + rolesEmpresa.size() + " roles");
                     }
                 } catch (Exception e) {
                     System.err.println("⚠️ Error actualizando usuario en empresa: " + e.getMessage());
@@ -468,14 +507,26 @@ public class AdminUsuarioService {
                 System.out.println("🏢 Asignando roles para empresa: " + empresaOpt.get().getId());
                 sincronizarRolesLegacy(usuario, empresaOpt.get(), roles);
                 
-                // Actualizar o crear entrada en la tabla usuario_empresas
-                System.out.println("🏢 Actualizando usuario en tabla usuario_empresas...");
+                // Actualizar o crear entrada en la tabla usuario_empresas con TODOS los roles
+                System.out.println("🏢 Actualizando usuario en tabla usuario_empresas con múltiples roles...");
                 try {
-                    // Mapear el rol del sistema al rol de empresa
-                    if (!roles.isEmpty()) {
-                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = mapearRolSistemaARolEmpresa(roles.iterator().next());
-                        empresaUsuarioService.asignarUsuarioAEmpresa(usuario.getId(), empresaOpt.get().getId(), rolEmpresa, actualizadoPor);
-                        System.out.println("✅ Usuario actualizado exitosamente en empresa: " + empresaOpt.get().getId() + " con rol: " + rolEmpresa);
+                    // Mapear TODOS los roles del sistema a roles de empresa
+                    Set<com.agrocloud.model.enums.RolEmpresa> rolesEmpresa = roles.stream()
+                            .map(this::mapearRolSistemaARolEmpresa)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+                    
+                    System.out.println("🎭 Roles de empresa a asignar: " + rolesEmpresa.stream()
+                            .map(com.agrocloud.model.enums.RolEmpresa::name)
+                            .collect(Collectors.joining(", ")));
+                    
+                    if (!rolesEmpresa.isEmpty()) {
+                        empresaUsuarioService.asignarRolesAUsuarioEnEmpresa(
+                                usuario.getId(), 
+                                empresaOpt.get().getId(), 
+                                rolesEmpresa
+                        );
+                        System.out.println("✅ Usuario actualizado exitosamente en empresa: " + empresaOpt.get().getId() + " con " + rolesEmpresa.size() + " roles");
                     }
                 } catch (Exception e) {
                     System.err.println("⚠️ Error actualizando usuario en empresa: " + e.getMessage());
@@ -673,7 +724,7 @@ public class AdminUsuarioService {
             dto.setCreadoPorEmail(user.getCreadoPor().getEmail());
         }
 
-        // Roles - Buscar en ambos sistemas (nuevo y legacy)
+        // Roles - Buscar en todos los sistemas (múltiples roles, sistema nuevo y legacy)
         Set<RoleDTO> rolesDTO = new HashSet<>();
         
         // Lista de roles válidos según el enum RolEmpresa
@@ -686,39 +737,80 @@ public class AdminUsuarioService {
             "CONSULTOR_EXTERNO"
         );
         
-        // PRIMERO: Buscar roles en el sistema nuevo (usuario_empresas)
+        // PRIMERO: Buscar roles múltiples en UsuarioEmpresaRol (sistema de múltiples roles)
         try {
+            // Obtener todas las empresas del usuario para buscar roles múltiples
             if (user.getUsuarioEmpresas() != null && !user.getUsuarioEmpresas().isEmpty()) {
                 for (com.agrocloud.model.entity.UsuarioEmpresa ue : user.getUsuarioEmpresas()) {
-                    if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO && ue.getRol() != null) {
-                        com.agrocloud.model.enums.RolEmpresa rolEmpresa = ue.getRol();
-                        // Aplicar mapeo de roles deprecated a roles nuevos
-                        com.agrocloud.model.enums.RolEmpresa rolActualizado = rolEmpresa.getRolActualizado();
-                        String nombreRol = rolActualizado.name(); // ADMINISTRADOR, SUPERADMIN, etc.
+                    if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO && ue.getEmpresa() != null) {
+                        // Buscar roles múltiples en UsuarioEmpresaRol
+                        List<UsuarioEmpresaRol> rolesMultiples = usuarioEmpresaRolRepository.findRolesActivosByUsuarioIdAndEmpresaId(
+                                user.getId(), 
+                                ue.getEmpresa().getId()
+                        );
                         
-                        // Solo agregar si es un rol válido
-                        if (rolesValidos.contains(nombreRol)) {
-                            // Buscar el Role correspondiente en la base de datos por nombre
-                            Role role = roleRepository.findByNombre(nombreRol).orElse(null);
-                            if (role != null) {
-                                rolesDTO.add(convertirARoleDTO(role));
-                            } else {
-                                // Si no existe el Role en la BD, crear un RoleDTO directamente desde el enum
-                                RoleDTO roleDTO = new RoleDTO();
-                                roleDTO.setName(nombreRol);
-                                roleDTO.setDescription(rolActualizado.getDescripcion());
-                                // ID será null si no existe en BD
-                                rolesDTO.add(roleDTO);
+                        for (UsuarioEmpresaRol uer : rolesMultiples) {
+                            if (uer.getRol() != null && uer.getActivo() != null && uer.getActivo()) {
+                                String nombreRol = uer.getRol().getNombre();
+                                
+                                // Solo agregar si es un rol válido
+                                if (rolesValidos.contains(nombreRol)) {
+                                    Role role = roleRepository.findByNombre(nombreRol).orElse(null);
+                                    if (role != null) {
+                                        rolesDTO.add(convertirARoleDTO(role));
+                                    } else {
+                                        // Si no existe el Role en la BD, crear un RoleDTO directamente
+                                        RoleDTO roleDTO = new RoleDTO();
+                                        roleDTO.setName(nombreRol);
+                                        roleDTO.setDescription("Rol: " + nombreRol);
+                                        rolesDTO.add(roleDTO);
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("⚠️ [AdminUsuarioService] Error obteniendo roles del sistema nuevo: " + e.getMessage());
+            System.err.println("⚠️ [AdminUsuarioService] Error obteniendo roles múltiples: " + e.getMessage());
+            e.printStackTrace();
         }
         
-        // SEGUNDO: Si no se encontraron roles en el sistema nuevo, buscar en el sistema legacy
+        // SEGUNDO: Si no se encontraron roles múltiples, buscar en el sistema antiguo (usuario_empresas con un solo rol)
+        if (rolesDTO.isEmpty()) {
+            try {
+                if (user.getUsuarioEmpresas() != null && !user.getUsuarioEmpresas().isEmpty()) {
+                    for (com.agrocloud.model.entity.UsuarioEmpresa ue : user.getUsuarioEmpresas()) {
+                        if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO && ue.getRol() != null) {
+                            com.agrocloud.model.enums.RolEmpresa rolEmpresa = ue.getRol();
+                            // Aplicar mapeo de roles deprecated a roles nuevos
+                            com.agrocloud.model.enums.RolEmpresa rolActualizado = rolEmpresa.getRolActualizado();
+                            String nombreRol = rolActualizado.name(); // ADMINISTRADOR, SUPERADMIN, etc.
+                            
+                            // Solo agregar si es un rol válido
+                            if (rolesValidos.contains(nombreRol)) {
+                                // Buscar el Role correspondiente en la base de datos por nombre
+                                Role role = roleRepository.findByNombre(nombreRol).orElse(null);
+                                if (role != null) {
+                                    rolesDTO.add(convertirARoleDTO(role));
+                                } else {
+                                    // Si no existe el Role en la BD, crear un RoleDTO directamente desde el enum
+                                    RoleDTO roleDTO = new RoleDTO();
+                                    roleDTO.setName(nombreRol);
+                                    roleDTO.setDescription(rolActualizado.getDescripcion());
+                                    // ID será null si no existe en BD
+                                    rolesDTO.add(roleDTO);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ [AdminUsuarioService] Error obteniendo roles del sistema nuevo: " + e.getMessage());
+            }
+        }
+        
+        // TERCERO: Si no se encontraron roles en los sistemas anteriores, buscar en el sistema legacy
         // Filtrar solo roles válidos según el enum RolEmpresa
         if (rolesDTO.isEmpty() && user.getRoles() != null && !user.getRoles().isEmpty()) {
             rolesDTO = user.getRoles().stream()

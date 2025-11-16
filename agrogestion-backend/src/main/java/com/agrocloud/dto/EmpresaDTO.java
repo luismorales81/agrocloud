@@ -1,19 +1,27 @@
 package com.agrocloud.dto;
 
+import com.agrocloud.config.serializer.CuitMaskingSerializer;
+import com.agrocloud.config.serializer.EmailMaskingSerializer;
 import com.agrocloud.model.enums.EstadoEmpresa;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
  * DTO para transferir datos de empresa sin referencias circulares
+ * Los datos sensibles se enmascaran automáticamente en las respuestas
  */
 public class EmpresaDTO {
     
     private Long id;
     private String nombre;
+    
+    @JsonSerialize(using = CuitMaskingSerializer.class)
     private String cuit;
+    
+    @JsonSerialize(using = EmailMaskingSerializer.class)
     private String emailContacto;
     private String telefonoContacto;
     private String direccion;

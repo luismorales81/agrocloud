@@ -31,6 +31,7 @@ interface UsuarioEmpresa {
   empresaId: number;
   empresaNombre: string;
   rol: string;
+  roles?: string[]; // Roles múltiples
   estado: string;
   fechaInicio: string;
 }
@@ -69,23 +70,16 @@ const AdminEmpresas: React.FC = () => {
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<Usuario | null>(null);
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState<Empresa | null>(null);
 
-  const [showCambiarRolForm, setShowCambiarRolForm] = useState(false);
-  const [cambioRolForm, setCambioRolForm] = useState({
-    usuarioId: 0,
-    empresaId: 0,
-    nuevoRol: 'OPERARIO'
-  });
 
   const [selectedEmpresa, setSelectedEmpresa] = useState<number | null>(null);
 
   const [rolesEmpresa, setRolesEmpresa] = useState([
+    { value: 'SUPERADMIN', label: 'Super Administrador' },
     { value: 'ADMINISTRADOR', label: 'Administrador de Empresa' },
-    { value: 'ASESOR', label: 'Asesor/Ingeniero Agrónomo' },
-    { value: 'OPERARIO', label: 'Operario' },
-    { value: 'TECNICO', label: 'Técnico' },
-    { value: 'CONTADOR', label: 'Contador' },
-    { value: 'LECTURA', label: 'Solo Lectura' },
-    { value: 'PRODUCTOR', label: 'Productor' }
+    { value: 'JEFE_CAMPO', label: 'Jefe de Campo' },
+    { value: 'JEFE_FINANCIERO', label: 'Jefe Financiero' },
+    { value: 'OPERARIO', label: 'Operario de Campo' },
+    { value: 'CONSULTOR_EXTERNO', label: 'Consultor Externo (Solo Lectura)' }
   ]);
 
   useEffect(() => {
@@ -164,24 +158,102 @@ const AdminEmpresas: React.FC = () => {
     }
   };
 
-  const cargarUsuariosEmpresas = async () => {
+  // Obtener roles disponibles incluyendo el rol actual del usuario (si es deprecated)
+  const obtenerRolesDisponibles = (rolActual?: string) => {
+    const rolesActivos = rolesEmpresa;
+    
+    // Si el rol actual es deprecated y no está en la lista, agregarlo
+    if (rolActual) {
+      const rolesDeprecated = ['PRODUCTOR', 'ASESOR', 'TECNICO', 'CONTADOR', 'LECTURA'];
+      const mapeoDeprecated: { [key: string]: { value: string; label: string } } = {
+        'PRODUCTOR': { value: 'PRODUCTOR', label: 'Productor (Deprecated - usar JEFE_CAMPO)' },
+        'ASESOR': { value: 'ASESOR', label: 'Asesor (Deprecated - usar JEFE_CAMPO)' },
+        'TECNICO': { value: 'TECNICO', label: 'Técnico (Deprecated - usar JEFE_CAMPO)' },
+        'CONTADOR': { value: 'CONTADOR', label: 'Contador (Deprecated - usar JEFE_FINANCIERO)' },
+        'LECTURA': { value: 'LECTURA', label: 'Solo Lectura (Deprecated - usar CONSULTOR_EXTERNO)' }
+      };
+      
+      if (rolesDeprecated.includes(rolActual) && !rolesActivos.find(r => r.value === rolActual)) {
+        return [...rolesActivos, mapeoDeprecated[rolActual]];
+      }
+    }
+    
+    return rolesActivos;
+  };
+
+  const cargarUsuariosEmpresas = async (): Promise<UsuarioEmpresa[]> => {
     try {
       // Cargar todas las relaciones usuario-empresa
       const response = await api.get(API_ENDPOINTS.EMPRESA_USUARIO.TODAS_RELACIONES);
       if (response.data.success) {
-        setUsuariosEmpresas(response.data.data);
+        const relaciones = response.data.data;
+        
+        // Cargar roles múltiples para cada relación
+        const relacionesConRoles = await Promise.all(
+          relaciones.map(async (relacion: UsuarioEmpresa) => {
+            try {
+              const rolesResponse = await api.get(
+                `${API_ENDPOINTS.EMPRESA_USUARIO.ROLES_USUARIO}?usuarioId=${relacion.usuarioId}&empresaId=${relacion.empresaId}`
+              );
+              console.log(`[DEBUG] Roles para usuario ${relacion.usuarioId} (${relacion.usuarioNombre}) en empresa ${relacion.empresaId} (${relacion.empresaNombre}):`, rolesResponse.data);
+              
+              if (rolesResponse.data && rolesResponse.data.success && rolesResponse.data.roles) {
+                const rolesArray = Array.isArray(rolesResponse.data.roles) ? rolesResponse.data.roles : [];
+                console.log(`[DEBUG] Usuario ${relacion.usuarioId}: ${rolesArray.length} roles encontrados:`, rolesArray);
+                
+                if (rolesArray.length > 0) {
+                  // Si hay roles múltiples, usarlos
+                  return {
+                    ...relacion,
+                    roles: rolesArray
+                  };
+                }
+              }
+              
+              // Si no hay roles múltiples, usar el rol único como fallback
+              console.log(`[DEBUG] Usuario ${relacion.usuarioId}: No hay roles múltiples, usando rol único: ${relacion.rol}`);
+              return {
+                ...relacion,
+                roles: relacion.rol ? [relacion.rol] : []
+              };
+            } catch (error: any) {
+              console.error(`[ERROR] Error cargando roles para usuario ${relacion.usuarioId} en empresa ${relacion.empresaId}:`, error);
+              console.error(`[ERROR] Detalles del error:`, error.response?.data || error.message);
+              // En caso de error, usar el rol único como fallback
+              return {
+                ...relacion,
+                roles: relacion.rol ? [relacion.rol] : []
+              };
+            }
+          })
+        );
+        
+        console.log('[DEBUG] Relaciones con roles cargadas:', relacionesConRoles);
+        console.log('[DEBUG] Total de relaciones:', relacionesConRoles.length);
+        
+        // Verificar cada relación para debug
+        relacionesConRoles.forEach((relacion, index) => {
+          console.log(`[DEBUG] Relación ${index + 1}: Usuario ${relacion.usuarioNombre}, Empresa ${relacion.empresaNombre}, Roles:`, relacion.roles);
+        });
+        
+        setUsuariosEmpresas(relacionesConRoles);
+        return relacionesConRoles;
       }
+      return [];
     } catch (error) {
       console.error('Error cargando usuarios de empresas:', error);
       // Si no existe el endpoint, intentar con la empresa por defecto
       try {
         const response = await api.get(API_ENDPOINTS.EMPRESA_USUARIO.USUARIOS_EMPRESA(1));
         if (response.data.success) {
-          setUsuariosEmpresas(response.data.data);
+          const datos = response.data.data;
+          setUsuariosEmpresas(datos);
+          return datos;
         }
       } catch (fallbackError) {
         console.error('Error en fallback:', fallbackError);
       }
+      return [];
     }
   };
 
@@ -245,27 +317,6 @@ const AdminEmpresas: React.FC = () => {
     setAsignacionForm({ usuarioId: 0, empresaId: 0, rol: 'OPERARIO' });
   };
 
-  const cambiarRolUsuario = async () => {
-    try {
-      const response = await api.put(API_ENDPOINTS.EMPRESA_USUARIO.CAMBIAR_ROL, {
-        usuarioId: cambioRolForm.usuarioId,
-        empresaId: cambioRolForm.empresaId,
-        rol: cambioRolForm.nuevoRol
-      });
-      
-      if (response.data.success) {
-        alert('Rol cambiado correctamente');
-        setShowCambiarRolForm(false);
-        setCambioRolForm({ usuarioId: 0, empresaId: 0, nuevoRol: 'OPERARIO' });
-        await cargarUsuariosEmpresas();
-      } else {
-        alert('Error: ' + response.data.message);
-      }
-    } catch (error) {
-      console.error('Error cambiando rol:', error);
-      alert('Error al cambiar rol del usuario');
-    }
-  };
 
   const removerUsuarioDeEmpresa = async (usuarioId: number, empresaId: number) => {
     if (!window.confirm('¿Está seguro de que desea remover este usuario de la empresa?')) {
@@ -289,12 +340,17 @@ const AdminEmpresas: React.FC = () => {
 
   const getRolColor = (rol: string) => {
     const colors: { [key: string]: string } = {
+      'SUPERADMIN': 'bg-purple-200 text-purple-900',
       'ADMINISTRADOR': 'bg-red-100 text-red-800',
+      'JEFE_CAMPO': 'bg-blue-100 text-blue-800',
+      'JEFE_FINANCIERO': 'bg-green-100 text-green-800',
+      'OPERARIO': 'bg-gray-100 text-gray-800',
+      'CONSULTOR_EXTERNO': 'bg-gray-50 text-gray-600',
+      // Roles legacy (mantener para retrocompatibilidad visual)
       'PRODUCTOR': 'bg-purple-100 text-purple-800',
       'ASESOR': 'bg-blue-100 text-blue-800',
       'CONTADOR': 'bg-green-100 text-green-800',
       'TECNICO': 'bg-yellow-100 text-yellow-800',
-      'OPERARIO': 'bg-gray-100 text-gray-800',
       'LECTURA': 'bg-gray-50 text-gray-600'
     };
     return colors[rol] || 'bg-gray-100 text-gray-800';
@@ -461,10 +517,36 @@ const AdminEmpresas: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {relacion.empresaNombre}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRolColor(relacion.rol)}`}>
-                      {relacion.rol}
-                    </span>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {(() => {
+                        // Debug: verificar qué roles tiene esta relación
+                        const rolesParaMostrar = relacion.roles && Array.isArray(relacion.roles) && relacion.roles.length > 0 
+                          ? relacion.roles 
+                          : (relacion.rol ? [relacion.rol] : []);
+                        
+                        if (rolesParaMostrar.length === 0) {
+                          return (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600">
+                              Sin rol
+                            </span>
+                          );
+                        }
+                        
+                        return rolesParaMostrar.map((rol, index) => {
+                          const rolString = String(rol); // Asegurar que sea string
+                          return (
+                            <span 
+                              key={`${relacion.usuarioId}-${relacion.empresaId}-${rolString}-${index}`}
+                              className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRolColor(rolString)}`}
+                              title={`Rol: ${rolString}`}
+                            >
+                              {rolString}
+                            </span>
+                          );
+                        });
+                      })()}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -477,19 +559,6 @@ const AdminEmpresas: React.FC = () => {
                     {new Date(relacion.fechaInicio).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => {
-                        setCambioRolForm({
-                          usuarioId: relacion.usuarioId,
-                          empresaId: relacion.empresaId,
-                          nuevoRol: relacion.rol
-                        });
-                        setShowCambiarRolForm(true);
-                      }}
-                      className="text-yellow-600 hover:text-yellow-900 mr-3"
-                    >
-                      Cambiar Rol
-                    </button>
                     <button
                       onClick={() => removerUsuarioDeEmpresa(relacion.usuarioId, relacion.empresaId)}
                       className="text-red-600 hover:text-red-900"
@@ -825,53 +894,6 @@ const AdminEmpresas: React.FC = () => {
         </div>
       )}
 
-      {/* Modal para cambiar rol */}
-      {showCambiarRolForm && (
-        <div className="admin-modal">
-          <div className="admin-modal-content">
-            <div className="admin-modal-header">
-              <h3 className="admin-modal-title">🔄 Cambiar Rol de Usuario</h3>
-              <button
-                onClick={() => setShowCambiarRolForm(false)}
-                className="admin-modal-close"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="admin-field-group">
-              <label className="admin-label">Nuevo Rol</label>
-              <select
-                value={cambioRolForm.nuevoRol}
-                onChange={(e) => setCambioRolForm({...cambioRolForm, nuevoRol: e.target.value})}
-                className="admin-select"
-              >
-                {rolesEmpresa.map(rol => (
-                  <option key={rol.value} value={rol.value}>
-                    {rol.label}
-                  </option>
-                ))}
-              </select>
-              <div className="admin-help-text">Selecciona el nuevo rol para el usuario</div>
-            </div>
-
-            <div className="admin-btn-group">
-              <button
-                onClick={() => setShowCambiarRolForm(false)}
-                className="admin-btn admin-btn-cancel"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={cambiarRolUsuario}
-                className="admin-btn admin-btn-secondary"
-              >
-                Cambiar Rol
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

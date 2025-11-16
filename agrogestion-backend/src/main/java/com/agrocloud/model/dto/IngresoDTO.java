@@ -1,19 +1,25 @@
 package com.agrocloud.model.dto;
 
+import com.agrocloud.config.serializer.MontoMaskingSerializer;
 import com.agrocloud.model.entity.Ingreso;
 import com.agrocloud.model.entity.Ingreso.TipoIngreso;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
  * DTO para transferir datos de Ingreso sin referencias circulares
+ * Los montos se enmascaran automáticamente en las respuestas
  */
 public class IngresoDTO {
     private Long id;
     private String concepto;
     private String descripcion;
     private TipoIngreso tipoIngreso;
+    
+    @JsonSerialize(using = MontoMaskingSerializer.class)
     private BigDecimal monto;
     private BigDecimal cantidad;
     private String unidadMedida;

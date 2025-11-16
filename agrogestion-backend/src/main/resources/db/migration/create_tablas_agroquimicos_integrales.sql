@@ -178,3 +178,7 @@ ALTER TABLE aplicaciones_agroquimicos COMMENT = 'Aplicaciones reales de agroquí
 
 
 
+
+
+
+

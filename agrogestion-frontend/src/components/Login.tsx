@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { authService } from '../services/api';
+import { eulaService } from '../services/apiServices';
+import EulaModal from './EulaModal';
 
 interface LoginProps {
   onLoginSuccess: (token: string, user: any) => void;
@@ -20,23 +22,118 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [mostrarEulaModal, setMostrarEulaModal] = useState(false);
+  const [usuarioPendienteEula, setUsuarioPendienteEula] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔧 [Login] ========== HANDLESUBMIT INICIADO ==========');
     console.log('🔧 [Login] Formulario enviado con datos:', formData);
     setError('');
     setLoading(true);
 
     try {
       console.log('🔧 [Login] Intentando autenticación...');
-      // Usar el servicio de autenticación
-      const data = await authService.login(formData.email, formData.password);
-      console.log('✅ [Login] Autenticación exitosa:', data);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      onLoginSuccess(data.token, data.user);
+      console.log('🔧 [Login] Llamando directamente a authService.login()');
+      
+      // Llamar directamente a authService.login() y capturar el error inmediatamente
+      let data;
+      try {
+        console.log('🔧 [Login] Dentro del try interno, llamando authService.login()');
+        data = await authService.login(formData.email, formData.password);
+        console.log('✅ [Login] Autenticación exitosa:', data);
+      
+      // Verificar si el usuario tiene EULA aceptado
+      try {
+        const estadoEula = await eulaService.obtenerEstado(formData.email);
+        console.log('📄 [Login] Estado EULA:', estadoEula);
+        
+        if (!estadoEula.aceptado) {
+          // Mostrar modal de EULA
+          setUsuarioPendienteEula(data.user);
+          setMostrarEulaModal(true);
+          setLoading(false);
+          return;
+        }
+      } catch (eulaError: any) {
+        console.warn('⚠️ [Login] Error verificando EULA, continuando:', eulaError);
+        // Si hay error verificando EULA, continuar con el login normal
+      }
+      
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        onLoginSuccess(data.token, data.user);
+      } catch (loginError: any) {
+        // Manejar error de EULA ANTES de que llegue al catch general
+        console.log('🔴 [Login] ========== ERROR CAPTURADO EN TRY INTERNO ==========');
+        console.log('🔴 [Login] loginError:', loginError);
+        console.log('🔴 [Login] loginError.response:', loginError.response);
+        console.log('🔴 [Login] loginError.response?.status:', loginError.response?.status);
+        console.log('🔴 [Login] loginError.response?.data:', loginError.response?.data);
+        console.log('🔴 [Login] loginError.isEulaError:', (loginError as any).isEulaError);
+        
+        if (loginError.response?.status === 403) {
+          const errorData = loginError.response.data || (loginError as any).eulaError;
+          console.log('🔴 [Login] errorData:', errorData);
+          const isEulaError = 
+            (loginError as any).isEulaError ||
+            errorData?.error === 'EULA_NO_ACEPTADO' ||
+            (errorData?.message && errorData.message.includes('EULA'));
+          
+          console.log('🔴 [Login] isEulaError:', isEulaError);
+          
+          if (isEulaError) {
+            console.log('✅ [Login] EULA no aceptado detectado en try interno, mostrando modal');
+            setUsuarioPendienteEula({ email: formData.email });
+            setMostrarEulaModal(true);
+            setLoading(false);
+            setError('');
+            return;
+          }
+        }
+        // Si no es EULA, re-lanzar para que lo capture el catch externo
+        console.log('🔴 [Login] Re-lanzando error para catch externo');
+        throw loginError;
+      }
     } catch (error: any) {
+      console.log('🔴 [Login] ========== CATCH EJECUTADO ==========');
       console.error('❌ [Login] Error de login:', error);
+      console.error('❌ [Login] Error response:', error.response);
+      console.error('❌ [Login] Error data:', error.response?.data);
+      console.error('❌ [Login] Error data stringified:', JSON.stringify(error.response?.data, null, 2));
+      console.error('❌ [Login] Error status:', error.response?.status);
+      
+      // Manejar error de EULA no aceptado (403 con error EULA_NO_ACEPTADO)
+      // Verificar primero si el error tiene la marca especial del interceptor
+      if ((error as any).isEulaError || error.response?.status === 403) {
+        const errorData = error.response?.data || (error as any).eulaError;
+        console.log('📄 [Login] ========== ERROR 403 DETECTADO ==========');
+        console.log('📄 [Login] error.isEulaError:', (error as any).isEulaError);
+        console.log('📄 [Login] errorData completo:', errorData);
+        console.log('📄 [Login] errorData?.error:', errorData?.error);
+        
+        // Verificar si es un error de EULA no aceptado (múltiples formas)
+        const isEulaError = 
+          (error as any).isEulaError ||
+          errorData?.error === 'EULA_NO_ACEPTADO' ||
+          (typeof errorData === 'string' && errorData.includes('EULA')) ||
+          (errorData?.message && typeof errorData.message === 'string' && errorData.message.includes('EULA')) ||
+          (errorData?.error && typeof errorData.error === 'string' && errorData.error.includes('EULA'));
+        
+        console.log('📄 [Login] isEulaError final:', isEulaError);
+        
+        if (isEulaError) {
+          console.log('✅ [Login] EULA no aceptado detectado, mostrando modal para:', formData.email);
+          setUsuarioPendienteEula({ email: formData.email });
+          setMostrarEulaModal(true);
+          setLoading(false);
+          setError(''); // Limpiar cualquier error previo
+          return;
+        } else {
+          console.log('❌ [Login] Error 403 pero NO es EULA');
+          setError('Tu cuenta está desactivada. Contacta al administrador.');
+        }
+      }
       
       // Manejar diferentes tipos de errores de autenticación
       if (error.response?.status === 401) {
@@ -51,8 +148,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         } else {
           setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
         }
-      } else if (error.response?.status === 403) {
-        setError('Tu cuenta está desactivada. Contacta al administrador.');
       } else if (error.response?.status === 500) {
         setError('Error interno del servidor. Inténtalo de nuevo más tarde.');
       } else if (error.code === 'NETWORK_ERROR' || !error.response) {
@@ -298,6 +393,29 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </p>
         </div>
       </div>
+      
+      {/* Modal de EULA */}
+      {mostrarEulaModal && (
+        <EulaModal
+          email={formData.email}
+          onAceptar={async () => {
+            setMostrarEulaModal(false);
+            // Intentar login nuevamente después de aceptar EULA
+            try {
+              const data = await authService.login(formData.email, formData.password);
+              localStorage.setItem('token', data.token);
+              localStorage.setItem('user', JSON.stringify(data.user));
+              onLoginSuccess(data.token, data.user);
+            } catch (err: any) {
+              setError('Error al iniciar sesión después de aceptar el EULA. Por favor, intente nuevamente.');
+            }
+          }}
+          onCancelar={() => {
+            setMostrarEulaModal(false);
+            setError('Debe aceptar el EULA para acceder al sistema.');
+          }}
+        />
+      )}
     </div>
   );
 };
