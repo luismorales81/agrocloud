@@ -111,22 +111,43 @@ const api = axios.create({
   // Interceptor para manejar respuestas
   api.interceptors.response.use(
   (response) => {
-    console.log('✅ [API] Respuesta exitosa:', response.config.url, response.status);
+    // Solo loggear respuestas exitosas si no son de EULA (para reducir ruido)
+    if (!response.config.url?.includes('/eula/')) {
+      console.log('✅ [API] Respuesta exitosa:', response.config.url, response.status);
+    }
     return response;
   },
   (error) => {
-    console.error('❌ [API] Error en respuesta:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.message,
-      data: error.response?.data
-    });
+    // Verificar si es un error de EULA esperado (no es realmente un error, es parte del flujo)
+    const isEulaError = error.response?.status === 403 && 
+                       error.response?.data?.error === 'EULA_NO_ACEPTADO';
+    
+    if (isEulaError) {
+      // Log mínimo para errores de EULA (flujo esperado)
+      console.log('📄 [API] EULA no aceptado detectado (flujo normal)');
+      error.isEulaError = true;
+      error.eulaError = error.response.data;
+    } else {
+      // Log completo para otros errores
+      console.error('❌ [API] Error en respuesta:', {
+        url: error.config?.url,
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data
+      });
+    }
     
     if (error.response?.status === 401) {
-      console.log('🔧 [API] Token expirado, limpiando localStorage');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // No limpiar localStorage si es un error de EULA (el usuario aún no está autenticado)
+      const isEulaEndpoint = error.config?.url?.includes('/eula/');
+      if (!isEulaEndpoint) {
+        console.log('🔧 [API] Token expirado, limpiando localStorage');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      } else {
+        console.log('📄 [API] Error 401 en endpoint EULA, no limpiando localStorage (usuario aún no autenticado)');
+      }
     } else if (error.response?.status === 500) {
       console.error('🚨 [API] Error interno del servidor:', error.response?.data);
       // No redirigir en errores 500, solo loggear
@@ -146,16 +167,21 @@ export const showNotification = (message: string, type: 'success' | 'error' | 'i
 // Servicio de autenticación
 export const authService = {
   async login(username: string, password: string) {
-    console.log('🔧 [AuthService] Intentando login con:', { username, password: '***' });
     try {
       // Usar el endpoint real de autenticación
-      console.log('🔧 [AuthService] Enviando petición a /auth/login');
       const response = await api.post('/auth/login', { email: username, password });
-      console.log('✅ [AuthService] Login exitoso:', response.data);
+      console.log('✅ [AuthService] Login exitoso');
       
       return response.data;
-    } catch (error) {
-      console.error('❌ [AuthService] Error en login:', error);
+    } catch (error: any) {
+      // Solo loggear si NO es un error de EULA esperado (flujo normal)
+      const isEulaError = 
+        (error as any).isEulaError ||
+        (error.response?.status === 403 && error.response?.data?.error === 'EULA_NO_ACEPTADO');
+      
+      if (!isEulaError) {
+        console.error('❌ [AuthService] Error en login:', error);
+      }
       throw error;
     }
   },

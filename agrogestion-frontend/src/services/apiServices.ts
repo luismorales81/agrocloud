@@ -94,6 +94,49 @@ export const authService = {
 };
 
 // ============================================================================
+// SERVICIO DE EULA
+// ============================================================================
+export const eulaService = {
+  async obtenerEstado(email?: string) {
+    if (email) {
+      const response = await api.get(`/eula/estado/${email}`);
+      return response.data;
+    } else {
+      const response = await api.get('/eula/estado');
+      return response.data;
+    }
+  },
+
+  async aceptarEula(email: string, aceptado: boolean) {
+    console.log('📄 [EulaService] Aceptando EULA para:', email);
+    try {
+      const response = await api.post(`/eula/aceptar/${email}`, {
+        aceptado,
+        ipAddress: '', // Se obtiene del servidor
+        userAgent: navigator.userAgent,
+      });
+      console.log('✅ [EulaService] EULA aceptado, respuesta:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [EulaService] Error en aceptarEula:', error);
+      throw error;
+    }
+  },
+
+  async obtenerTexto() {
+    const response = await api.get('/eula/texto');
+    return response.data;
+  },
+
+  async descargarPdf(userId: number) {
+    const response = await api.get(`/eula/pdf/${userId}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+};
+
+// ============================================================================
 // SERVICIO DE USUARIOS
 // ============================================================================
 export const usuariosService = {

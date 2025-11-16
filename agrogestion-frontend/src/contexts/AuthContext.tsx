@@ -91,6 +91,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('✅ [AuthContext] Login completado exitosamente');
       return true;
     } catch (error: any) {
+      // Verificar si es un error de EULA esperado (no es realmente un error, es parte del flujo)
+      const isEulaError = 
+        (error as any).isEulaError ||
+        (error.response?.status === 403 && error.response?.data?.error === 'EULA_NO_ACEPTADO');
+      
+      if (isEulaError) {
+        // Log mínimo y re-lanzar para que Login.tsx lo maneje
+        console.log('📄 [AuthContext] EULA no aceptado, re-lanzando para Login');
+        throw error;
+      }
+      
+      // Log completo para otros errores reales
       console.error('❌ [AuthContext] Error en login:', error);
       
       // Manejar diferentes tipos de errores de autenticación
@@ -108,15 +120,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } else if (error.response?.status === 403) {
         showNotification('Tu cuenta está desactivada. Contacta al administrador.', 'error');
+        return false;
       } else if (error.response?.status === 500) {
         showNotification('Error interno del servidor. Inténtalo de nuevo más tarde.', 'error');
+        return false;
       } else if (error.code === 'NETWORK_ERROR' || !error.response) {
         showNotification('Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.', 'error');
+        return false;
       } else {
         showNotification('Error en el inicio de sesión. Inténtalo de nuevo.', 'error');
+        return false;
       }
-      
-      return false;
     } finally {
       setLoading(false);
     }

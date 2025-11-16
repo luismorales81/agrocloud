@@ -80,6 +80,13 @@ public class AuthService implements UserDetailsService {
                 throw new RuntimeException("Usuario inactivo");
             }
             
+            // Verificar que el usuario haya aceptado el EULA
+            if (user.getEulaAceptado() == null || !user.getEulaAceptado()) {
+                logger.warn("📄 [AuthService] Usuario sin EULA aceptado: {}", loginRequest.getEmail());
+                throw new com.agrocloud.exception.EulaNoAceptadoException(
+                    "Debe aceptar el EULA antes de acceder al sistema. Por favor, acepte los términos y condiciones.");
+            }
+            
             // Autenticar usuario
             logger.info("🔐 [AuthService] Iniciando autenticación con AuthenticationManager...");
             Authentication authentication = authenticationManager.authenticate(
@@ -105,6 +112,9 @@ public class AuthService implements UserDetailsService {
             
             return new LoginResponse(token, jwtService.getExpirationTimeInSeconds(), userDto);
             
+        } catch (com.agrocloud.exception.EulaNoAceptadoException e) {
+            logger.warn("📄 [AuthService] EULA no aceptado para usuario: {}", loginRequest.getEmail());
+            throw e; // Re-lanzar EulaNoAceptadoException para que sea manejada por GlobalExceptionHandler
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
             logger.warn("🔐 [AuthService] Credenciales incorrectas para usuario: {}", loginRequest.getEmail());
             throw e; // Re-lanzar BadCredentialsException para que sea manejada por GlobalExceptionHandler

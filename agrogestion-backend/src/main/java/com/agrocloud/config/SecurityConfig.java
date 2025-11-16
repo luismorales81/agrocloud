@@ -34,7 +34,7 @@ public class SecurityConfig {
             .authenticationProvider(authenticationProvider)
             .authorizeHttpRequests(auth -> auth
                 // Permitir endpoints públicos
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test", "/api/auth/test-auth", "/api/auth/test-productor", "/api/auth/generate-hash", "/api/auth/test-password", "/api/health", "/api/public/**", "/api/admin-global/dashboard-test", "/api/admin-global/test-simple", "/api/admin-global/dashboard-simple", "/api/admin-global/test-connectivity", "/api/admin-global/empresas-basic", "/api/admin-global/usuarios-basic", "/api/admin-global/estadisticas-uso", "/api/v1/weather-simple/**", "/api/v1/weather/**", "/actuator/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test", "/api/auth/test-auth", "/api/auth/test-productor", "/api/auth/generate-hash", "/api/auth/test-password", "/api/health", "/api/public/**", "/api/admin-global/dashboard-test", "/api/admin-global/test-simple", "/api/admin-global/dashboard-simple", "/api/admin-global/test-connectivity", "/api/admin-global/empresas-basic", "/api/admin-global/usuarios-basic", "/api/admin-global/estadisticas-uso", "/api/admin-global/diagnostico-roles", "/api/v1/weather-simple/**", "/api/v1/weather/**", "/api/eula/**", "/actuator/**").permitAll()
                 // Endpoints de administración global (solo SuperAdmin)
                 .requestMatchers("/api/admin-global/**").hasAuthority("ROLE_SUPERADMIN")
                 // Endpoints de administración de empresa

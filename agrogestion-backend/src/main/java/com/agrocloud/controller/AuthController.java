@@ -4,11 +4,14 @@ import com.agrocloud.dto.LoginRequest;
 import com.agrocloud.dto.LoginResponse;
 import com.agrocloud.dto.CreateUserRequest;
 import com.agrocloud.dto.UserDto;
+import com.agrocloud.exception.EulaNoAceptadoException;
 import com.agrocloud.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,9 +34,25 @@ public class AuthController {
             logger.info("🔧 [AuthController] Recibida petición de login para: {}", loginRequest.getEmail());
             LoginResponse response = authService.login(loginRequest);
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        } catch (EulaNoAceptadoException e) {
+            // Re-lanzar para que GlobalExceptionHandler lo maneje correctamente
+            logger.warn("📄 [AuthController] EULA no aceptado: {}", e.getMessage());
+            throw e;
+        } catch (BadCredentialsException | UsernameNotFoundException e) {
+            // Re-lanzar para que GlobalExceptionHandler lo maneje correctamente
+            logger.warn("🔐 [AuthController] Error de autenticación: {}", e.getMessage());
+            throw e;
+        } catch (RuntimeException e) {
+            // Manejar otros RuntimeException específicos
+            if (e.getMessage() != null && e.getMessage().contains("Usuario inactivo")) {
+                logger.warn("🚫 [AuthController] Usuario inactivo");
+                throw e;
+            }
             logger.error("❌ [AuthController] Error en login: {}", e.getMessage());
             return ResponseEntity.badRequest().body("Credenciales incorrectas");
+        } catch (Exception e) {
+            logger.error("❌ [AuthController] Error inesperado en login: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Error al iniciar sesión: " + e.getMessage());
         }
     }
     

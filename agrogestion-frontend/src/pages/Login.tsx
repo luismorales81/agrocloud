@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
+import { eulaService } from '../services/apiServices';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import EmpresaSelector from '../components/EmpresaSelector';
+import EulaModal from '../components/EulaModal';
 import './Login.css';
 
 const Login: React.FC = () => {
@@ -13,6 +15,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mostrarSelectorEmpresa, setMostrarSelectorEmpresa] = useState(false);
+  const [mostrarEulaModal, setMostrarEulaModal] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Por defecto activado
   const { login } = useAuth();
   const { empresasUsuario, cargarEmpresasUsuario } = useEmpresa();
@@ -49,8 +52,60 @@ const Login: React.FC = () => {
       } else {
         setError('❌ Email o contraseña incorrectos. Por favor, verifica tus credenciales.');
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Verificar si es un error de EULA no aceptado (flujo esperado)
+      const isEulaError = 
+        (err as any).isEulaError ||
+        (err.response?.status === 403 && err.response?.data?.error === 'EULA_NO_ACEPTADO');
+      
+      if (isEulaError) {
+        // Log mínimo para EULA (no es un error real, es parte del flujo)
+        console.log('📄 [Login] Usuario sin EULA aceptado, mostrando modal');
+        setMostrarEulaModal(true);
+        setLoading(false);
+        setError('');
+        return;
+      }
+      
+      // Log completo para otros errores reales
+      console.error('❌ [Login] Error en handleSubmit:', err);
+      
       setError('❌ Error al conectar con el servidor. Por favor, intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleEulaAceptado = async () => {
+    console.log('📄 [Login] EULA aceptado, cerrando modal y reintentando login');
+    setMostrarEulaModal(false);
+    // Intentar login nuevamente después de aceptar EULA
+    try {
+      setLoading(true);
+      console.log('📄 [Login] Intentando login después de aceptar EULA...');
+      const success = await login(username, password, rememberMe);
+      console.log('📄 [Login] Resultado del login después de EULA:', success);
+      
+      if (success) {
+        console.log('✅ [Login] Login exitoso después de EULA, cargando empresas...');
+        const empresasCargadas = await cargarEmpresasUsuario();
+        console.log('📄 [Login] Empresas cargadas:', empresasCargadas.length);
+        if (empresasCargadas.length > 1) {
+          setMostrarSelectorEmpresa(true);
+        } else if (empresasCargadas.length === 1) {
+          navigate('/dashboard');
+        } else {
+          setError('No tienes acceso a ninguna empresa. Contacta al administrador.');
+        }
+      } else {
+        console.warn('⚠️ [Login] Login falló después de aceptar EULA');
+        setError('Error al iniciar sesión después de aceptar el EULA. Por favor, intente nuevamente.');
+      }
+    } catch (err: any) {
+      console.error('❌ [Login] Error en handleEulaAceptado:', err);
+      console.error('❌ [Login] Error response:', err.response);
+      console.error('❌ [Login] Error data:', err.response?.data);
+      setError(err.response?.data?.message || 'Error al iniciar sesión después de aceptar el EULA. Por favor, intente nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -205,6 +260,18 @@ const Login: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de EULA */}
+      {mostrarEulaModal && (
+        <EulaModal
+          email={username}
+          onAceptar={handleEulaAceptado}
+          onCancelar={() => {
+            setMostrarEulaModal(false);
+            setError('Debe aceptar el EULA para acceder al sistema.');
+          }}
+        />
       )}
     </div>
   );
