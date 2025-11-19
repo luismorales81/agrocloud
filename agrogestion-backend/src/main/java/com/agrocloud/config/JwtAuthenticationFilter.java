@@ -59,6 +59,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             requestURI.contains("/api/auth/register") || 
             requestURI.contains("/api/auth/test") ||
             requestURI.contains("/api/auth/test-auth") ||
+            requestURI.contains("/api/auth/request-password-reset") ||
+            requestURI.contains("/api/auth/reset-password") ||
+            requestURI.contains("/api/auth/test-email") ||
             requestURI.contains("/api/health") ||
             requestURI.contains("/api/public/") ||
             requestURI.contains("/api/eula/") ||

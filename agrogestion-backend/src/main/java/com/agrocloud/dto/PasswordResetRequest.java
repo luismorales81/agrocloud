@@ -9,6 +9,10 @@ public class PasswordResetRequest {
     @Email(message = "El formato del email no es válido")
     private String email;
     
+    private String token;
+    
+    private String newPassword;
+    
     public PasswordResetRequest() {}
     
     public PasswordResetRequest(String email) {
@@ -21,5 +25,21 @@ public class PasswordResetRequest {
     
     public void setEmail(String email) {
         this.email = email;
+    }
+    
+    public String getToken() {
+        return token;
+    }
+    
+    public void setToken(String token) {
+        this.token = token;
+    }
+    
+    public String getNewPassword() {
+        return newPassword;
+    }
+    
+    public void setNewPassword(String newPassword) {
+        this.newPassword = newPassword;
     }
 }
