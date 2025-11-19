@@ -6,6 +6,17 @@ import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
+// Detectar si estamos en producción
+const isProduction = typeof window !== 'undefined' && (
+  window.location.hostname === 'www.agrocloud.com.ar' ||
+  window.location.hostname === 'agrocloud.com.ar' ||
+  window.location.hostname.includes('vercel.app') ||
+  window.location.hostname.includes('railway.app')
+);
+
+// URL del backend en producción (Railway)
+const PRODUCTION_API_URL = 'https://agrocloud-production.up.railway.app/api';
+
 let BASE_URL;
 if (VITE_API_BASE_URL && VITE_API_BASE_URL.includes('/api')) {
   // VITE_API_BASE_URL ya incluye /api (como en Vercel)
@@ -16,16 +27,22 @@ if (VITE_API_BASE_URL && VITE_API_BASE_URL.includes('/api')) {
 } else if (VITE_API_BASE_URL) {
   // VITE_API_BASE_URL no incluye /api, agregarlo
   BASE_URL = VITE_API_BASE_URL.includes('/api') ? VITE_API_BASE_URL : `${VITE_API_BASE_URL}/api`;
+} else if (isProduction) {
+  // Si estamos en producción y no hay variables configuradas, usar la URL de Railway
+  BASE_URL = PRODUCTION_API_URL;
+  console.warn('⚠️ [API] Variables de entorno no configuradas, usando URL de producción por defecto');
 } else {
-  // Fallback a localhost
+  // Fallback a localhost solo en desarrollo
   BASE_URL = 'http://localhost:8080/api';
 }
 
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
-console.log('%c🚀 API SERVICE INITIALIZED - VERSION 2.1', 'color: #00ff00; font-weight: bold; font-size: 16px');
+console.log('%c🚀 API SERVICE INITIALIZED - VERSION 2.2', 'color: #00ff00; font-weight: bold; font-size: 16px');
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
 console.log('%c📡 VITE_API_URL:', 'color: #ffaa00; font-weight: bold', VITE_API_URL || 'NOT SET');
 console.log('%c📡 VITE_API_BASE_URL:', 'color: #ffaa00; font-weight: bold', VITE_API_BASE_URL || 'NOT SET');
+console.log('%c🌐 Hostname:', 'color: #ffaa00; font-weight: bold', typeof window !== 'undefined' ? window.location.hostname : 'N/A');
+console.log('%c🏭 Is Production:', 'color: #ffaa00; font-weight: bold', isProduction);
 console.log('%c📡 BASE_URL final:', 'color: #ffaa00; font-weight: bold', BASE_URL);
 console.log('%c✅ /api prefix included:', 'color: #00ff00; font-weight: bold', BASE_URL.includes('/api'));
 console.log('%c🔍 URL Analysis:', 'color: #00ff00; font-weight: bold');
@@ -34,6 +51,9 @@ console.log('  - VITE_API_BASE_URL includes /api:', VITE_API_BASE_URL?.includes(
 console.log('  - BASE_URL final:', BASE_URL);
 console.log('%c🔧 MODE:', 'color: #ffaa00', import.meta.env.MODE);
 console.log('%c🌍 ENV:', 'color: #ffaa00', import.meta.env.VITE_ENVIRONMENT || 'development');
+if (isProduction && !VITE_API_BASE_URL && !VITE_API_URL) {
+  console.warn('%c⚠️ ADVERTENCIA: Variables de entorno no configuradas en Vercel. Usando URL de producción por defecto.', 'color: #ff9900; font-weight: bold');
+}
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
 
 // Crear instancia de Axios
