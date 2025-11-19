@@ -15,7 +15,8 @@
       "dest": "/sw.js",
       "headers": {
         "Content-Type": "application/javascript",
-        "Cache-Control": "no-cache"
+        "Cache-Control": "no-cache",
+        "Access-Control-Allow-Origin": "*"
       }
     },
     {
@@ -23,7 +24,8 @@
       "dest": "/manifest.json",
       "headers": {
         "Content-Type": "application/json",
-        "Cache-Control": "no-cache"
+        "Cache-Control": "no-cache",
+        "Access-Control-Allow-Origin": "*"
       }
     },
     {
