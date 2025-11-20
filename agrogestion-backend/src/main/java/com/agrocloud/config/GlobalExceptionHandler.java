@@ -2,6 +2,7 @@ package com.agrocloud.config;
 
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.exception.ResourceConflictException;
+import com.agrocloud.exception.EulaNoAceptadoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -64,6 +65,24 @@ public class GlobalExceptionHandler {
         response.put("path", request.getDescription(false).replace("uri=", ""));
         
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+    
+    /**
+     * Maneja excepciones de EULA no aceptado
+     */
+    @ExceptionHandler(EulaNoAceptadoException.class)
+    public ResponseEntity<Map<String, Object>> handleEulaNoAceptadoException(
+            EulaNoAceptadoException ex, WebRequest request) {
+        logger.warn("📄 [GlobalExceptionHandler] EULA no aceptado: {}", ex.getMessage());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.FORBIDDEN.value());
+        response.put("error", "EULA_NO_ACEPTADO");
+        response.put("message", ex.getMessage());
+        response.put("path", request.getDescription(false).replace("uri=", ""));
+        
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
     
     /**

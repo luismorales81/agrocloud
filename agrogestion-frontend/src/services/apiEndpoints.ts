@@ -289,6 +289,8 @@ export const API_ENDPOINTS = {
     USUARIOS_EMPRESA: (empresaId: number) => `/empresa-usuario/empresa/${empresaId}/usuarios`,
     ASIGNAR: '/empresa-usuario/asignar',
     CAMBIAR_ROL: '/empresa-usuario/cambiar-rol',
+    ASIGNAR_ROLES: '/empresa-usuario/asignar-roles',
+    ROLES_USUARIO: '/empresa-usuario/roles-usuario',
     REMOVER: (usuarioId: number, empresaId: number) => `/empresa-usuario/remover/${usuarioId}/${empresaId}`,
   },
 

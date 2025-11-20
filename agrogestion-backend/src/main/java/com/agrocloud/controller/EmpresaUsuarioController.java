@@ -1,11 +1,11 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.dto.AsignarUsuarioEmpresaDTO;
 import com.agrocloud.dto.UsuarioEmpresaDTO;
 import com.agrocloud.model.entity.User;
 import com.agrocloud.model.entity.UsuarioEmpresa;
 import com.agrocloud.model.enums.EstadoUsuarioEmpresa;
 import com.agrocloud.model.enums.RolEmpresa;
+import com.agrocloud.model.entity.UsuarioEmpresaRol;
 import com.agrocloud.service.EmpresaUsuarioService;
 import com.agrocloud.service.UserService;
 import org.slf4j.Logger;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -41,7 +42,7 @@ public class EmpresaUsuarioController {
      */
     @PostMapping("/asignar")
     public ResponseEntity<Map<String, Object>> asignarUsuarioAEmpresa(
-            @RequestBody AsignarUsuarioEmpresaDTO request,
+            @RequestBody Map<String, Object> request,
             Authentication authentication) {
         
         Map<String, Object> response = new HashMap<>();
@@ -58,10 +59,14 @@ public class EmpresaUsuarioController {
                 return ResponseEntity.status(403).body(response);
             }
             
+            Long usuarioId = Long.valueOf(request.get("usuarioId").toString());
+            Long empresaId = Long.valueOf(request.get("empresaId").toString());
+            RolEmpresa rol = RolEmpresa.valueOf(request.get("rol").toString());
+            
             UsuarioEmpresa relacion = empresaUsuarioService.asignarUsuarioAEmpresa(
-                    request.getUsuarioId(),
-                    request.getEmpresaId(),
-                    request.getRol(),
+                    usuarioId,
+                    empresaId,
+                    rol,
                     usuarioActual
             );
             
@@ -263,6 +268,87 @@ public class EmpresaUsuarioController {
             
         } catch (Exception e) {
             logger.error("Error cambiando rol del usuario: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    /**
+     * Asignar múltiples roles a un usuario en una empresa
+     */
+    @PutMapping("/asignar-roles")
+    public ResponseEntity<Map<String, Object>> asignarRolesAUsuarioEnEmpresa(
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Obtener usuario actual desde el token
+            String username = authentication.getName();
+            User usuarioActual = userService.findByEmailWithAllRelations(username);
+            
+            // Verificar permisos: solo SUPERADMIN puede cambiar roles
+            if (!usuarioActual.isAdmin() && !"SUPERADMIN".equals(usuarioActual.getRoles().iterator().next().getNombre())) {
+                response.put("success", false);
+                response.put("message", "No tienes permisos para cambiar roles de usuarios");
+                return ResponseEntity.status(403).body(response);
+            }
+            
+            Long usuarioId = Long.valueOf(request.get("usuarioId").toString());
+            Long empresaId = Long.valueOf(request.get("empresaId").toString());
+            
+            @SuppressWarnings("unchecked")
+            List<String> rolesStr = (List<String>) request.get("roles");
+            Set<RolEmpresa> roles = rolesStr.stream()
+                    .map(RolEmpresa::valueOf)
+                    .collect(java.util.stream.Collectors.toSet());
+            
+            List<UsuarioEmpresaRol> rolesAsignados = empresaUsuarioService.asignarRolesAUsuarioEnEmpresa(usuarioId, empresaId, roles);
+            
+            List<String> rolesNombres = rolesAsignados.stream()
+                    .map(uer -> uer.getRol().getNombre())
+                    .collect(java.util.stream.Collectors.toList());
+            
+            response.put("success", true);
+            response.put("message", "Roles asignados correctamente");
+            response.put("roles", rolesNombres);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error asignando roles al usuario: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    /**
+     * Obtener todos los roles de un usuario en una empresa
+     */
+    @GetMapping("/roles-usuario")
+    public ResponseEntity<Map<String, Object>> obtenerRolesDeUsuarioEnEmpresa(
+            @RequestParam Long usuarioId,
+            @RequestParam Long empresaId,
+            Authentication authentication) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            List<RolEmpresa> roles = empresaUsuarioService.obtenerRolesDeUsuarioEnEmpresa(usuarioId, empresaId);
+            List<String> rolesNombres = roles.stream()
+                    .map(RolEmpresa::name)
+                    .collect(java.util.stream.Collectors.toList());
+            
+            response.put("success", true);
+            response.put("roles", rolesNombres);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error obteniendo roles del usuario: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "Error: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);

@@ -871,13 +871,13 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                           </div>
                           <div>
                             <div className="font-medium text-gray-900 text-sm">
-                              {usuario[0]?.firstName} {usuario[0]?.lastName}
+                              {usuario.nombre || 'Usuario sin nombre'}
                             </div>
-                            <div className="text-xs text-gray-500">@{usuario[0]?.username}</div>
+                            <div className="text-xs text-gray-500">{usuario.email || ''}</div>
                           </div>
                         </div>
                         <div className="text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded-full">
-                          {usuario[1]} actividades
+                          {usuario.actividad || 'Sin actividad'}
                         </div>
                       </div>
                     ))
@@ -904,10 +904,10 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                           </div>
                           <div>
                             <div className="font-medium text-gray-900 text-sm">
-                              {empresa[0]?.nombre}
+                              {empresa.nombre || 'Empresa sin nombre'}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {empresa[1]} campos, {empresa[2]} lotes, {empresa[3]} insumos
+                              {empresa.actividad || 'Sin actividad'}
                             </div>
                           </div>
                         </div>

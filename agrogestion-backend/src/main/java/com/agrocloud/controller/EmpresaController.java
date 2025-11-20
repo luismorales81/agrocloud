@@ -196,6 +196,35 @@ public class EmpresaController {
     }
 
     /**
+     * Obtiene una empresa específica del usuario como DTO (con enmascaramiento)
+     */
+    @GetMapping("/{id}/dto")
+    public ResponseEntity<EmpresaDTO> obtenerEmpresaDTO(@PathVariable Long id, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User usuario = userService.findByEmailWithAllRelations(email);
+            if (usuario == null) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Verificar que el usuario pertenece a esta empresa
+            if (!usuario.perteneceAEmpresa(id)) {
+                return ResponseEntity.status(403).build();
+            }
+
+            Optional<Empresa> empresa = empresaService.obtenerEmpresaPorId(id);
+            if (empresa.isPresent()) {
+                EmpresaDTO dto = convertirAEmpresaDTO(empresa.get());
+                return ResponseEntity.ok(dto);
+            }
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            logger.error("Error obteniendo empresa DTO: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * Obtiene una empresa específica del usuario
      */
     @GetMapping("/{id}")

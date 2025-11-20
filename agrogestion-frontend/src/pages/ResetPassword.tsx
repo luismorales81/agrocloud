@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { authService, showNotification } from '../services/api';
+import './Login.css';
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -14,12 +15,25 @@ const ResetPassword: React.FC = () => {
   const [token, setToken] = useState('');
 
   useEffect(() => {
+    // Obtener todos los parámetros de la URL para debug
+    const allParams = Object.fromEntries(searchParams.entries());
+    console.log('🔍 [ResetPassword] Parámetros de URL:', allParams);
+    console.log('🔍 [ResetPassword] URL completa:', window.location.href);
+    
     const tokenParam = searchParams.get('token');
+    console.log('🔍 [ResetPassword] Token obtenido:', tokenParam);
+    
     if (!tokenParam) {
-      showNotification('Token de recuperación no válido', 'error');
-      navigate('/forgot-password');
+      console.error('❌ [ResetPassword] No se encontró token en la URL');
+      showNotification('Token de recuperación no válido. Por favor, solicita un nuevo enlace de recuperación.', 'error');
+      // Redirigir después de un pequeño delay para que el usuario vea el mensaje
+      setTimeout(() => {
+        navigate('/forgot-password');
+      }, 2000);
       return;
     }
+    
+    console.log('✅ [ResetPassword] Token válido encontrado');
     setToken(tokenParam);
   }, [searchParams, navigate]);
 
@@ -55,24 +69,28 @@ const ResetPassword: React.FC = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
+      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 login-background">
+        {/* Overlay oscuro para mejorar legibilidad */}
+        <div className="absolute inset-0 login-overlay"></div>
+        
+        {/* Contenido */}
+        <div className="relative z-10 max-w-md w-full space-y-8">
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-center text-4xl font-extrabold text-white login-title">
               Contraseña Actualizada
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-lg text-white login-subtitle">
               Tu contraseña ha sido actualizada exitosamente
             </p>
           </div>
           
-          <div className="card p-8 text-center">
+          <div className="login-card p-8 text-center">
             <div className="mb-4">
-              <svg className="mx-auto h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="mx-auto h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-700 mb-6">
               Ya puedes iniciar sesión con tu nueva contraseña.
             </p>
             <Button
@@ -90,19 +108,23 @@ const ResetPassword: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 login-background">
+      {/* Overlay oscuro para mejorar legibilidad */}
+      <div className="absolute inset-0 login-overlay"></div>
+      
+      {/* Contenido */}
+      <div className="relative z-10 max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-4xl font-extrabold text-white login-title">
             Nueva Contraseña
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-lg text-white login-subtitle">
             Ingresa tu nueva contraseña
           </p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="card p-8">
+          <div className="login-card p-8">
             <Input
               label="Nueva Contraseña"
               type="password"

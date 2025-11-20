@@ -84,6 +84,25 @@ public class User implements UserDetails {
     @Column(name = "reset_password_token_expiry")
     private LocalDateTime resetPasswordTokenExpiry;
 
+    // Campos EULA
+    @Column(name = "eula_aceptado", nullable = false)
+    private Boolean eulaAceptado = false;
+
+    @Column(name = "eula_fecha_aceptacion")
+    private LocalDateTime eulaFechaAceptacion;
+
+    @Column(name = "eula_ip_address", length = 45)
+    private String eulaIpAddress;
+
+    @Column(name = "eula_user_agent", length = 500)
+    private String eulaUserAgent;
+
+    @Column(name = "eula_version", length = 20)
+    private String eulaVersion;
+
+    @Column(name = "eula_pdf_path", length = 500)
+    private String eulaPdfPath;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creado_por_id")
     @JsonIgnore
@@ -419,6 +438,55 @@ public class User implements UserDetails {
 
     public void setResetPasswordTokenExpiry(LocalDateTime resetPasswordTokenExpiry) {
         this.resetPasswordTokenExpiry = resetPasswordTokenExpiry;
+    }
+
+    // Getters y Setters para campos EULA
+    public Boolean getEulaAceptado() {
+        return eulaAceptado;
+    }
+
+    public void setEulaAceptado(Boolean eulaAceptado) {
+        this.eulaAceptado = eulaAceptado;
+    }
+
+    public LocalDateTime getEulaFechaAceptacion() {
+        return eulaFechaAceptacion;
+    }
+
+    public void setEulaFechaAceptacion(LocalDateTime eulaFechaAceptacion) {
+        this.eulaFechaAceptacion = eulaFechaAceptacion;
+    }
+
+    public String getEulaIpAddress() {
+        return eulaIpAddress;
+    }
+
+    public void setEulaIpAddress(String eulaIpAddress) {
+        this.eulaIpAddress = eulaIpAddress;
+    }
+
+    public String getEulaUserAgent() {
+        return eulaUserAgent;
+    }
+
+    public void setEulaUserAgent(String eulaUserAgent) {
+        this.eulaUserAgent = eulaUserAgent;
+    }
+
+    public String getEulaVersion() {
+        return eulaVersion;
+    }
+
+    public void setEulaVersion(String eulaVersion) {
+        this.eulaVersion = eulaVersion;
+    }
+
+    public String getEulaPdfPath() {
+        return eulaPdfPath;
+    }
+
+    public void setEulaPdfPath(String eulaPdfPath) {
+        this.eulaPdfPath = eulaPdfPath;
     }
 
     public User getCreadoPor() {

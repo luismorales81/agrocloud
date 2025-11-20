@@ -1,22 +1,34 @@
 package com.agrocloud.dto;
 
+import com.agrocloud.config.serializer.CuitMaskingSerializer;
+import com.agrocloud.config.serializer.EmailMaskingSerializer;
 import com.agrocloud.model.enums.EstadoUsuarioEmpresa;
 import com.agrocloud.model.enums.RolEmpresa;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import java.time.LocalDate;
 
 /**
  * DTO para la relación usuario-empresa
+ * Los datos sensibles se enmascaran automáticamente en las respuestas
  */
 public class UsuarioEmpresaDTO {
     
     private Long id;
     private Long usuarioId;
+    
+    @JsonSerialize(using = EmailMaskingSerializer.class)
     private String usuarioEmail;
+    
     private String usuarioNombre;
     private Long empresaId;
     private String empresaNombre;
+    
+    @JsonSerialize(using = CuitMaskingSerializer.class)
     private String empresaCuit;
+    
+    @JsonSerialize(using = EmailMaskingSerializer.class)
     private String empresaEmail;
     
     @JsonProperty("rol")
@@ -27,6 +39,8 @@ public class UsuarioEmpresaDTO {
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
     private Long creadoPorId;
+    
+    @JsonSerialize(using = EmailMaskingSerializer.class)
     private String creadoPorEmail;
     
     // Constructor

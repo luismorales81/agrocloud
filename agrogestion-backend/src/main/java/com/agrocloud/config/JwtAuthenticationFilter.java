@@ -59,8 +59,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             requestURI.contains("/api/auth/register") || 
             requestURI.contains("/api/auth/test") ||
             requestURI.contains("/api/auth/test-auth") ||
+            requestURI.contains("/api/auth/request-password-reset") ||
+            requestURI.contains("/api/auth/reset-password") ||
+            requestURI.contains("/api/auth/test-email") ||
             requestURI.contains("/api/health") ||
             requestURI.contains("/api/public/") ||
+            requestURI.contains("/api/eula/") ||
             requestURI.contains("/api/admin-global/dashboard-test") ||
             requestURI.contains("/api/admin-global/test-simple") ||
            requestURI.contains("/api/admin-global/dashboard-simple") ||
@@ -68,6 +72,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
            requestURI.contains("/api/admin-global/empresas-basic") ||
            requestURI.contains("/api/admin-global/usuarios-basic") ||
            requestURI.contains("/api/admin-global/estadisticas-uso") ||
+           requestURI.contains("/api/admin-global/diagnostico-roles") ||
             requestURI.contains("/api/v1/weather-simple/") ||
             requestURI.contains("/api/v1/weather/") ||
             requestURI.contains("/actuator/")) {

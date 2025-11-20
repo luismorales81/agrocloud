@@ -10,6 +10,7 @@ import com.agrocloud.service.FieldService;
 import com.agrocloud.service.InsumoService;
 import com.agrocloud.service.MaquinariaService;
 import com.agrocloud.service.WeatherApiUsageService;
+import com.agrocloud.service.EnmascaramientoDatosService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -54,6 +55,15 @@ public class AdminGlobalController {
     
     @Autowired
     private WeatherApiUsageService weatherApiUsageService;
+    
+    @Autowired
+    private EnmascaramientoDatosService enmascaramientoDatosService;
+    
+    @Autowired
+    private com.agrocloud.repository.UsuarioEmpresaRolRepository usuarioEmpresaRolRepository;
+    
+    @Autowired
+    private com.agrocloud.repository.UsuarioEmpresaRepository usuarioEmpresaRepository;
 
 
     /**
@@ -115,11 +125,84 @@ public class AdminGlobalController {
     @GetMapping("/estadisticas-uso")
     public ResponseEntity<Map<String, Object>> obtenerEstadisticasUso() {
         try {
+            System.out.println("🔍 [AdminGlobalController] obtenerEstadisticasUso() - INICIO");
             Map<String, Object> estadisticas = adminGlobalService.obtenerEstadisticasUso();
+            System.out.println("✅ [AdminGlobalController] Estadísticas obtenidas: " + estadisticas.get("usuariosPorRol"));
             return ResponseEntity.ok(estadisticas);
         } catch (Exception e) {
+            System.err.println("❌ [AdminGlobalController] Error obteniendo estadísticas: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
+        }
+    }
+    
+    /**
+     * Endpoint de diagnóstico para verificar valores reales en la base de datos
+     * Accesible sin autenticación para facilitar el diagnóstico
+     */
+    @GetMapping("/diagnostico-roles")
+    @CrossOrigin(origins = "*")
+    public ResponseEntity<Map<String, Object>> diagnosticoRoles() {
+        Map<String, Object> diagnostico = new HashMap<>();
+        try {
+            // Contar desde UsuarioEmpresaRol
+            long totalUsuarioEmpresaRol = usuarioEmpresaRolRepository.count();
+            diagnostico.put("totalRegistrosUsuarioEmpresaRol", totalUsuarioEmpresaRol);
+            
+            // Contar desde UsuarioEmpresa (legacy)
+            long totalUsuarioEmpresa = usuarioEmpresaRepository.count();
+            diagnostico.put("totalRegistrosUsuarioEmpresa", totalUsuarioEmpresa);
+            
+            // Obtener conteos desde UsuarioEmpresaRol
+            List<Object[]> conteosUsuarioEmpresaRol = usuarioEmpresaRolRepository.countUsuariosUnicosPorRol();
+            Map<String, Long> rolesDesdeUsuarioEmpresaRol = new HashMap<>();
+            for (Object[] resultado : conteosUsuarioEmpresaRol) {
+                String nombreRol = (String) resultado[0];
+                Long cantidad = ((Number) resultado[1]).longValue();
+                rolesDesdeUsuarioEmpresaRol.put(nombreRol, cantidad);
+            }
+            diagnostico.put("rolesDesdeUsuarioEmpresaRol", rolesDesdeUsuarioEmpresaRol);
+            
+            // Obtener conteos desde UsuarioEmpresa (legacy)
+            List<com.agrocloud.model.entity.UsuarioEmpresa> relaciones = usuarioEmpresaRepository.findAll();
+            Map<String, java.util.Set<Long>> usuariosPorRolSet = new HashMap<>();
+            for (com.agrocloud.model.entity.UsuarioEmpresa relacion : relaciones) {
+                if (relacion.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
+                    String nombreRol = relacion.getRol().name();
+                    Long usuarioId = relacion.getUsuario().getId();
+                    usuariosPorRolSet.putIfAbsent(nombreRol, new java.util.HashSet<>());
+                    usuariosPorRolSet.get(nombreRol).add(usuarioId);
+                }
+            }
+            Map<String, Long> rolesDesdeUsuarioEmpresa = new HashMap<>();
+            for (Map.Entry<String, java.util.Set<Long>> entry : usuariosPorRolSet.entrySet()) {
+                rolesDesdeUsuarioEmpresa.put(entry.getKey(), (long) entry.getValue().size());
+            }
+            diagnostico.put("rolesDesdeUsuarioEmpresa", rolesDesdeUsuarioEmpresa);
+            
+            // Obtener detalles de usuarios y sus roles
+            List<com.agrocloud.model.entity.User> todosUsuarios = userService.findAll();
+            Map<String, Object> detallesUsuarios = new HashMap<>();
+            detallesUsuarios.put("totalUsuarios", todosUsuarios.size());
+            
+            // Contar usuarios por rol del sistema (User.getRoles())
+            Map<String, Long> usuariosPorRolSistema = new HashMap<>();
+            for (com.agrocloud.model.entity.User usuario : todosUsuarios) {
+                if (usuario.getRoles() != null) {
+                    for (var rol : usuario.getRoles()) {
+                        String nombreRol = rol.getNombre();
+                        usuariosPorRolSistema.put(nombreRol, usuariosPorRolSistema.getOrDefault(nombreRol, 0L) + 1);
+                    }
+                }
+            }
+            diagnostico.put("usuariosPorRolSistema", usuariosPorRolSistema);
+            
+            return ResponseEntity.ok(diagnostico);
+        } catch (Exception e) {
+            System.err.println("❌ Error en diagnóstico: " + e.getMessage());
+            e.printStackTrace();
+            diagnostico.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(diagnostico);
         }
     }
     
@@ -220,10 +303,13 @@ public class AdminGlobalController {
                 Map<String, Object> empresaBasica = new HashMap<>();
                 empresaBasica.put("id", empresa.getId());
                 empresaBasica.put("nombre", empresa.getNombre());
-                empresaBasica.put("cuit", empresa.getCuit());
-                empresaBasica.put("emailContacto", empresa.getEmailContacto());
-                empresaBasica.put("telefonoContacto", empresa.getTelefonoContacto());
-                empresaBasica.put("direccion", empresa.getDireccion());
+                // Enmascarar datos sensibles
+                empresaBasica.put("cuit", enmascaramientoDatosService.enmascararCuit(empresa.getCuit()));
+                empresaBasica.put("emailContacto", enmascaramientoDatosService.enmascararEmail(empresa.getEmailContacto()));
+                empresaBasica.put("telefonoContacto", empresa.getTelefonoContacto() != null ? 
+                    enmascaramientoDatosService.enmascararTelefono(empresa.getTelefonoContacto()) : null);
+                empresaBasica.put("direccion", empresa.getDireccion() != null ? 
+                    enmascaramientoDatosService.enmascararDireccion(empresa.getDireccion()) : null);
                 empresaBasica.put("estado", empresa.getEstado() != null ? empresa.getEstado().name() : "ACTIVO");
                 empresaBasica.put("activo", empresa.getActivo());
                 empresaBasica.put("fechaCreacion", empresa.getFechaCreacion());
@@ -268,7 +354,8 @@ public class AdminGlobalController {
                 usuarioBasico.put("username", usuario.getUsername());
                 usuarioBasico.put("firstName", usuario.getFirstName());
                 usuarioBasico.put("lastName", usuario.getLastName());
-                usuarioBasico.put("email", usuario.getEmail());
+                // Enmascarar email
+                usuarioBasico.put("email", enmascaramientoDatosService.enmascararEmail(usuario.getEmail()));
                 usuarioBasico.put("activo", usuario.getActivo());
                 usuarioBasico.put("estado", usuario.getEstado() != null ? usuario.getEstado().name() : "ACTIVO");
                 usuarioBasico.put("emailVerified", usuario.getEmailVerified());

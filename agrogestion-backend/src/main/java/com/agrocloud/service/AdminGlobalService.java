@@ -43,6 +43,12 @@ public class AdminGlobalService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private EnmascaramientoDatosService enmascaramientoDatosService;
+    
+    @Autowired
+    private com.agrocloud.repository.UsuarioEmpresaRolRepository usuarioEmpresaRolRepository;
 
     /**
      * Obtiene el dashboard del administrador global
@@ -313,7 +319,18 @@ public class AdminGlobalService {
         Empresa empresa = empresaRepository.findById(empresaId)
                 .orElseThrow(() -> new RuntimeException("Empresa no encontrada con ID: " + empresaId));
 
-        reporte.put("empresa", empresa);
+        // Crear mapa con datos enmascarados de la empresa
+        Map<String, Object> empresaData = new HashMap<>();
+        empresaData.put("id", empresa.getId());
+        empresaData.put("nombre", empresa.getNombre());
+        empresaData.put("cuit", enmascaramientoDatosService.enmascararCuit(empresa.getCuit()));
+        empresaData.put("emailContacto", enmascaramientoDatosService.enmascararEmail(empresa.getEmailContacto()));
+        empresaData.put("telefonoContacto", empresa.getTelefonoContacto() != null ? 
+            enmascaramientoDatosService.enmascararTelefono(empresa.getTelefonoContacto()) : null);
+        empresaData.put("estado", empresa.getEstado() != null ? empresa.getEstado().name() : "ACTIVO");
+        empresaData.put("activo", empresa.getActivo());
+        
+        reporte.put("empresa", empresaData);
 
         // Estadísticas de usuarios
         long totalUsuarios = usuarioEmpresaRepository.countByEmpresa(empresa);
@@ -380,7 +397,17 @@ public class AdminGlobalService {
         User usuario = userRepository.findById(usuarioId)
             .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + usuarioId));
         
-        reporte.put("usuario", usuario);
+        // Crear mapa con datos enmascarados del usuario
+        Map<String, Object> usuarioData = new HashMap<>();
+        usuarioData.put("id", usuario.getId());
+        usuarioData.put("username", usuario.getUsername());
+        usuarioData.put("firstName", usuario.getFirstName());
+        usuarioData.put("lastName", usuario.getLastName());
+        usuarioData.put("email", enmascaramientoDatosService.enmascararEmail(usuario.getEmail()));
+        usuarioData.put("activo", usuario.getActivo());
+        usuarioData.put("estado", usuario.getEstado() != null ? usuario.getEstado().name() : "ACTIVO");
+        
+        reporte.put("usuario", usuarioData);
         
         // Estadísticas de actividad del usuario
         reporte.put("ultimoAcceso", usuario.getFechaActualizacion());
@@ -425,18 +452,95 @@ public class AdminGlobalService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> obtenerEstadisticasUso() {
+        System.out.println("🚀 [AdminGlobalService] obtenerEstadisticasUso() - INICIO");
         Map<String, Object> estadisticas = new HashMap<>();
         
-        // Distribución de usuarios por rol
+        // Distribución de usuarios por rol de empresa
         Map<String, Long> usuariosPorRol = new HashMap<>();
-        List<User> todosUsuarios = userRepository.findAll();
         
-        for (User usuario : todosUsuarios) {
-            if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
-                String rol = usuario.getRoles().iterator().next().getNombre();
-                usuariosPorRol.put(rol, usuariosPorRol.getOrDefault(rol, 0L) + 1);
+        // Inicializar todos los roles posibles con 0 para que aparezcan aunque no tengan usuarios
+        usuariosPorRol.put("SUPERADMIN", 0L);
+        usuariosPorRol.put("ADMINISTRADOR", 0L);
+        usuariosPorRol.put("JEFE_CAMPO", 0L);
+        usuariosPorRol.put("JEFE_FINANCIERO", 0L);
+        usuariosPorRol.put("OPERARIO", 0L);
+        usuariosPorRol.put("CONSULTOR_EXTERNO", 0L);
+        
+        // Usar UsuarioEmpresa como fuente principal (tiene más datos y es la fuente de verdad)
+        // Luego combinar con UsuarioEmpresaRol para tener el conteo completo
+        try {
+            System.out.println("📊 [AdminGlobalService] Usando UsuarioEmpresa como fuente principal");
+            List<com.agrocloud.model.entity.UsuarioEmpresa> relaciones = usuarioEmpresaRepository.findAll();
+            System.out.println("  - Total relaciones encontradas en UsuarioEmpresa: " + relaciones.size());
+            
+            // Contar usuarios únicos por rol (usando roles actualizados para mapear deprecated)
+            Map<String, java.util.Set<Long>> usuariosPorRolSet = new HashMap<>();
+            
+            for (com.agrocloud.model.entity.UsuarioEmpresa relacion : relaciones) {
+                if (relacion.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
+                    // Usar getRolActualizado() para mapear roles deprecated a los nuevos
+                    com.agrocloud.model.enums.RolEmpresa rol = relacion.getRol();
+                    if (rol != null) {
+                        com.agrocloud.model.enums.RolEmpresa rolActualizado = rol.getRolActualizado();
+                        String nombreRol = rolActualizado.name();
+                        Long usuarioId = relacion.getUsuario().getId();
+                        
+                        usuariosPorRolSet.putIfAbsent(nombreRol, new java.util.HashSet<>());
+                        usuariosPorRolSet.get(nombreRol).add(usuarioId);
+                    }
+                }
             }
+            
+            // Convertir sets a conteos
+            for (Map.Entry<String, java.util.Set<Long>> entry : usuariosPorRolSet.entrySet()) {
+                usuariosPorRol.put(entry.getKey(), (long) entry.getValue().size());
+                System.out.println("  ✅ Rol desde UsuarioEmpresa: " + entry.getKey() + " = " + entry.getValue().size() + " usuarios únicos");
+            }
+            
+            // Ahora agregar datos de UsuarioEmpresaRol para usuarios que puedan estar solo ahí
+            try {
+                long totalRegistrosRol = usuarioEmpresaRolRepository.count();
+                System.out.println("📊 [AdminGlobalService] Total registros en UsuarioEmpresaRol: " + totalRegistrosRol);
+                
+                if (totalRegistrosRol > 0) {
+                    List<Object[]> conteosPorRol = usuarioEmpresaRolRepository.countUsuariosUnicosPorRol();
+                    System.out.println("📊 [AdminGlobalService] Combinando con UsuarioEmpresaRol: " + (conteosPorRol != null ? conteosPorRol.size() : 0) + " roles");
+                    
+                    if (conteosPorRol != null && !conteosPorRol.isEmpty()) {
+                        for (Object[] resultado : conteosPorRol) {
+                            String nombreRol = (String) resultado[0];
+                            Long cantidad = ((Number) resultado[1]).longValue();
+                            
+                            // Mapear el nombre del rol a RolEmpresa si es necesario
+                            try {
+                                com.agrocloud.model.enums.RolEmpresa rolEmpresa = com.agrocloud.model.enums.RolEmpresa.valueOf(nombreRol);
+                                com.agrocloud.model.enums.RolEmpresa rolActualizado = rolEmpresa.getRolActualizado();
+                                String nombreRolFinal = rolActualizado.name();
+                                
+                                // Combinar con los datos de UsuarioEmpresa (usar el máximo para evitar duplicados)
+                                Long cantidadActual = usuariosPorRol.getOrDefault(nombreRolFinal, 0L);
+                                // Si UsuarioEmpresaRol tiene más usuarios, actualizar (puede haber usuarios solo en esta tabla)
+                                if (cantidad > cantidadActual) {
+                                    usuariosPorRol.put(nombreRolFinal, cantidad);
+                                    System.out.println("  🔄 Actualizado desde UsuarioEmpresaRol: " + nombreRolFinal + " = " + cantidad);
+                                }
+                            } catch (IllegalArgumentException e) {
+                                // Si no es un RolEmpresa válido, ignorar
+                                System.out.println("    ⚠️ Rol no reconocido como RolEmpresa: " + nombreRol);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Error combinando con UsuarioEmpresaRol: " + e.getMessage());
+            }
+            
+        } catch (Exception ex) {
+            System.err.println("❌ Error contando usuarios por rol desde UsuarioEmpresa: " + ex.getMessage());
+            ex.printStackTrace();
         }
+        
+        System.out.println("✅ [AdminGlobalService] Distribución final de usuarios por rol: " + usuariosPorRol);
         estadisticas.put("usuariosPorRol", usuariosPorRol);
         
         // Usuarios más activos basados en contenido creado
@@ -456,6 +560,7 @@ public class AdminGlobalService {
         } catch (Exception e) {
             System.err.println("Error obteniendo usuarios activos: " + e.getMessage());
             // Fallback a usuarios recientes
+            List<User> todosUsuarios = userRepository.findAll();
             todosUsuarios.stream()
                 .filter(u -> u.getUpdatedAt() != null)
                 .sorted((u1, u2) -> u2.getUpdatedAt().compareTo(u1.getUpdatedAt()))
@@ -505,9 +610,10 @@ public class AdminGlobalService {
         estadisticas.put("empresasMasActivas", empresasMasActivas);
         
         // Estadísticas de sesiones (simplificado)
-        estadisticas.put("sesionesHoy", todosUsuarios.size()); // Aproximación
-        estadisticas.put("sesionesEstaSemana", todosUsuarios.size() * 2); // Aproximación
-        estadisticas.put("sesionesEsteMes", todosUsuarios.size() * 10); // Aproximación
+        long totalUsuarios = userRepository.count();
+        estadisticas.put("sesionesHoy", totalUsuarios); // Aproximación
+        estadisticas.put("sesionesEstaSemana", totalUsuarios * 2); // Aproximación
+        estadisticas.put("sesionesEsteMes", totalUsuarios * 10); // Aproximación
         
         return estadisticas;
     }

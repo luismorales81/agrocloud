@@ -80,6 +80,13 @@ public class AuthService implements UserDetailsService {
                 throw new RuntimeException("Usuario inactivo");
             }
             
+            // Verificar que el usuario haya aceptado el EULA
+            if (user.getEulaAceptado() == null || !user.getEulaAceptado()) {
+                logger.warn("📄 [AuthService] Usuario sin EULA aceptado: {}", loginRequest.getEmail());
+                throw new com.agrocloud.exception.EulaNoAceptadoException(
+                    "Debe aceptar el EULA antes de acceder al sistema. Por favor, acepte los términos y condiciones.");
+            }
+            
             // Autenticar usuario
             logger.info("🔐 [AuthService] Iniciando autenticación con AuthenticationManager...");
             Authentication authentication = authenticationManager.authenticate(
@@ -105,6 +112,9 @@ public class AuthService implements UserDetailsService {
             
             return new LoginResponse(token, jwtService.getExpirationTimeInSeconds(), userDto);
             
+        } catch (com.agrocloud.exception.EulaNoAceptadoException e) {
+            logger.warn("📄 [AuthService] EULA no aceptado para usuario: {}", loginRequest.getEmail());
+            throw e; // Re-lanzar EulaNoAceptadoException para que sea manejada por GlobalExceptionHandler
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
             logger.warn("🔐 [AuthService] Credenciales incorrectas para usuario: {}", loginRequest.getEmail());
             throw e; // Re-lanzar BadCredentialsException para que sea manejada por GlobalExceptionHandler
@@ -260,29 +270,53 @@ public class AuthService implements UserDetailsService {
     
     /**
      * Solicitar reset de contraseña
+     * 
+     * IMPORTANTE: Por seguridad, siempre devuelve éxito sin revelar si el email existe o no.
+     * Esto previene ataques de enumeración de usuarios.
      */
     public void requestPasswordReset(String email) {
         logger.info("Solicitando reset de contraseña para: {}", email);
         
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ese email"));
+        // Buscar usuario sin lanzar excepción si no existe
+        User user = userRepository.findByEmail(email).orElse(null);
         
-        if (!user.getActivo()) {
-            throw new RuntimeException("Usuario inactivo");
+        // Si el usuario existe y está activo, procesar el reset
+        if (user != null && user.getActivo()) {
+            // Generar token de reset
+            String resetToken = generateResetToken();
+            LocalDateTime expiryTime = LocalDateTime.now().plusHours(24); // Token válido por 24 horas
+            
+            user.setResetPasswordToken(resetToken);
+            user.setResetPasswordTokenExpiry(expiryTime);
+            userRepository.save(user);
+            
+            // Enviar email solo si el usuario existe y está activo
+            try {
+                emailService.sendPasswordResetEmail(email, resetToken);
+                logger.info("Token de reset generado y email enviado para: {}", email);
+            } catch (Exception e) {
+                logger.error("Error enviando email de recupero para: {}", email, e);
+                // No lanzar excepción para no revelar información
+            }
+        } else {
+            // Usuario no existe o está inactivo
+            // No hacer nada pero no revelar esta información
+            if (user == null) {
+                logger.warn("Intento de recupero de contraseña para email inexistente: {}", email);
+            } else {
+                logger.warn("Intento de recupero de contraseña para usuario inactivo: {}", email);
+            }
+            // Simular el mismo tiempo de procesamiento para evitar timing attacks
+            try {
+                Thread.sleep(100 + (long)(Math.random() * 200)); // 100-300ms delay aleatorio
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         
-        // Generar token de reset
-        String resetToken = generateResetToken();
-        LocalDateTime expiryTime = LocalDateTime.now().plusHours(24); // Token válido por 24 horas
-        
-        user.setResetPasswordToken(resetToken);
-        user.setResetPasswordTokenExpiry(expiryTime);
-        userRepository.save(user);
-        
-        // Enviar email
-        emailService.sendPasswordResetEmail(email, resetToken);
-        
-        logger.info("Token de reset generado y email enviado para: {}", email);
+        // Siempre devolver éxito sin revelar si el email existe o no
+        // Esto previene ataques de enumeración de usuarios
+        logger.info("Procesamiento de recupero de contraseña completado para: {} (sin revelar resultado)", email);
     }
     
     /**

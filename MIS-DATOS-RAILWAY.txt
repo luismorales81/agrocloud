@@ -1,0 +1,74 @@
+========================================
+DATOS DE CONEXIÓN A MYSQL EN RAILWAY
+========================================
+
+INSTRUCCIONES:
+1. Ve a Railway Dashboard: https://railway.app
+2. Selecciona tu proyecto
+3. Haz clic en el servicio MySQL
+4. Ve a la pestaña "Variables"
+5. Copia los valores aquí abajo
+
+========================================
+CONFIGURACIÓN
+========================================
+
+HOST (MYSQLHOST) - URL PÚBLICA:
+--------------------------------------------------------
+ballast.proxy.rlwy.net
+--------------------------------------------------------
+
+PORT (MYSQLPORT) - PUERTO PÚBLICO:
+--------------------------------------------------------
+41199
+--------------------------------------------------------
+
+HOST INTERNO (solo para referencia):
+--------------------------------------------------------
+mysql-bjw_.railway.internal (puerto 3306)
+--------------------------------------------------------
+
+DATABASE (MYSQLDATABASE):
+--------------------------------------------------------
+railway
+--------------------------------------------------------
+
+USERNAME (MYSQLUSER):
+--------------------------------------------------------
+root
+--------------------------------------------------------
+
+PASSWORD (MYSQLPASSWORD):
+--------------------------------------------------------
+OxwHQZQdvdAmCNBwEsdhDCmxzHbgJGpy
+--------------------------------------------------------
+
+========================================
+URL COMPLETA (si la tienes)
+========================================
+
+MYSQL_URL:
+--------------------------------------------------------
+[Pega aquí tu MYSQL_URL completa si Railway la proporciona]
+[Ejemplo: mysql://root:password@host:3306/railway]
+--------------------------------------------------------
+
+========================================
+NOTAS
+========================================
+
+Fecha de obtención: [Fecha]
+Última actualización: [Fecha]
+
+========================================
+PARA USAR EN SCRIPTS
+========================================
+
+Una vez que completes los datos arriba, puedes copiarlos a:
+- conectar-mysql-railway.bat
+- subir-estructura-railway.bat
+
+O usarlos directamente en MySQL Workbench o línea de comandos.
+
+========================================
+
