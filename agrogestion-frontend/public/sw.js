@@ -1,8 +1,8 @@
 // Service Worker para AgroCloud PWA
-const CACHE_NAME = 'agrocloud-v1.0.1'; // Actualizado para forzar refresh
-const STATIC_CACHE = 'agrocloud-static-v1.0.1';
-const DYNAMIC_CACHE = 'agrocloud-dynamic-v1.0.1';
-const API_CACHE = 'agrocloud-api-v1.0.1';
+const CACHE_NAME = 'agrocloud-v1.1.0'; // Actualizado para forzar refresh y limpiar caché antiguo
+const STATIC_CACHE = 'agrocloud-static-v1.1.0';
+const DYNAMIC_CACHE = 'agrocloud-dynamic-v1.1.0';
+const API_CACHE = 'agrocloud-api-v1.1.0';
 
 // Archivos estáticos para cache
 const STATIC_FILES = [
