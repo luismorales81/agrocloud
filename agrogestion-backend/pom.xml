@@ -14,7 +14,7 @@
 
     <groupId>com.agrocloud</groupId>
     <artifactId>agrocloud-backend</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <name>agrocloud-backend</name>
     <description>Sistema de Gestión Agropecuaria Backend</description>
 
