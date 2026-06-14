@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { authService } from '../services/api';
+import { authService, mensajeErrorConexionApi } from '../services/api';
 import { eulaService } from '../services/apiServices';
 import EulaModal from './EulaModal';
 
@@ -150,8 +150,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
       } else if (error.response?.status === 500) {
         setError('Error interno del servidor. Inténtalo de nuevo más tarde.');
-      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
-        setError('Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.');
+      } else if (error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK' || !error.response) {
+        setError(mensajeErrorConexionApi(error));
       } else {
         setError('Error en el inicio de sesión. Inténtalo de nuevo.');
       }

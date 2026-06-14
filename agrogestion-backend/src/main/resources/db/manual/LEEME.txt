@@ -1,0 +1,7 @@
+Scripts SQL que NO son migraciones Flyway (nombres sin prefijo V__ / R__).
+Ejecutarlos a mano en MySQL si hacen falta; Flyway ignora esta carpeta.
+
+Archivos movidos desde db/migration para evitar avisos/errores de validateMigrationNaming:
+- corregir_dosis_insumos.sql
+- create_tablas_agroquimicos_integrales.sql
+- create_tablas_aplicaciones_agroquimicas.sql

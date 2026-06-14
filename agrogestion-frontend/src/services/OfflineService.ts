@@ -1,5 +1,6 @@
 import { showNotification } from './api';
 import api from './api';
+import type { LaborDetalladoDTO } from '../types/labor.types';
 
 // Tipos para el caché offline
 interface CacheEntry<T> {
@@ -231,11 +232,60 @@ class OfflineService {
     }, 5 * 60 * 1000);
   }
 
-  public async getLabores(): Promise<any[]> {
-    return this.get('labores', async () => {
-      const response = await api.get('/labores');
+  public async getLabores(opciones?: { pagina?: number; tamano?: number }): Promise<LaborDetalladoDTO[]> {
+    const usarPaginacion = opciones?.pagina != null && opciones?.tamano != null;
+    const claveCache = usarPaginacion
+      ? `labores-p${opciones.pagina}-s${opciones.tamano}`
+      : 'labores';
+
+    const datos = await this.get<LaborDetalladoDTO[]>(claveCache, async () => {
+      if (usarPaginacion) {
+        const response = await api.get('/labores', {
+          params: { page: opciones!.pagina, size: opciones!.tamano },
+        });
+        const pagina = response.data as { contenido?: LaborDetalladoDTO[] };
+        return pagina.contenido ?? [];
+      }
+      const response = await api.get<LaborDetalladoDTO[]>('/labores');
       return response.data;
-    }, 2 * 60 * 1000); // 2 minutos TTL (más frecuente)
+    }, 2 * 60 * 1000);
+    return datos ?? [];
+  }
+
+  public async getLaboresPaginadas(
+    pagina: number,
+    tamano: number,
+    filtros?: { loteId?: number; estado?: string; busqueda?: string; soloVencidas?: boolean }
+  ): Promise<{
+    contenido: LaborDetalladoDTO[];
+    totalElementos: number;
+    totalPaginas: number;
+  }> {
+    const params: Record<string, string | number | boolean> = { page: pagina, size: tamano };
+    if (filtros?.loteId != null) {
+      params.loteId = filtros.loteId;
+    }
+    if (filtros?.estado && filtros.estado !== 'todos') {
+      if (filtros.estado === 'vencidas') {
+        params.soloVencidas = true;
+      } else {
+        params.estado = filtros.estado;
+      }
+    }
+    if (filtros?.busqueda?.trim()) {
+      params.busqueda = filtros.busqueda.trim();
+    }
+    const response = await api.get('/labores', { params });
+    const data = response.data as {
+      contenido?: LaborDetalladoDTO[];
+      totalElementos?: number;
+      totalPaginas?: number;
+    };
+    return {
+      contenido: data.contenido ?? [],
+      totalElementos: data.totalElementos ?? 0,
+      totalPaginas: data.totalPaginas ?? 0,
+    };
   }
 
   public async getInsumos(): Promise<any[]> {

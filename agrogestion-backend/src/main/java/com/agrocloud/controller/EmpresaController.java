@@ -2,16 +2,17 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.EmpresaDTO;
 import com.agrocloud.dto.UsuarioEmpresaDTO;
-import com.agrocloud.model.entity.Empresa;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.model.entity.UsuarioEmpresa;
+import com.agrocloud.core.domain.Empresa;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.core.domain.UsuarioEmpresa;
 import com.agrocloud.model.enums.RolEmpresa;
-import com.agrocloud.service.EmpresaService;
-import com.agrocloud.service.EmpresaUsuarioService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.core.application.EmpresaService;
+import com.agrocloud.core.application.EmpresaUsuarioService;
+import com.agrocloud.core.application.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -30,18 +31,20 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/v1/empresas")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173"})
 public class EmpresaController {
 
     private static final Logger logger = LoggerFactory.getLogger(EmpresaController.class);
 
     @Autowired
+    @Qualifier("empresaServiceCore")
     private EmpresaService empresaService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
 
     @Autowired
+    @Qualifier("empresaUsuarioServiceCore")
     private EmpresaUsuarioService empresaUsuarioService;
     
     @Autowired

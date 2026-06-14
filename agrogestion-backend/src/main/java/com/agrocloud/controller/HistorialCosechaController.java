@@ -1,10 +1,11 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.dto.CosechaDTO;
-import com.agrocloud.model.entity.HistorialCosecha;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.HistorialCosechaService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.cultivos.domain.HistorialCosecha;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.cultivos.application.HistorialCosechaService;
+import org.springframework.beans.factory.annotation.Qualifier;
+import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,10 +22,10 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping({"/api/historial-cosechas", "/api/v1/cosechas"})
-@CrossOrigin(origins = "*")
 public class HistorialCosechaController {
 
     @Autowired
+    @Qualifier("historialCosechaServiceCultivos")
     private HistorialCosechaService historialCosechaService;
 
     @Autowired

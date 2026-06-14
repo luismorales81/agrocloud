@@ -23,6 +23,7 @@ interface UsuarioEmpresa {
   usuarioNombre: string;
   empresaId: number;
   empresaNombre: string;
+  cuit?: string;
   rol: 'ADMINISTRADOR' | 'JEFE_CAMPO' | 'JEFE_FINANCIERO' | 'OPERARIO' | 'CONSULTOR_EXTERNO' | 
        // Roles legacy para retrocompatibilidad
        'ASESOR' | 'CONTADOR' | 'TECNICO' | 'LECTURA' | 'PRODUCTOR';
@@ -35,10 +36,12 @@ interface UsuarioEmpresa {
 
 interface EmpresaContextType {
   empresaActiva: Empresa | null;
+  /** Id de la empresa activa; null si no hay selección */
+  empresaId: number | null;
   empresasUsuario: UsuarioEmpresa[];
   rolUsuario: string | null;
   cambiarEmpresa: (empresaId: number) => Promise<void>;
-  cargarEmpresasUsuario: () => Promise<void>;
+  cargarEmpresasUsuario: () => Promise<UsuarioEmpresa[]>;
   // Nuevos roles
   esAdministrador: () => boolean;
   esJefeCampo: () => boolean;
@@ -220,6 +223,7 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
 
   const value: EmpresaContextType = {
     empresaActiva,
+    empresaId: empresaActiva?.id ?? null,
     empresasUsuario,
     rolUsuario,
     cambiarEmpresa,
@@ -252,8 +256,11 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
   );
 };
 
-export const useEmpresa = (): EmpresaContextType | undefined => {
+export const useEmpresa = (): EmpresaContextType => {
   const context = useContext(EmpresaContext);
+  if (context === undefined) {
+    throw new Error('useEmpresa debe usarse dentro de EmpresaProvider');
+  }
   return context;
 };
 

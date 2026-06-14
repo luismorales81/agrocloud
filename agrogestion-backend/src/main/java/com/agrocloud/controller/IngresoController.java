@@ -1,9 +1,10 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Ingreso;
-import com.agrocloud.repository.IngresoRepository;
-import com.agrocloud.repository.PlotRepository;
+import com.agrocloud.core.domain.Ingreso;
+import com.agrocloud.core.infrastructure.IngresoRepository;
+import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -20,11 +21,11 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/v1/ingresos")
-@CrossOrigin(origins = "*")
 public class IngresoController {
 
     @Autowired
-    private IngresoRepository ingresoRepository;
+    @Qualifier("ingresoRepositoryCore")
+        private IngresoRepository ingresoRepository;
 
     @Autowired
     private PlotRepository plotRepository;
@@ -63,14 +64,13 @@ public class IngresoController {
         
         // Validar que el lote pertenece al usuario si se especifica
         if (ingreso.getLote() != null && ingreso.getLote().getId() != null) {
-            Optional<com.agrocloud.model.entity.Plot> lote = plotRepository.findById(ingreso.getLote().getId());
+            Optional<com.agrocloud.cultivos.domain.Plot> lote = plotRepository.findById(ingreso.getLote().getId());
             if (lote.isEmpty() || !lote.get().getUser().getId().equals(usuarioId)) {
                 return ResponseEntity.badRequest().build();
             }
         }
         
-        // Establecer el usuario
-        com.agrocloud.model.entity.User usuario = new com.agrocloud.model.entity.User();
+        com.agrocloud.core.domain.User usuario = new com.agrocloud.core.domain.User();
         usuario.setId(usuarioId);
         ingreso.setUser(usuario);
         

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { lotesService } from '../services/apiServices';
+import { Icon } from '../core/components/Icon';
 
 interface Lote {
   id?: number;
@@ -257,7 +258,7 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
           paddingBottom: '10px'
         }}>
           <h2 style={{ margin: 0, color: '#e65100', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            🌾 Cosechar Lote
+            <Icon name="Wheat" size={20} /> Cosechar Lote
           </h2>
           <button
             onClick={onClose}
@@ -266,10 +267,13 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
-              color: '#666'
+              color: '#666',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            ✕
+            <Icon name="X" size={20} />
           </button>
         </div>
 
@@ -304,7 +308,7 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>
-              🔄 Cargando información del cultivo...
+              <Icon name="RefreshCcw" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Cargando información del cultivo...
             </div>
           </div>
         ) : infoCosecha ? (
@@ -316,7 +320,9 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
             border: '1px solid #4caf50'
           }}>
             <div style={{ fontSize: '14px', color: '#2e7d32', marginBottom: '8px' }}>
-              <strong>📋 Información del Cultivo</strong>
+              <strong style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Icon name="Clipboard" size={16} /> Información del Cultivo
+              </strong>
             </div>
             <div style={{ fontSize: '13px', color: '#2e7d32' }}>
               <strong>Variedad:</strong> {infoCosecha.variedadSemilla || 'No especificada'}
@@ -421,7 +427,9 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
                 border: '1px solid #ffeaa7'
               }}>
                 <div style={{ fontSize: '12px', color: '#856404', marginBottom: '4px' }}>
-                  <strong>📊 Comparación con Rendimiento Esperado</strong>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="BarChart" size={14} /> Comparación con Rendimiento Esperado
+                  </strong>
                 </div>
                 <div style={{ fontSize: '11px', color: '#856404' }}>
                   <div>Esperado: {comparacionRendimiento.cantidadEsperadaEnUnidadUsuario.toFixed(1)} {comparacionRendimiento.unidadDisplay}</div>
@@ -461,7 +469,7 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
             />
             {infoCosecha && infoCosecha.variedadSemilla && (
               <small style={{ color: '#6b7280', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                ✅ Variedad obtenida automáticamente del cultivo sembrado
+                <Icon name="CheckCircle" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Variedad obtenida automáticamente del cultivo sembrado
               </small>
             )}
           </div>
@@ -482,9 +490,9 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
                 fontSize: '14px'
               }}
             >
-              <option value="BUENO">✅ Bueno - Listo para próxima siembra</option>
-              <option value="DESCANSANDO">⏸️ Descansando - Requiere período de recuperación</option>
-              <option value="AGOTADO">⚠️ Agotado - Necesita intervención</option>
+              <option value="BUENO">Bueno - Listo para próxima siembra</option>
+              <option value="DESCANSANDO">Descansando - Requiere período de recuperación</option>
+              <option value="AGOTADO">Agotado - Necesita intervención</option>
             </select>
           </div>
 
@@ -513,7 +521,7 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
                 })}
                 style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
               />
-              🌱 ¿Requiere período de descanso?
+              <Icon name="Sprout" size={16} style={{ marginRight: '4px' }} /> ¿Requiere período de descanso?
             </label>
             
             {formData.requiereDescanso && (
@@ -537,7 +545,7 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
                   }}
                 />
                 <small style={{ color: '#6b7280', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                  💡 Recomendado: 30-60 días para recuperación del suelo
+                  <Icon name="Lightbulb" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Recomendado: 30-60 días para recuperación del suelo
                 </small>
               </div>
             )}
@@ -624,7 +632,15 @@ const CosechaModal: React.FC<CosechaModalProps> = ({ lote, onClose, onSuccess })
                 fontWeight: 'bold'
               }}
             >
-              {loading ? '🔄 Cosechando...' : '🌾 Confirmar Cosecha'}
+              {loading ? (
+                <>
+                  <Icon name="RefreshCcw" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Cosechando...
+                </>
+              ) : (
+                <>
+                  <Icon name="Wheat" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Confirmar Cosecha
+                </>
+              )}
             </button>
           </div>
         </div>

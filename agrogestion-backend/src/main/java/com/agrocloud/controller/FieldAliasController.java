@@ -1,11 +1,12 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.dto.FieldDTO;
-import com.agrocloud.model.entity.Field;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.FieldService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.cultivos.domain.Field;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.cultivos.application.FieldService;
+import com.agrocloud.core.application.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,13 +24,14 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/fields")
-@CrossOrigin(origins = "*")
 public class FieldAliasController {
 
     @Autowired
+    @Qualifier("fieldServiceCultivos")
     private FieldService fieldService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
 
     @Autowired

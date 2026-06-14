@@ -1,9 +1,11 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Insumo;
+import com.agrocloud.core.inventory.domain.Insumo;
 import com.agrocloud.model.dto.InsumoDTO;
-import com.agrocloud.repository.InsumoRepository;
+import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,11 +20,12 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/public/insumos")
-@CrossOrigin(origins = "*")
+@Profile("dev")
 public class PublicInsumoController {
 
     @Autowired
-    private InsumoRepository insumoRepository;
+    @Qualifier("insumoRepositoryInventario")
+        private InsumoRepository insumoRepository;
 
     /**
      * Obtiene todos los insumos (público).

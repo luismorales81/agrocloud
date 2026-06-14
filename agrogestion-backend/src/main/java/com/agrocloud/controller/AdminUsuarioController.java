@@ -2,16 +2,17 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.AdminUsuarioDTO;
 import com.agrocloud.dto.RoleDTO;
-import com.agrocloud.model.entity.EstadoUsuario;
-import com.agrocloud.model.entity.Role;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.AdminUsuarioService;
-import com.agrocloud.service.RoleService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.core.domain.EstadoUsuario;
+import com.agrocloud.core.domain.Role;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.core.application.AdminUsuarioService;
+import com.agrocloud.core.application.RoleService;
+import com.agrocloud.core.application.UserService;
 import com.agrocloud.model.enums.RolEmpresa;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,16 +29,18 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/usuarios")
 @Tag(name = "Administración de Usuarios", description = "Endpoints para gestión de usuarios por administradores")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"})
 public class AdminUsuarioController {
 
     @Autowired
+    @Qualifier("adminUsuarioServiceCore")
     private AdminUsuarioService adminUsuarioService;
 
     @Autowired
+    @Qualifier("roleServiceCore")
     private RoleService roleService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
 
     /**
@@ -460,7 +463,7 @@ public class AdminUsuarioController {
                     System.out.println("🔍 [AdminUsuarioController] usuarioEmpresas.size() = " + size);
                     
                     // Inicializar cada UsuarioEmpresa y sus relaciones
-                    for (com.agrocloud.model.entity.UsuarioEmpresa ue : usuarioAutenticado.getUsuarioEmpresas()) {
+                    for (com.agrocloud.core.domain.UsuarioEmpresa ue : usuarioAutenticado.getUsuarioEmpresas()) {
                         // Forzar inicialización del enum rol
                         if (ue.getRol() != null) {
                             RolEmpresa rol = ue.getRol();
@@ -487,7 +490,7 @@ public class AdminUsuarioController {
                     int size = usuarioAutenticado.getUserCompanyRoles().size();
                     System.out.println("🔍 [AdminUsuarioController] userCompanyRoles.size() = " + size);
                     
-                    for (com.agrocloud.model.entity.UserCompanyRole ucr : usuarioAutenticado.getUserCompanyRoles()) {
+                    for (com.agrocloud.core.domain.UserCompanyRole ucr : usuarioAutenticado.getUserCompanyRoles()) {
                         if (ucr.getRol() != null) {
                             String rolNombre = ucr.getRol().getNombre();
                             System.out.println("🔍 [AdminUsuarioController] UserCompanyRole - Rol nombre: " + rolNombre);
@@ -653,7 +656,7 @@ public class AdminUsuarioController {
             try {
                 // PRIMERO: Buscar en el sistema nuevo (usuario_empresas)
                 if (usuarioActual.getUsuarioEmpresas() != null && !usuarioActual.getUsuarioEmpresas().isEmpty()) {
-                    for (com.agrocloud.model.entity.UsuarioEmpresa ue : usuarioActual.getUsuarioEmpresas()) {
+                    for (com.agrocloud.core.domain.UsuarioEmpresa ue : usuarioActual.getUsuarioEmpresas()) {
                         if (ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO && ue.getRol() != null) {
                             com.agrocloud.model.enums.RolEmpresa rolEmpresa = ue.getRol();
                             // Aplicar mapeo de roles deprecated a roles nuevos

@@ -2,8 +2,9 @@ package com.agrocloud.controller;
 
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.exception.ResourceConflictException;
-import com.agrocloud.model.entity.Role;
-import com.agrocloud.service.RoleService;
+import com.agrocloud.core.domain.Role;
+import com.agrocloud.core.application.RoleService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +19,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/roles")
 @Tag(name = "Roles", description = "Endpoints para gestión de roles y permisos")
-@CrossOrigin(origins = "*")
 public class RoleController {
     
     @Autowired
+    @Qualifier("roleServiceCore")
     private RoleService roleService;
     
     @GetMapping

@@ -1,198 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
-import { useAuth } from '../contexts/AuthContext';
-import { useEmpresa } from '../contexts/EmpresaContext';
 import { offlineService } from '../services/OfflineService';
-import { lotesService, insumosService, maquinariaService, laboresService, dosisAgroquimicosService } from '../services/apiServices';
+import { laboresService, dosisAgroquimicosService } from '../services/apiServices';
+import type { Labor, Lote, Insumo, Maquinaria, MaquinariaAsignada, InsumoUsado, LaborMaquinaria, LaborManoObra } from '../types/labores.types';
+import { mapEstadoToBackend, mapEstadoFromBackend, mapTipoLaborToBackend, mapTipoLaborFromBackend, ESTADOS_LABOR, TODOS_LOS_TIPOS_LABOR } from '../utils/laboresUtils';
+import { useLaboresPermisos } from '../hooks/useLaboresPermisos';
+import { useLaboresData } from '../hooks/useLaboresData';
 import PermissionGate from './PermissionGate';
-
-interface Insumo {
-  id: number;
-  nombre: string;
-  tipo: string;
-  stock_actual: number;
-  unidad_medida: string;
-  precio_unitario: number;
-}
-
-interface Maquinaria {
-  id: number;
-  nombre: string;
-  tipo: string;
-  estado: string;
-  kilometros_uso: number;
-  costo_por_hora: number;
-}
-
-interface Labor {
-  id?: number;
-  tipo: string;
-  fecha: string;
-  fecha_fin?: string;
-  observaciones: string;
-  lote_id: number;
-  lote_nombre: string;
-  estado: 'planificada' | 'en_progreso' | 'completada' | 'interrumpida' | 'cancelada';
-  insumos_usados: InsumoUsado[];
-  maquinaria_asignada: MaquinariaAsignada[];
-  responsable: string;
-  horas_trabajo?: number;
-  costo_total?: number;
-  // Nuevos campos para costos detallados
-  costo_base?: number;
-  costo_maquinaria?: number;
-  costo_mano_obra?: number;
-  maquinarias?: LaborMaquinaria[];
-  mano_obra?: LaborManoObra[];
-}
-
-interface MaquinariaAsignada {
-  maquinaria_id: number;
-  maquinaria_nombre: string;
-  costo_total: number;
-  proveedor?: string;
-}
-
-interface InsumoUsado {
-  insumo_id: number;
-  insumo_nombre: string;
-  cantidad_usada: number;
-  cantidad_planificada: number;
-  unidad_medida: string;
-  costo_unitario: number;
-  costo_total: number;
-}
-
-// Nuevas interfaces para costos detallados
-interface LaborMaquinaria {
-  id_labor_maquinaria: number;
-  id_labor: number;
-  descripcion: string;
-  proveedor?: string;
-  costo: number;
-  observaciones?: string;
-}
-
-interface LaborManoObra {
-  id_labor_mano_obra: number;
-  id_labor: number;
-  descripcion: string;
-  cantidad_personas: number;
-  proveedor?: string;
-  costo_total: number;
-  horas_trabajo?: number;
-  observaciones?: string;
-}
-
-interface Lote {
-  id: number;
-  nombre: string;
-  superficie: number;
-  cultivo: string;
-  estado?: string;  // Estado del lote (DISPONIBLE, SEMBRADO, etc.)
-}
+import { Icon } from '../core/components/Icon';
+import { Autocomplete, AutocompleteOption } from './ui/Autocomplete';
+import { LaborDetalleCostosModal } from './labores/LaborDetalleCostosModal';
 
 const LaboresManagement: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const abrirLaborIdProcesado = useRef<number | null>(null);
   const { formatCurrency } = useCurrencyContext();
-  const { user } = useAuth();
-  const empresaContext = useEmpresa();
-  const esOperario = empresaContext?.esOperario() || false;
-  const esAdministrador = empresaContext?.esAdministrador() || false;
-  const esJefeCampo = empresaContext?.esJefeCampo() || false;
-  const esConsultorExterno = empresaContext?.esConsultorExterno() || false;
-  
-  // Función para verificar si el usuario puede editar/eliminar una labor
-  const puedeModificarLabor = (labor: any): boolean => {
-    // CONSULTOR_EXTERNO es solo lectura, no puede modificar nada
-    if (esConsultorExterno) {
-      return false;
-    }
-    
-    // ADMIN y JEFE_CAMPO pueden modificar cualquier labor
-    if (esAdministrador || esJefeCampo) {
-      return true;
-    }
-    
-    // OPERARIO solo puede modificar sus propias labores
-    if (esOperario) {
-      // Comparar el responsable de la labor con el nombre del usuario
-      const nombreUsuario = user?.name || '';
-      const responsableLabor = labor.responsable || '';
-      return nombreUsuario.toLowerCase() === responsableLabor.toLowerCase();
-    }
-    
-    // Otros roles no pueden modificar
-    return false;
-  };
-  
-  // Función para mapear estados del frontend al backend
-  const mapEstadoToBackend = (estado: string) => {
-    const estadoMap: { [key: string]: string } = {
-      'planificada': 'PLANIFICADA',
-      'en_progreso': 'EN_PROGRESO',
-      'completada': 'COMPLETADA',
-      'cancelada': 'CANCELADA'
-    };
-    return estadoMap[estado] || 'PLANIFICADA';
-  };
+  const { puedeModificarLabor, puedeAnularLabor, puedeEliminarLabor } = useLaboresPermisos();
+  const { labores, setLabores, lotes, insumos, setInsumos, maquinaria, cultivos, loading, setLoading, totalElementos, totalPaginas: totalPaginasServidor, loadData, cargarLabores } = useLaboresData();
 
-  // Función para mapear estados del backend al frontend
-  const mapEstadoFromBackend = (estado: string) => {
-    const estadoMap: { [key: string]: string } = {
-      'PLANIFICADA': 'planificada',
-      'EN_PROGRESO': 'en_progreso',
-      'COMPLETADA': 'completada',
-      'CANCELADA': 'cancelada'
-    };
-    return estadoMap[estado] || 'planificada';
-  };
-
-  // Función para mapear tipos de labor del frontend al backend
-  const mapTipoLaborToBackend = (tipo: string) => {
-    const tipoMap: { [key: string]: string } = {
-      'siembra': 'SIEMBRA',
-      'fertilizacion': 'FERTILIZACION',
-      'riego': 'RIEGO',
-      'cosecha': 'COSECHA',
-      'mantenimiento': 'MANTENIMIENTO',
-      'poda': 'PODA',
-      'control_plagas': 'CONTROL_PLAGAS',
-      'control_malezas': 'CONTROL_MALEZAS',
-      'desmalezado': 'CONTROL_MALEZAS', // Mapear desmalezado a CONTROL_MALEZAS
-      'aplicacion_herbicida': 'CONTROL_MALEZAS', // Mapear aplicación herbicida a CONTROL_MALEZAS
-      'aplicacion_insecticida': 'CONTROL_PLAGAS', // Mapear aplicación insecticida a CONTROL_PLAGAS
-      'pulverizacion': 'MANTENIMIENTO', // Mapear pulverización a MANTENIMIENTO
-      'arado': 'MANTENIMIENTO', // Mapear arado a MANTENIMIENTO
-      'rastra': 'MANTENIMIENTO', // Mapear rastra a MANTENIMIENTO
-      'monitoreo': 'ANALISIS_SUELO', // Mapear monitoreo a ANALISIS_SUELO
-      'otro': 'OTROS', // Mapear otro a OTROS
-      'analisis_suelo': 'ANALISIS_SUELO',
-      'otros': 'OTROS'
-    };
-    return tipoMap[tipo.toLowerCase()] || 'OTROS';
-  };
-
-  // Función para mapear tipos de labor del backend al frontend
-  const mapTipoLaborFromBackend = (tipo: string) => {
-    const tipoMap: { [key: string]: string } = {
-      'SIEMBRA': 'siembra',
-      'FERTILIZACION': 'fertilizacion',
-      'RIEGO': 'riego',
-      'COSECHA': 'cosecha',
-      'MANTENIMIENTO': 'mantenimiento',
-      'PODA': 'poda',
-      'CONTROL_PLAGAS': 'control_plagas',
-      'CONTROL_MALEZAS': 'control_malezas',
-      'ANALISIS_SUELO': 'analisis_suelo',
-      'OTROS': 'otros'
-    };
-    return tipoMap[tipo] || 'otros';
-  };
-  
-  const [labores, setLabores] = useState<Labor[]>([]);
-  const [lotes, setLotes] = useState<Lote[]>([]);
-  const [insumos, setInsumos] = useState<Insumo[]>([]);
-  const [maquinaria, setMaquinaria] = useState<Maquinaria[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingLabor, setEditingLabor] = useState<Labor | null>(null);
   const [showDetallesCostos, setShowDetallesCostos] = useState(false);
@@ -237,15 +64,17 @@ const LaboresManagement: React.FC = () => {
     observaciones: ''
   });
   const [searchTerm, setSearchTerm] = useState('');
+  /** Texto de búsqueda aplicado al filtro tras debounce (evita filtrar/ordenar en cada tecla). */
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
   const [filterEstado, setFilterEstado] = useState('todos');
   const [filterLote, setFilterLote] = useState<number | 'todos'>('todos');
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Labor>({
     tipo: '',
     fecha: '',
     observaciones: '',
     lote_id: 0,
     lote_nombre: '',
+    cultivo_id: undefined,
     estado: 'planificada',
     insumos_usados: [],
     maquinaria_asignada: [],
@@ -281,169 +110,195 @@ const LaboresManagement: React.FC = () => {
   const [dosisDisponibles, setDosisDisponibles] = useState<any[]>([]);
   const [dosisSeleccionada, setDosisSeleccionada] = useState<number | null>(null);
 
+  // Modal anular labor (solo para labores completadas o en progreso; requiere admin/jefe)
+  const [showModalAnular, setShowModalAnular] = useState(false);
+  const [laborAnularId, setLaborAnularId] = useState<number | null>(null);
+  const [justificacionAnular, setJustificacionAnular] = useState('');
+  const [restaurarInsumosAnular, setRestaurarInsumosAnular] = useState(true);
+
   // Tipos de labor disponibles (se filtrarán según el estado del lote)
   const [tiposLaborDisponibles, setTiposLaborDisponibles] = useState<string[]>([]);
   const [loteEstado, setLoteEstado] = useState<string>('');
   
-  // Todos los tipos de labor posibles
-  const todosLosTiposLabor = [
-    'siembra', 'fertilizacion', 'cosecha', 'riego', 'pulverizacion',
-    'arado', 'rastra', 'desmalezado', 'aplicacion_herbicida',
-    'aplicacion_insecticida', 'monitoreo', 'otro'
-  ];
+  // Estados para mensaje de configuración faltante
+  const [mensajeConfiguracion, setMensajeConfiguracion] = useState<string>('');
+  const [requiereConfiguracion, setRequiereConfiguracion] = useState<boolean>(false);
+  /** true cuando el tipo no tiene config pero se muestran tareas de plantilla (advertencia, no bloqueo) */
+  const [usandoTareasPlantilla, setUsandoTareasPlantilla] = useState<boolean>(false);
 
-  const estadosLabor = [
-    { value: 'planificada', label: 'Planificada', color: '#6b7280' },
-    { value: 'en_progreso', label: 'En Progreso', color: '#3b82f6' },
-    { value: 'completada', label: 'Completada', color: '#10b981' },
-    { value: 'interrumpida', label: 'Interrumpida', color: '#f59e0b' },
-    { value: 'cancelada', label: 'Cancelada', color: '#ef4444' }
-  ];
+  const todosLosTiposLabor = TODOS_LOS_TIPOS_LABOR;
+  const estadosLabor = ESTADOS_LABOR;
 
-  // Cargar datos desde la API real
-  const loadData = async () => {
-    setLoading(true);
-    
-    try {
-      // Obtener token del localStorage
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No hay token de autenticación');
-        alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
-        return;
-      }
-
-      // Cargar lotes
-      try {
-        const lotesData = await lotesService.listar();
-        const lotesMapeados: Lote[] = (Array.isArray(lotesData) ? lotesData : []).map((lote: any) => ({
-          id: lote.id,
-          nombre: lote.nombre,
-          superficie: lote.areaHectareas || 0,
-          cultivo: lote.cultivoActual || '',
-          estado: lote.estado // ← AGREGADO: campo estado del lote
-        }));
-        setLotes(lotesMapeados);
-      } catch (error) {
-        console.error('Error cargando lotes:', error);
-      }
-
-      // Cargar insumos
-      try {
-        const insumosData = await insumosService.listar();
-        const insumosMapeados: Insumo[] = (Array.isArray(insumosData) ? insumosData : []).map((insumo: any) => ({
-          id: insumo.id,
-          nombre: insumo.nombre,
-          tipo: insumo.tipo,
-          stock_actual: insumo.stockActual || 0,
-          unidad_medida: insumo.unidadMedida || '',
-          precio_unitario: insumo.precioUnitario || 0
-        }));
-        setInsumos(insumosMapeados);
-      } catch (error) {
-        console.error('Error cargando insumos:', error);
-      }
-
-      // Cargar maquinaria
-      try {
-        const maquinariaData = await maquinariaService.listar();
-        const maquinariaMapeada: Maquinaria[] = (Array.isArray(maquinariaData) ? maquinariaData : []).map((maq: any) => ({
-          id: maq.id,
-          nombre: maq.nombre,
-          tipo: maq.tipo,
-          estado: maq.estado,
-          kilometros_uso: maq.kilometrosUso || 0,
-          costo_por_hora: maq.costoPorHora || 0
-        }));
-        setMaquinaria(maquinariaMapeada);
-      } catch (error) {
-        console.error('Error cargando maquinaria:', error);
-      }
-
-      // Cargar labores usando servicio offline
-      try {
-        const laboresData = await offlineService.getLabores();
-        if (laboresData) {
-          // Filtrar solo labores activas (no eliminadas)
-          const laboresActivas = laboresData.filter((labor: any) => labor.activo !== false);
-          const laboresMapeadas: Labor[] = laboresActivas.map((labor: any) => ({
-            id: labor.id,
-            tipo: labor.tipo || '',
-            fecha: labor.fechaInicio || '',
-            fecha_fin: labor.fechaFin || '',
-            observaciones: labor.observaciones || '',
-            lote_id: labor.loteId || 0,
-            lote_nombre: labor.loteNombre || '',
-            estado: mapEstadoFromBackend(labor.estado || 'PLANIFICADA'),
-            maquinaria_asignada: labor.maquinariaAsignada || [],
-            responsable: labor.responsable || '',
-            horas_trabajo: labor.horasTrabajo || 0,
-            costo_total: labor.costoTotal || 0,
-            // Nuevos campos para costos detallados - mapeo correcto del backend
-            costo_base: labor.costoBase || labor.costoInsumos || 0, // Usar costoInsumos si costoBase no está disponible
-            costo_maquinaria: labor.costoMaquinaria || 0,
-            costo_mano_obra: labor.costoManoObra || 0,
-            maquinarias: labor.maquinarias || [],
-            mano_obra: (labor.manoObra || []).map((mo: any) => ({
-              id_labor_mano_obra: mo.idLaborManoObra || mo.id_labor_mano_obra,
-              id_labor: mo.idLabor || mo.id_labor,
-              descripcion: mo.descripcion,
-              cantidad_personas: mo.cantidadPersonas || mo.cantidad_personas || 1, // Asegurar que al menos sea 1
-              proveedor: mo.proveedor,
-              costo_total: mo.costoTotal || mo.costo_total || 0,
-              horas_trabajo: mo.horasTrabajo || mo.horas_trabajo,
-              observaciones: mo.observaciones
-            })),
-            insumos_usados: (labor.insumosUsados || []).map((ins: any) => ({
-              insumo_id: ins.idInsumo || ins.insumo_id || ins.id_insumo,
-              insumo_nombre: ins.insumoNombre || ins.insumo_nombre || ins.nombre || 'Insumo sin nombre',
-              cantidad_usada: ins.cantidadUsada || ins.cantidad_usada || ins.cantidad || 0,
-              cantidad_planificada: ins.cantidadPlanificada || ins.cantidad_planificada || ins.cantidad_usada || 0,
-              unidad_medida: ins.unidadMedida || ins.unidad_medida || ins.unidad || '',
-              costo_unitario: ins.costoUnitario || ins.costo_unitario || ins.precio_unitario || 0,
-              costo_total: ins.costoTotal || ins.costo_total || (ins.cantidadUsada || ins.cantidad_usada || ins.cantidad || 0) * (ins.costoUnitario || ins.costo_unitario || ins.precio_unitario || 0)
-            }))
-          }));
-          setLabores(laboresMapeadas);
-        }
-      } catch (error) {
-        console.error('Error cargando labores:', error);
-      }
-
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-      alert('Error al cargar los datos. Verifica la conexión con el servidor.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Función para cargar tareas disponibles según el estado del lote
-  const cargarTareasDisponibles = async (estadoLote: string) => {
-    if (!estadoLote) {
-      console.log('❌ No hay estado de lote, usando todas las tareas');
-      setTiposLaborDisponibles(todosLosTiposLabor);
+  // Función para cargar tareas disponibles según el lote (usa configuración de estados)
+  const cargarTareasDisponibles = async (loteId: number | null, estadoLote?: string) => {
+    if (!loteId) {
+      console.log('❌ No hay lote seleccionado');
+      setTiposLaborDisponibles([]);
+      setMensajeConfiguracion('');
+      setRequiereConfiguracion(false);
       return;
     }
 
     try {
-      console.log('🔍 Cargando tareas disponibles para estado:', estadoLote);
-      const data = await laboresService.obtenerTareasDisponibles(estadoLote);
+      console.log('🔍 Cargando tareas disponibles para lote:', loteId);
+      // Intentar usar el nuevo endpoint que usa configuración
+      const data = await laboresService.obtenerTareasDisponiblesPorLote(loteId);
       
-      console.log('✅ Tareas recibidas del backend:', data.tareas);
-      setTiposLaborDisponibles(data.tareas || []);
+      console.log('✅ Tareas recibidas del backend:', data);
+      
+      // Verificar si requiere configuración (tipo sin esquema de estados/tareas)
+      if (data.requiereConfiguracion) {
+        setRequiereConfiguracion(true);
+        setMensajeConfiguracion(
+          data.mensaje || 'El cultivo asignado no tiene un esquema de estados, transiciones y tareas configurado.'
+        );
+        // Si aun así el backend envió tareas (plantilla), mostrarlas para no bloquear al usuario
+        const tareasFallback = data.tareas && data.tareas.length > 0 ? data.tareas.map((t: string) => t.toLowerCase()) : [];
+        if (tareasFallback.length > 0) {
+          setTiposLaborDisponibles(tareasFallback);
+          setUsandoTareasPlantilla(true);
+          setMensajeConfiguracion(
+            'El tipo de cultivo no tiene configuración específica. Se muestran tareas de plantilla. Configure en Cultivos → Configuración → Configuración del Módulo para definir estados y tareas de este tipo.'
+          );
+          console.log('⚠️ Usando tareas de plantilla; tipo sin configuración:', data.mensaje);
+        } else {
+          setTiposLaborDisponibles([]);
+          setUsandoTareasPlantilla(false);
+          console.log('⚠️ Requiere configuración:', data.mensaje);
+        }
+      } else {
+        setRequiereConfiguracion(false);
+        setUsandoTareasPlantilla(false);
+        setMensajeConfiguracion('');
+        
+        // Si hay tareas detalladas (desde configuración), usarlas
+        if (data.tareasDetalladas && data.tareasDetalladas.length > 0) {
+          const tiposLabor = data.tareasDetalladas.map((t: any) => t.tipoLabor.toLowerCase());
+          setTiposLaborDisponibles(tiposLabor);
+          console.log('✅ Usando tareas desde configuración:', tiposLabor);
+        } else if (data.tareas && data.tareas.length > 0) {
+          // Fallback a tareas simples
+          setTiposLaborDisponibles(data.tareas.map((t: string) => t.toLowerCase()));
+          console.log('✅ Usando tareas simples:', data.tareas);
+        } else {
+          // No hay tareas para este estado pero el tipo de cultivo sí tiene configuración: mensaje informativo, no bloqueante
+          setTiposLaborDisponibles([]);
+          setMensajeConfiguracion(data.mensaje || 'No hay tareas configuradas para el estado actual del lote.');
+          setRequiereConfiguracion(data.tieneConfiguracion === true ? false : true);
+          console.log('⚠️ No se encontraron tareas para este estado');
+        }
+      }
+      
+      // Actualizar estado del lote si viene en la respuesta
+      if (data.estadoConfigurado) {
+        setLoteEstado(data.estadoConfigurado.nombre);
+      } else if (data.estadoEnum) {
+        setLoteEstado(data.estadoEnum);
+      } else if (estadoLote) {
+        setLoteEstado(estadoLote);
+      }
     } catch (error) {
-      console.error('❌ Error cargando tareas disponibles:', error);
-      // Si falla, usar todas las tareas
-      setTiposLaborDisponibles(todosLosTiposLabor);
+      console.error('❌ Error cargando tareas disponibles por lote:', error);
+      setRequiereConfiguracion(true);
+      setMensajeConfiguracion('No se pudieron cargar las tareas para este lote. Verifique la configuración de estados.');
+      setTiposLaborDisponibles([]);
     }
   };
 
   useEffect(() => {
     loadData();
-    // Inicializar con todas las tareas disponibles
-    setTiposLaborDisponibles(todosLosTiposLabor);
+    // Las tareas se cargan al seleccionar un lote (según estado y configuración)
+    setTiposLaborDisponibles([]);
   }, []);
+
+  useEffect(() => {
+    const temporizador = window.setTimeout(() => setBusquedaDebounced(searchTerm), 300);
+    return () => window.clearTimeout(temporizador);
+  }, [searchTerm]);
+  
+  // Efecto separado para preseleccionar lote cuando se cargan los lotes
+  useEffect(() => {
+    // Verificar si hay un lote preseleccionado desde LotesManagement
+    const lotePreseleccionado = localStorage.getItem('lotePreseleccionadoParaLabor');
+    if (lotePreseleccionado && lotes.length > 0) {
+      try {
+        const lote = JSON.parse(lotePreseleccionado);
+        if (lote.id && lotes.find(l => l.id === lote.id)) {
+          handleLoteChange(lote.id);
+          // Limpiar el localStorage después de usarlo
+          localStorage.removeItem('lotePreseleccionadoParaLabor');
+        }
+      } catch (error) {
+        console.error('Error al parsear lote preseleccionado:', error);
+        localStorage.removeItem('lotePreseleccionadoParaLabor');
+      }
+    }
+  }, [lotes]);
+
+  // Abrir detalle de labor al llegar desde el calendario (state.abrirLaborId)
+  useEffect(() => {
+    const abrirLaborId = (location.state as { abrirLaborId?: number })?.abrirLaborId;
+    if (loading || abrirLaborId == null || abrirLaborIdProcesado.current === abrirLaborId) return;
+
+    abrirLaborIdProcesado.current = abrirLaborId;
+    let cancelled = false;
+
+    laboresService.obtener(abrirLaborId)
+      .then((d: any) => {
+        if (cancelled) return;
+        const laborMapeada: Labor = {
+          id: d.id,
+          tipo: d.tipo || 'OTROS',
+          fecha: d.fechaInicio || '',
+          fecha_fin: d.fechaFin || undefined,
+          observaciones: d.observaciones || d.descripcion || '',
+          lote_id: d.loteId ?? 0,
+          lote_nombre: d.loteNombre || '',
+          estado: mapEstadoFromBackend(d.estado || 'PLANIFICADA'),
+          responsable: d.responsable || '',
+          horas_trabajo: d.horasTrabajo ?? 0,
+          costo_total: d.costoTotal ?? 0,
+          insumos_usados: (d.insumosUsados || []).map((ins: any) => ({
+            insumo_id: ins.idInsumo ?? ins.insumo_id,
+            insumo_nombre: ins.insumoNombre ?? ins.insumo_nombre ?? '',
+            cantidad_usada: ins.cantidadUsada ?? ins.cantidad_usada ?? 0,
+            cantidad_planificada: ins.cantidadPlanificada ?? ins.cantidad_planificada ?? 0,
+            unidad_medida: ins.unidadMedida ?? ins.unidad_medida ?? '',
+            costo_unitario: ins.costoUnitario ?? ins.costo_unitario ?? 0,
+            costo_total: ins.costoTotal ?? ins.costo_total ?? 0
+          })),
+          maquinaria_asignada: [],
+          maquinarias: (d.maquinarias || []).map((m: any) => ({
+            id_labor_maquinaria: m.idLaborMaquinaria ?? m.id_labor_maquinaria ?? 0,
+            id_labor: d.id,
+            descripcion: m.descripcion ?? m.maquinariaNombre ?? '',
+            proveedor: m.proveedor,
+            costo: m.costo ?? 0,
+            observaciones: m.observaciones
+          })),
+          mano_obra: (d.manoObra || []).map((mo: any) => ({
+            id_labor_mano_obra: mo.idLaborManoObra ?? mo.id_labor_mano_obra ?? 0,
+            id_labor: d.id,
+            descripcion: mo.descripcion ?? '',
+            cantidad_personas: mo.cantidadPersonas ?? mo.cantidad_personas ?? 1,
+            proveedor: mo.proveedor,
+            costo_total: mo.costoTotal ?? mo.costo_total ?? 0,
+            horas_trabajo: mo.horasTrabajo ?? mo.horas_trabajo,
+            observaciones: mo.observaciones
+          }))
+        };
+        handleOpenEditModal(laborMapeada);
+        navigate('/cultivos/labores', { replace: true, state: {} });
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('Error al cargar labor desde calendario:', err);
+          abrirLaborIdProcesado.current = null;
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [loading, location.state]);
 
   // Detectar si es móvil
   const [isMobile, setIsMobile] = useState(false);
@@ -467,6 +322,7 @@ const LaboresManagement: React.FC = () => {
       observaciones: '',
       lote_id: 0,
       lote_nombre: '',
+      cultivo_id: undefined,
       estado: 'planificada',
       insumos_usados: [],
       maquinaria_asignada: [],
@@ -569,65 +425,113 @@ const LaboresManagement: React.FC = () => {
   };
 
   const handleOpenEditModal = async (labor: Labor) => {
-    // Mapear el tipo de labor del backend al frontend
+    // Cargar siempre desde el backend para mostrar los datos actualizados (evita datos en caché/lista desactualizada)
+    let laborParaForm = labor;
+    if (labor.id) {
+      try {
+        const d = await laboresService.obtener(labor.id);
+        laborParaForm = {
+          id: d.id,
+          tipo: (d.tipo || '').toLowerCase(),
+          fecha: d.fechaInicio || '',
+          fecha_fin: d.fechaFin || '',
+          observaciones: d.observaciones || '',
+          lote_id: d.loteId ?? 0,
+          lote_nombre: d.loteNombre || '',
+          estado: mapEstadoFromBackend(d.estado || 'PLANIFICADA'),
+          responsable: d.responsable || '',
+          horas_trabajo: d.horasTrabajo ?? 0,
+          costo_total: d.costoTotal ?? 0,
+          costo_insumos: d.costoInsumos ?? 0,
+          costo_maquinaria: d.costoMaquinaria ?? 0,
+          costo_mano_obra: d.costoManoObra ?? 0,
+          fecha_realizacion: d.fechaRealizacion || undefined,
+          insumos_usados: (d.insumosUsados || []).map((ins: any) => ({
+            insumo_id: ins.idInsumo ?? ins.insumo_id,
+            insumo_nombre: ins.insumoNombre ?? ins.insumo_nombre ?? '',
+            cantidad_usada: ins.cantidadUsada ?? ins.cantidad_usada ?? 0,
+            cantidad_planificada: ins.cantidadPlanificada ?? ins.cantidad_planificada ?? 0,
+            unidad_medida: ins.unidadMedida ?? ins.unidad_medida ?? '',
+            costo_unitario: ins.costoUnitario ?? ins.costo_unitario ?? 0,
+            costo_total: ins.costoTotal ?? ins.costo_total ?? 0
+          })),
+          maquinaria_asignada: (d.maquinarias || []).map((m: any) => ({
+            maquinaria_id: m.idLaborMaquinaria ?? m.id_labor_maquinaria ?? 0,
+            maquinaria_nombre: m.descripcion ?? m.maquinariaNombre ?? '',
+            costo_total: m.costo ?? 0,
+            proveedor: m.proveedor
+          })),
+          maquinarias: (d.maquinarias || []).map((m: any) => ({
+            id_labor_maquinaria: m.idLaborMaquinaria ?? m.id_labor_maquinaria ?? 0,
+            id_labor: d.id,
+            descripcion: m.descripcion ?? m.maquinariaNombre ?? '',
+            proveedor: m.proveedor,
+            costo: m.costo ?? 0,
+            observaciones: m.observaciones
+          })),
+          mano_obra: (d.manoObra || []).map((mo: any) => ({
+            id_labor_mano_obra: mo.idLaborManoObra ?? mo.id_labor_mano_obra ?? 0,
+            id_labor: d.id,
+            descripcion: mo.descripcion ?? '',
+            cantidad_personas: mo.cantidadPersonas ?? mo.cantidad_personas ?? 1,
+            proveedor: mo.proveedor,
+            costo_total: mo.costoTotal ?? mo.costo_total ?? 0,
+            horas_trabajo: mo.horasTrabajo ?? mo.horas_trabajo,
+            observaciones: mo.observaciones
+          }))
+        };
+      } catch (err) {
+        console.warn('No se pudo cargar labor por ID, usando datos del listado:', err);
+      }
+    }
+
     const laborMapeada = {
-      ...labor,
-      tipo: mapTipoLaborFromBackend(labor.tipo)
+      ...laborParaForm,
+      tipo: mapTipoLaborFromBackend(laborParaForm.tipo)
     };
-    
     setFormData(laborMapeada);
-    
-    // Cargar el estado del lote y las tareas disponibles
-    const lote = lotes.find(l => l.id === labor.lote_id);
-    if (lote && lote.estado) {
-      console.log('🔄 [handleOpenEditModal] Cargando tareas para lote en estado:', lote.estado);
-      setLoteEstado(lote.estado);
-      await cargarTareasDisponibles(lote.estado);
+
+    const lote = lotes.find(l => l.id === laborParaForm.lote_id);
+    if (lote && lote.id) {
+      await cargarTareasDisponibles(lote.id, lote.estado);
     } else {
-      console.log('⚠️ [handleOpenEditModal] Lote sin estado, limpiando tareas');
       setLoteEstado('');
       setTiposLaborDisponibles([]);
     }
-    
-    // Mapear insumos del formato del backend al formato del frontend
-    const insumosMapeados = (labor.insumos_usados || []).map((insumo: any) => ({
+
+    const insumosMapeados = (laborParaForm.insumos_usados || []).map((insumo: any) => ({
       insumo_id: insumo.insumo_id || insumo.id,
       insumo_nombre: insumo.insumo_nombre || insumo.nombre,
       cantidad_usada: insumo.cantidad_usada || insumo.cantidad,
       cantidad_planificada: insumo.cantidad_planificada || insumo.cantidad,
       unidad_medida: insumo.unidad_medida || insumo.unidad,
       costo_unitario: insumo.costo_unitario || insumo.precio_unitario,
-      costo_total: insumo.costo_total || (insumo.cantidad * insumo.precio_unitario)
+      costo_total: insumo.costo_total ?? (insumo.cantidad * insumo.precio_unitario)
     }));
-    
     setSelectedInsumos(insumosMapeados);
-    
-    // Mapear maquinarias del formato del backend al formato del frontend
-    const maquinariasMapeadas = (labor.maquinarias || []).map((maq: any) => ({
+
+    const maquinariasMapeadas = (laborParaForm.maquinarias || []).map((maq: any) => ({
       maquinaria_id: maq.id_labor_maquinaria,
-      maquinaria_nombre: maq.descripcion, // El frontend espera maquinaria_nombre
+      maquinaria_nombre: maq.descripcion,
       descripcion: maq.descripcion,
       proveedor: maq.proveedor,
-      costo_total: maq.costo, // Mapear costo a costo_total
-      horas_uso: 0, // No se almacena en el backend
-      kilometros_recorridos: 0 // No se almacena en el backend
+      costo_total: maq.costo ?? 0,
+      horas_uso: 0,
+      kilometros_recorridos: 0
     }));
-    
-    // Mapear mano de obra del formato del backend al formato del frontend
-    const manoObraMapeada = (labor.mano_obra || []).map((mo: any) => ({
-      id_labor_mano_obra: mo.idLaborManoObra || mo.id_labor_mano_obra,
-      id_labor: mo.idLabor || mo.id_labor,
+    const manoObraMapeada = (laborParaForm.mano_obra || []).map((mo: any) => ({
+      id_labor_mano_obra: mo.idLaborManoObra ?? mo.id_labor_mano_obra,
+      id_labor: mo.idLabor ?? mo.id_labor,
       descripcion: mo.descripcion,
-      cantidad_personas: mo.cantidadPersonas || mo.cantidad_personas,
+      cantidad_personas: mo.cantidadPersonas ?? mo.cantidad_personas,
       proveedor: mo.proveedor,
-      costo_total: mo.costoTotal || mo.costo_total || 0,
-      horas_trabajo: mo.horasTrabajo || mo.horas_trabajo,
+      costo_total: mo.costoTotal ?? mo.costo_total ?? 0,
+      horas_trabajo: mo.horasTrabajo ?? mo.horas_trabajo,
       observaciones: mo.observaciones
     }));
-    
     setSelectedMaquinaria(maquinariasMapeadas);
     setSelectedManoObra(manoObraMapeada);
-    setEditingLabor(labor);
+    setEditingLabor(laborParaForm);
     setShowForm(true);
   };
 
@@ -775,9 +679,9 @@ const LaboresManagement: React.FC = () => {
   const handleInputChange = (field: keyof Labor, value: any) => {
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      ...(field === 'tipo' ? { cultivo_id: value === 'siembra' ? prev.cultivo_id : undefined } : {})
     }));
-    
     // Si se cambia el tipo de labor, verificar si involucra agroquímicos
     if (field === 'tipo' && value) {
       console.log('📋 Tipo de labor seleccionado:', value);
@@ -813,24 +717,28 @@ const LaboresManagement: React.FC = () => {
       ...prev,
       lote_id: loteId,
       lote_nombre: lote?.nombre || '',
-      tipo: '' // Resetear tipo de labor cuando cambia el lote
+      tipo: '', // Resetear tipo de labor cuando cambia el lote
+      cultivo_id: undefined
     }));
     
-    // Cargar tareas disponibles según el estado del lote
-    if (lote && lote.estado) {
-      console.log('✅ Lote tiene estado, cargando tareas para:', lote.estado);
-      setLoteEstado(lote.estado);
-      await cargarTareasDisponibles(lote.estado);
+    // Cargar tareas disponibles según el lote (usa configuración de estados)
+    if (lote && lote.id) {
+      console.log('✅ Lote seleccionado, cargando tareas para lote:', lote.id);
+      await cargarTareasDisponibles(lote.id, lote.estado);
     } else {
-      console.log('❌ Lote NO tiene estado, usando todas las tareas');
+      console.log('❌ Lote NO seleccionado, usando todas las tareas');
       setLoteEstado('');
-      setTiposLaborDisponibles(todosLosTiposLabor);
+      setTiposLaborDisponibles([...todosLosTiposLabor]);
     }
   };
 
   const saveLabor = async () => {
     if (!formData.tipo || !formData.fecha || !formData.lote_id || !formData.responsable) {
       alert('Por favor complete todos los campos obligatorios');
+      return;
+    }
+    if (formData.tipo === 'siembra' && !formData.cultivo_id) {
+      alert('Para una labor de Siembra debe seleccionar el cultivo a sembrar.');
       return;
     }
 
@@ -869,7 +777,7 @@ const LaboresManagement: React.FC = () => {
         observaciones: mo.observaciones || null
       }));
       
-      const laborCompleta = {
+      const laborCompleta: Record<string, unknown> = {
         // Mapear campos del frontend al backend
         tipoLabor: mapTipoLaborToBackend(formData.tipo), // Mapear tipo al formato del backend
         descripcion: formData.observaciones || '',
@@ -880,6 +788,8 @@ const LaboresManagement: React.FC = () => {
         horasTrabajo: formData.horas_trabajo || 0,
         costoTotal: calcularCostoTotal(),
         lote: formData.lote_id ? { id: formData.lote_id } : null,
+        // Cultivo a sembrar: el backend lo usa para asignar tipo de cultivo al lote
+        ...(formData.tipo === 'siembra' && formData.cultivo_id ? { cultivoId: formData.cultivo_id } : {}),
         // Campos adicionales del frontend - transformados al formato correcto
         insumosUsados: selectedInsumos,
         maquinariaAsignada: maquinariaTransformada,
@@ -901,10 +811,10 @@ const LaboresManagement: React.FC = () => {
       }
 
       alert(editingLabor ? 'Labor actualizada exitosamente' : 'Labor creada exitosamente');
-      // Invalidar caché de labores para forzar recarga fresca
+      // Invalidar caché y recargar listado antes de cerrar para que al reabrir se vean los cambios
       offlineService.remove('labores');
+      await loadData();
       handleCloseModal();
-      loadData(); // Recargar datos desde el backend
     } catch (error) {
       console.error('Error:', error);
       alert('Error al guardar la labor');
@@ -931,12 +841,56 @@ const LaboresManagement: React.FC = () => {
         // Eliminar del estado local solo si la API confirma la eliminación
         setLabores(prev => prev.filter(l => l.id !== id));
         alert('Labor eliminada exitosamente');
-      } catch (error) {
-        console.error('Error de conexión al eliminar la labor:', error);
-        alert('Error de conexión al eliminar la labor. Por favor, verifica tu conexión e intenta nuevamente.');
+      } catch (error: any) {
+        console.error('Error al eliminar la labor:', error);
+        const mensajeBackend = error?.response?.data?.error;
+        const mensaje = mensajeBackend
+          ? mensajeBackend
+          : 'Error de conexión al eliminar la labor. Por favor, verifica tu conexión e intenta nuevamente.';
+        alert(mensaje);
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const openModalAnular = (labor: Labor) => {
+    setLaborAnularId(labor.id!);
+    setJustificacionAnular('');
+    setRestaurarInsumosAnular(true);
+    setShowModalAnular(true);
+  };
+
+  const closeModalAnular = () => {
+    setShowModalAnular(false);
+    setLaborAnularId(null);
+    setJustificacionAnular('');
+    setRestaurarInsumosAnular(true);
+  };
+
+  const confirmarAnular = async () => {
+    if (laborAnularId == null) return;
+    const justificacion = justificacionAnular.trim();
+    if (!justificacion) {
+      alert('La justificación es obligatoria para anular una labor.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await laboresService.anular(laborAnularId, {
+        justificacion,
+        restaurarInsumos: restaurarInsumosAnular
+      });
+      offlineService.remove('labores');
+      setLabores(prev => prev.filter(l => l.id !== laborAnularId));
+      alert('Labor anulada exitosamente.');
+      closeModalAnular();
+    } catch (error: any) {
+      console.error('Error al anular la labor:', error);
+      const mensaje = error?.response?.data?.error || 'Error al anular la labor. Intente de nuevo.';
+      alert(mensaje);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1071,37 +1025,54 @@ const LaboresManagement: React.FC = () => {
     });
   };
 
-  // Filtrar labores
-  const filteredLabores = labores
-    .filter(labor => {
-      const matchesSearch = (labor.tipo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (labor.lote_nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (labor.responsable || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesEstado = filterEstado === 'todos' || labor.estado === filterEstado;
-      const matchesLote = filterLote === 'todos' || labor.lote_id === filterLote;
-      return matchesSearch && matchesEstado && matchesLote;
-    })
-    .sort((a, b) => {
-      // Ordenar por fecha (más nuevo a más viejo)
-      const fechaA = new Date(a.fecha || 0).getTime();
-      const fechaB = new Date(b.fecha || 0).getTime();
-      return fechaB - fechaA; // Orden descendente (más nuevo primero)
-    });
+  const resumenLabores = useMemo(() => {
+    let costoTotal = 0;
+    let enProgreso = 0;
+    let completadas = 0;
+    for (const l of labores) {
+      costoTotal += l.costo_total || 0;
+      if (l.estado === 'en_progreso') enProgreso++;
+      if (l.estado === 'completada') completadas++;
+    }
+    return {
+      total: labores.length,
+      enProgreso,
+      completadas,
+      costoTotal
+    };
+  }, [labores]);
 
-  // Función para obtener labores paginadas
-  const obtenerLaboresPaginadas = () => {
-    const totalPaginas = Math.ceil(filteredLabores.length / elementosPorPagina);
-    const inicio = (paginaActual - 1) * elementosPorPagina;
-    const fin = inicio + elementosPorPagina;
-    const laboresPaginadas = filteredLabores.slice(inicio, fin);
-    
-    return { laboresPaginadas, totalPaginas };
-  };
+  const filteredLabores = labores;
 
-  // Resetear paginación cuando cambien los filtros
+  const { laboresPaginadas, totalPaginas, totalListado } = useMemo(() => ({
+    laboresPaginadas: filteredLabores,
+    totalPaginas: totalPaginasServidor,
+    totalListado: totalElementos,
+  }), [filteredLabores, totalPaginasServidor, totalElementos]);
+
+  const hayFiltrosAplicados =
+    busquedaDebounced.trim() !== '' || filterEstado !== 'todos' || filterLote !== 'todos';
+
+  const filtrosLabores = useMemo(() => ({
+    loteId: filterLote === 'todos' ? undefined : filterLote,
+    estado: filterEstado,
+    busqueda: busquedaDebounced.trim() || undefined,
+  }), [filterLote, filterEstado, busquedaDebounced]);
+
+  // Carga paginada con filtros en servidor
+  useEffect(() => {
+    cargarLabores(paginaActual - 1, elementosPorPagina, filtrosLabores);
+  }, [paginaActual, elementosPorPagina, filtrosLabores, cargarLabores]);
+
+  // Resetear paginación cuando cambien los filtros (búsqueda tras debounce)
   useEffect(() => {
     setPaginaActual(1);
-  }, [searchTerm, filterEstado, filterLote]);
+  }, [busquedaDebounced, filterEstado, filterLote]);
+
+  /** Si el total de páginas encoge, evitar quedar en una página vacía. */
+  useEffect(() => {
+    setPaginaActual(p => (p > totalPaginasServidor ? Math.max(1, totalPaginasServidor) : p));
+  }, [totalPaginasServidor]);
 
   return (
     <div style={{ 
@@ -1117,16 +1088,19 @@ const LaboresManagement: React.FC = () => {
       }}>
         <h1 style={{ 
           margin: '0 0 10px 0', 
-          fontSize: isMobile ? '20px' : '24px' 
+          fontSize: isMobile ? '20px' : '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          🔧 Gestión de Labores
+          <Icon name="Wrench" size={24} /> Gestión de Labores
         </h1>
         <p style={{ 
           margin: '0', 
           opacity: '0.9',
           fontSize: isMobile ? '14px' : '16px'
         }}>
-          Administra las labores agrícolas y su consumo de insumos
+          Administra las labores agrícolas y su consumo de insumos. Las tareas del calendario se derivan de estas labores.
         </p>
       </div>
 
@@ -1142,7 +1116,7 @@ const LaboresManagement: React.FC = () => {
           color: '#374151',
           fontSize: isMobile ? '16px' : '18px'
         }}>
-          📊 Resumen de Labores
+          <Icon name="BarChart" size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Resumen de Labores
         </h3>
         <div style={{ 
           display: 'grid', 
@@ -1151,25 +1125,25 @@ const LaboresManagement: React.FC = () => {
         }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
-              {labores.length}
+              {resumenLabores.total}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>Total Labores</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3b82f6' }}>
-              {labores.filter((l: Labor) => l.estado === 'en_progreso').length}
+              {resumenLabores.enProgreso}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>En Progreso</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-              {labores.filter((l: Labor) => l.estado === 'completada').length}
+              {resumenLabores.completadas}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>Completadas</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
-              {formatCurrency(labores.reduce((sum: number, l: Labor) => sum + (l.costo_total || 0), 0))}
+              {formatCurrency(resumenLabores.costoTotal)}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>Costo Total</div>
           </div>
@@ -1216,6 +1190,7 @@ const LaboresManagement: React.FC = () => {
             }}
           >
             <option value="todos">Todos los estados</option>
+            <option value="vencidas">Vencidas</option>
             {estadosLabor.map(estado => (
               <option key={estado.value} value={estado.value}>
                 {estado.label}
@@ -1254,7 +1229,7 @@ const LaboresManagement: React.FC = () => {
                 fontWeight: 'bold'
               }}
             >
-              ➕ {isMobile ? 'Nueva' : 'Nueva Labor'}
+              <Icon name="Plus" size={16} style={{ marginRight: '5px', verticalAlign: 'middle' }} /> {isMobile ? 'Nueva' : 'Nueva Labor'}
             </button>
           </PermissionGate>
         </div>
@@ -1272,16 +1247,16 @@ const LaboresManagement: React.FC = () => {
           borderBottom: '1px solid #dee2e6',
           fontWeight: 'bold'
         }}>
-          🔧 Labores Registradas ({filteredLabores.length})
+          <Icon name="Wrench" size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Labores Registradas ({totalListado})
         </div>
         
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-            🔄 Cargando labores...
+            <Icon name="Loader" size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Cargando labores...
           </div>
         ) : filteredLabores.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-            {searchTerm || filterEstado !== 'todos' ? 'No se encontraron labores con los filtros aplicados' : 'No hay labores registradas'}
+            {hayFiltrosAplicados ? 'No se encontraron labores con los filtros aplicados' : 'No hay labores registradas'}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -1294,10 +1269,11 @@ const LaboresManagement: React.FC = () => {
                 <tr style={{ background: '#f8f9fa' }}>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Labor</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Lote</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha planificada</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Fecha realización</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Estado</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Responsable</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Costo Base</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Insumos</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Maquinaria</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Mano de Obra</th>
                   <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>Total</th>
@@ -1305,20 +1281,7 @@ const LaboresManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {(() => {
-                  const { laboresPaginadas, totalPaginas } = obtenerLaboresPaginadas();
-                  
-                  if (filteredLabores.length === 0) {
-                    return (
-                      <tr>
-                        <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
-                          {searchTerm || filterEstado !== 'todos' ? 'No se encontraron labores que coincidan con los filtros' : 'No hay labores registradas'}
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  return laboresPaginadas.map((labor: Labor) => (
+                {laboresPaginadas.map((labor: Labor) => (
                   <tr key={labor.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
                     <td style={{ padding: '12px' }}>
                       <div>
@@ -1332,7 +1295,10 @@ const LaboresManagement: React.FC = () => {
                       <span style={{ fontWeight: 'bold' }}>{labor.lote_nombre}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      {labor.fecha ? new Date(labor.fecha).toLocaleDateString('es-ES') : 'Sin fecha'}
+                      {labor.fecha ? new Date(labor.fecha).toLocaleDateString('es-ES') : '—'}
+                    </td>
+                    <td style={{ padding: '12px', color: labor.fecha_realizacion ? '#047857' : '#9ca3af' }}>
+                      {labor.fecha_realizacion ? new Date(labor.fecha_realizacion).toLocaleDateString('es-ES') : '—'}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{
@@ -1340,19 +1306,37 @@ const LaboresManagement: React.FC = () => {
                         borderRadius: '12px',
                         fontSize: '12px',
                         fontWeight: 'bold',
-                        background: '#10b98120',
-                        color: '#10b981'
+                        background: labor.overdue ? '#dc262620' : '#10b98120',
+                        color: labor.overdue ? '#dc2626' : '#10b981'
                       }}>
                         {labor.estado.charAt(0).toUpperCase() + labor.estado.slice(1)}
                       </span>
+                      {labor.overdue && (
+                        <span style={{
+                          marginLeft: '6px',
+                          padding: '2px 6px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          background: '#dc2626',
+                          color: '#fff'
+                        }}>
+                          Vencida
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '12px' }}>
                       {labor.responsable}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ fontWeight: 'bold', color: '#6b7280' }}>
-                        {formatCurrency(labor.costo_base || 0)}
+                        {formatCurrency(labor.costo_insumos || 0)}
                       </span>
+                      {labor.insumos_usados && labor.insumos_usados.length > 0 && (
+                        <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>
+                          {labor.insumos_usados.length} insumo(s)
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>
@@ -1376,7 +1360,7 @@ const LaboresManagement: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ fontWeight: 'bold', color: '#10b981', fontSize: '16px' }}>
-                        {formatCurrency((labor.costo_base || 0) + (labor.costo_maquinaria || 0) + (labor.costo_mano_obra || 0))}
+                {formatCurrency((labor.costo_insumos || 0) + (labor.costo_maquinaria || 0) + (labor.costo_mano_obra || 0))}
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
@@ -1395,7 +1379,7 @@ const LaboresManagement: React.FC = () => {
                             }}
                             title="Editar labor"
                           >
-                            ✏️
+                            <Icon name="Pencil" size={14} />
                           </button>
                         )}
                         <button
@@ -1411,9 +1395,9 @@ const LaboresManagement: React.FC = () => {
                           }}
                           title="Ver detalles de costos"
                         >
-                          💰
+                          <Icon name="DollarSign" size={14} />
                         </button>
-                        {puedeModificarLabor(labor) && (
+                        {puedeEliminarLabor(labor) && (
                           <button
                             onClick={() => deleteLabor(labor.id!)}
                             style={{
@@ -1425,27 +1409,39 @@ const LaboresManagement: React.FC = () => {
                               cursor: 'pointer',
                               fontSize: '12px'
                             }}
-                            title="Eliminar labor"
+                            title="Eliminar labor (solo planificadas, canceladas o anuladas)"
                           >
-                            🗑️
+                            <Icon name="Trash2" size={14} />
+                          </button>
+                        )}
+                        {puedeAnularLabor(labor) && (
+                          <button
+                            onClick={() => openModalAnular(labor)}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#b45309',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            title="Anular labor (completada o en progreso)"
+                          >
+                            <Icon name="XCircle" size={14} />
                           </button>
                         )}
                       </div>
                     </td>
                   </tr>
-                ));
-                })()}
+                ))}
               </tbody>
             </table>
           </div>
         )}
 
         {/* Paginación */}
-        {(() => {
-          const { totalPaginas } = obtenerLaboresPaginadas();
-          
-          if (totalPaginas > 1) {
-            return (
+        {totalPaginas > 1 && (
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -1455,7 +1451,7 @@ const LaboresManagement: React.FC = () => {
                 background: '#f8f9fa'
               }}>
                 <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                  Mostrando {((paginaActual - 1) * elementosPorPagina) + 1} - {Math.min(paginaActual * elementosPorPagina, filteredLabores.length)} de {filteredLabores.length} labores
+                  Mostrando {((paginaActual - 1) * elementosPorPagina) + 1} - {Math.min(paginaActual * elementosPorPagina, totalListado)} de {totalListado} labores
                 </div>
                 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1472,7 +1468,7 @@ const LaboresManagement: React.FC = () => {
                       fontSize: '14px'
                     }}
                   >
-                    ⏮️ Primera
+                    <Icon name="ChevronsLeft" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Primera
                   </button>
                   
                   <button
@@ -1488,7 +1484,7 @@ const LaboresManagement: React.FC = () => {
                       fontSize: '14px'
                     }}
                   >
-                    ⬅️ Anterior
+                    <Icon name="ChevronLeft" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Anterior
                   </button>
                   
                   <span style={{ 
@@ -1513,7 +1509,7 @@ const LaboresManagement: React.FC = () => {
                       fontSize: '14px'
                     }}
                   >
-                    Siguiente ➡️
+                    Siguiente <Icon name="ChevronRight" size={14} style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
                   </button>
                   
                   <button
@@ -1529,14 +1525,11 @@ const LaboresManagement: React.FC = () => {
                       fontSize: '14px'
                     }}
                   >
-                    Última ⏭️
+                    Última <Icon name="ChevronsRight" size={14} style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
                   </button>
                 </div>
               </div>
-            );
-          }
-          return null;
-        })()}
+        )}
       </div>
 
       {/* Modal para crear/editar labor */}
@@ -1571,8 +1564,16 @@ const LaboresManagement: React.FC = () => {
               borderBottom: '1px solid #e5e7eb',
               paddingBottom: '15px'
             }}>
-              <h2 style={{ margin: 0, color: '#374151' }}>
-                {editingLabor ? '✏️ Editar Labor' : '➕ Nueva Labor'}
+              <h2 style={{ margin: 0, color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {editingLabor ? (
+                  <>
+                    <Icon name="Pencil" size={20} /> Editar Labor
+                  </>
+                ) : (
+                  <>
+                    <Icon name="Plus" size={20} /> Nueva Labor
+                  </>
+                )}
               </h2>
               <button
                 onClick={handleCloseModal}
@@ -1581,10 +1582,13 @@ const LaboresManagement: React.FC = () => {
                   border: 'none',
                   fontSize: '24px',
                   cursor: 'pointer',
-                  color: '#6b7280'
+                  color: '#6b7280',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
-                ✕
+                <Icon name="X" size={20} />
               </button>
             </div>
 
@@ -1624,9 +1628,9 @@ const LaboresManagement: React.FC = () => {
                       fontSize: '12px',
                       color: '#1e40af'
                     }}>
-                      <strong>📍 Estado del lote:</strong> {loteEstado.replace(/_/g, ' ')}
+                      <strong><Icon name="MapPin" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Estado del lote:</strong> {loteEstado.replace(/_/g, ' ')}
                       <br />
-                      <em>✅ Solo se mostrarán las labores apropiadas para este estado</em>
+                      <em><Icon name="CheckCircle" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Solo se mostrarán las labores apropiadas para este estado</em>
                     </div>
                   )}
                 </div>
@@ -1666,7 +1670,7 @@ const LaboresManagement: React.FC = () => {
                       color: '#6b7280',
                       fontWeight: 'bold'
                     }}>
-                      🔒 El tipo de labor no se puede cambiar al editar
+                      <Icon name="Lock" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> El tipo de labor no se puede cambiar al editar
                     </div>
                   )}
                   {tiposLaborDisponibles.length > 0 && formData.lote_id && editingLabor === null && (
@@ -1676,7 +1680,7 @@ const LaboresManagement: React.FC = () => {
                       color: '#059669',
                       fontWeight: 'bold'
                     }}>
-                      ✓ {tiposLaborDisponibles.length} labor(es) disponible(s) para este lote
+                      <Icon name="Check" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {tiposLaborDisponibles.length} labor(es) disponible(s) para este lote
                     </div>
                   )}
                   
@@ -1693,6 +1697,71 @@ const LaboresManagement: React.FC = () => {
                       lineHeight: '1.5'
                     }}>
                       {mensajeAgroquimicos}
+                    </div>
+                  )}
+                  
+                  {/* Mensaje cuando falta configuración: no mostrar al editar (el tipo ya está fijado) */}
+                  {requiereConfiguracion && formData.lote_id && editingLabor === null && (
+                    <div style={{
+                      marginTop: '10px',
+                      padding: '12px',
+                      backgroundColor: usandoTareasPlantilla ? '#fef3c7' : '#fee2e2',
+                      border: `1px solid ${usandoTareasPlantilla ? '#f59e0b' : '#ef4444'}`,
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      color: usandoTareasPlantilla ? '#92400e' : '#991b1b',
+                      lineHeight: '1.6'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                        <Icon name="AlertCircle" size={18} style={{ marginTop: '2px', flexShrink: 0 }} />
+                        <div>
+                          <strong style={{ display: 'block', marginBottom: '4px' }}>
+                            {usandoTareasPlantilla ? 'ℹ️ Tareas de plantilla' : '⚠️ Configuración Requerida'}
+                          </strong>
+                          <div>{mensajeConfiguracion}</div>
+                          {!usandoTareasPlantilla && (
+                            <div style={{ marginTop: '8px', fontSize: '12px', fontStyle: 'italic' }}>
+                              Configure el esquema de estados, transiciones y tareas para este tipo de cultivo en la sección de Configuración de Estados.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cultivo a sembrar: obligatorio cuando el tipo de labor es Siembra */}
+                  {formData.tipo === 'siembra' && (
+                    <div style={{ marginTop: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+                        Cultivo a sembrar *
+                      </label>
+                      <select
+                        value={formData.cultivo_id ?? ''}
+                        onChange={(e) => handleInputChange('cultivo_id', e.target.value ? Number(e.target.value) : undefined)}
+                        required
+                        disabled={editingLabor !== null}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          backgroundColor: editingLabor !== null ? '#f3f4f6' : 'white'
+                        }}
+                      >
+                        <option value="">Seleccionar cultivo</option>
+                        {cultivos.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.nombre} {c.tipo ? `(${c.tipo})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#6b7280' }}>
+                        Al guardar, el lote quedará asignado a este cultivo y tipo de cultivo para las próximas labores.
+                      </div>
+                      <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fef3c7', borderRadius: '6px', fontSize: '11px', color: '#92400e' }}>
+                        Si el tipo de cultivo (ej. Soja, Maíz) no tiene configuración de estados y tareas en Configuración del Módulo, la siembra se guardará igual; en las próximas labores se usarán tareas de plantilla hasta que configure ese tipo.
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1792,8 +1861,8 @@ const LaboresManagement: React.FC = () => {
                     alignItems: 'center',
                     marginBottom: '10px'
                   }}>
-                    <label style={{ fontWeight: 'bold', color: '#374151' }}>
-                      🧪 Insumos Utilizados
+                    <label style={{ fontWeight: 'bold', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Icon name="FlaskConical" size={18} /> Insumos Utilizados
                     </label>
                     <button
                       type="button"
@@ -1805,10 +1874,13 @@ const LaboresManagement: React.FC = () => {
                         border: 'none',
                         borderRadius: '5px',
                         cursor: 'pointer',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
                       }}
                     >
-                      ➕ Agregar
+                      <Icon name="Plus" size={14} /> Agregar
                     </button>
                   </div>
                   
@@ -1849,7 +1921,7 @@ const LaboresManagement: React.FC = () => {
                               fontSize: '10px'
                             }}
                           >
-                            ✕
+                            <Icon name="X" size={12} />
                           </button>
                         </div>
                       ))}
@@ -1876,8 +1948,8 @@ const LaboresManagement: React.FC = () => {
                     alignItems: 'center',
                     marginBottom: '10px'
                   }}>
-                    <label style={{ fontWeight: 'bold', color: '#374151' }}>
-                      🚜 Maquinaria Utilizada
+                    <label style={{ fontWeight: 'bold', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Icon name="Tractor" size={18} /> Maquinaria Utilizada
                     </label>
                     <div style={{ display: 'flex', gap: '5px' }}>
                       <button
@@ -1890,10 +1962,13 @@ const LaboresManagement: React.FC = () => {
                           border: 'none',
                           borderRadius: '5px',
                           cursor: 'pointer',
-                          fontSize: '12px'
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
                       >
-                        🏠 Propia
+                        <Icon name="Home" size={14} /> Propia
                       </button>
                       <button
                         type="button"
@@ -1905,10 +1980,13 @@ const LaboresManagement: React.FC = () => {
                           border: 'none',
                           borderRadius: '5px',
                           cursor: 'pointer',
-                          fontSize: '12px'
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
                       >
-                        🏢 Alquilada
+                        <Icon name="Building" size={14} /> Alquilada
                       </button>
                     </div>
                   </div>
@@ -1950,7 +2028,7 @@ const LaboresManagement: React.FC = () => {
                               fontSize: '10px'
                             }}
                           >
-                            ✕
+                            <Icon name="X" size={12} />
                           </button>
                         </div>
                       ))}
@@ -1977,8 +2055,8 @@ const LaboresManagement: React.FC = () => {
                     alignItems: 'center',
                     marginBottom: '10px'
                   }}>
-                    <label style={{ fontWeight: 'bold', color: '#374151' }}>
-                      👥 Mano de Obra
+                    <label style={{ fontWeight: 'bold', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Icon name="Users" size={18} /> Mano de Obra
                     </label>
                     <button
                       type="button"
@@ -1990,10 +2068,13 @@ const LaboresManagement: React.FC = () => {
                         border: 'none',
                         borderRadius: '5px',
                         cursor: 'pointer',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
                       }}
                     >
-                      ➕ Agregar
+                      <Icon name="Plus" size={14} /> Agregar
                     </button>
                   </div>
                   
@@ -2038,7 +2119,7 @@ const LaboresManagement: React.FC = () => {
                               fontSize: '10px'
                             }}
                           >
-                            ✕
+                            <Icon name="X" size={12} />
                           </button>
                         </div>
                       ))}
@@ -2064,7 +2145,9 @@ const LaboresManagement: React.FC = () => {
                   borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <h4 style={{ margin: '0 0 10px 0', color: '#374151' }}>💰 Resumen de Costos</h4>
+                  <h4 style={{ margin: '0 0 10px 0', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Icon name="DollarSign" size={18} /> Resumen de Costos
+                  </h4>
                   <div style={{ display: 'grid', gap: '5px', fontSize: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>Insumos:</span>
@@ -2151,26 +2234,31 @@ const LaboresManagement: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1001,
-          padding: '20px'
+          padding: '16px'
         }}>
           <div style={{
             background: 'white',
-            borderRadius: '10px',
-            padding: '20px',
+            borderRadius: '12px',
+            padding: '28px',
             width: '100%',
-            maxWidth: '500px',
-            maxHeight: '80vh',
-            overflowY: 'auto'
+            maxWidth: '640px',
+            maxHeight: 'calc(100vh - 32px)',
+            minHeight: '520px',
+            overflowY: 'auto',
+            overflowX: 'hidden'
           }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '20px',
+              marginBottom: '24px',
               borderBottom: '1px solid #e5e7eb',
-              paddingBottom: '15px'
+              paddingBottom: '20px',
+              paddingTop: '4px'
             }}>
-              <h3 style={{ margin: 0, color: '#374151' }}>🧪 Seleccionar Insumos</h3>
+              <h3 style={{ margin: 0, color: '#374151', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="FlaskConical" size={22} /> Seleccionar Insumos
+              </h3>
               <button
                 onClick={() => {
                   setShowInsumosModal(false);
@@ -2183,23 +2271,37 @@ const LaboresManagement: React.FC = () => {
                   border: 'none',
                   fontSize: '24px',
                   cursor: 'pointer',
-                  color: '#6b7280'
+                  color: '#6b7280',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
-                ✕
+                <Icon name="X" size={20} />
               </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {/* Selección de insumo */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#374151' }}>
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {/* Selección de insumo - Autocomplete con búsqueda para listas largas */}
+              <div style={{ minWidth: '100%' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#374151', fontSize: '15px' }}>
                   Seleccionar Insumo
                 </label>
-                <select
-                  value={selectedInsumoId}
-                  onChange={async (e) => {
-                    const insumoId = Number(e.target.value);
+                <Autocomplete<Insumo>
+                  options={insumos.map(insumo => {
+                    const cantidadYaUsada = selectedInsumos
+                      .filter(i => i.insumo_id === insumo.id)
+                      .reduce((sum, i) => sum + i.cantidad_usada, 0);
+                    const stockDisponible = insumo.stock_actual - cantidadYaUsada;
+                    return {
+                      value: insumo.id,
+                      label: `${insumo.nombre} - Stock: ${stockDisponible} ${insumo.unidad_medida}`,
+                      data: insumo
+                    };
+                  })}
+                  value={selectedInsumoId || undefined}
+                  onChange={async (value, option) => {
+                    const insumoId = value ? Number(value) : 0;
                     setSelectedInsumoId(insumoId);
                     setInsumoCantidad(0);
                     setDosisCalculada(null);
@@ -2219,78 +2321,41 @@ const LaboresManagement: React.FC = () => {
                       
                       const insumo = insumos.find(i => i.id === insumoId);
                       if (insumo && tiposConAgroquimicos.includes(formData.tipo.toLowerCase())) {
-                        // Verificar si el insumo es agroquímico
                         const esAgroquimico = insumo.tipo === 'HERBICIDA' || insumo.tipo === 'FUNGICIDA' || 
                                              insumo.tipo === 'INSECTICIDA' || insumo.tipo === 'FERTILIZANTE';
                         
                         if (esAgroquimico) {
-                          console.log('🦠 Detectado agroquímico:', insumo.nombre);
-                          console.log('🔍 Buscando dosis para insumo ID:', insumoId);
-                          
                           try {
-                            // Buscar todas las dosis recomendadas del insumo
-                            console.log('📡 Llamando a API: /dosis-agroquimicos/insumo/' + insumoId);
                             const dosisData = await dosisAgroquimicosService.obtenerPorInsumo(insumoId);
-                            console.log('✅ Respuesta recibida del servidor:', dosisData);
-                            console.log('📦 Response data type:', typeof dosisData);
-                            console.log('📦 Response data length:', Array.isArray(dosisData) ? dosisData.length : 'no es array');
-                            
                             if (dosisData && Array.isArray(dosisData) && dosisData.length > 0) {
-                              console.log('📋 Dosis disponibles encontradas:', dosisData.length);
-                              console.log('📋 Dosis disponibles (datos completos):', JSON.stringify(dosisData, null, 2));
                               setDosisDisponibles(dosisData);
-                              
-                              // Si hay solo una dosis, seleccionarla automáticamente
                               if (dosisData.length === 1) {
-                                console.log('✅ Solo hay una dosis, seleccionando automáticamente');
                                 setDosisSeleccionada(dosisData[0].id);
                                 calcularCantidadDesdeDosis(dosisData[0], insumo);
                               }
                             } else {
-                              // No hay dosis configuradas - el usuario puede usar el insumo normalmente
-                              console.log('⚠️ No se encontraron dosis. dosisData:', dosisData);
                               setDosisDisponibles([]);
                               setDosisCalculada(null);
-                              console.log('ℹ️ No hay dosis configuradas para este insumo. El usuario puede usarlo como insumo normal.');
                             }
-                          } catch (error: any) {
-                            console.error('❌ Error al buscar dosis recomendada:', error);
-                            console.error('❌ Error completo:', JSON.stringify(error, null, 2));
-                            if (error.response) {
-                              console.error('❌ Error response status:', error.response.status);
-                              console.error('❌ Error response data:', error.response.data);
-                            }
-                            // Si hay error, permitir usar el insumo normalmente
+                          } catch {
                             setDosisDisponibles([]);
                             setDosisCalculada(null);
-                            console.log('ℹ️ Error al obtener dosis. El usuario puede usar el insumo normalmente.');
                           }
                         }
                       }
                     }
                   }}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '14px'
+                  placeholder="Buscar insumo por nombre..."
+                  emptyMessage="No se encontraron insumos"
+                  maxHeight={280}
+                  style={{ minHeight: '56px' }}
+                  inputStyle={{
+                    minHeight: '56px',
+                    fontSize: '16px',
+                    padding: '14px 2.75rem 14px 16px',
+                    lineHeight: '1.5',
                   }}
-                >
-                  <option value={0}>Seleccionar un insumo</option>
-                  {insumos.map(insumo => {
-                    const cantidadYaUsada = selectedInsumos
-                      .filter(i => i.insumo_id === insumo.id)
-                      .reduce((sum, i) => sum + i.cantidad_usada, 0);
-                    const stockDisponible = insumo.stock_actual - cantidadYaUsada;
-                    
-                    return (
-                      <option key={insumo.id} value={insumo.id}>
-                        {insumo.nombre} - Stock disponible: {stockDisponible} {insumo.unidad_medida}
-                      </option>
-                    );
-                  })}
-                </select>
+                />
               </div>
 
               {/* Información del insumo seleccionado */}
@@ -2328,8 +2393,8 @@ const LaboresManagement: React.FC = () => {
                       {/* Selector de dosis si hay dosis disponibles (opcional) */}
                       {dosisDisponibles.length > 0 && (
                         <div style={{ marginTop: '15px' }}>
-                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px', color: '#374151' }}>
-                            🎯 (Opcional) Seleccione la aplicación para cálculo automático:
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px', color: '#374151' }}>
+                            <Icon name="Target" size={16} /> (Opcional) Seleccione la aplicación para cálculo automático:
                           </label>
                           <select
                             value={dosisSeleccionada || ''}
@@ -2389,7 +2454,9 @@ const LaboresManagement: React.FC = () => {
                           color: '#1e40af',
                           lineHeight: '1.5'
                         }}>
-                          <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>💡 Cálculo automático:</div>
+                          <div style={{ fontWeight: 'bold', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Icon name="Lightbulb" size={16} /> Cálculo automático:
+                          </div>
                           <div>{dosisCalculada.mensaje}</div>
                           <div style={{ marginTop: '5px', fontSize: '11px', fontStyle: 'italic' }}>
                             Puede modificar la cantidad manualmente si lo desea.
@@ -2409,7 +2476,7 @@ const LaboresManagement: React.FC = () => {
                           color: '#1e40af',
                           lineHeight: '1.5'
                         }}>
-                          ℹ️ Este agroquímico no tiene dosis configuradas. Puede ingresar la cantidad manualmente como insumo normal.
+                          <Icon name="Info" size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Este agroquímico no tiene dosis configuradas. Puede ingresar la cantidad manualmente como insumo normal.
                         </div>
                       )}
                     </div>
@@ -2501,7 +2568,9 @@ const LaboresManagement: React.FC = () => {
               borderBottom: '1px solid #e5e7eb',
               paddingBottom: '15px'
             }}>
-              <h3 style={{ margin: 0, color: '#374151' }}>🚜 Seleccionar Maquinaria</h3>
+              <h3 style={{ margin: 0, color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="Tractor" size={20} /> Seleccionar Maquinaria
+              </h3>
               <button
                 onClick={() => setShowMaquinariaModal(false)}
                 style={{
@@ -2509,10 +2578,13 @@ const LaboresManagement: React.FC = () => {
                   border: 'none',
                   fontSize: '24px',
                   cursor: 'pointer',
-                  color: '#6b7280'
+                  color: '#6b7280',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
-                ✕
+                <Icon name="X" size={20} />
               </button>
             </div>
 
@@ -2652,6 +2724,15 @@ const LaboresManagement: React.FC = () => {
 
       {/* Modal de Detalles de Costos */}
       {showDetallesCostos && laborSeleccionada && (
+        <LaborDetalleCostosModal
+          labor={laborSeleccionada}
+          onClose={() => setShowDetallesCostos(false)}
+          formatCurrency={formatCurrency}
+        />
+      )}
+
+      {/* Modal Anular labor (completada o en progreso) */}
+      {showModalAnular && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -2666,270 +2747,79 @@ const LaboresManagement: React.FC = () => {
         }}>
           <div style={{
             backgroundColor: 'white',
+            padding: '24px',
             borderRadius: '8px',
-            padding: '20px',
-            maxWidth: '800px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflowY: 'auto'
+            width: '100%',
+            maxWidth: '440px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
           }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-              borderBottom: '1px solid #e5e7eb',
-              paddingBottom: '10px'
-            }}>
-              <h2 style={{ margin: 0, color: '#374151' }}>
-                💰 Detalles de Costos - {laborSeleccionada.tipo}
-              </h2>
+            <h3 style={{ margin: '0 0 16px 0', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="XCircle" size={22} style={{ color: '#b45309' }} />
+              Anular labor
+            </h3>
+            <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: '14px' }}>
+              Esta labor está completada o en progreso. Para anularla debe indicar una justificación. Opcionalmente puede restaurar los insumos al inventario.
+            </p>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '14px', color: '#374151' }}>
+              Justificación (obligatoria)
+            </label>
+            <textarea
+              value={justificacionAnular}
+              onChange={(e) => setJustificacionAnular(e.target.value)}
+              placeholder="Ej.: Error en datos, labor duplicada..."
+              rows={3}
+              maxLength={1000}
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                resize: 'vertical',
+                marginBottom: '12px',
+                boxSizing: 'border-box'
+              }}
+            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>
+              <input
+                type="checkbox"
+                checked={restaurarInsumosAnular}
+                onChange={(e) => setRestaurarInsumosAnular(e.target.checked)}
+              />
+              Restaurar insumos al inventario
+            </label>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
-                onClick={() => setShowDetallesCostos(false)}
+                type="button"
+                onClick={closeModalAnular}
                 style={{
-                  background: 'none',
+                  padding: '8px 16px',
+                  background: '#e5e7eb',
+                  color: '#374151',
                   border: 'none',
-                  fontSize: '24px',
+                  borderRadius: '6px',
                   cursor: 'pointer',
-                  color: '#6b7280'
+                  fontSize: '14px'
                 }}
               >
-                ×
+                Cancelar
               </button>
-            </div>
-
-            {/* Resumen de Costos */}
-            {(() => {
-              // Calcular costo de insumos sumando los insumos_usados
-              const costoInsumos = laborSeleccionada.insumos_usados && laborSeleccionada.insumos_usados.length > 0
-                ? laborSeleccionada.insumos_usados.reduce((sum: number, ins: any) => {
-                    const costo = ins.costoTotal || ins.costo_total || 
-                                  (ins.costoUnitario || ins.costo_unitario || 0) * (ins.cantidadUsada || ins.cantidad_usada || ins.cantidad || 0);
-                    return sum + (costo || 0);
-                  }, 0)
-                : (laborSeleccionada.costo_base || 0);
-              
-              const costoMaquinaria = laborSeleccionada.costo_maquinaria || 0;
-              const costoManoObra = laborSeleccionada.costo_mano_obra || 0;
-              const total = costoInsumos + costoMaquinaria + costoManoObra;
-              
-              return (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: '15px',
-                  marginBottom: '30px'
-                }}>
-                  <div style={{
-                    padding: '15px',
-                    backgroundColor: '#e0e7ff',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    border: '2px solid #6366f1'
-                  }}>
-                    <div style={{ fontSize: '14px', color: '#4338ca', marginBottom: '5px', fontWeight: '600' }}>
-                      🧪 Insumos
-                    </div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#4338ca' }}>
-                      {formatCurrency(costoInsumos)}
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '15px',
-                    backgroundColor: '#dbeafe',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    border: '2px solid #3b82f6'
-                  }}>
-                    <div style={{ fontSize: '14px', color: '#1d4ed8', marginBottom: '5px', fontWeight: '600' }}>
-                      🔧 Maquinaria
-                    </div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1d4ed8' }}>
-                      {formatCurrency(costoMaquinaria)}
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '15px',
-                    backgroundColor: '#fef3c7',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    border: '2px solid #f59e0b'
-                  }}>
-                    <div style={{ fontSize: '14px', color: '#d97706', marginBottom: '5px', fontWeight: '600' }}>
-                      👥 Mano de Obra
-                    </div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#d97706' }}>
-                      {formatCurrency(costoManoObra)}
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '15px',
-                    backgroundColor: '#d1fae5',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    border: '2px solid #10b981',
-                    gridColumn: 'span 1'
-                  }}>
-                    <div style={{ fontSize: '14px', color: '#059669', marginBottom: '5px', fontWeight: '600' }}>
-                      💰 Total
-                    </div>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#059669' }}>
-                      {formatCurrency(total)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Detalles de Maquinaria */}
-            {laborSeleccionada.maquinarias && laborSeleccionada.maquinarias.length > 0 && (
-              <div style={{ marginBottom: '30px' }}>
-                <h3 style={{ color: '#374151', marginBottom: '15px' }}>🔧 Maquinaria Utilizada</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {laborSeleccionada.maquinarias.map((maq, index) => (
-                    <div key={maq.id_labor_maquinaria || `maquinaria-${index}`} style={{
-                      padding: '15px',
-                      backgroundColor: '#f8fafc',
-                      borderRadius: '8px',
-                      border: '1px solid #e2e8f0'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: 'bold', color: '#374151' }}>{maq.descripcion}</div>
-                          <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                            Tipo: {maq.tipo} {maq.proveedor && `- ${maq.proveedor}`}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1d4ed8' }}>
-                          {formatCurrency(maq.costo)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Detalles de Mano de Obra */}
-            {laborSeleccionada.mano_obra && laborSeleccionada.mano_obra.length > 0 && (
-              <div style={{ marginBottom: '30px' }}>
-                <h3 style={{ color: '#374151', marginBottom: '15px' }}>👥 Mano de Obra</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {laborSeleccionada.mano_obra.map((mo, index) => {
-                    // Normalizar datos de mano de obra
-                    const cantidadPersonas = mo.cantidadPersonas || mo.cantidad_personas || 1;
-                    const costoTotal = mo.costoTotal || mo.costo_total || 0;
-                    const horasTrabajo = mo.horasTrabajo || mo.horas_trabajo;
-                    
-                    return (
-                      <div key={mo.id_labor_mano_obra || mo.idLaborManoObra || `mano-obra-detail-${index}`} style={{
-                        padding: '15px',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 'bold', color: '#374151', marginBottom: '4px' }}>
-                              {mo.descripcion}
-                            </div>
-                            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '2px' }}>
-                              👥 Personas: <strong>{cantidadPersonas}</strong>
-                            </div>
-                            {mo.proveedor && (
-                              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '2px' }}>
-                                🏢 Proveedor: {mo.proveedor}
-                              </div>
-                            )}
-                            {horasTrabajo && (
-                              <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                                ⏱️ Horas: {horasTrabajo}
-                              </div>
-                            )}
-                            {mo.observaciones && (
-                              <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', fontStyle: 'italic' }}>
-                                {mo.observaciones}
-                              </div>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#d97706', textAlign: 'right', minWidth: '120px' }}>
-                            {formatCurrency(costoTotal)}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Detalles de Insumos Utilizados */}
-            {laborSeleccionada.insumos_usados && laborSeleccionada.insumos_usados.length > 0 && (
-              <div style={{ marginBottom: '30px' }}>
-                <h3 style={{ color: '#374151', marginBottom: '15px' }}>🧪 Insumos Utilizados</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {laborSeleccionada.insumos_usados.map((insumo, index) => {
-                    // Normalizar datos de insumo
-                    const cantidadUsada = insumo.cantidadUsada || insumo.cantidad_usada || insumo.cantidad || 0;
-                    const costoUnitario = insumo.costoUnitario || insumo.costo_unitario || insumo.precio_unitario || 0;
-                    const costoTotal = insumo.costoTotal || insumo.costo_total || (cantidadUsada * costoUnitario);
-                    const unidadMedida = insumo.unidadMedida || insumo.unidad_medida || insumo.unidad || '';
-                    const insumoNombre = insumo.insumoNombre || insumo.insumo_nombre || insumo.nombre || 'Insumo sin nombre';
-                    
-                    return (
-                      <div key={insumo.insumo_id || insumo.idInsumo || insumo.id || `insumo-detail-${index}`} style={{
-                        padding: '15px',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 'bold', color: '#374151', marginBottom: '4px' }}>
-                              {insumoNombre}
-                            </div>
-                            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '2px' }}>
-                              📦 Cantidad: <strong>{cantidadUsada} {unidadMedida}</strong>
-                            </div>
-                            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '2px' }}>
-                              💰 Precio Unitario: {formatCurrency(costoUnitario)}
-                            </div>
-                            {insumo.observaciones && (
-                              <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', fontStyle: 'italic' }}>
-                                {insumo.observaciones}
-                              </div>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#059669', textAlign: 'right', minWidth: '120px' }}>
-                            {formatCurrency(costoTotal)}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Información de la Labor */}
-            <div style={{
-              padding: '15px',
-              backgroundColor: '#f9fafb',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <h4 style={{ color: '#374151', marginBottom: '10px' }}>Información de la Labor</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-                <div><strong>Lote:</strong> {laborSeleccionada.lote_nombre}</div>
-                <div><strong>Fecha:</strong> {new Date(laborSeleccionada.fecha).toLocaleDateString('es-ES')}</div>
-                <div><strong>Estado:</strong> {laborSeleccionada.estado}</div>
-                <div><strong>Responsable:</strong> {laborSeleccionada.responsable}</div>
-              </div>
-              {laborSeleccionada.observaciones && (
-                <div style={{ marginTop: '10px' }}>
-                  <strong>Observaciones:</strong> {laborSeleccionada.observaciones}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={confirmarAnular}
+                disabled={!justificacionAnular.trim()}
+                style={{
+                  padding: '8px 16px',
+                  background: justificacionAnular.trim() ? '#b45309' : '#9ca3af',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: justificacionAnular.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '14px'
+                }}
+              >
+                Anular labor
+              </button>
             </div>
           </div>
         </div>
@@ -2958,8 +2848,8 @@ const LaboresManagement: React.FC = () => {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, color: '#374151' }}>
-                🏠 Agregar Maquinaria Propia
+              <h2 style={{ margin: 0, color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="Home" size={20} /> Agregar Maquinaria Propia
               </h2>
               <button
                 onClick={() => setShowFormMaquinaria(false)}
@@ -3114,8 +3004,8 @@ const LaboresManagement: React.FC = () => {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, color: '#374151' }}>
-                🏢 Agregar Maquinaria Alquilada
+              <h2 style={{ margin: 0, color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="Building" size={20} /> Agregar Maquinaria Alquilada
               </h2>
               <button
                 onClick={() => setShowFormMaquinariaAlquilada(false)}
@@ -3235,8 +3125,8 @@ const LaboresManagement: React.FC = () => {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, color: '#374151' }}>
-                👥 Agregar Mano de Obra
+              <h2 style={{ margin: 0, color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="Users" size={20} /> Agregar Mano de Obra
               </h2>
               <button
                 onClick={() => setShowFormManoObra(false)}

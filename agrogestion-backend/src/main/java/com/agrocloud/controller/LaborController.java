@@ -1,18 +1,23 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.dto.LaborDetalladoDTO;
+import com.agrocloud.dto.PaginaLaboresDTO;
+import com.agrocloud.dto.FiltrosLaboresDTO;
 import com.agrocloud.dto.RespuestaCambioEstado;
 import com.agrocloud.dto.ConfirmacionCambioEstado;
 import com.agrocloud.dto.ReporteCosechaDTO;
 import com.agrocloud.dto.CrearLaborRequest;
-import com.agrocloud.model.entity.Labor;
-import com.agrocloud.model.entity.LaborMaquinaria;
-import com.agrocloud.model.entity.LaborManoObra;
-import com.agrocloud.model.entity.User;
+import com.agrocloud.cultivos.domain.Labor;
+import com.agrocloud.cultivos.domain.LaborMaquinaria;
+import com.agrocloud.cultivos.domain.LaborManoObra;
+import com.agrocloud.core.domain.User;
 import com.agrocloud.model.enums.EstadoLote;
-import com.agrocloud.service.LaborService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.cultivos.application.LaborService;
+import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,10 +29,10 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/labores")
-@CrossOrigin(origins = "*")
 public class LaborController {
 
     @Autowired
+    @Qualifier("laborServicioCultivos")
     private LaborService laborService;
 
     @Autowired
@@ -49,13 +54,49 @@ public class LaborController {
      * Obtener todas las labores accesibles por el usuario con costos detallados
      */
     @GetMapping
-    public ResponseEntity<List<LaborDetalladoDTO>> getAllLabores(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> getAllLabores(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Long loteId,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) Boolean soloVencidas,
+            @RequestParam(required = false) String busqueda) {
         try {
             User user = obtenerUsuario(userDetails);
             if (user == null) {
                 return ResponseEntity.badRequest().build();
             }
-            
+
+            FiltrosLaboresDTO filtros = construirFiltrosLabores(loteId, estado, soloVencidas, busqueda);
+
+            if (page != null && size != null) {
+                int paginaSegura = Math.max(0, page);
+                int tamanoSeguro = Math.min(Math.max(1, size), 200);
+                Page<LaborDetalladoDTO> resultado = laborService.getLaboresDetalladasPaginadas(
+                        user, PageRequest.of(paginaSegura, tamanoSeguro), filtros);
+                PaginaLaboresDTO pagina = new PaginaLaboresDTO(
+                        resultado.getContent(),
+                        resultado.getNumber(),
+                        resultado.getSize(),
+                        resultado.getTotalElements());
+                return ResponseEntity.ok(pagina);
+            }
+
+            if (filtros.tieneFiltros()) {
+                List<LaborDetalladoDTO> labores = laborService.getLaboresDetalladasConFiltros(
+                        user, null, null, filtros.getLoteId(),
+                        filtros.getEstado() != null ? filtros.getEstado().name() : null,
+                        filtros.getSoloVencidas());
+                if (busqueda != null && !busqueda.isBlank()) {
+                    String q = busqueda.trim().toLowerCase();
+                    labores = labores.stream()
+                            .filter(l -> coincideBusquedaLabor(l, q))
+                            .toList();
+                }
+                return ResponseEntity.ok(labores);
+            }
+
             List<LaborDetalladoDTO> labores = laborService.getLaboresDetalladasByUser(user);
             return ResponseEntity.ok(labores);
         } catch (Exception e) {
@@ -63,6 +104,45 @@ public class LaborController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    private FiltrosLaboresDTO construirFiltrosLabores(Long loteId, String estado, Boolean soloVencidas, String busqueda) {
+        FiltrosLaboresDTO filtros = new FiltrosLaboresDTO();
+        filtros.setLoteId(loteId);
+        filtros.setBusqueda(busqueda);
+        if (Boolean.TRUE.equals(soloVencidas) || (estado != null && "vencidas".equalsIgnoreCase(estado.trim()))) {
+            filtros.setSoloVencidas(true);
+        } else {
+            filtros.setEstado(mapearEstadoFiltro(estado));
+        }
+        return filtros;
+    }
+
+    private Labor.EstadoLabor mapearEstadoFiltro(String estado) {
+        if (estado == null || estado.isBlank() || "todos".equalsIgnoreCase(estado.trim())) {
+            return null;
+        }
+        return switch (estado.trim().toLowerCase()) {
+            case "planificada" -> Labor.EstadoLabor.PLANIFICADA;
+            case "en_progreso" -> Labor.EstadoLabor.EN_PROGRESO;
+            case "completada", "realizada" -> Labor.EstadoLabor.COMPLETADA;
+            case "cancelada" -> Labor.EstadoLabor.CANCELADA;
+            case "anulada" -> Labor.EstadoLabor.ANULADA;
+            default -> {
+                try {
+                    yield Labor.EstadoLabor.valueOf(estado.trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    yield null;
+                }
+            }
+        };
+    }
+
+    private boolean coincideBusquedaLabor(LaborDetalladoDTO labor, String busqueda) {
+        return (labor.getTipo() != null && labor.getTipo().toLowerCase().contains(busqueda))
+                || (labor.getLoteNombre() != null && labor.getLoteNombre().toLowerCase().contains(busqueda))
+                || (labor.getResponsable() != null && labor.getResponsable().toLowerCase().contains(busqueda))
+                || (labor.getObservaciones() != null && labor.getObservaciones().toLowerCase().contains(busqueda));
     }
 
     /**
@@ -264,7 +344,7 @@ public class LaborController {
     public ResponseEntity<Map<String, Object>> confirmarLaborCosecha(@PathVariable Long laborId, @RequestBody ConfirmacionCambioEstado confirmacion, @AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = obtenerUsuario(userDetails);
-            laborService.confirmarLaborCosecha(laborId, confirmacion, user);
+            laborService.finalizarLaborCosecha(laborId, confirmacion, user);
             
             Map<String, Object> respuesta = new java.util.HashMap<>();
             respuesta.put("success", true);

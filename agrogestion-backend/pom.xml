@@ -69,6 +69,8 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
+        
+        <!-- Flyway DESHABILITADO - Las migraciones se ejecutan manualmente en MySQL -->
 
         <!-- JWT -->
         <dependency>
@@ -94,6 +96,13 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
+        </dependency>
+
+        <!-- Apache POI para exportación a Excel -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
         </dependency>
 
         <!-- Development Tools -->
@@ -124,15 +133,82 @@
             <version>2.15.1</version>
         </dependency>
 
+        <!-- Flyway (migraciones versionadas) -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    <compilerArgs>
+                        <arg>-Xlint:deprecation</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.agrocloud.AgroCloudApplication</mainClass>
+                </configuration>
+            </plugin>
+
+            <!-- Reparar checksums: definir FLYWAY_URL, FLYWAY_USER, FLYWAY_PASSWORD (p. ej. scripts/ejecutar-flyway-repair.ps1) o -Dflyway.* sin & en CMD -->
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <configuration>
+                    <locations>
+                        <location>filesystem:src/main/resources/db/migration</location>
+                    </locations>
+                    <!-- Alineado con spring.flyway.out-of-order: bases con migraciones 1.x fuera de orden -->
+                    <outOfOrder>true</outOfOrder>
+                </configuration>
+            </plugin>
+            
+            <!-- OWASP Dependency-Check para análisis de vulnerabilidades -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>9.0.9</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <format>HTML</format>
+                    <failOnError>false</failOnError>
+                    <skipProvidedScope>true</skipProvidedScope>
+                    <skipRuntimeScope>false</skipRuntimeScope>
                 </configuration>
             </plugin>
             

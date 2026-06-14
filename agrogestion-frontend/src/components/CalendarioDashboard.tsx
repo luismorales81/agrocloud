@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
@@ -6,15 +7,19 @@ import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useCurrencyUpdate } from '../hooks/useCurrencyUpdate';
 import EmpresaSelector from './EmpresaSelector';
 import { laboresService } from '../services/apiServices';
+import { Icon } from './icons';
 
 interface EventoCalendario {
   id: string;
-  tipo: 'LABOR' | 'COSECHA' | 'RECORDATORIO';
+  tipo: 'LABOR' | 'COSECHA' | 'RECORDATORIO' | 'TAREA_RECURRENTE';
   titulo: string;
   descripcion?: string;
   fecha: string;
   fechaFin?: string;
   estado?: string;
+  /** Spec SDD: labor vencida (fecha planificada &lt; hoy y planificada). */
+  overdue?: boolean;
+  fechaRealizacion?: string;
   laborId?: number;
   loteId?: number;
   loteNombre?: string;
@@ -26,6 +31,15 @@ interface EventoCalendario {
   recordatorioId?: number;
   cultivo?: string;
   superficie?: number;
+  /** Tareas recurrentes (SPEC calendario). */
+  serieId?: number;
+  tipoRepeticion?: string;
+  cumplida?: boolean;
+}
+
+interface CalendarioDashboardProps {
+  /** Calendario general (cultivos) o calendario propio del módulo avícola huevos. */
+  modoCalendario?: 'general' | 'avicolaHuevos';
 }
 
 interface RecordatorioForm {
@@ -35,9 +49,11 @@ interface RecordatorioForm {
   tipo: string;
   laborId?: number;
   loteId?: number;
+  loteAvicolaHuevoId?: number | '';
 }
 
-const CalendarioDashboard: React.FC = () => {
+const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendario = 'general' }) => {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { empresaActiva, rolUsuario } = useEmpresa();
   const { formatCurrency, selectedCurrency, exchangeType, realRates, changeCurrency, changeExchangeType } = useCurrencyContext();
@@ -49,16 +65,32 @@ const CalendarioDashboard: React.FC = () => {
   const [mostrarModalRecordatorio, setMostrarModalRecordatorio] = useState(false);
   const [mostrarModalLabor, setMostrarModalLabor] = useState(false);
   const [mostrarModalDetalleRecordatorio, setMostrarModalDetalleRecordatorio] = useState(false);
+  const [eventoSeleccionado, setEventoSeleccionado] = useState<EventoCalendario | null>(null);
   const [laborSeleccionada, setLaborSeleccionada] = useState<any>(null);
   const [recordatorioSeleccionado, setRecordatorioSeleccionado] = useState<any>(null);
   const [loadingLabor, setLoadingLabor] = useState(false);
   const [loadingRecordatorio, setLoadingRecordatorio] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>('');
+  const [errorCalendario, setErrorCalendario] = useState<string | null>(null);
+  const [actualizandoLabor, setActualizandoLabor] = useState(false);
+  const [reprogramarFecha, setReprogramarFecha] = useState<string>('');
   const [formRecordatorio, setFormRecordatorio] = useState<RecordatorioForm>({
     titulo: '',
     descripcion: '',
     fecha: '',
-    tipo: 'GENERAL'
+    tipo: 'GENERAL',
+    loteAvicolaHuevoId: '',
+  });
+  const [eliminandoRecordatorio, setEliminandoRecordatorio] = useState(false);
+  const [eliminandoSerieRecurrente, setEliminandoSerieRecurrente] = useState(false);
+  const [lotesHuevosOpciones, setLotesHuevosOpciones] = useState<{ id: number; nombre: string }[]>([]);
+  const [mostrarModalTareaRecurrente, setMostrarModalTareaRecurrente] = useState(false);
+  const [guardandoTareaRecurrente, setGuardandoTareaRecurrente] = useState(false);
+  const [formTareaRecurrente, setFormTareaRecurrente] = useState({
+    titulo: '',
+    descripcion: '',
+    fechaInicio: '',
+    tipoRepeticion: 'SEMANAL',
   });
 
   const handleLogout = () => {
@@ -75,20 +107,55 @@ const CalendarioDashboard: React.FC = () => {
   // Cargar eventos del calendario
   useEffect(() => {
     cargarEventos();
-  }, [fechaActual]);
+  }, [fechaActual, modoCalendario]);
+
+  useEffect(() => {
+    if (modoCalendario !== 'avicolaHuevos') {
+      setLotesHuevosOpciones([]);
+      return;
+    }
+    (async () => {
+      try {
+        const { data } = await api.get<Array<{ id: number; nombre: string }>>('/avicola-huevos/lotes');
+        setLotesHuevosOpciones(Array.isArray(data) ? data.map((l) => ({ id: l.id, nombre: l.nombre })) : []);
+      } catch {
+        setLotesHuevosOpciones([]);
+      }
+    })();
+  }, [modoCalendario]);
 
   const cargarEventos = async () => {
     setLoading(true);
+    setErrorCalendario(null);
     try {
       const fechaInicio = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-01`;
       const fechaFin = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(diasEnMes).padStart(2, '0')}`;
-      
-      const response = await api.get(`/calendario/eventos?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
+
+      const ruta =
+        modoCalendario === 'avicolaHuevos'
+          ? `/calendario/avicola-huevos?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`
+          : `/calendario/eventos?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+
+      const response = await api.get(ruta);
       if (response.data && response.data.todos) {
-        setEventos(response.data.todos);
+        const lista: EventoCalendario[] = response.data.todos;
+        setEventos(lista);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error cargando eventos:', error);
+      const status = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { status?: number } }).response?.status
+        : null;
+      const es503 = status === 503;
+      const esRed = error && typeof error === 'object' && 'message' in error &&
+        typeof (error as { message: string }).message === 'string' &&
+        ((error as { message: string }).message.includes('Network') || (error as { message: string }).message.includes('Failed to fetch'));
+      setErrorCalendario(
+        es503 || esRed
+          ? 'No se pudo conectar con el servidor. Compruebe que el backend esté en ejecución (puerto 8080).'
+          : 'No se pudieron cargar los eventos del calendario. Intente de nuevo.'
+      );
+      setEventos([]);
     } finally {
       setLoading(false);
     }
@@ -111,8 +178,14 @@ const CalendarioDashboard: React.FC = () => {
     return eventos.filter(evento => evento.fecha === fechaCompleta);
   };
 
-  const obtenerColorEvento = (tipo: string, estado?: string, completado?: boolean): string => {
+  const obtenerColorEvento = (
+    tipo: string,
+    estado?: string,
+    completado?: boolean,
+    overdue?: boolean
+  ): string => {
     if (tipo === 'LABOR') {
+      if (overdue) return '#dc2626'; // Rojo: labor vencida (spec SDD)
       switch (estado) {
         case 'PLANIFICADA': return '#3b82f6'; // Azul
         case 'EN_PROGRESO': return '#f59e0b'; // Naranja
@@ -126,16 +199,19 @@ const CalendarioDashboard: React.FC = () => {
     } else if (tipo === 'RECORDATORIO') {
       if (completado) return '#6b7280'; // Gris si está completado
       return '#ec4899'; // Rosa
+    } else if (tipo === 'TAREA_RECURRENTE') {
+      return completado ? '#6b7280' : '#d97706';
     }
     return '#6b7280';
   };
 
-  const obtenerIconoEvento = (tipo: string): string => {
+  const obtenerIconoEvento = (tipo: string): React.ReactNode => {
     switch (tipo) {
-      case 'LABOR': return '⚒️';
-      case 'COSECHA': return '🌾';
-      case 'RECORDATORIO': return '📌';
-      default: return '📅';
+      case 'LABOR': return <Icon name="Wrench" size={16} />;
+      case 'COSECHA': return <Icon name="Wheat" size={16} />;
+      case 'RECORDATORIO': return <Icon name="Pin" size={16} />;
+      case 'TAREA_RECURRENTE': return <Icon name="Calendar" size={16} />;
+      default: return <Icon name="CalendarDays" size={16} />;
     }
   };
 
@@ -146,26 +222,153 @@ const CalendarioDashboard: React.FC = () => {
       titulo: '',
       descripcion: '',
       fecha: fechaCompleta,
-      tipo: 'GENERAL'
+      tipo: 'GENERAL',
+      loteAvicolaHuevoId: '',
     });
     setMostrarModalRecordatorio(true);
   };
 
   const guardarRecordatorio = async () => {
     try {
-      await api.post('/recordatorios', {
+      const cuerpo: Record<string, unknown> = {
         titulo: formRecordatorio.titulo,
         descripcion: formRecordatorio.descripcion,
         fecha: formRecordatorio.fecha,
         tipo: formRecordatorio.tipo,
         laborId: formRecordatorio.laborId || null,
-        loteId: formRecordatorio.loteId || null
-      });
+        loteId: formRecordatorio.loteId || null,
+      };
+      if (modoCalendario === 'avicolaHuevos') {
+        if (formRecordatorio.loteAvicolaHuevoId === '') {
+          alert('Seleccioná un lote de postura para este recordatorio');
+          return;
+        }
+        cuerpo.loteAvicolaHuevoId = formRecordatorio.loteAvicolaHuevoId;
+      }
+      await api.post('/recordatorios', cuerpo);
       setMostrarModalRecordatorio(false);
       cargarEventos();
     } catch (error) {
       console.error('Error guardando recordatorio:', error);
       alert('Error al guardar el recordatorio');
+    }
+  };
+
+  const guardarTareaRecurrenteModulo = async () => {
+    if (!formTareaRecurrente.titulo.trim() || !formTareaRecurrente.fechaInicio) {
+      alert('Título y fecha de inicio son obligatorios');
+      return;
+    }
+    setGuardandoTareaRecurrente(true);
+    try {
+      await api.post('/calendario/tareas-recurrentes', {
+        titulo: formTareaRecurrente.titulo.trim(),
+        descripcion: formTareaRecurrente.descripcion.trim() || null,
+        fechaInicio: formTareaRecurrente.fechaInicio,
+        fechaFin: null,
+        tipoRepeticion: formTareaRecurrente.tipoRepeticion,
+        ambitoCalendario: modoCalendario === 'avicolaHuevos' ? 'AVICOLA_HUEVOS' : 'GENERAL',
+      });
+      setMostrarModalTareaRecurrente(false);
+      setFormTareaRecurrente({ titulo: '', descripcion: '', fechaInicio: '', tipoRepeticion: 'SEMANAL' });
+      cargarEventos();
+    } catch (e) {
+      console.error(e);
+      alert('No se pudo crear la tarea recurrente');
+    } finally {
+      setGuardandoTareaRecurrente(false);
+    }
+  };
+
+  const alternarCumplimientoTareaRecurrente = async () => {
+    if (!eventoSeleccionado?.serieId || !eventoSeleccionado?.fecha) return;
+    try {
+      const cumplida = !eventoSeleccionado.cumplida;
+      await api.patch(
+        `/calendario/tareas-recurrentes/${eventoSeleccionado.serieId}/cumplimiento?fecha=${eventoSeleccionado.fecha}`,
+        { cumplida }
+      );
+      setEventoSeleccionado(null);
+      cargarEventos();
+    } catch (e) {
+      console.error(e);
+      alert('No se pudo actualizar el cumplimiento');
+    }
+  };
+
+  /** Elimina la serie completa: desaparecen todas las ocurrencias (pasadas y futuras) de esta tarea recurrente. */
+  const eliminarSerieTareaRecurrente = async () => {
+    if (!eventoSeleccionado?.serieId) return;
+    if (
+      !window.confirm(
+        '¿Eliminar toda esta tarea recurrente? Se quitarán todas las fechas similares vinculadas a la misma serie. No se puede deshacer.'
+      )
+    ) {
+      return;
+    }
+    setEliminandoSerieRecurrente(true);
+    try {
+      await api.delete(`/calendario/tareas-recurrentes/${eventoSeleccionado.serieId}`);
+      setEventoSeleccionado(null);
+      await cargarEventos();
+    } catch (e) {
+      console.error(e);
+      alert(mensajeErrorApi(e));
+    } finally {
+      setEliminandoSerieRecurrente(false);
+    }
+  };
+
+  const mensajeErrorApi = (error: unknown): string => {
+    const data = error && typeof error === 'object' && 'response' in error
+      ? (error as { response?: { data?: { error?: string; mensaje?: string } } }).response?.data
+      : undefined;
+    if (data?.error && typeof data.error === 'string') return data.error;
+    if (data?.mensaje && typeof data.mensaje === 'string') return data.mensaje;
+    return 'Ocurrió un error. Intente de nuevo.';
+  };
+
+  const eliminarRecordatorioCalendario = async (recordatorioId: number) => {
+    if (!window.confirm('¿Eliminar este recordatorio? No se puede deshacer.')) return;
+    setEliminandoRecordatorio(true);
+    try {
+      await api.delete(`/recordatorios/${recordatorioId}`);
+      setMostrarModalDetalleRecordatorio(false);
+      setRecordatorioSeleccionado(null);
+      if (eventoSeleccionado?.recordatorioId === recordatorioId) {
+        setEventoSeleccionado(null);
+      }
+      await cargarEventos();
+    } catch (error) {
+      console.error('Error eliminando recordatorio:', error);
+      alert(mensajeErrorApi(error));
+    } finally {
+      setEliminandoRecordatorio(false);
+    }
+  };
+
+  const eliminarLaborCalendario = async (laborId: number) => {
+    if (
+      !window.confirm(
+        '¿Eliminar esta labor del calendario? Si está planificada, se cancelará y se revertirán reservas de insumos cuando corresponda. Las labores ya ejecutadas pueden requerir anulación formal desde Cultivos.'
+      )
+    ) {
+      return;
+    }
+    setActualizandoLabor(true);
+    try {
+      await laboresService.eliminar(laborId);
+      setMostrarModalLabor(false);
+      setLaborSeleccionada(null);
+      if (eventoSeleccionado?.laborId === laborId) {
+        setEventoSeleccionado(null);
+      }
+      await cargarEventos();
+    } catch (error) {
+      console.error('Error eliminando labor:', error);
+      alert(mensajeErrorApi(error));
+    } finally {
+      setActualizandoLabor(false);
     }
   };
 
@@ -181,6 +384,7 @@ const CalendarioDashboard: React.FC = () => {
   const abrirModalLabor = async (laborId: number) => {
     setLoadingLabor(true);
     setMostrarModalLabor(true);
+    setReprogramarFecha('');
     try {
       const labor = await laboresService.obtener(laborId);
       setLaborSeleccionada(labor);
@@ -190,6 +394,60 @@ const CalendarioDashboard: React.FC = () => {
       setMostrarModalLabor(false);
     } finally {
       setLoadingLabor(false);
+    }
+  };
+
+  /** Spec SDD: marcar labor como realizada (PATCH). */
+  const marcarLaborRealizada = async () => {
+    if (!laborSeleccionada?.id) return;
+    setActualizandoLabor(true);
+    try {
+      const hoy = new Date().toISOString().slice(0, 10);
+      await laboresService.actualizarParcial(laborSeleccionada.id, { estado: 'realizada', fecha_realizacion: hoy });
+      const labor = await laboresService.obtener(laborSeleccionada.id);
+      setLaborSeleccionada(labor);
+      cargarEventos();
+    } catch (e) {
+      console.error(e);
+      alert('Error al marcar la labor como realizada');
+    } finally {
+      setActualizandoLabor(false);
+    }
+  };
+
+  /** Spec SDD: reprogramar labor (PATCH fecha_planificada). */
+  const reprogramarLabor = async () => {
+    if (!laborSeleccionada?.id || !reprogramarFecha) return;
+    setActualizandoLabor(true);
+    try {
+      await laboresService.actualizarParcial(laborSeleccionada.id, { fecha_planificada: reprogramarFecha });
+      const labor = await laboresService.obtener(laborSeleccionada.id);
+      setLaborSeleccionada(labor);
+      setReprogramarFecha('');
+      cargarEventos();
+    } catch (e) {
+      console.error(e);
+      alert('Error al reprogramar la labor');
+    } finally {
+      setActualizandoLabor(false);
+    }
+  };
+
+  /** Spec SDD: cancelar labor (PATCH estado=cancelada). */
+  const cancelarLabor = async () => {
+    if (!laborSeleccionada?.id) return;
+    if (!window.confirm('¿Cancelar esta labor? Ya no aparecerá como pendiente en el calendario.')) return;
+    setActualizandoLabor(true);
+    try {
+      await laboresService.actualizarParcial(laborSeleccionada.id, { estado: 'cancelada' });
+      setMostrarModalLabor(false);
+      setLaborSeleccionada(null);
+      cargarEventos();
+    } catch (e) {
+      console.error(e);
+      alert('Error al cancelar la labor');
+    } finally {
+      setActualizandoLabor(false);
     }
   };
 
@@ -260,7 +518,10 @@ const CalendarioDashboard: React.FC = () => {
           fontWeight: 'bold', 
           color: '#1f2937'
         }}>
-          📅 Calendario de Actividades
+          <Icon name="CalendarDays" size={32} style={{ marginRight: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }} />{' '}
+          {modoCalendario === 'avicolaHuevos'
+            ? 'Calendario avícola huevos'
+            : 'Calendario de labores y tareas'}
         </h1>
         
         <div style={{
@@ -362,7 +623,7 @@ const CalendarioDashboard: React.FC = () => {
         }}>
           {nombresMeses[fechaActual.getMonth()]} {fechaActual.getFullYear()}
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
           <button
             onClick={mesAnterior}
             style={{
@@ -405,10 +666,55 @@ const CalendarioDashboard: React.FC = () => {
           >
             Siguiente →
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              const hoyIso = new Date().toISOString().slice(0, 10);
+              setFechaSeleccionada(hoyIso);
+              setFormRecordatorio({
+                titulo: '',
+                descripcion: '',
+                fecha: hoyIso,
+                tipo: 'GENERAL',
+              });
+              setMostrarModalRecordatorio(true);
+            }}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#ec4899',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer',
+              fontSize: '0.875rem'
+            }}
+          >
+            Nuevo recordatorio
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const hoy = new Date().toISOString().slice(0, 10);
+              setFormTareaRecurrente((f) => ({ ...f, fechaInicio: hoy }));
+              setMostrarModalTareaRecurrente(true);
+            }}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '0.375rem',
+              border: '1px solid #d97706',
+              backgroundColor: '#fffbeb',
+              color: '#b45309',
+              cursor: 'pointer',
+              fontWeight: 500,
+              fontSize: '0.875rem',
+            }}
+          >
+            Nueva tarea recurrente
+          </button>
         </div>
       </div>
 
-      {/* Leyenda */}
+      {/* Leyenda: el calendario es vista derivada de labores (spec SDD). Las tareas son las labores. */}
       <div style={{
         backgroundColor: 'white',
         padding: '1rem',
@@ -421,30 +727,47 @@ const CalendarioDashboard: React.FC = () => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ width: '20px', height: '20px', backgroundColor: '#3b82f6', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Labores Planificadas</span>
+          <span style={{ fontSize: '0.875rem' }}>Labores / Tareas planificadas</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ width: '20px', height: '20px', backgroundColor: '#f59e0b', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Labores en Progreso</span>
+          <span style={{ fontSize: '0.875rem' }}>En progreso</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ width: '20px', height: '20px', backgroundColor: '#10b981', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Labores Completadas</span>
+          <span style={{ fontSize: '0.875rem' }}>Labores realizadas</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ width: '20px', height: '20px', backgroundColor: '#dc2626', borderRadius: '4px' }}></div>
+          <span style={{ fontSize: '0.875rem' }}>Vencidas (pendientes)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ width: '20px', height: '20px', backgroundColor: '#8b5cf6', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Cosechas</span>
+          <span style={{ fontSize: '0.875rem' }}>Cosechas estimadas</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ width: '20px', height: '20px', backgroundColor: '#ec4899', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Recordatorios</span>
+          <span style={{ fontSize: '0.875rem' }}>Recordatorios generales</span>
         </div>
       </div>
 
       {/* Calendario */}
+      {errorCalendario && (
+        <div style={{
+          padding: '1rem 1.25rem',
+          marginBottom: '1rem',
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '0.5rem',
+          color: '#b91c1c',
+          fontSize: '0.875rem'
+        }}>
+          {errorCalendario}
+        </div>
+      )}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+          <Icon name="Loader2" size={32} className="animate-spin" />
           <p>Cargando eventos...</p>
         </div>
       ) : (
@@ -518,7 +841,12 @@ const CalendarioDashboard: React.FC = () => {
                       <div
                         key={evento.id}
                         style={{
-                          backgroundColor: obtenerColorEvento(evento.tipo, evento.estado, evento.completado),
+                          backgroundColor: obtenerColorEvento(
+                            evento.tipo,
+                            evento.estado,
+                            Boolean(evento.completado || evento.cumplida),
+                            evento.overdue
+                          ),
                           color: 'white',
                           padding: '0.25rem 0.5rem',
                           borderRadius: '0.25rem',
@@ -528,17 +856,27 @@ const CalendarioDashboard: React.FC = () => {
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
                         }}
-                        title={`${obtenerIconoEvento(evento.tipo)} ${evento.titulo}`}
+                        title={evento.titulo}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (evento.tipo === 'LABOR' && evento.laborId) {
+                            // Click simple: ir directo al detalle completo de la labor
                             abrirModalLabor(evento.laborId);
                           } else if (evento.tipo === 'RECORDATORIO' && evento.recordatorioId) {
+                            // Click simple: ver detalle completo del recordatorio
                             abrirModalDetalleRecordatorio(evento.recordatorioId);
+                          } else {
+                            // Otros tipos: al menos mostrar un resumen básico
+                            setEventoSeleccionado(evento);
                           }
                         }}
+                        onDoubleClick={(e) => {
+                          // Doble click: siempre mostrar un resumen del evento, sin importar el tipo
+                          e.stopPropagation();
+                          setEventoSeleccionado(evento);
+                        }}
                       >
-                        {obtenerIconoEvento(evento.tipo)} {evento.titulo.length > 15 ? evento.titulo.substring(0, 15) + '...' : evento.titulo}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '0.25rem' }}>{obtenerIconoEvento(evento.tipo)}</span> {evento.titulo.length > 15 ? evento.titulo.substring(0, 15) + '...' : evento.titulo}
                       </div>
                     ))}
                     {eventosDia.length > 3 && (
@@ -555,6 +893,368 @@ const CalendarioDashboard: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de resumen rápido de evento (para doble click) */}
+      {eventoSeleccionado && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '1rem'
+          }}
+          onClick={() => setEventoSeleccionado(null)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '0.75rem',
+              maxWidth: '480px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <div>
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  {obtenerIconoEvento(eventoSeleccionado.tipo)}{' '}
+                  {eventoSeleccionado.titulo}
+                </h2>
+                <p
+                  style={{
+                    margin: '0.25rem 0 0 0',
+                    fontSize: '0.8rem',
+                    color: '#6b7280'
+                  }}
+                >
+                  {eventoSeleccionado.fecha}
+                  {eventoSeleccionado.fechaFin
+                    ? ` → ${eventoSeleccionado.fechaFin}`
+                    : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setEventoSeleccionado(null)}
+                style={{
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '1.25rem',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {eventoSeleccionado.descripcion && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}
+                  >
+                    Descripción
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#111827' }}>
+                    {eventoSeleccionado.descripcion}
+                  </div>
+                </div>
+              )}
+
+              {eventoSeleccionado.loteNombre && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}
+                  >
+                    Lote
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#111827' }}>
+                    {eventoSeleccionado.loteNombre}
+                  </div>
+                </div>
+              )}
+
+              {eventoSeleccionado.cultivo && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}
+                  >
+                    Cultivo
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#111827' }}>
+                    {eventoSeleccionado.cultivo}
+                    {eventoSeleccionado.superficie
+                      ? ` • ${eventoSeleccionado.superficie} ha`
+                      : ''}
+                  </div>
+                </div>
+              )}
+
+              {eventoSeleccionado.estado && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}
+                  >
+                    Estado
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#111827' }}>
+                    {obtenerNombreEstado(eventoSeleccionado.estado)}
+                  </div>
+                </div>
+              )}
+
+              {eventoSeleccionado.tipo === 'TAREA_RECURRENTE' && eventoSeleccionado.serieId != null && (
+                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={alternarCumplimientoTareaRecurrente}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.875rem',
+                      color: '#92400e',
+                      backgroundColor: '#fffbeb',
+                      border: '1px solid #fcd34d',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {eventoSeleccionado.cumplida ? 'Marcar como pendiente' : 'Marcar como cumplida'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={eliminarSerieTareaRecurrente}
+                    disabled={eliminandoSerieRecurrente}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.875rem',
+                      color: '#b91c1c',
+                      backgroundColor: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '0.375rem',
+                      cursor: eliminandoSerieRecurrente ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {eliminandoSerieRecurrente ? 'Eliminando…' : 'Eliminar toda la serie recurrente'}
+                  </button>
+                </div>
+              )}
+
+              {eventoSeleccionado.tipo === 'RECORDATORIO' && eventoSeleccionado.recordatorioId != null && (
+                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => eliminarRecordatorioCalendario(eventoSeleccionado.recordatorioId!)}
+                    disabled={eliminandoRecordatorio}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.875rem',
+                      color: '#b91c1c',
+                      backgroundColor: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '0.375rem',
+                      cursor: eliminandoRecordatorio ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {eliminandoRecordatorio ? 'Eliminando…' : 'Eliminar recordatorio'}
+                  </button>
+                </div>
+              )}
+
+              {eventoSeleccionado.tipo === 'LABOR' &&
+                eventoSeleccionado.laborId != null &&
+                eventoSeleccionado.estado === 'PLANIFICADA' && (
+                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => eliminarLaborCalendario(eventoSeleccionado.laborId!)}
+                    disabled={actualizandoLabor}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.875rem',
+                      color: '#b91c1c',
+                      backgroundColor: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '0.375rem',
+                      cursor: actualizandoLabor ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {actualizandoLabor ? 'Eliminando…' : 'Eliminar labor'}
+                  </button>
+                </div>
+              )}
+
+              {eventoSeleccionado.responsable && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}
+                  >
+                    Responsable
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#111827' }}>
+                    {eventoSeleccionado.responsable}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarModalTareaRecurrente && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => !guardandoTareaRecurrente && setMostrarModalTareaRecurrente(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '0.5rem',
+              width: '90%',
+              maxWidth: '480px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0 }}>Nueva tarea recurrente</h2>
+            <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+              {modoCalendario === 'avicolaHuevos'
+                ? 'Visible solo en el calendario de avícola huevos.'
+                : 'Visible en el calendario general.'}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <label style={{ fontWeight: 500 }}>
+                Título *
+                <input
+                  type="text"
+                  value={formTareaRecurrente.titulo}
+                  onChange={(e) => setFormTareaRecurrente({ ...formTareaRecurrente, titulo: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
+                />
+              </label>
+              <label style={{ fontWeight: 500 }}>
+                Descripción
+                <textarea
+                  value={formTareaRecurrente.descripcion}
+                  onChange={(e) => setFormTareaRecurrente({ ...formTareaRecurrente, descripcion: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', minHeight: '64px' }}
+                />
+              </label>
+              <label style={{ fontWeight: 500 }}>
+                Primera fecha *
+                <input
+                  type="date"
+                  value={formTareaRecurrente.fechaInicio}
+                  onChange={(e) => setFormTareaRecurrente({ ...formTareaRecurrente, fechaInicio: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
+                />
+              </label>
+              <label style={{ fontWeight: 500 }}>
+                Repetición
+                <select
+                  value={formTareaRecurrente.tipoRepeticion}
+                  onChange={(e) => setFormTareaRecurrente({ ...formTareaRecurrente, tipoRepeticion: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
+                >
+                  <option value="DIARIA">Diaria</option>
+                  <option value="SEMANAL">Semanal</option>
+                  <option value="MENSUAL">Mensual</option>
+                  <option value="ANUAL">Anual</option>
+                </select>
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalTareaRecurrente(false)}
+                  disabled={guardandoTareaRecurrente}
+                  style={{ padding: '0.5rem 1rem', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={guardarTareaRecurrenteModulo}
+                  disabled={guardandoTareaRecurrente}
+                  style={{ padding: '0.5rem 1rem', backgroundColor: '#d97706', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}
+                >
+                  {guardandoTareaRecurrente ? 'Guardando…' : 'Crear'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -580,7 +1280,10 @@ const CalendarioDashboard: React.FC = () => {
             width: '90%',
             maxWidth: '500px'
           }}>
-            <h2 style={{ marginTop: 0, marginBottom: '1.5rem' }}>Agregar Recordatorio</h2>
+            <h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Agregar Recordatorio</h2>
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 0, marginBottom: '1rem' }}>
+              Un recordatorio es <strong>una sola fecha</strong> en el calendario (avisos generales o vinculados a labores y lotes).
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
@@ -642,6 +1345,36 @@ const CalendarioDashboard: React.FC = () => {
                   <option value="OTRO">Otro</option>
                 </select>
               </div>
+              {modoCalendario === 'avicolaHuevos' && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    Lote de postura *
+                  </label>
+                  <select
+                    value={formRecordatorio.loteAvicolaHuevoId === '' ? '' : String(formRecordatorio.loteAvicolaHuevoId)}
+                    onChange={(e) =>
+                      setFormRecordatorio({
+                        ...formRecordatorio,
+                        loteAvicolaHuevoId: e.target.value === '' ? '' : Number(e.target.value),
+                      })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    <option value="">Seleccionar lote…</option>
+                    {lotesHuevosOpciones.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => setMostrarModalRecordatorio(false)}
@@ -708,7 +1441,7 @@ const CalendarioDashboard: React.FC = () => {
           }}>
             {loadingLabor ? (
               <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+                <Icon name="Loader2" size={48} className="animate-spin" />
                 <p style={{ color: '#6b7280', fontSize: '1rem' }}>Cargando detalles de la labor...</p>
               </div>
             ) : laborSeleccionada ? (
@@ -721,15 +1454,37 @@ const CalendarioDashboard: React.FC = () => {
                   borderRadius: '0.75rem 0.75rem 0 0',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem'
                 }}>
                   <div>
                     <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>
-                      ⚒️ {laborSeleccionada.tipo || laborSeleccionada.tipoLabor || 'Labor'}
+                      <Icon name="Wrench" size={24} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> {laborSeleccionada.tipo || laborSeleccionada.tipoLabor || 'Labor'}
                     </h2>
                     <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9, fontSize: '0.875rem' }}>
                       {laborSeleccionada.loteNombre || 'Sin lote asignado'}
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => { setMostrarModalLabor(false); navigate('/cultivos/labores', { state: laborSeleccionada?.id != null ? { abrirLaborId: laborSeleccionada.id } : {} }); }}
+                      style={{
+                        marginTop: '0.75rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.4rem 0.75rem',
+                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                        color: 'white',
+                        border: '1px solid rgba(255, 255, 255, 0.5)',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        fontSize: '0.8125rem',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <Icon name="ExternalLink" size={14} /> Ver detalle en Labores
+                    </button>
                   </div>
                   <button
                     onClick={() => setMostrarModalLabor(false)}
@@ -751,7 +1506,7 @@ const CalendarioDashboard: React.FC = () => {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
                   >
-                    ✕
+                    <Icon name="X" size={24} />
                   </button>
                 </div>
 
@@ -772,7 +1527,7 @@ const CalendarioDashboard: React.FC = () => {
                         fontSize: '1.125rem',
                         fontWeight: '600'
                       }}>
-                        🔲 Información del Lote
+                        <Icon name="Square" size={20} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> Información del Lote
                       </h3>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                         <div>
@@ -844,30 +1599,44 @@ const CalendarioDashboard: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Tarjetas principales en grid - 4 columnas */}
+                  {/* Tarjetas principales en grid - adaptativo según elementos disponibles */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gridTemplateColumns: `repeat(${laborSeleccionada.fechaFin ? 4 : 3}, 1fr)`,
                     gap: '1rem',
                     marginBottom: '2rem'
                   }}>
-                    {/* Estado */}
+                    {/* Estado y vencida (spec SDD) */}
                     <div style={{
                       backgroundColor: '#f9fafb',
                       padding: '1.25rem',
                       borderRadius: '0.5rem',
                       border: '2px solid',
-                      borderColor: obtenerColorEvento('LABOR', laborSeleccionada.estado)
+                      borderColor: obtenerColorEvento('LABOR', laborSeleccionada.estado, undefined, laborSeleccionada.overdue)
                     }}>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>
                         Estado
                       </div>
-                      <div style={{
-                        fontSize: '1.125rem',
-                        fontWeight: 'bold',
-                        color: obtenerColorEvento('LABOR', laborSeleccionada.estado)
-                      }}>
-                        {obtenerNombreEstado(laborSeleccionada.estado)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{
+                          fontSize: '1.125rem',
+                          fontWeight: 'bold',
+                          color: obtenerColorEvento('LABOR', laborSeleccionada.estado, undefined, laborSeleccionada.overdue)
+                        }}>
+                          {obtenerNombreEstado(laborSeleccionada.estado)}
+                        </span>
+                        {laborSeleccionada.overdue && (
+                          <span style={{
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            color: '#fff',
+                            backgroundColor: '#dc2626',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '0.25rem'
+                          }}>
+                            Vencida
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -879,7 +1648,7 @@ const CalendarioDashboard: React.FC = () => {
                       border: '1px solid #e5e7eb'
                     }}>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>
-                        👤 Responsable
+                        <Icon name="User" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Responsable
                       </div>
                       <div style={{ fontSize: '1rem', fontWeight: '500', color: '#1f2937' }}>
                         {laborSeleccionada.responsable || 'No asignado'}
@@ -894,7 +1663,7 @@ const CalendarioDashboard: React.FC = () => {
                       border: '1px solid #e5e7eb'
                     }}>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>
-                        📅 Fecha Inicio
+                        <Icon name="CalendarDays" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Fecha Inicio
                       </div>
                       <div style={{ fontSize: '1rem', fontWeight: '500', color: '#1f2937' }}>
                         {laborSeleccionada.fechaInicio ? new Date(laborSeleccionada.fechaInicio).toLocaleDateString('es-ES', { 
@@ -915,21 +1684,43 @@ const CalendarioDashboard: React.FC = () => {
                         border: '1px solid #e5e7eb'
                       }}>
                         <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>
-                          ✅ Fecha Fin
+                          <Icon name="CheckCircle" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Fecha Fin
                         </div>
                         <div style={{ fontSize: '1rem', fontWeight: '500', color: '#1f2937' }}>
-                          {new Date(laborSeleccionada.fechaFin).toLocaleDateString('es-ES', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
+                          {new Date(laborSeleccionada.fechaFin).toLocaleDateString('es-ES', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
                           })}
                         </div>
                       </div>
                     )}
 
-                    {/* Horas de Trabajo */}
-                    {laborSeleccionada.horasTrabajo && (
+                    {/* Fecha realización (spec SDD) */}
+                    {laborSeleccionada.fechaRealizacion && (
+                      <div style={{
+                        backgroundColor: '#ecfdf5',
+                        padding: '1.25rem',
+                        borderRadius: '0.5rem',
+                        border: '1px solid #a7f3d0'
+                      }}>
+                        <div style={{ fontSize: '0.75rem', color: '#065f46', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>
+                          <Icon name="CheckCircle" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Fecha realización
+                        </div>
+                        <div style={{ fontSize: '1rem', fontWeight: '500', color: '#047857' }}>
+                          {new Date(laborSeleccionada.fechaRealizacion).toLocaleDateString('es-ES', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Horas de Trabajo: solo se muestra si hay horas registradas (> 0) */}
+                    {laborSeleccionada.horasTrabajo != null && Number(laborSeleccionada.horasTrabajo) > 0 && (
                       <div style={{
                         backgroundColor: '#f9fafb',
                         padding: '1.25rem',
@@ -937,7 +1728,7 @@ const CalendarioDashboard: React.FC = () => {
                         border: '1px solid #e5e7eb'
                       }}>
                         <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>
-                          ⏱️ Horas Trabajo
+                          <Icon name="Clock" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Horas Trabajo
                         </div>
                         <div style={{ fontSize: '1rem', fontWeight: '500', color: '#1f2937' }}>
                           {laborSeleccionada.horasTrabajo} horas
@@ -946,8 +1737,106 @@ const CalendarioDashboard: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Costo Total destacado */}
-                  {laborSeleccionada.costoTotal && (
+                  {/* Acciones rápidas (spec SDD): solo si la labor está planificada */}
+                  {laborSeleccionada.estado === 'PLANIFICADA' && (
+                    <div style={{
+                      backgroundColor: '#eff6ff',
+                      padding: '1.25rem',
+                      borderRadius: '0.5rem',
+                      marginBottom: '2rem',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1e40af', marginBottom: '0.75rem' }}>
+                        Acciones
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={marcarLaborRealizada}
+                          disabled={actualizandoLabor}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            cursor: actualizandoLabor ? 'not-allowed' : 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          {actualizandoLabor ? '...' : 'Marcar como realizada'}
+                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input
+                            type="date"
+                            value={reprogramarFecha}
+                            onChange={(e) => setReprogramarFecha(e.target.value)}
+                            style={{
+                              padding: '0.5rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.875rem'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={reprogramarLabor}
+                            disabled={actualizandoLabor || !reprogramarFecha}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '0.375rem',
+                              cursor: actualizandoLabor || !reprogramarFecha ? 'not-allowed' : 'pointer',
+                              fontSize: '0.875rem',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Reprogramar
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={cancelarLabor}
+                          disabled={actualizandoLabor}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#6b7280',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            cursor: actualizandoLabor ? 'not-allowed' : 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          Cancelar labor
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => laborSeleccionada?.id != null && eliminarLaborCalendario(laborSeleccionada.id)}
+                          disabled={actualizandoLabor}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#fef2f2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            borderRadius: '0.375rem',
+                            cursor: actualizandoLabor ? 'not-allowed' : 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          Eliminar labor
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Costo Total destacado: solo se muestra si hay costo (> 0) */}
+                  {laborSeleccionada.costoTotal != null && Number(laborSeleccionada.costoTotal) > 0 && (
                     <div style={{
                       background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                       color: 'white',
@@ -981,7 +1870,7 @@ const CalendarioDashboard: React.FC = () => {
                         fontSize: '1rem',
                         fontWeight: '600'
                       }}>
-                        📝 Descripción
+                        <Icon name="FileText" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Descripción
                       </h3>
                       <p style={{ 
                         margin: 0, 
@@ -1010,7 +1899,7 @@ const CalendarioDashboard: React.FC = () => {
                         fontSize: '1rem',
                         fontWeight: '600'
                       }}>
-                        💡 Observaciones
+                        <Icon name="Lightbulb" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Observaciones
                       </h3>
                       <p style={{ 
                         margin: 0, 
@@ -1038,7 +1927,7 @@ const CalendarioDashboard: React.FC = () => {
                         fontSize: '1.125rem',
                         fontWeight: '600'
                       }}>
-                        💰 Desglose de Costos
+                        <Icon name="DollarSign" size={20} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> Desglose de Costos
                       </h3>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                         {laborSeleccionada.costoInsumos && (
@@ -1100,7 +1989,7 @@ const CalendarioDashboard: React.FC = () => {
                         fontSize: '1.125rem',
                         fontWeight: '600'
                       }}>
-                        🧪 Insumos Utilizados ({laborSeleccionada.insumosUsados.length})
+                        <Icon name="Flask" size={20} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> Insumos Utilizados ({laborSeleccionada.insumosUsados.length})
                       </h3>
                       <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {laborSeleccionada.insumosUsados.map((insumo: any, index: number) => (
@@ -1155,7 +2044,7 @@ const CalendarioDashboard: React.FC = () => {
                       fontSize: '1.125rem',
                       fontWeight: '600'
                     }}>
-                      🚜 Maquinaria Utilizada {laborSeleccionada.maquinarias && laborSeleccionada.maquinarias.length > 0 ? `(${laborSeleccionada.maquinarias.length})` : ''}
+                      <Icon name="Tractor" size={20} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> Maquinaria Utilizada {laborSeleccionada.maquinarias && laborSeleccionada.maquinarias.length > 0 ? `(${laborSeleccionada.maquinarias.length})` : ''}
                     </h3>
                     
                     {laborSeleccionada.maquinarias && laborSeleccionada.maquinarias.length > 0 ? (
@@ -1164,7 +2053,7 @@ const CalendarioDashboard: React.FC = () => {
                         {laborSeleccionada.maquinarias.filter((maq: any) => maq.tipo === 'PROPIA' || !maq.tipo || maq.tipo === null).length > 0 && (
                           <div style={{ marginBottom: '1.5rem' }}>
                             <div style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '600', marginBottom: '0.75rem', textTransform: 'uppercase' }}>
-                              🏠 Maquinaria Propia
+                              <Icon name="Home" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Maquinaria Propia
                             </div>
                             <div style={{ display: 'grid', gap: '0.75rem' }}>
                               {laborSeleccionada.maquinarias
@@ -1210,7 +2099,7 @@ const CalendarioDashboard: React.FC = () => {
                         {laborSeleccionada.maquinarias.filter((maq: any) => maq.tipo === 'ALQUILADA').length > 0 && (
                           <div>
                             <div style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '600', marginBottom: '0.75rem', textTransform: 'uppercase' }}>
-                              🏢 Maquinaria Alquilada
+                              <Icon name="Building2" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Maquinaria Alquilada
                             </div>
                             <div style={{ display: 'grid', gap: '0.75rem' }}>
                               {laborSeleccionada.maquinarias
@@ -1255,9 +2144,34 @@ const CalendarioDashboard: React.FC = () => {
                         )}
                       </>
                     ) : (
-                      <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.875rem', fontStyle: 'italic' }}>
-                        No se registró maquinaria para esta labor
-                      </p>
+                      <div style={{ margin: 0 }}>
+                        <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                          No se registró maquinaria para esta labor.
+                        </p>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8125rem', color: '#6b7280' }}>
+                          Puede ver y editar el detalle completo de esta labor (insumos, costos, fechas) en el módulo Labores.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => { setMostrarModalLabor(false); navigate('/cultivos/labores', { state: laborSeleccionada?.id != null ? { abrirLaborId: laborSeleccionada.id } : {} }); }}
+                          style={{
+                            marginTop: '0.5rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.35rem 0.65rem',
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '0.375rem',
+                            cursor: 'pointer',
+                            fontSize: '0.8125rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          <Icon name="ExternalLink" size={14} /> Ver en Labores
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -1275,7 +2189,7 @@ const CalendarioDashboard: React.FC = () => {
                         fontSize: '1.125rem',
                         fontWeight: '600'
                       }}>
-                        👷 Mano de Obra ({laborSeleccionada.manoObra.length})
+                        <Icon name="Users" size={20} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> Mano de Obra ({laborSeleccionada.manoObra.length})
                       </h3>
                       <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {laborSeleccionada.manoObra.map((mo: any, index: number) => (
@@ -1312,7 +2226,7 @@ const CalendarioDashboard: React.FC = () => {
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>❌</div>
+                <Icon name="XCircle" size={48} />
                 <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>No se pudieron cargar los detalles de la labor</p>
                 <button
                   onClick={() => setMostrarModalLabor(false)}
@@ -1364,7 +2278,7 @@ const CalendarioDashboard: React.FC = () => {
           >
             {loadingRecordatorio ? (
               <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+                <Icon name="Loader2" size={48} className="animate-spin" />
                 <p style={{ color: '#6b7280', fontSize: '1rem' }}>Cargando detalles del recordatorio...</p>
               </div>
             ) : recordatorioSeleccionado ? (
@@ -1381,7 +2295,7 @@ const CalendarioDashboard: React.FC = () => {
                 }}>
                   <div>
                     <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>
-                      📌 {recordatorioSeleccionado.titulo || 'Recordatorio'}
+                      <Icon name="Pin" size={24} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> {recordatorioSeleccionado.titulo || 'Recordatorio'}
                     </h2>
                     <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9, fontSize: '0.875rem' }}>
                       {obtenerNombreTipoRecordatorio(recordatorioSeleccionado.tipo || 'GENERAL')}
@@ -1400,7 +2314,7 @@ const CalendarioDashboard: React.FC = () => {
                       fontWeight: 'bold'
                     }}
                   >
-                    ✕
+                    <Icon name="X" size={24} />
                   </button>
                 </div>
 
@@ -1422,7 +2336,7 @@ const CalendarioDashboard: React.FC = () => {
                       fontWeight: 'bold',
                       color: recordatorioSeleccionado.completado ? '#10b981' : '#f59e0b'
                     }}>
-                      {recordatorioSeleccionado.completado ? '✅ Completado' : '⏳ Pendiente'}
+                      {recordatorioSeleccionado.completado ? <><Icon name="CheckCircle" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Completado</> : <><Icon name="Clock" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Pendiente</>}
                     </div>
                   </div>
 
@@ -1435,7 +2349,7 @@ const CalendarioDashboard: React.FC = () => {
                     border: '1px solid #e5e7eb'
                   }}>
                     <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>
-                      📅 Fecha
+                      <Icon name="CalendarDays" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Fecha
                     </div>
                     <div style={{ fontSize: '1rem', fontWeight: '500', color: '#1f2937' }}>
                       {recordatorioSeleccionado.fecha ? new Date(recordatorioSeleccionado.fecha).toLocaleDateString('es-ES', { 
@@ -1463,7 +2377,7 @@ const CalendarioDashboard: React.FC = () => {
                         fontSize: '1rem',
                         fontWeight: '600'
                       }}>
-                        📝 Descripción
+                        <Icon name="FileText" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Descripción
                       </h3>
                       <p style={{ 
                         margin: 0, 
@@ -1492,7 +2406,7 @@ const CalendarioDashboard: React.FC = () => {
                         fontSize: '1rem',
                         fontWeight: '600'
                       }}>
-                        🔗 Relacionado con
+                        <Icon name="Link" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Relacionado con
                       </h3>
                       <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {recordatorioSeleccionado.laborId && (
@@ -1510,7 +2424,7 @@ const CalendarioDashboard: React.FC = () => {
                   )}
 
                   {/* Botones de acción */}
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '2rem' }}>
                     {!recordatorioSeleccionado.completado && (
                       <button
                         onClick={async () => {
@@ -1525,7 +2439,7 @@ const CalendarioDashboard: React.FC = () => {
                           }
                         }}
                         style={{
-                          flex: 1,
+                          flex: '1 1 140px',
                           padding: '0.75rem 1.5rem',
                           backgroundColor: '#10b981',
                           color: 'white',
@@ -1536,13 +2450,31 @@ const CalendarioDashboard: React.FC = () => {
                           fontSize: '0.875rem'
                         }}
                       >
-                        ✅ Marcar como Completado
+                        <Icon name="CheckCircle" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Marcar como Completado
                       </button>
                     )}
                     <button
+                      type="button"
+                      onClick={() => eliminarRecordatorioCalendario(recordatorioSeleccionado.id)}
+                      disabled={eliminandoRecordatorio}
+                      style={{
+                        flex: '1 1 140px',
+                        padding: '0.75rem 1.5rem',
+                        backgroundColor: '#fef2f2',
+                        color: '#b91c1c',
+                        border: '1px solid #fecaca',
+                        borderRadius: '0.375rem',
+                        cursor: eliminandoRecordatorio ? 'wait' : 'pointer',
+                        fontWeight: '500',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      {eliminandoRecordatorio ? 'Eliminando…' : 'Eliminar recordatorio'}
+                    </button>
+                    <button
                       onClick={() => setMostrarModalDetalleRecordatorio(false)}
                       style={{
-                        flex: 1,
+                        flex: '1 1 140px',
                         padding: '0.75rem 1.5rem',
                         backgroundColor: '#6b7280',
                         color: 'white',
@@ -1560,7 +2492,7 @@ const CalendarioDashboard: React.FC = () => {
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>❌</div>
+                <Icon name="XCircle" size={48} />
                 <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>No se pudieron cargar los detalles del recordatorio</p>
                 <button
                   onClick={() => setMostrarModalDetalleRecordatorio(false)}

@@ -4,12 +4,7 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
 import Badge from './ui/Badge';
-// Iconos simplificados sin lucide-react
-const Plus = () => <span>➕</span>;
-const Edit = () => <span>✏️</span>;
-const Trash2 = () => <span>🗑️</span>;
-const DollarSign = () => <span>💰</span>;
-const Calendar = () => <span>📅</span>;
+import { Icon } from './icons';
 import { ingresosService, camposService } from '../services/apiServices';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 
@@ -164,7 +159,7 @@ const IngresosManagement: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-6 h-6" />
+            <Icon name="DollarSign" size={24} />
             Gestión de Ingresos
           </CardTitle>
         </CardHeader>
@@ -175,7 +170,7 @@ const IngresosManagement: React.FC = () => {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }, 100);
           }} className="mb-4">
-            <Plus className="w-4 h-4 mr-2" />
+            <Icon name="Plus" size={16} style={{ marginRight: '0.5rem' }} />
             Nuevo Ingreso
           </Button>
 
@@ -193,7 +188,7 @@ const IngresosManagement: React.FC = () => {
                       <label className="block text-sm font-medium mb-2">Concepto *</label>
                       <Input
                         value={formData.concepto}
-                        onChange={(e) => setFormData({...formData, concepto: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, concepto: valor})}
                         required
                       />
                     </div>
@@ -217,7 +212,7 @@ const IngresosManagement: React.FC = () => {
                       <Input
                         type="date"
                         value={formData.fechaIngreso}
-                        onChange={(e) => setFormData({...formData, fechaIngreso: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, fechaIngreso: valor})}
                         required
                       />
                     </div>
@@ -226,8 +221,8 @@ const IngresosManagement: React.FC = () => {
                       <Input
                         type="number"
                         step="0.01"
-                        value={formData.monto}
-                        onChange={(e) => setFormData({...formData, monto: parseFloat(e.target.value) || 0})}
+                        value={String(formData.monto)}
+                        onChange={(valor) => setFormData({...formData, monto: parseFloat(valor) || 0})}
                         required
                       />
                     </div>
@@ -268,8 +263,8 @@ const IngresosManagement: React.FC = () => {
                     <div>
                       <label className="block text-sm font-medium mb-2">Unidad de Medida</label>
                       <Input
-                        value={formData.unidadMedida}
-                        onChange={(e) => setFormData({...formData, unidadMedida: e.target.value})}
+                        value={formData.unidadMedida ?? ''}
+                        onChange={(valor) => setFormData({...formData, unidadMedida: valor})}
                         placeholder="kg, toneladas, etc."
                       />
                     </div>
@@ -278,8 +273,8 @@ const IngresosManagement: React.FC = () => {
                       <Input
                         type="number"
                         step="0.01"
-                        value={formData.cantidad}
-                        onChange={(e) => setFormData({...formData, cantidad: parseFloat(e.target.value) || 0})}
+                        value={String(formData.cantidad ?? 0)}
+                        onChange={(valor) => setFormData({...formData, cantidad: parseFloat(valor) || 0})}
                       />
                     </div>
                   </div>
@@ -287,8 +282,8 @@ const IngresosManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Cliente/Comprador</label>
                     <Input
-                      value={formData.clienteComprador}
-                      onChange={(e) => setFormData({...formData, clienteComprador: e.target.value})}
+                      value={formData.clienteComprador ?? ''}
+                      onChange={(valor) => setFormData({...formData, clienteComprador: valor})}
                       placeholder="Nombre del cliente o comprador"
                     />
                   </div>
@@ -296,8 +291,8 @@ const IngresosManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Descripción</label>
                     <Input
-                      value={formData.descripcion}
-                      onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
+                      value={formData.descripcion ?? ''}
+                      onChange={(valor) => setFormData({...formData, descripcion: valor})}
                       placeholder="Descripción adicional del ingreso"
                     />
                   </div>
@@ -305,8 +300,8 @@ const IngresosManagement: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Observaciones</label>
                     <Input
-                      value={formData.observaciones}
-                      onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
+                      value={formData.observaciones ?? ''}
+                      onChange={(valor) => setFormData({...formData, observaciones: valor})}
                       placeholder="Observaciones adicionales"
                     />
                   </div>
@@ -340,7 +335,7 @@ const IngresosManagement: React.FC = () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          <Calendar className="w-4 h-4 inline mr-1" />
+                          <Icon name="Calendar" size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
                           {formatearFecha(ingreso.fechaIngreso)} • {ingreso.tipoIngreso.replace('_', ' ')}
                           {ingreso.lote && ` • Lote: ${ingreso.lote.nombre}`}
                         </p>
@@ -361,14 +356,14 @@ const IngresosManagement: React.FC = () => {
                             variant="outline"
                             onClick={() => handleEdit(ingreso)}
                           >
-                            <Edit className="w-4 h-4" />
+                            <Icon name="Pencil" size={16} />
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleDelete(ingreso.id!)}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Icon name="Trash2" size={16} />
                           </Button>
                         </div>
                       </div>

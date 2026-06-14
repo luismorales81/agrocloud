@@ -2,19 +2,21 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.SiembraRequest;
 import com.agrocloud.dto.CosechaRequest;
-import com.agrocloud.model.entity.Plot;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.model.entity.Empresa;
-import com.agrocloud.model.entity.Cultivo;
-import com.agrocloud.service.PlotService;
-import com.agrocloud.service.UserService;
-import com.agrocloud.service.SiembraService;
-import com.agrocloud.service.EmpresaContextService;
-import com.agrocloud.repository.CultivoRepository;
+import com.agrocloud.cultivos.domain.Plot;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.core.domain.Empresa;
+import com.agrocloud.cultivos.domain.Cultivo;
+import com.agrocloud.cultivos.application.PlotService;
+import com.agrocloud.cultivos.application.SiembraService;
+import com.agrocloud.core.application.UserService;
+import com.agrocloud.core.infrastructure.EmpresaRepository;
+import com.agrocloud.core.application.EmpresaContextService;
+import com.agrocloud.cultivos.infrastructure.CultivoRepository;
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.exception.BadRequestException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,23 +29,41 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/v1/lotes")
-@CrossOrigin(origins = "*")
 public class PlotController {
 
     @Autowired
+    @Qualifier("plotServicioCultivos")
     private PlotService plotService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
     
     @Autowired
+    @Qualifier("siembraServiceCultivos")
     private SiembraService siembraService;
     
     @Autowired
+    @Qualifier("empresaContextServiceCore")
     private EmpresaContextService empresaContextService;
     
     @Autowired
+    @Qualifier("cultivoRepositoryCultivos")
     private CultivoRepository cultivoRepository;
+
+    @Autowired
+    private com.agrocloud.core.application.UserService usuarioCoreService;
+
+    @Autowired
+    private EmpresaRepository empresaCoreRepository;
+
+    private com.agrocloud.core.domain.Empresa obtenerEmpresaCore(User usuario) {
+        Long empresaId = empresaContextService.obtenerEmpresaPrincipalDelUsuario(usuario.getId())
+                .orElseThrow(() -> new RuntimeException("El usuario no pertenece a ninguna empresa"))
+                .getId();
+        return empresaCoreRepository.findById(empresaId)
+                .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+    }
 
     // Obtener todos los lotes accesibles por el usuario
     @GetMapping
@@ -71,6 +91,25 @@ public class PlotController {
         } catch (Exception e) {
             System.err.println("[PLOT_CONTROLLER] ERROR en getAllLotes: " + e.getMessage());
             e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /** Lotes del módulo cultivos (tabla cultivo_lotes). */
+    @GetMapping("/cultivo")
+    public ResponseEntity<List<com.agrocloud.cultivos.domain.Plot>> getLotesCultivo(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            if (userDetails == null) {
+                return ResponseEntity.status(401).build();
+            }
+            User user = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
+            if (user == null) {
+                return ResponseEntity.status(404).build();
+            }
+            return ResponseEntity.ok(plotService.getLotesCultivoByUser(user));
+        } catch (Exception e) {
+            System.err.println("[PLOT_CONTROLLER] ERROR en getLotesCultivo: " + e.getMessage());
             return ResponseEntity.status(500).build();
         }
     }
@@ -121,10 +160,9 @@ public class PlotController {
             Optional<Plot> existingLote = plotService.getLoteById(id, user);
             
             if (existingLote.isPresent()) {
-                lote.setId(id);
-                lote.setUser(user);
-                Plot updatedLote = plotService.saveLote(lote);
-                return ResponseEntity.ok(updatedLote);
+                return plotService.updateLote(id, lote, user)
+                        .map(ResponseEntity::ok)
+                        .orElse(ResponseEntity.notFound().build());
             } else {
                 return ResponseEntity.notFound().build();
             }
@@ -221,12 +259,10 @@ public class PlotController {
             
             // Obtener usuario
             User usuario = userService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.core.domain.User usuarioCore = usuarioCoreService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.core.domain.Empresa empresa = obtenerEmpresaCore(usuario);
             
-            // Obtener empresa principal del usuario
-            Empresa empresa = empresaContextService.obtenerEmpresaPrincipalDelUsuario(usuario.getId())
-                    .orElseThrow(() -> new RuntimeException("El usuario no pertenece a ninguna empresa"));
-            
-            Plot lote = siembraService.sembrarLote(id, request, usuario, empresa);
+            com.agrocloud.cultivos.domain.Plot lote = siembraService.sembrarLote(id, request, usuarioCore, empresa);
             System.out.println("[PLOT_CONTROLLER] Lote sembrado exitosamente: " + lote.getId());
             
             return ResponseEntity.ok(Map.of(
@@ -370,12 +406,10 @@ public class PlotController {
             
             // Obtener usuario
             User usuario = userService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.core.domain.User usuarioCore = usuarioCoreService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.core.domain.Empresa empresa = obtenerEmpresaCore(usuario);
             
-            // Obtener empresa principal del usuario
-            Empresa empresa = empresaContextService.obtenerEmpresaPrincipalDelUsuario(usuario.getId())
-                    .orElseThrow(() -> new RuntimeException("El usuario no pertenece a ninguna empresa"));
-            
-            Plot lote = siembraService.cosecharLote(id, request, usuario, empresa);
+            com.agrocloud.cultivos.domain.Plot lote = siembraService.cosecharLote(id, request, usuarioCore, empresa);
             System.out.println("[PLOT_CONTROLLER] Lote cosechado exitosamente: " + lote.getId());
             
             return ResponseEntity.ok(Map.of(
@@ -424,12 +458,12 @@ public class PlotController {
             }
             
             User usuario = userService.findByEmailWithRelations(userDetails.getUsername());
-            Empresa empresa = empresaContextService.obtenerEmpresaPrincipalDelUsuario(usuario.getId())
-                    .orElseThrow(() -> new RuntimeException("El usuario no pertenece a ninguna empresa"));
+            com.agrocloud.core.domain.User usuarioCore = usuarioCoreService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.core.domain.Empresa empresa = obtenerEmpresaCore(usuario);
             
             String motivo = request.getOrDefault("motivo", "Sin motivo especificado");
             
-            Plot lote = siembraService.abandonarCultivo(id, motivo, usuario, empresa);
+            com.agrocloud.cultivos.domain.Plot lote = siembraService.abandonarCultivo(id, motivo, usuarioCore, empresa);
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -464,12 +498,12 @@ public class PlotController {
             }
             
             User usuario = userService.findByEmailWithRelations(userDetails.getUsername());
-            Empresa empresa = empresaContextService.obtenerEmpresaPrincipalDelUsuario(usuario.getId())
-                    .orElseThrow(() -> new RuntimeException("El usuario no pertenece a ninguna empresa"));
+            com.agrocloud.core.domain.User usuarioCore = usuarioCoreService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.core.domain.Empresa empresa = obtenerEmpresaCore(usuario);
             
             String motivo = request.getOrDefault("motivo", "Sin motivo especificado");
             
-            Plot lote = siembraService.limpiarCultivo(id, motivo, usuario, empresa);
+            com.agrocloud.cultivos.domain.Plot lote = siembraService.limpiarCultivo(id, motivo, usuarioCore, empresa);
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -504,10 +538,10 @@ public class PlotController {
             }
             
             User usuario = userService.findByEmailWithRelations(userDetails.getUsername());
-            Empresa empresa = empresaContextService.obtenerEmpresaPrincipalDelUsuario(usuario.getId())
-                    .orElseThrow(() -> new RuntimeException("El usuario no pertenece a ninguna empresa"));
+            com.agrocloud.core.domain.User usuarioCore = usuarioCoreService.findByEmailWithRelations(userDetails.getUsername());
+            com.agrocloud.core.domain.Empresa empresa = obtenerEmpresaCore(usuario);
             
-            Plot lote = siembraService.convertirAForraje(id, request, usuario, empresa);
+            com.agrocloud.cultivos.domain.Plot lote = siembraService.convertirAForraje(id, request, usuarioCore, empresa);
             
             return ResponseEntity.ok(Map.of(
                 "success", true,

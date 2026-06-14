@@ -1,16 +1,17 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Egreso;
-import com.agrocloud.model.entity.Insumo;
-import com.agrocloud.model.entity.Plot;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.repository.EgresoRepository;
-import com.agrocloud.repository.InsumoRepository;
-import com.agrocloud.repository.PlotRepository;
-import com.agrocloud.repository.UserRepository;
-import com.agrocloud.service.EgresoService;
+import com.agrocloud.core.domain.Egreso;
+import com.agrocloud.core.inventory.domain.Insumo;
+import com.agrocloud.cultivos.domain.Plot;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.core.infrastructure.EgresoRepository;
+import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
+import com.agrocloud.cultivos.infrastructure.PlotRepository;
+import com.agrocloud.core.infrastructure.UserRepository;
+import com.agrocloud.cultivos.application.EgresoService;
 import com.agrocloud.dto.CrearEgresoRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,22 +32,26 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/v1/egresos")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173"})
 public class EgresoController {
 
     @Autowired
-    private EgresoRepository egresoRepository;
+    @Qualifier("egresoRepositoryCore")
+        private EgresoRepository egresoRepository;
 
     @Autowired
+    @Qualifier("userRepositoryCore")
     private UserRepository userRepository;
 
     @Autowired
+    @Qualifier("plotRepositoryCultivos")
     private PlotRepository plotRepository;
 
     @Autowired
-    private InsumoRepository insumoRepository;
+    @Qualifier("insumoRepositoryInventario")
+        private InsumoRepository insumoRepository;
 
     @Autowired
+    @Qualifier("egresoServiceCultivos")
     private EgresoService egresoService;
 
     /**

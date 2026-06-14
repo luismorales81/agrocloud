@@ -21,3 +21,12 @@ logs/
 .vscode/
 .idea/
 *.sw?
+
+# Herramientas locales en /docs (generación de PDF)
+docs/node_modules/
+
+# Node en raíz (MCP MySQL y herramientas npm del repo)
+/node_modules/
+
+# Clon upstream de agency-agents (reglas generadas en .cursor/rules/agency/)
+vendor/agency-agents/

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { usePermissions } from '../hooks/usePermissions';
-import SiembraModal from './SiembraModalHibrido';
-import CosechaModal from './CosechaModal';
 import AccionLoteModal from './AccionLoteModal';
-import EstadosLoteAyuda from './EstadosLoteAyuda';
+import EstadoLoteDisplay from './EstadoLoteDisplay';
+import ResetLoteModal from './ResetLoteModal';
 import { camposService, lotesService, laboresService, cultivosService } from '../services/apiServices';
+import type { LaborDetalladoDTO } from '../types/labor.types';
 import PermissionGate from './PermissionGate';
+import { Icon } from './icons';
 
 interface Campo {
   id: number;
@@ -25,7 +26,15 @@ interface Lote {
   campo_id: number;
   estado: string;
   descripcion?: string;
+  fechaSiembra?: string;
+  fechaCosechaEsperada?: string;
   tipoSuelo?: string;
+  estadoConfigurado?: {
+    id: number;
+    nombre: string;
+    color: string;
+    icono?: string;
+  };
 }
 
 interface Labor {
@@ -64,20 +73,16 @@ const LotesManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Estados para modales de Siembra y Cosecha
-  const [showSiembraModal, setShowSiembraModal] = useState(false);
-  const [showCosechaModal, setShowCosechaModal] = useState(false);
-  const [loteParaSiembra, setLoteParaSiembra] = useState<Lote | null>(null);
-  const [loteParaCosecha, setLoteParaCosecha] = useState<Lote | null>(null);
-  
   // Estados para acciones especiales
   const [showAccionModal, setShowAccionModal] = useState(false);
   const [loteParaAccion, setLoteParaAccion] = useState<Lote | null>(null);
   
-  // Estado para modal de ayuda de estados
-  const [showEstadosAyuda, setShowEstadosAyuda] = useState(false);
-  const [tipoAccion, setTipoAccion] = useState<'abandonar' | 'limpiar' | 'forraje'>('abandonar');
+  const [tipoAccion, setTipoAccion] = useState<'abandonar' | 'forraje'>('abandonar');
   const [menuAbierto, setMenuAbierto] = useState<number | null>(null);
+  
+  // Estados para resetear
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [loteParaReset, setLoteParaReset] = useState<Lote | null>(null);
   
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
@@ -154,39 +159,6 @@ const LotesManagement: React.FC = () => {
     }
   ];
 
-  // Datos simulados de lotes
-  const lotesSimulados: Lote[] = [
-    {
-      id: 1,
-      nombre: 'Lote A1',
-      superficie: 25.5,
-      cultivo: 'Soja',
-      campo_id: 1,
-      estado: 'disponible',
-      descripcion: 'Lote de soja de primera',
-      tipoSuelo: 'Franco Limoso'
-    },
-    {
-      id: 2,
-      nombre: 'Lote A2',
-      superficie: 30.25,
-      cultivo: 'Maíz',
-      campo_id: 1,
-      estado: 'disponible',
-      descripcion: 'Lote de maíz tardío',
-      tipoSuelo: 'Franco Arenoso'
-    },
-    {
-      id: 3,
-      nombre: 'Lote B1',
-      superficie: 40.0,
-      cultivo: 'Trigo',
-      campo_id: 2,
-      estado: 'disponible',
-      descripcion: 'Lote de trigo de invierno',
-      tipoSuelo: 'Arcilloso'
-    }
-  ];
 
   const [formData, setFormData] = useState<Lote>({
     nombre: '',
@@ -198,109 +170,6 @@ const LotesManagement: React.FC = () => {
     tipoSuelo: 'Franco Limoso'
   });
 
-  // Datos simulados de labores
-  const laboresSimuladas: Labor[] = [
-    {
-      id: 1,
-      tipo: 'siembra',
-      fecha: '2024-11-15',
-      fecha_fin: '2024-11-15',
-      observaciones: 'Siembra de soja con densidad de 25 plantas/m²',
-      lote_id: 1,
-      lote_nombre: 'Lote A1',
-      estado: 'completada',
-      responsable: 'Juan Pérez',
-      horas_trabajo: 8,
-      costo_total: 4250560,
-      progreso: 100,
-      insumos_usados: [
-        { insumo_nombre: 'Semilla Soja DM 53i54', cantidad_usada: 500, unidad_medida: 'kg', costo_total: 4250000 }
-      ],
-      maquinaria_asignada: [
-        { maquinaria_nombre: 'Tractor John Deere 5075E', horas_uso: 8, costo_total: 360 },
-        { maquinaria_nombre: 'Sembradora de Precisión', horas_uso: 8, costo_total: 200 }
-      ]
-    },
-    {
-      id: 2,
-      tipo: 'fertilizacion',
-      fecha: '2024-12-05',
-      fecha_fin: '2024-12-05',
-      observaciones: 'Aplicación de fertilizante NPK 15-15-15',
-      lote_id: 1,
-      lote_nombre: 'Lote A1',
-      estado: 'completada',
-      responsable: 'María González',
-      horas_trabajo: 6,
-      costo_total: 1250000,
-      progreso: 100,
-      insumos_usados: [
-        { insumo_nombre: 'Fertilizante NPK 15-15-15', cantidad_usada: 250, unidad_medida: 'kg', costo_total: 1250000 }
-      ],
-      maquinaria_asignada: [
-        { maquinaria_nombre: 'Tractor John Deere 5075E', horas_uso: 6, costo_total: 270 }
-      ]
-    },
-    {
-      id: 3,
-      tipo: 'pulverizacion',
-      fecha: '2024-12-20',
-      fecha_fin: '2024-12-20',
-      observaciones: 'Control de malezas con glifosato',
-      lote_id: 1,
-      lote_nombre: 'Lote A1',
-      estado: 'completada',
-      responsable: 'Carlos Rodríguez',
-      horas_trabajo: 4,
-      costo_total: 850000,
-      progreso: 100,
-      insumos_usados: [
-        { insumo_nombre: 'Glifosato 48%', cantidad_usada: 30, unidad_medida: 'L', costo_total: 840000 }
-      ],
-      maquinaria_asignada: [
-        { maquinaria_nombre: 'Pulverizadora Jacto 2000', horas_uso: 4, costo_total: 140 }
-      ]
-    },
-    {
-      id: 4,
-      tipo: 'siembra',
-      fecha: '2024-11-20',
-      fecha_fin: '2024-11-20',
-      observaciones: 'Siembra de maíz tardío',
-      lote_id: 2,
-      lote_nombre: 'Lote A2',
-      estado: 'completada',
-      responsable: 'Juan Pérez',
-      horas_trabajo: 10,
-      costo_total: 3800000,
-      progreso: 100,
-      insumos_usados: [
-        { insumo_nombre: 'Semilla Maíz DK 7210', cantidad_usada: 600, unidad_medida: 'kg', costo_total: 3600000 }
-      ],
-      maquinaria_asignada: [
-        { maquinaria_nombre: 'Tractor John Deere 5075E', horas_uso: 10, costo_total: 450 },
-        { maquinaria_nombre: 'Sembradora de Precisión', horas_uso: 10, costo_total: 250 }
-      ]
-    },
-    {
-      id: 5,
-      tipo: 'cosecha',
-      fecha: '2024-03-15',
-      fecha_fin: '2024-03-15',
-      observaciones: 'Cosecha de soja con rendimiento de 3.2 tn/ha',
-      lote_id: 1,
-      lote_nombre: 'Lote A1',
-      estado: 'completada',
-      responsable: 'Roberto Silva',
-      horas_trabajo: 12,
-      costo_total: 2800000,
-      progreso: 100,
-      insumos_usados: [],
-      maquinaria_asignada: [
-        { maquinaria_nombre: 'Cosechadora New Holland CR8.90', horas_uso: 12, costo_total: 1440 }
-      ]
-    }
-  ];
 
   // Estado para cultivos
   const [cultivos, setCultivos] = useState<string[]>([]);
@@ -425,26 +294,56 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const data = await lotesService.listar();
+      const data = await lotesService.listarCultivo();
+      
+      console.log('🔍 [LotesManagement] Lotes recibidos del backend:', data.length, data);
       
       // Mapear los datos de la API al formato del frontend
-      const lotesMapeados: Lote[] = data.map((lote: any) => ({
-        id: lote.id,
-        nombre: lote.nombre,
-        superficie: lote.areaHectareas || 0,
-        cultivo: lote.cultivoActual || '',
-        campo_id: lote.campo?.id || lote.campoId || 0,
-        estado: lote.estado || 'DISPONIBLE', // Mantener en MAYÚSCULAS como viene del backend
-        descripcion: lote.descripcion || '',
-        tipoSuelo: lote.tipoSuelo || 'Franco Limoso'
-      }));
+      const lotesMapeados: Lote[] = data.map((lote: any) => {
+        const campoId = lote.campoId || lote.campo?.id || 0;
+        console.log(`📍 [LotesManagement] Lote ${lote.nombre}: campoId=${campoId}, campo?.id=${lote.campo?.id}`);
+        
+        // Determinar el estado del lote
+        const estadoLote = lote.estado || 'DISPONIBLE';
+        
+        // Manejar cultivoActual: puede venir como string, objeto o null
+        // IMPORTANTE: Si el lote está DISPONIBLE, no debe mostrar cultivo aunque exista en BD
+        let cultivoNombre = '';
+        if (estadoLote !== 'DISPONIBLE') {
+          // Solo obtener el cultivo si el lote NO está disponible
+          if (lote.cultivoActual) {
+            if (typeof lote.cultivoActual === 'string') {
+              cultivoNombre = lote.cultivoActual;
+            } else if (typeof lote.cultivoActual === 'object' && lote.cultivoActual.nombre) {
+              cultivoNombre = lote.cultivoActual.nombre;
+            }
+          }
+          // Si no hay cultivoActual pero hay cultivo (objeto), usar su nombre
+          if (!cultivoNombre && lote.cultivo && typeof lote.cultivo === 'object' && lote.cultivo.nombre) {
+            cultivoNombre = lote.cultivo.nombre;
+          }
+        }
+        // Si el estado es DISPONIBLE, forzar cultivoNombre a vacío (ignorar cualquier valor en BD)
+        
+        return {
+          id: lote.id,
+          nombre: lote.nombre,
+          superficie: lote.areaHectareas || 0,
+          cultivo: cultivoNombre,
+          campo_id: campoId,
+          estado: estadoLote, // Mantener en MAYÚSCULAS como viene del backend
+          descripcion: lote.descripcion || '',
+          tipoSuelo: lote.tipoSuelo || 'Franco Limoso',
+          estadoConfigurado: lote.estadoConfigurado
+        };
+      });
 
+      console.log('✅ [LotesManagement] Lotes mapeados:', lotesMapeados.length, lotesMapeados);
       setLotes(lotesMapeados);
     } catch (error) {
       console.error('Error cargando lotes:', error);
-      setError('Error al cargar los lotes. Usando datos de ejemplo.');
-      // Fallback a datos simulados
-      setLotes(lotesSimulados);
+      setError('Error al cargar los lotes. Por favor, verifica tu conexión.');
+      setLotes([]);
     }
   };
 
@@ -457,30 +356,29 @@ const LotesManagement: React.FC = () => {
         return;
       }
 
-      const data = await laboresService.listar();
+      const data: LaborDetalladoDTO[] = await laboresService.listar();
       
-      // Mapear los datos de la API al formato del frontend
-      const laboresMapeadas: Labor[] = data.map((labor: any) => ({
+      // Mapear los datos de la API al formato del frontend (contrato único: loteId, loteNombre)
+      const laboresMapeadas: Labor[] = data.map((labor: LaborDetalladoDTO) => ({
         id: labor.id,
         nombre: labor.nombre,
         tipo: labor.tipo || '',
         fecha: labor.fechaInicio || '',
         lote_id: labor.loteId || 0,
-        lote_nombre: labor.lote?.nombre || '',
+        lote_nombre: labor.loteNombre || labor.lote?.nombre || '',
         responsable: labor.responsable || '',
         horas_trabajo: labor.horasTrabajo || 0,
         costo_total: labor.costoTotal || 0,
         descripcion: labor.descripcion || '',
-        estado: labor.estado || 'planificada',
+        estado: (labor.estado || 'planificada') as Labor['estado'],
         observaciones: labor.observaciones || ''
       }));
 
       setLabores(laboresMapeadas);
     } catch (error) {
       console.error('Error cargando labores:', error);
-      setError('Error al cargar las labores. Usando datos de ejemplo.');
-      // Fallback a datos simulados
-      setLabores(laboresSimuladas);
+      setError('Error al cargar las labores. Por favor, verifica tu conexión.');
+      setLabores([]);
     } finally {
       setLoading(false);
     }
@@ -499,7 +397,7 @@ const LotesManagement: React.FC = () => {
 
       const cultivosData = await cultivosService.listar();
       // Extraer nombres únicos de cultivos
-      const nombresCultivos = [...new Set(cultivosData.map((cultivo: any) => cultivo.nombre))];
+      const nombresCultivos = [...new Set(cultivosData.map((cultivo: { nombre: string }) => cultivo.nombre))] as string[];
       setCultivos(nombresCultivos);
     } catch (error) {
       console.error('Error cargando cultivos:', error);
@@ -527,7 +425,7 @@ const LotesManagement: React.FC = () => {
     // Calcular superficie total de lotes existentes en el campo (excluyendo el lote que se está editando)
     const superficieLotesExistentes = lotes
       .filter(lote => lote.campo_id === campoId && lote.id !== excludeLoteId)
-      .reduce((sum, lote) => sum + lote.superficie, 0);
+      .reduce((sum, lote) => sum + Number(lote.superficie || 0), 0);
 
     const superficieTotal = superficieLotesExistentes + superficie;
     
@@ -592,7 +490,7 @@ const LotesManagement: React.FC = () => {
       const campo = campos.find(c => c.id === formData.campo_id);
       const superficieLotesExistentes = lotes
         .filter(lote => lote.campo_id === formData.campo_id && lote.id !== selectedLote?.id)
-        .reduce((sum, lote) => sum + lote.superficie, 0);
+        .reduce((sum, lote) => sum + Number(lote.superficie || 0), 0);
       
       const superficieDisponible = (campo?.superficie || 0) - superficieLotesExistentes;
       
@@ -686,29 +584,12 @@ const LotesManagement: React.FC = () => {
     setShowHistorialModal(true);
   };
   
-  // Funciones para manejar Siembra y Cosecha
-  const handleSembrar = (lote: Lote) => {
-    setLoteParaSiembra(lote);
-    setShowSiembraModal(true);
-  };
-  
-  const handleCosechar = (lote: Lote) => {
-    console.log('🌾 handleCosechar llamado para lote:', lote);
-    setLoteParaCosecha(lote);
-    setShowCosechaModal(true);
-    console.log('✅ Modal de cosecha activado');
-  };
-  
-  const puedeSembrar = (estado: string): boolean => {
-    const estadoUpper = estado?.toUpperCase() || '';
-    return estadoUpper === 'DISPONIBLE' || estadoUpper === 'PREPARADO' || estadoUpper === 'EN_PREPARACION';
-  };
-  
-  const puedeCosechar = (estado: string): boolean => {
-    const estadoUpper = estado?.toUpperCase() || '';
-    return estadoUpper === 'SEMBRADO' || estadoUpper === 'LISTO_PARA_COSECHA' || 
-           estadoUpper === 'EN_CRECIMIENTO' || estadoUpper === 'EN_FLORACION' || 
-           estadoUpper === 'EN_FRUTIFICACION';
+  // Función para abrir crear labor
+  // Función para abrir modal de reset
+  const handleResetearLote = (lote: Lote) => {
+    setLoteParaReset(lote);
+    setShowResetModal(true);
+    setMenuAbierto(null); // Cerrar menú
   };
   
   const tieneAccionesEspeciales = (estado: string): boolean => {
@@ -717,7 +598,7 @@ const LotesManagement: React.FC = () => {
            estadoUpper === 'EN_FLORACION' || estadoUpper === 'EN_FRUTIFICACION';
   };
   
-  const handleAccionEspecial = (lote: Lote, accion: 'abandonar' | 'limpiar' | 'forraje') => {
+  const handleAccionEspecial = (lote: Lote, accion: 'abandonar' | 'forraje') => {
     setLoteParaAccion(lote);
     setTipoAccion(accion);
     setShowAccionModal(true);
@@ -786,7 +667,7 @@ const LotesManagement: React.FC = () => {
 
     const superficieLotesExistentes = lotes
       .filter(lote => lote.campo_id === campoId && lote.id !== selectedLote?.id)
-      .reduce((sum, lote) => sum + lote.superficie, 0);
+      .reduce((sum, lote) => sum + Number(lote.superficie || 0), 0);
 
     return campo.superficie - superficieLotesExistentes;
   };
@@ -798,6 +679,9 @@ const LotesManagement: React.FC = () => {
     const matchesCultivo = selectedCultivo === '' || lote.cultivo === selectedCultivo;
     return matchesSearch && matchesCultivo;
   });
+  
+  // Log temporal para diagnóstico
+  console.log('🔍 [LotesManagement] Total lotes:', lotes.length, 'Filtrados:', filteredLotes.length, 'Búsqueda:', searchTerm, 'Cultivo:', selectedCultivo);
 
   // Función para obtener lotes paginados
   const obtenerLotesPaginados = () => {
@@ -815,7 +699,7 @@ const LotesManagement: React.FC = () => {
   }, [searchTerm, selectedCultivo]);
 
   // Estadísticas
-  const totalSuperficie = lotes.reduce((sum, lote) => sum + lote.superficie, 0);
+  const totalSuperficie = lotes.reduce((sum, lote) => sum + Number(lote.superficie || 0), 0);
   const cultivosUnicos = new Set(lotes.map(l => l.cultivo)).size;
   const camposConLotes = new Set(lotes.map(l => l.campo_id)).size;
 
@@ -831,42 +715,13 @@ const LotesManagement: React.FC = () => {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div>
-            <h1 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>🏞️ Gestión de Lotes</h1>
+            <h1 style={{ margin: '0 0 10px 0', fontSize: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="Mountain" size={24} /> Gestión de Lotes
+            </h1>
             <p style={{ margin: '0', opacity: '0.9' }}>
               Divide campos en lotes y asigna cultivos específicos
             </p>
           </div>
-          
-          {/* Botón de Ayuda de Estados */}
-          <button
-            onClick={() => setShowEstadosAyuda(true)}
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 8px -1px rgba(0,0,0,0.15)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>📊</span>
-            <span>Flujo de Estados</span>
-          </button>
         </div>
       </div>
 
@@ -886,7 +741,7 @@ const LotesManagement: React.FC = () => {
               fontSize: '14px'
             }}
           >
-            ➕ Agregar Lote
+            <Icon name="Plus" size={16} style={{ marginRight: '4px' }} /> Agregar Lote
           </button>
         </PermissionGate>
       </div>
@@ -952,7 +807,9 @@ const LotesManagement: React.FC = () => {
           padding: '15px', 
           borderBottom: '1px solid #dee2e6' 
         }}>
-          <h3 style={{ margin: '0', color: '#495057' }}>📊 Lista de Lotes ({filteredLotes.length})</h3>
+          <h3 style={{ margin: '0', color: '#495057', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Icon name="BarChart" size={18} /> Lista de Lotes ({filteredLotes.length})
+          </h3>
         </div>
 
         {(() => {
@@ -1005,16 +862,29 @@ const LotesManagement: React.FC = () => {
                       {lote.superficie} ha
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <span style={{
-                        background: '#e3f2fd',
-                        color: '#1976d2',
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}>
-                        {lote.cultivo}
-                      </span>
+                      {lote.cultivo ? (
+                        <span style={{
+                          background: '#e3f2fd',
+                          color: '#1976d2',
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          {lote.cultivo}
+                        </span>
+                      ) : (
+                        <span style={{
+                          background: '#f3f4f6',
+                          color: '#6b7280',
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          Sin cultivo
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{
@@ -1061,167 +931,14 @@ const LotesManagement: React.FC = () => {
                       )}
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <span style={{
-                        background: lote.estado === 'activo' ? '#e8f5e8' : 
-                                   lote.estado === 'inactivo' ? '#ffebee' : '#fff3e0',
-                        color: lote.estado === 'activo' ? '#2e7d32' : 
-                               lote.estado === 'inactivo' ? '#c62828' : '#e65100',
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}>
-                        {getEstadoTraducido(lote.estado)}
-                      </span>
+                      <EstadoLoteDisplay 
+                        estado={lote.estado} 
+                        estadoConfigurado={lote.estadoConfigurado}
+                      />
                     </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', position: 'relative' }}>
-                        {/* Botones contextuales según el estado del lote */}
-                        {permissions.canCreateCosechas && puedeSembrar(lote.estado) && (
-                          <button
-                            onClick={() => handleSembrar(lote)}
-                            data-testid={`lote-${lote.id}-sembrar-button`}
-                            style={{
-                              background: '#4CAF50',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            🌱 Sembrar
-                          </button>
-                        )}
-                        
-                        {/* Botón de Cosechar con dropdown para acciones especiales */}
-                        {permissions.canCreateCosechas && puedeCosechar(lote.estado) && (
-                          <div style={{ position: 'relative' }}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMenuAbierto(menuAbierto === lote.id ? null : lote.id!);
-                              }}
-                              data-testid={`lote-${lote.id}-cosechar-button`}
-                              style={{
-                                background: '#FF9800',
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              🌾 Cosechar ▾
-                            </button>
-                            
-                            {/* Dropdown menu */}
-                            {menuAbierto === lote.id && (
-                              <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                marginTop: '4px',
-                                background: 'white',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                zIndex: 1000,
-                                minWidth: '200px'
-                              }}>
-                                <button
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); // Prevenir que el click cierre el menú antes de ejecutar
-                                    handleCosechar(lote); 
-                                    setMenuAbierto(null); 
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '10px 16px',
-                                    border: 'none',
-                                    background: 'white',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                    fontSize: '13px',
-                                    borderBottom: '1px solid #f0f0f0'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                                >
-                                  🌾 Cosechar Normal
-                                </button>
-                                <button
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); // Prevenir que el click cierre el menú antes de ejecutar
-                                    handleAccionEspecial(lote, 'forraje'); 
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '10px 16px',
-                                    border: 'none',
-                                    background: 'white',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                    fontSize: '13px',
-                                    borderBottom: '1px solid #f0f0f0'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                                >
-                                  🐄 Convertir a Forraje
-                                </button>
-                                <button
-                                  onClick={(e) => { 
-                                    e.stopPropagation();
-                                    handleAccionEspecial(lote, 'limpiar'); 
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '10px 16px',
-                                    border: 'none',
-                                    background: 'white',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                    fontSize: '13px',
-                                    borderBottom: '1px solid #f0f0f0'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                                >
-                                  🚜 Limpiar Cultivo
-                                </button>
-                                <button
-                                  onClick={(e) => { 
-                                    e.stopPropagation();
-                                    handleAccionEspecial(lote, 'abandonar'); 
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '10px 16px',
-                                    border: 'none',
-                                    background: 'white',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                    fontSize: '13px',
-                                    color: '#f44336'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = '#ffebee'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                                >
-                                  ⚠️ Abandonar Cultivo
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
+                        {/* Botón de Historial */}
                         <button
                           onClick={() => handleVerHistorial(lote)}
                           data-testid={`lote-${lote.id}-historial-button`}
@@ -1232,11 +949,134 @@ const LotesManagement: React.FC = () => {
                             padding: '6px 12px',
                             borderRadius: '4px',
                             cursor: 'pointer',
-                            fontSize: '12px'
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
                           }}
                         >
-                          📋 Historial
+                          <Icon name="History" size={14} />
+                          Historial
                         </button>
+                        
+                        {/* Menú de acciones adicionales */}
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMenuAbierto(menuAbierto === lote.id ? null : lote.id!);
+                            }}
+                            style={{
+                              background: '#6b7280',
+                              color: 'white',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Icon name="MoreVertical" size={14} />
+                            Más
+                          </button>
+                          
+                          {/* Dropdown menu */}
+                          {menuAbierto === lote.id && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              right: 0,
+                              marginTop: '4px',
+                              background: 'white',
+                              border: '1px solid #ddd',
+                              borderRadius: '4px',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                              zIndex: 1000,
+                              minWidth: '200px'
+                            }}>
+                              <button
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  handleAccionEspecial(lote, 'forraje');
+                                  setMenuAbierto(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px 16px',
+                                  border: 'none',
+                                  background: 'white',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  fontSize: '13px',
+                                  borderBottom: '1px solid #f0f0f0',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                              >
+                                <Icon name="Circle" size={14} />
+                                Convertir a Forraje
+                              </button>
+                              <button
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  handleAccionEspecial(lote, 'abandonar');
+                                  setMenuAbierto(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px 16px',
+                                  border: 'none',
+                                  background: 'white',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  fontSize: '13px',
+                                  borderBottom: '1px solid #f0f0f0',
+                                  color: '#f44336',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#ffebee'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                              >
+                                <Icon name="AlertTriangle" size={14} />
+                                Abandonar Cultivo
+                              </button>
+                              <button
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  handleResetearLote(lote);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px 16px',
+                                  border: 'none',
+                                  background: 'white',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  fontSize: '13px',
+                                  color: '#ef4444',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#fee2e2'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                              >
+                                <Icon name="RefreshCw" size={14} />
+                                Resetear a Inicial
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Botones de Editar y Eliminar */}
                         {permissions.canEditLotes && (
                           <button
                             onClick={() => handleEditar(lote)}
@@ -1248,10 +1088,14 @@ const LotesManagement: React.FC = () => {
                               padding: '6px 12px',
                               borderRadius: '4px',
                               cursor: 'pointer',
-                              fontSize: '12px'
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
                             }}
                           >
-                            ✏️ Editar
+                            <Icon name="Pencil" size={14} />
+                            Editar
                           </button>
                         )}
                         {permissions.canDeleteLotes && (
@@ -1265,10 +1109,14 @@ const LotesManagement: React.FC = () => {
                               padding: '6px 12px',
                               borderRadius: '4px',
                               cursor: 'pointer',
-                              fontSize: '12px'
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
                             }}
                           >
-                            🗑️ Eliminar
+                            <Icon name="Trash2" size={14} />
+                            Eliminar
                           </button>
                         )}
                       </div>
@@ -1307,7 +1155,7 @@ const LotesManagement: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      ⏮️ Primera
+                      <Icon name="ChevronsLeft" size={14} style={{ marginRight: '4px' }} /> Primera
                     </button>
                     
                     <button
@@ -1323,7 +1171,7 @@ const LotesManagement: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      ⬅️ Anterior
+                      <Icon name="ChevronLeft" size={14} style={{ marginRight: '4px' }} /> Anterior
                     </button>
                     
                     <span style={{ 
@@ -1348,7 +1196,7 @@ const LotesManagement: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      Siguiente ➡️
+                      Siguiente <Icon name="ChevronRight" size={14} style={{ marginLeft: '4px' }} />
                     </button>
                     
                     <button
@@ -1364,7 +1212,7 @@ const LotesManagement: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      Última ⏭️
+                      Última <Icon name="ChevronsRight" size={14} style={{ marginLeft: '4px' }} />
                     </button>
                   </div>
                 </div>
@@ -1380,7 +1228,9 @@ const LotesManagement: React.FC = () => {
         padding: '15px', 
         borderRadius: '8px' 
       }}>
-        <h4 style={{ margin: '0 0 10px 0', color: '#2e7d32' }}>📈 Estadísticas</h4>
+        <h4 style={{ margin: '0 0 10px 0', color: '#2e7d32', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Icon name="TrendingUp" size={18} /> Estadísticas
+        </h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
           <div>
             <strong>Total de Lotes:</strong> {lotes.length}
@@ -1421,7 +1271,10 @@ const LotesManagement: React.FC = () => {
             overflowY: 'auto'
           }}>
             <h2 style={{ margin: '0 0 1.5rem 0', color: '#1f2937' }}>
-              {isEditing ? '✏️ Editar Lote' : '➕ Agregar Nuevo Lote'}
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name={isEditing ? "Pencil" : "Plus"} size={20} />
+                {isEditing ? 'Editar Lote' : 'Agregar Nuevo Lote'}
+              </span>
             </h2>
             
             <form onSubmit={(e) => { e.preventDefault(); handleSaveLote(); }}>
@@ -1466,7 +1319,7 @@ const LotesManagement: React.FC = () => {
                     border: '1px solid #0ea5e9'
                   }}>
                     <h4 style={{ margin: '0 0 0.5rem 0', color: '#0c4a6e', fontSize: '1rem' }}>
-                      📊 Información del Campo
+                      <Icon name="BarChart" size={16} style={{ marginRight: '4px' }} /> Información del Campo
                     </h4>
                     <div style={{ fontSize: '0.875rem', color: '#0c4a6e' }}>
                       <p style={{ margin: '0.25rem 0' }}>
@@ -1548,8 +1401,8 @@ const LotesManagement: React.FC = () => {
                   fontSize: '13px',
                   color: '#1b5e20'
                 }}>
-                  💡 <strong>Nota:</strong> El lote se creará en estado <strong>DISPONIBLE</strong> para siembra. 
-                  El cultivo se asignará cuando hagas clic en <strong>🌱 Sembrar</strong>.
+                  <Icon name="Lightbulb" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> <strong>Nota:</strong> El lote se creará en estado <strong>DISPONIBLE</strong> para siembra. 
+                  El cultivo se asignará cuando hagas clic en <strong><Icon name="Sprout" size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} /> Sembrar</strong>.
                 </div>
 
                 {/* Descripción */}
@@ -1619,7 +1472,7 @@ const LotesManagement: React.FC = () => {
                     border: '1px solid #ffcdd2',
                     fontSize: '0.875rem'
                   }}>
-                    ⚠️ {validationError}
+                    <Icon name="AlertTriangle" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {validationError}
                   </div>
                 )}
               </div>
@@ -1700,7 +1553,9 @@ const LotesManagement: React.FC = () => {
               paddingBottom: '1rem'
             }}>
               <h2 style={{ margin: 0, color: '#1f2937' }}>
-                📋 Historial de Labores - {selectedLoteForHistorial.nombre}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Icon name="Clipboard" size={20} /> Historial de Labores - {selectedLoteForHistorial.nombre}
+                </span>
               </h2>
               <button
                 onClick={() => setShowHistorialModal(false)}
@@ -1712,7 +1567,7 @@ const LotesManagement: React.FC = () => {
                   color: '#6b7280'
                 }}
               >
-                ✕
+                <Icon name="X" size={24} />
               </button>
             </div>
 
@@ -1735,7 +1590,11 @@ const LotesManagement: React.FC = () => {
                   <strong>Cultivo:</strong> {selectedLoteForHistorial.cultivo}
                 </div>
                 <div>
-                  <strong>Estado:</strong> {getEstadoTraducido(selectedLoteForHistorial.estado)}
+                  <strong>Estado:</strong>{' '}
+                  <EstadoLoteDisplay 
+                    estado={selectedLoteForHistorial.estado} 
+                    estadoConfigurado={selectedLoteForHistorial.estadoConfigurado}
+                  />
                 </div>
               </div>
             </div>
@@ -1754,7 +1613,9 @@ const LotesManagement: React.FC = () => {
                     borderRadius: '8px',
                     border: '1px solid #e5e7eb'
                   }}>
-                    <div style={{ fontSize: '48px', marginBottom: '1rem' }}>📝</div>
+                    <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+                      <Icon name="FileText" size={48} />
+                    </div>
                     <h3 style={{ margin: '0 0 0.5rem 0', color: '#374151' }}>Sin labores registradas</h3>
                     <p style={{ margin: 0, fontSize: '14px' }}>
                       No se han registrado labores para este lote aún.
@@ -1818,13 +1679,14 @@ const LotesManagement: React.FC = () => {
                             <div><strong>Responsable:</strong> {labor.responsable}</div>
                             <div><strong>Horas:</strong> {labor.horas_trabajo || 0}h</div>
                             <div><strong>Costo:</strong> {formatCurrency(labor.costo_total || 0)}</div>
-                            <div><strong>Progreso:</strong> {labor.progreso || 0}%</div>
                           </div>
 
                           {/* Insumos utilizados */}
                           {labor.insumos_usados && labor.insumos_usados.length > 0 && (
                             <div style={{ marginBottom: '0.75rem' }}>
-                              <strong style={{ fontSize: '14px', color: '#374151' }}>🧪 Insumos:</strong>
+                              <strong style={{ fontSize: '14px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Icon name="FlaskConical" size={14} /> Insumos:
+                              </strong>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
                                 {labor.insumos_usados.map((insumo: any, index: number) => (
                                   <span key={index} style={{
@@ -1844,7 +1706,9 @@ const LotesManagement: React.FC = () => {
                           {/* Maquinaria utilizada */}
                           {labor.maquinaria_asignada && labor.maquinaria_asignada.length > 0 && (
                             <div>
-                              <strong style={{ fontSize: '14px', color: '#374151' }}>🚜 Maquinaria:</strong>
+                              <strong style={{ fontSize: '14px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Icon name="Tractor" size={14} /> Maquinaria:
+                              </strong>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
                                 {labor.maquinaria_asignada.map((maq: any, index: number) => (
                                   <span key={index} style={{
@@ -1872,7 +1736,9 @@ const LotesManagement: React.FC = () => {
                     marginTop: '1.5rem',
                     border: '1px solid #c8e6c9'
                   }}>
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#2e7d32' }}>💰 Resumen de Costos</h4>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#2e7d32', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Icon name="DollarSign" size={18} /> Resumen de Costos
+                    </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', fontSize: '14px' }}>
                       <div><strong>Total de labores:</strong> {laboresDelLote.length}</div>
                       <div><strong>Costo total:</strong> {formatCurrency(laboresDelLote.reduce((sum, l) => sum + (l.costo_total || 0), 0))}</div>
@@ -1887,30 +1753,16 @@ const LotesManagement: React.FC = () => {
         </div>
       )}
       
-      {/* Modal de Siembra */}
-      {showSiembraModal && loteParaSiembra && (
-        <SiembraModal
-          lote={loteParaSiembra}
+      {/* Modal de Reset */}
+      {showResetModal && loteParaReset && (
+        <ResetLoteModal
+          lote={loteParaReset}
           onClose={() => {
-            setShowSiembraModal(false);
-            setLoteParaSiembra(null);
+            setShowResetModal(false);
+            setLoteParaReset(null);
           }}
           onSuccess={() => {
-            cargarDatos(); // Recargar datos después de sembrar
-          }}
-        />
-      )}
-      
-      {/* Modal de Cosecha */}
-      {showCosechaModal && loteParaCosecha && (
-        <CosechaModal
-          lote={loteParaCosecha}
-          onClose={() => {
-            setShowCosechaModal(false);
-            setLoteParaCosecha(null);
-          }}
-          onSuccess={() => {
-            cargarLotes(); // Recargar datos después de cosechar
+            cargarDatos();
           }}
         />
       )}
@@ -1927,13 +1779,6 @@ const LotesManagement: React.FC = () => {
           onSuccess={() => {
             cargarDatos(); // Recargar datos después de la acción
           }}
-        />
-      )}
-      
-      {/* Modal de Ayuda de Estados */}
-      {showEstadosAyuda && (
-        <EstadosLoteAyuda
-          onClose={() => setShowEstadosAyuda(false)}
         />
       )}
     </div>

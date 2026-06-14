@@ -1,0 +1,34 @@
+import React from 'react';
+import TrazabilidadExpedienteScreen from './TrazabilidadExpedienteScreen';
+import {
+  configuracionExpedienteAvicolaCarne,
+  configuracionExpedienteAvicolaCrianza,
+  configuracionExpedienteAvicolaHuevos,
+  configuracionExpedienteAvicolaPonedoras,
+  configuracionExpedienteCultivos,
+  configuracionExpedientePorcinos,
+} from './configuracionesExpediente';
+
+export const ExpedienteTrazabilidadCultivos: React.FC = () => (
+  <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteCultivos} />
+);
+
+export const ExpedienteTrazabilidadPorcinos: React.FC = () => (
+  <TrazabilidadExpedienteScreen configuracion={configuracionExpedientePorcinos} />
+);
+
+export const ExpedienteTrazabilidadAvicolaHuevos: React.FC = () => (
+  <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteAvicolaHuevos} />
+);
+
+export const ExpedienteTrazabilidadAvicolaCrianza: React.FC = () => (
+  <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteAvicolaCrianza} />
+);
+
+export const ExpedienteTrazabilidadAvicolaCarne: React.FC = () => (
+  <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteAvicolaCarne} />
+);
+
+export const ExpedienteTrazabilidadAvicolaPonedoras: React.FC = () => (
+  <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteAvicolaPonedoras} />
+);

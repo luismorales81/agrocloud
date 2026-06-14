@@ -2,10 +2,11 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.ReporteRendimientoDTO;
 import com.agrocloud.dto.ReporteCosechasDTO;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.ReporteService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.cultivos.application.ReporteService;
+import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,13 +23,14 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/reportes")
-@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:5173"})
 public class ReporteController {
 
     @Autowired
+    @Qualifier("reporteServiceCultivos")
     private ReporteService reporteService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
     
     /**

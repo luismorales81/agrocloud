@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
 import { aplicacionesAgroquimicasService, laboresService, insumosService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
+import type { LaborDetalladoDTO } from '../types/labor.types';
 
 interface AplicacionAgroquimica {
   id?: number;
@@ -19,15 +20,6 @@ interface AplicacionAgroquimica {
   fechaAplicacion: string;
   fechaRegistro: string;
   activo: boolean;
-}
-
-interface Labor {
-  id: number;
-  tipoLabor: string;
-  fecha: string;
-  loteId: number;
-  loteNombre: string;
-  loteSuperficieHa: number;
 }
 
 interface Insumo {
@@ -50,7 +42,7 @@ const AplicacionesAgroquimicas: React.FC = () => {
   const { rolUsuario } = useEmpresa();
   
   const [aplicaciones, setAplicaciones] = useState<AplicacionAgroquimica[]>([]);
-  const [labores, setLabores] = useState<Labor[]>([]);
+  const [labores, setLabores] = useState<LaborDetalladoDTO[]>([]);
   const [insumos, setInsumos] = useState<Insumo[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -155,7 +147,7 @@ const AplicacionesAgroquimicas: React.FC = () => {
       setFormData(prev => ({
         ...prev,
         laborId,
-        superficieAplicadaHa: labor.loteSuperficieHa
+        superficieAplicadaHa: labor.loteSuperficieHa ?? 0
       }));
       
       // Si ya hay insumo y tipo seleccionados, calcular
@@ -372,7 +364,7 @@ const AplicacionesAgroquimicas: React.FC = () => {
                 <option value={0}>Seleccionar labor</option>
                 {labores.map(labor => (
                   <option key={labor.id} value={labor.id}>
-                    {labor.tipoLabor} - {labor.loteNombre} ({labor.loteSuperficieHa} ha)
+                    {(labor.tipo ?? labor.nombre ?? 'Labor')} - {labor.loteNombre} ({labor.loteSuperficieHa ?? 0} ha)
                   </option>
                 ))}
               </select>

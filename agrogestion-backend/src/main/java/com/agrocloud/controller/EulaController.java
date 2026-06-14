@@ -3,13 +3,15 @@ package com.agrocloud.controller;
 import com.agrocloud.dto.AceptarEulaRequest;
 import com.agrocloud.dto.EulaEstadoResponse;
 import com.agrocloud.exception.EulaNoAceptadoException;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.repository.UserRepository;
-import com.agrocloud.service.EulaService;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.core.infrastructure.UserRepository;
+import com.agrocloud.core.application.EulaService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,15 +30,16 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/eula")
-@CrossOrigin(origins = "*")
 public class EulaController {
     
     private static final Logger logger = LoggerFactory.getLogger(EulaController.class);
     
     @Autowired
+    @Qualifier("eulaServiceCore")
     private EulaService eulaService;
     
     @Autowired
+    @Qualifier("userRepositoryCore")
     private UserRepository userRepository;
     
     /**

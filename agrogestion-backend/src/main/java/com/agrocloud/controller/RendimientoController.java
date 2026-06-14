@@ -1,7 +1,8 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.service.RendimientoService;
+import com.agrocloud.cultivos.application.RendimientoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,10 +14,10 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/rendimiento")
-@CrossOrigin(origins = "*")
 public class RendimientoController {
 
     @Autowired
+    @Qualifier("rendimientoServiceCultivos")
     private RendimientoService rendimientoService;
 
     /**

@@ -3,7 +3,7 @@
 -- Descripción: Crear tabla para el historial de cosechas con todas las relaciones necesarias
 
 -- Crear tabla historial_cosechas
-CREATE TABLE historial_cosechas (
+CREATE TABLE IF NOT EXISTS historial_cosechas (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     lote_id BIGINT NOT NULL,
     cultivo_id BIGINT NOT NULL,

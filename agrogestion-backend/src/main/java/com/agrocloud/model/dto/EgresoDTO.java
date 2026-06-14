@@ -1,8 +1,8 @@
 package com.agrocloud.model.dto;
 
 import com.agrocloud.config.serializer.MontoMaskingSerializer;
-import com.agrocloud.model.entity.Egreso;
-import com.agrocloud.model.entity.Egreso.TipoEgreso;
+import com.agrocloud.core.domain.Egreso;
+import com.agrocloud.core.domain.Egreso.TipoEgreso;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.math.BigDecimal;

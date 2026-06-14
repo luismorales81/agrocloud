@@ -1,9 +1,11 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Plot;
+import com.agrocloud.cultivos.domain.Plot;
 import com.agrocloud.dto.PlotDTO;
-import com.agrocloud.repository.PlotRepository;
+import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,10 +14,11 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/public/lotes")
-@CrossOrigin(origins = "*")
+@Profile("dev")
 public class PublicPlotController {
 
     @Autowired
+    @Qualifier("plotRepositoryCultivos")
     private PlotRepository plotRepository;
 
     /**
@@ -61,7 +64,7 @@ public class PublicPlotController {
     public ResponseEntity<String> test() {
         return ResponseEntity.ok("PublicPlotController funcionando correctamente");
     }
-    
+
     /**
      * Convierte una entidad Plot a PlotDTO
      */

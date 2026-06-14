@@ -11,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/aplicaciones-agroquimicas")
-@CrossOrigin(origins = "*")
 public class AplicacionAgroquimicaController {
     
     @GetMapping

@@ -1,4 +1,6 @@
 // Servicio para exportación de reportes
+import { currencyService } from './CurrencyService';
+
 export interface ExportOptions {
   format: 'excel' | 'pdf' | 'csv';
   filename?: string;
@@ -96,7 +98,15 @@ class ExportService {
       data.columns.map(col => {
         const value = row[col.key];
         if (col.type === 'currency') {
-          return typeof value === 'number' ? `$${value.toFixed(2)}` : value;
+          if (typeof value === 'number') {
+            const selectedCurrency = localStorage.getItem('selectedCurrency') || 'ARS';
+            if (selectedCurrency === 'USD') {
+              const convertedAmount = currencyService.convert(value, 'ARS', 'USD');
+              return `USD ${convertedAmount.toFixed(2)}`;
+            }
+            return currencyService.formatCurrency(value, 'ARS', 'es-AR');
+          }
+          return value;
         }
         if (col.type === 'date' && value) {
           return new Date(value).toLocaleDateString('es-ES');
@@ -160,7 +170,16 @@ class ExportService {
                   ${data.columns.map(col => {
                     const value = row[col.key];
                     if (col.type === 'currency') {
-                      return `<td>$${typeof value === 'number' ? value.toFixed(2) : value}</td>`;
+                      if (typeof value === 'number') {
+                        const selectedCurrency = localStorage.getItem('selectedCurrency') || 'ARS';
+                        const exchangeType = localStorage.getItem('exchangeType') || 'oficial';
+                        if (selectedCurrency === 'USD') {
+                          const convertedAmount = currencyService.convert(value, 'ARS', 'USD');
+                          return `<td>USD ${convertedAmount.toFixed(2)}</td>`;
+                        }
+                        return `<td>${currencyService.formatCurrency(value, 'ARS', 'es-AR')}</td>`;
+                      }
+                      return `<td>${value}</td>`;
                     }
                     if (col.type === 'date' && value) {
                       return `<td>${new Date(value).toLocaleDateString('es-ES')}</td>`;
@@ -176,8 +195,22 @@ class ExportService {
     const summary = data.summary ? `
           <div class="summary">
             <h3>Resumen</h3>
-            ${data.summary.total ? `<p>Total: $${data.summary.total.toFixed(2)}</p>` : ''}
-            ${data.summary.average ? `<p>Promedio: $${data.summary.average.toFixed(2)}</p>` : ''}
+            ${data.summary.total ? (() => {
+              const selectedCurrency = localStorage.getItem('selectedCurrency') || 'ARS';
+              if (selectedCurrency === 'USD') {
+                const converted = currencyService.convert(data.summary.total, 'ARS', 'USD');
+                return `<p>Total: USD ${converted.toFixed(2)}</p>`;
+              }
+              return `<p>Total: ${currencyService.formatCurrency(data.summary.total, 'ARS', 'es-AR')}</p>`;
+            })() : ''}
+            ${data.summary.average ? (() => {
+              const selectedCurrency = localStorage.getItem('selectedCurrency') || 'ARS';
+              if (selectedCurrency === 'USD') {
+                const converted = currencyService.convert(data.summary.average, 'ARS', 'USD');
+                return `<p>Promedio: USD ${converted.toFixed(2)}</p>`;
+              }
+              return `<p>Promedio: ${currencyService.formatCurrency(data.summary.average, 'ARS', 'es-AR')}</p>`;
+            })() : ''}
             ${data.summary.count ? `<p>Cantidad de registros: ${data.summary.count}</p>` : ''}
           </div>
     ` : '';
@@ -202,7 +235,15 @@ class ExportService {
         console.log(`🔍 [EXPORT] Campo ${col.key}:`, value, 'Tipo:', typeof value);
         
         if (col.type === 'currency') {
-          return typeof value === 'number' ? `$${value.toFixed(2)}` : value;
+          if (typeof value === 'number') {
+            const selectedCurrency = localStorage.getItem('selectedCurrency') || 'ARS';
+            if (selectedCurrency === 'USD') {
+              const convertedAmount = currencyService.convert(value, 'ARS', 'USD');
+              return `USD ${convertedAmount.toFixed(2)}`;
+            }
+            return currencyService.formatCurrency(value, 'ARS', 'es-AR');
+          }
+          return value;
         }
         if (col.type === 'date' && value) {
           return new Date(value).toLocaleDateString('es-ES');

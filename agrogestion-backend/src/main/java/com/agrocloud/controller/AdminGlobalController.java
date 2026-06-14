@@ -1,16 +1,19 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Empresa;
-import com.agrocloud.model.entity.User;
+import com.agrocloud.core.domain.Empresa;
+import com.agrocloud.core.domain.User;
 import com.agrocloud.model.enums.EstadoEmpresa;
-import com.agrocloud.service.AdminGlobalService;
-import com.agrocloud.service.EmpresaService;
-import com.agrocloud.service.UserService;
-import com.agrocloud.service.FieldService;
-import com.agrocloud.service.InsumoService;
-import com.agrocloud.service.MaquinariaService;
-import com.agrocloud.service.WeatherApiUsageService;
-import com.agrocloud.service.EnmascaramientoDatosService;
+import com.agrocloud.core.application.AdminGlobalService;
+import com.agrocloud.core.application.EmpresaService;
+import com.agrocloud.core.application.UserService;
+import com.agrocloud.cultivos.application.FieldService;
+import org.springframework.beans.factory.annotation.Qualifier;
+import com.agrocloud.cultivos.application.InsumoService;
+import com.agrocloud.cultivos.application.MaquinariaService;
+import com.agrocloud.core.application.WeatherApiUsageService;
+import com.agrocloud.core.application.EnmascaramientoDatosService;
+import com.agrocloud.core.infrastructure.UsuarioEmpresaRepository;
+import com.agrocloud.core.infrastructure.UsuarioEmpresaRolRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,38 +35,47 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/admin-global")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173"})
 public class AdminGlobalController {
 
     @Autowired
+    @Qualifier("adminGlobalServiceCore")
     private AdminGlobalService adminGlobalService;
     
     @Autowired
+    @Qualifier("empresaServiceCore")
     private EmpresaService empresaService;
     
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
     
     @Autowired
+    @Qualifier("fieldServiceCultivos")
     private FieldService fieldService;
     
     @Autowired
+    @Qualifier("insumoServiceCultivos")
     private InsumoService insumoService;
     
     @Autowired
+    @Qualifier("maquinariaServiceCultivos")
     private MaquinariaService maquinariaService;
     
     @Autowired
+    @Qualifier("weatherApiUsageServiceCore")
     private WeatherApiUsageService weatherApiUsageService;
     
     @Autowired
+    @Qualifier("enmascaramientoDatosServiceCore")
     private EnmascaramientoDatosService enmascaramientoDatosService;
     
     @Autowired
-    private com.agrocloud.repository.UsuarioEmpresaRolRepository usuarioEmpresaRolRepository;
+    @Qualifier("usuarioEmpresaRolRepositoryCore")
+    private UsuarioEmpresaRolRepository usuarioEmpresaRolRepository;
     
     @Autowired
-    private com.agrocloud.repository.UsuarioEmpresaRepository usuarioEmpresaRepository;
+    @Qualifier("usuarioEmpresaRepositoryCore")
+    private UsuarioEmpresaRepository usuarioEmpresaRepository;
 
 
     /**
@@ -141,7 +153,6 @@ public class AdminGlobalController {
      * Accesible sin autenticación para facilitar el diagnóstico
      */
     @GetMapping("/diagnostico-roles")
-    @CrossOrigin(origins = "*")
     public ResponseEntity<Map<String, Object>> diagnosticoRoles() {
         Map<String, Object> diagnostico = new HashMap<>();
         try {
@@ -164,9 +175,9 @@ public class AdminGlobalController {
             diagnostico.put("rolesDesdeUsuarioEmpresaRol", rolesDesdeUsuarioEmpresaRol);
             
             // Obtener conteos desde UsuarioEmpresa (legacy)
-            List<com.agrocloud.model.entity.UsuarioEmpresa> relaciones = usuarioEmpresaRepository.findAll();
+            List<com.agrocloud.core.domain.UsuarioEmpresa> relaciones = usuarioEmpresaRepository.findAll();
             Map<String, java.util.Set<Long>> usuariosPorRolSet = new HashMap<>();
-            for (com.agrocloud.model.entity.UsuarioEmpresa relacion : relaciones) {
+            for (com.agrocloud.core.domain.UsuarioEmpresa relacion : relaciones) {
                 if (relacion.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO) {
                     String nombreRol = relacion.getRol().name();
                     Long usuarioId = relacion.getUsuario().getId();
@@ -181,13 +192,13 @@ public class AdminGlobalController {
             diagnostico.put("rolesDesdeUsuarioEmpresa", rolesDesdeUsuarioEmpresa);
             
             // Obtener detalles de usuarios y sus roles
-            List<com.agrocloud.model.entity.User> todosUsuarios = userService.findAll();
+            List<com.agrocloud.core.domain.User> todosUsuarios = userService.findAll();
             Map<String, Object> detallesUsuarios = new HashMap<>();
             detallesUsuarios.put("totalUsuarios", todosUsuarios.size());
             
             // Contar usuarios por rol del sistema (User.getRoles())
             Map<String, Long> usuariosPorRolSistema = new HashMap<>();
-            for (com.agrocloud.model.entity.User usuario : todosUsuarios) {
+            for (com.agrocloud.core.domain.User usuario : todosUsuarios) {
                 if (usuario.getRoles() != null) {
                     for (var rol : usuario.getRoles()) {
                         String nombreRol = rol.getNombre();
@@ -515,9 +526,9 @@ public class AdminGlobalController {
      */
     @GetMapping("/empresas/{id}/usuarios")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<List<com.agrocloud.model.entity.UsuarioEmpresa>> obtenerUsuariosDeEmpresa(@PathVariable Long id) {
+    public ResponseEntity<List<com.agrocloud.core.domain.UsuarioEmpresa>> obtenerUsuariosDeEmpresa(@PathVariable Long id) {
         try {
-            List<com.agrocloud.model.entity.UsuarioEmpresa> usuarios = adminGlobalService.obtenerUsuariosDeEmpresa(id);
+            List<com.agrocloud.core.domain.UsuarioEmpresa> usuarios = adminGlobalService.obtenerUsuariosDeEmpresa(id);
             return ResponseEntity.ok(usuarios);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();

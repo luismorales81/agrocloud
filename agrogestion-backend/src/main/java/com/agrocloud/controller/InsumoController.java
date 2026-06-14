@@ -1,11 +1,12 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.exception.ResourceNotFoundException;
-import com.agrocloud.model.entity.Insumo;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.InsumoService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.core.inventory.domain.Insumo;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.cultivos.application.InsumoService;
+import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,10 +19,10 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/insumos")
-@CrossOrigin(origins = "*")
 public class InsumoController {
 
     @Autowired
+    @Qualifier("insumoServiceCultivos")
     private InsumoService insumoService;
 
     @Autowired

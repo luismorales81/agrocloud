@@ -1,6 +1,6 @@
 package com.agrocloud.dto;
 
-import com.agrocloud.model.entity.Insumo;
+import com.agrocloud.core.inventory.domain.Insumo;
 import com.agrocloud.model.enums.TipoAplicacion;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;

@@ -4,12 +4,7 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
 import Badge from './ui/Badge';
-// Iconos simplificados sin lucide-react
-const Calendar = () => <span>📅</span>;
-const TrendingUp = () => <span>📈</span>;
-const TrendingDown = () => <span>📉</span>;
-const DollarSign = () => <span>💰</span>;
-const BarChart3 = () => <span>📊</span>;
+import { Icon } from './icons';
 import { lotesService, balanceService } from '../services/apiServices';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useCurrencyUpdate } from '../hooks/useCurrencyUpdate';
@@ -115,7 +110,7 @@ const BalanceReport: React.FC = () => {
 
   const cargarLotes = async () => {
     try {
-      const lotesData = await lotesService.listar();
+      const lotesData = await lotesService.listarCultivo();
       setLotes(Array.isArray(lotesData) ? lotesData : []);
     } catch (error) {
       console.error('Error cargando lotes:', error);
@@ -142,7 +137,7 @@ const BalanceReport: React.FC = () => {
       if (tipoReporte === 'general') {
         balanceData = await balanceService.obtenerGeneral(fechaInicio, fechaFin);
       } else if (tipoReporte === 'lote') {
-        balanceData = await balanceService.obtenerPorLote(loteId, fechaInicio, fechaFin);
+        balanceData = await balanceService.obtenerPorLote(Number(loteId), fechaInicio, fechaFin);
       } else if (tipoReporte === 'mes-actual') {
         balanceData = await balanceService.obtenerMesActual();
       } else if (tipoReporte === 'año-actual') {
@@ -367,7 +362,7 @@ const BalanceReport: React.FC = () => {
   };
 
   const obtenerIconoBalance = (balanceNeto: number) => {
-    return balanceNeto >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />;
+    return balanceNeto >= 0 ? <Icon name="TrendingUp" size={20} /> : <Icon name="TrendingDown" size={20} />;
   };
 
   return (
@@ -375,7 +370,7 @@ const BalanceReport: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-6 h-6" />
+            <Icon name="BarChart3" size={24} />
             Balance de Costos y Beneficios
           </CardTitle>
         </CardHeader>
@@ -541,7 +536,7 @@ const BalanceReport: React.FC = () => {
                       {formatCurrency(balance.totalIngresos)}
                     </p>
                   </div>
-                  <DollarSign className="w-8 h-8 text-green-600" />
+                  <Icon name="DollarSign" size={32} color="#16a34a" />
                 </div>
               </CardContent>
             </Card>
@@ -555,7 +550,7 @@ const BalanceReport: React.FC = () => {
                       {formatCurrency(balance.totalCostos)}
                     </p>
                   </div>
-                  <DollarSign className="w-8 h-8 text-red-600" />
+                  <Icon name="DollarSign" size={32} color="#dc2626" />
                 </div>
               </CardContent>
             </Card>
@@ -583,7 +578,7 @@ const BalanceReport: React.FC = () => {
                       {balance.margenBeneficio.toFixed(2)}%
                     </p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-blue-600" />
+                  <Icon name="TrendingUp" size={32} color="#2563eb" />
                 </div>
               </CardContent>
             </Card>
@@ -593,7 +588,7 @@ const BalanceReport: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
+                <Icon name="Calendar" size={20} />
                 Período del Reporte
               </CardTitle>
             </CardHeader>
@@ -660,7 +655,7 @@ const BalanceReport: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const costos = balance.detalles.filter(d => d.tipo === 'COSTO' || d.tipo === 'EGRESO');
+                  const costos = balance.detalles.filter(d => d.tipo === 'COSTO');
                   const costosPorCategoria = costos.reduce((acc, detalle) => {
                     const categoria = detalle.categoria || 'OTROS';
                     acc[categoria] = (acc[categoria] || 0) + detalle.monto;
@@ -717,7 +712,7 @@ const BalanceReport: React.FC = () => {
                     type="text"
                     placeholder="Buscar por concepto, categoría o lote..."
                     value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
+                    onChange={(valor) => setBusqueda(valor)}
                     className="w-full h-10"
                   />
                 </div>

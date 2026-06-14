@@ -1,10 +1,11 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Cultivo;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.CultivoService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.cultivos.domain.Cultivo;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.cultivos.application.CultivoService;
+import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,13 +16,14 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/cultivos")
-@CrossOrigin(origins = "*")
 public class CultivoController {
 
     @Autowired
+    @Qualifier("cultivoServiceCultivos")
     private CultivoService cultivoService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
 
     // Obtener todos los cultivos accesibles por el usuario

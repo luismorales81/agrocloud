@@ -2,14 +2,15 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.FieldDTO;
 import com.agrocloud.exception.ResourceNotFoundException;
-import com.agrocloud.model.entity.Field;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.FieldService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.cultivos.domain.Field;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.cultivos.application.FieldService;
+import com.agrocloud.core.application.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,13 +23,14 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/campos")
-@CrossOrigin(origins = "*")
 public class FieldController {
 
     @Autowired
+    @Qualifier("fieldServiceCultivos")
     private FieldService fieldService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
 
     @Autowired

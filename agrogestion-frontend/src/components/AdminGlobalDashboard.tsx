@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../services/apiEndpoints';
+import ModulosManagement from './ModulosManagement';
 
 interface Empresa {
   id: number;
@@ -34,7 +35,8 @@ interface Usuario {
   activo: boolean;
   emailVerified: boolean;
   createdAt: string;
-  roles: string[];
+  fechaCreacion?: string;
+  roles?: (string | { name?: string })[];
 }
 
 interface EstadisticasGlobales {
@@ -110,15 +112,16 @@ const AdminGlobalDashboard: React.FC = () => {
         console.log('✅ [AdminGlobalDashboard] Datos de estadísticas:', statsResponse.data);
         setEstadisticas(statsResponse.data);
         console.log('✅ [AdminGlobalDashboard] Estado actualizado con estadísticas');
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('❌ [AdminGlobalDashboard] Error cargando estadísticas:', error);
+        const err = error as { message?: string; response?: { data?: unknown; status?: number }; config?: unknown };
         console.error('❌ [AdminGlobalDashboard] Detalles del error:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          config: error.config
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+          config: err.config
         });
-        setError(`Error cargando estadísticas: ${error.message}`);
+        setError(`Error cargando estadísticas: ${err.message ?? String(error)}`);
         // NO usar datos por defecto, mantener null para mostrar el error
       }
       
@@ -460,6 +463,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
               { id: 'resumen', name: '📊 Resumen Global', icon: '📊' },
               { id: 'empresas', name: '🏢 Empresas', icon: '🏢' },
               { id: 'usuarios', name: '👥 Usuarios Globales', icon: '👥' },
+              { id: 'modulos', name: '📦 Módulos', icon: '📦' },
               { id: 'uso-sistema', name: '📊 Uso del Sistema', icon: '📊' },
               { id: 'reportes', name: '📈 Reportes Globales', icon: '📈' }
             ].map((tab) => (
@@ -750,7 +754,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                           <div className="flex flex-wrap gap-1">
                             {usuario.roles?.map((rol, index) => (
                               <span key={index} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                {rol.name || rol}
+                                {typeof rol === 'string' ? rol : (rol.name ?? '')}
                               </span>
                             ))}
                           </div>
@@ -765,7 +769,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(usuario.fechaCreacion)}
+                          {formatDate(usuario.fechaCreacion ?? usuario.createdAt)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
@@ -787,6 +791,10 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'modulos' && (
+          <ModulosManagement />
         )}
 
         {activeTab === 'uso-sistema' && (

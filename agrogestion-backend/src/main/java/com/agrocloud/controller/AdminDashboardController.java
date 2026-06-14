@@ -1,11 +1,12 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.service.AdminDashboardService;
-import com.agrocloud.service.UserService;
-import com.agrocloud.model.entity.User;
+import com.agrocloud.core.application.AdminDashboardService;
+import com.agrocloud.core.application.UserService;
+import com.agrocloud.core.domain.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -18,13 +19,14 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin/dashboard")
 @Tag(name = "Admin Dashboard", description = "Endpoints para el dashboard del administrador")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"})
 public class AdminDashboardController {
 
     @Autowired
+    @Qualifier("adminDashboardServiceCore")
     private AdminDashboardService adminDashboardService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
 
     /**

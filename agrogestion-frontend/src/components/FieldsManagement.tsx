@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { TerraDraw, TerraDrawPolygonMode, TerraDrawRenderMode } from 'terra-draw';
+import { TerraDrawGoogleMapsAdapter } from 'terra-draw-google-maps-adapter';
 import FieldWeatherButton from './FieldWeatherButton';
 import OpenMeteoWeatherWidget from './OpenMeteoWeatherWidget';
 import PermissionGate from './PermissionGate';
 import { loadGoogleMaps, GOOGLE_MAPS_CONFIG } from '../config/googleMaps';
 import { camposService } from '../services/apiServices';
+import { Icon } from './icons';
 
 // Declaraciones de tipos para Google Maps
 declare global {
@@ -33,6 +36,49 @@ interface FormData {
   coordenadas: Array<{lat: number; lng: number}>;
 }
 
+/** Valida que lat/lng estén en rangos válidos (mismas condiciones que el polígono del mapa). */
+function coordenadaValida(lat: number, lng: number): boolean {
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && !Number.isNaN(lat) && !Number.isNaN(lng);
+}
+
+/** Calcula superficie aproximada en hectáreas desde un polígono de coordenadas (misma lógica que el mapa). */
+function calcularSuperficieHectareas(coords: Array<{lat: number; lng: number}>): number {
+  if (!coords || coords.length < 3) return 0;
+  const n = coords.length;
+  let areaKm2 = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const latRadI = (coords[i].lat * Math.PI) / 180;
+    const latRadJ = (coords[j].lat * Math.PI) / 180;
+    const xi = (coords[i].lng * 111320 * Math.cos(latRadI)) / 1000;
+    const yi = (coords[i].lat * 110540) / 1000;
+    const xj = (coords[j].lng * 111320 * Math.cos(latRadJ)) / 1000;
+    const yj = (coords[j].lat * 110540) / 1000;
+    areaKm2 += xi * yj - xj * yi;
+  }
+  areaKm2 = Math.abs(areaKm2) / 2;
+  return Math.round((areaKm2 * 100) * 100) / 100;
+}
+
+/** Extrae coordenadas {lat,lng}[] desde GeoJSON Polygon y calcula superficie en ha. GeoJSON usa [lng,lat]. */
+function extraerCoordenadasYSuperficie(coordsGeo: [number, number][]): { coordenadas: Array<{lat: number; lng: number}>; superficie: number } {
+  if (!coordsGeo || coordsGeo.length < 3) return { coordenadas: [], superficie: 0 };
+  const sinDuplicado = coordsGeo.length > 1 && coordsGeo[0][0] === coordsGeo[coordsGeo.length - 1][0] && coordsGeo[0][1] === coordsGeo[coordsGeo.length - 1][1]
+    ? coordsGeo.slice(0, -1) : coordsGeo;
+  const [a, b] = sinDuplicado[0];
+  const esLngLat = Math.abs(a) <= 180 && Math.abs(b) <= 90;
+  const coordenadas = sinDuplicado.map(([x, y]) => esLngLat ? { lat: y, lng: x } : { lat: x, lng: y });
+  if (coordenadas.length < 3) return { coordenadas: [], superficie: 0 };
+  let superficie = 0;
+  if (window.google?.maps?.geometry?.spherical) {
+    const path = new window.google.maps.MVCArray(coordenadas.map(c => new window.google.maps.LatLng(c.lat, c.lng)));
+    const areaM2 = window.google.maps.geometry.spherical.computeArea(path);
+    superficie = Math.round((areaM2 / 10000) * 100) / 100;
+  }
+  if (superficie === 0) superficie = calcularSuperficieHectareas(coordenadas);
+  return { coordenadas, superficie };
+}
+
 const FieldsManagement: React.FC = () => {
   const [campos, setCampos] = useState<Campo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +89,10 @@ const FieldsManagement: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [map, setMap] = useState<any>(null);
   const [mapModal, setMapModal] = useState<any>(null);
-  const [drawingManager, setDrawingManager] = useState<any>(null);
+  const [terraDraw, setTerraDraw] = useState<TerraDraw | null>(null);
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
     superficie: 0,
@@ -55,13 +102,7 @@ const FieldsManagement: React.FC = () => {
     coordenadas: []
   });
 
-  // Wrapper para setFormData con logging
   const setFormDataWithLog = (newFormData: FormData | ((prev: FormData) => FormData)) => {
-    console.log('=== SET FORMDATA EJECUTADO ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('New formData:', newFormData);
-    console.log('Current formData:', formData);
-    console.log('Stack trace:', new Error().stack);
     setFormData(newFormData);
   };
   const [isEditing, setIsEditing] = useState(false);
@@ -72,6 +113,8 @@ const FieldsManagement: React.FC = () => {
   const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
   const [isDrawingMode, setIsDrawingMode] = useState<boolean>(false);
   const [isButtonClicked, setIsButtonClicked] = useState<boolean>(false);
+  /** 'mapa' = dibujar en Google Maps; 'manual' = ingresar coordenadas a mano (mismas validaciones). */
+  const [modoCoordenadasCampo, setModoCoordenadasCampo] = useState<'mapa' | 'manual'>('mapa');
   const mapRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,22 +122,47 @@ const FieldsManagement: React.FC = () => {
   const isMobile = window.innerWidth <= 768;
 
   useEffect(() => {
-    console.log('=== useEffect INITIAL - Cargando campos e inicializando mapa ===');
     cargarCampos();
-    initializeMap();
+    
+    // Obtener ubicación del usuario automáticamente al iniciar
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(location);
+          setLocationError(null);
+          // Inicializar mapa después de obtener la ubicación
+          initializeMap();
+        },
+        (error) => {
+          console.warn('⚠️ No se pudo obtener la ubicación al iniciar:', error.message);
+          setLocationError('No se pudo obtener la ubicación. Se usará ubicación por defecto.');
+          // Inicializar mapa con ubicación por defecto
+          initializeMap();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 300000 // 5 minutos - usar ubicación en caché si está disponible
+        }
+      );
+    } else {
+      initializeMap();
+    }
   }, []);
 
   // Limpiar mapa cuando se cierre el modal
   useEffect(() => {
-    console.log('=== useEffect MODAL CLEANUP ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('showAddModal:', showAddModal, 'showEditModal:', showEditModal, 'showMapModal:', showMapModal);
-    console.log('Stack trace:', new Error().stack);
     if (!showAddModal && !showEditModal && !showMapModal) {
-      console.log('Cleaning up map state');
       setMap(null);
       setMapModal(null);
-      setDrawingManager(null);
+      setTerraDraw(prev => {
+        if (prev) try { prev.stop(); } catch { /* ignorar */ }
+        return null;
+      });
       setIsDrawingMode(false);
     }
   }, [showAddModal, showEditModal, showMapModal]);
@@ -102,12 +170,27 @@ const FieldsManagement: React.FC = () => {
   // Inicializar mapa en modal de detalles cuando se abre
   useEffect(() => {
     if (showDetailsModal && selectedField && mapLoaded) {
-      // Pequeño delay para asegurar que el DOM esté listo
       setTimeout(() => {
         initializeMapInDetails(selectedField);
       }, 100);
     }
   }, [showDetailsModal, selectedField, mapLoaded]);
+
+  // Inicializar mapa en modal agregar/editar cuando se abre con modo "mapa"
+  useEffect(() => {
+    if (!(showAddModal || showEditModal) || modoCoordenadasCampo !== 'mapa' || !mapLoaded) return;
+    const init = () => {
+      if (mapRef.current && window.google) {
+        if (showEditModal && selectedField?.coordenadas && selectedField.coordenadas.length > 0) {
+          initializeMapInForm(selectedField.coordenadas, true);
+        } else {
+          initializeMapInForm(undefined, false);
+        }
+      }
+    };
+    const t = setTimeout(init, 300);
+    return () => clearTimeout(t);
+  }, [showAddModal, showEditModal, modoCoordenadasCampo, mapLoaded, selectedField]);
 
   // Cerrar resultados de búsqueda al hacer clic fuera
   useEffect(() => {
@@ -123,11 +206,12 @@ const FieldsManagement: React.FC = () => {
     };
   }, []);
 
+  // Función auxiliar para obtener el centro del mapa (userLocation si está disponible, sino DEFAULT_CENTER)
+  const getMapCenter = (): {lat: number; lng: number} => {
+    return userLocation || GOOGLE_MAPS_CONFIG.DEFAULT_CENTER;
+  };
+
   const getUserLocation = () => {
-    console.log('=== GET USER LOCATION INICIADO ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('getUserLocation called, showMapModal:', showMapModal, 'mapModal:', !!mapModal, 'map:', !!map);
-    console.log('Current formData before getUserLocation:', formData);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -137,28 +221,20 @@ const FieldsManagement: React.FC = () => {
           };
           setUserLocation(location);
           setLocationError(null);
-          console.log('=== UBICACIÓN OBTENIDA ===');
-          console.log('Timestamp:', new Date().toISOString());
-          console.log('Ubicación del usuario obtenida:', location);
-          console.log('formData after setting location:', formData);
-          
           // Centrar el mapa en la ubicación del usuario
           const currentMap = showMapModal ? mapModal : map;
-          const currentDrawingManager = showMapModal ? null : drawingManager;
+          const currentTerraDraw = showMapModal ? null : terraDraw;
           
           if (currentMap) {
             currentMap.setCenter(location);
             currentMap.setZoom(15);
             
             // Si estamos en el modal de agregar/editar campo, activar modo de dibujo
-            if (!showMapModal && currentDrawingManager) {
-              // Activar modo de dibujo de polígono
-              currentDrawingManager.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
-              setIsDrawingMode(true);
-              console.log('=== MODO DE DIBUJO ACTIVADO ===');
-              console.log('Timestamp:', new Date().toISOString());
-              console.log('Modo de dibujo de polígono activado');
-              console.log('formData después de activar modo de dibujo:', formData);
+            if (!showMapModal && currentTerraDraw) {
+              setTimeout(() => {
+                currentTerraDraw.setMode('polygon');
+                setIsDrawingMode(true);
+              }, 100);
             }
           }
         },
@@ -173,16 +249,11 @@ const FieldsManagement: React.FC = () => {
         }
       );
     } else {
-      console.log('Geolocalización no soportada por este navegador');
       setLocationError('Geolocalización no soportada por este navegador.');
     }
-    console.log('=== GET USER LOCATION TERMINADO ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('formData final después de getUserLocation:', formData);
   };
 
   const centerMapOnAllFields = () => {
-    console.log('centerMapOnAllFields called, showMapModal:', showMapModal, 'mapModal:', !!mapModal, 'map:', !!map, 'campos:', campos.length);
     const currentMap = showMapModal ? mapModal : map;
     if (!currentMap || !campos.length) return;
 
@@ -191,10 +262,7 @@ const FieldsManagement: React.FC = () => {
       campo.coordenadas && campo.coordenadas.length > 0
     );
 
-    if (camposConCoordenadas.length === 0) {
-      console.log('No hay campos con coordenadas para mostrar');
-      return;
-    }
+    if (camposConCoordenadas.length === 0) return;
 
     if (camposConCoordenadas.length === 1) {
       // Si solo hay un campo, centrar en él
@@ -375,10 +443,23 @@ const FieldsManagement: React.FC = () => {
   };
 
   const initializeMap = () => {
-    loadGoogleMaps(() => {
-      console.log('Google Maps cargado, inicializando mapa...');
-      setMapLoaded(true);
-    });
+    try {
+      loadGoogleMaps(() => {
+        // Verificar que Google Maps realmente se cargó
+        if (window.google && window.google.maps) {
+          setMapLoaded(true);
+          setMapError(null);
+        } else {
+          console.warn('⚠️ Google Maps no está disponible');
+          setMapError('Google Maps no está disponible. Verifica que la API key sea válida y que la facturación esté habilitada.');
+          setMapLoaded(false);
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error inicializando Google Maps:', error);
+      setMapError('Error al cargar Google Maps. La aplicación continuará funcionando sin mapas.');
+      setMapLoaded(false);
+    }
   };
 
   const cargarCampos = async () => {
@@ -409,8 +490,6 @@ const FieldsManagement: React.FC = () => {
       }));
       
       setCampos(camposMapeados);
-      console.log('✅ Campos cargados exitosamente:', camposMapeados.length);
-      
     } catch (error) {
       console.error('❌ Error cargando campos:', error);
       setError('Error al cargar los campos. Por favor, inténtalo de nuevo.');
@@ -462,34 +541,12 @@ const FieldsManagement: React.FC = () => {
     });
     setIsEditing(true);
     setShowEditModal(true);
-    // Scroll al modal
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 100);
-    // Inicializar mapa cuando se abre el modal
-    setTimeout(() => {
-      if (mapLoaded && mapRef.current) {
-        // Limpiar mapa existente si hay uno
-        if (map) {
-          setMap(null);
-          setDrawingManager(null);
-        }
-        initializeMapInForm(campo.coordenadas, true); // Pasar coordenadas y modo edición
-      }
-    }, 100);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+    // El mapa se inicializa en el useEffect cuando el modal y modoCoordenadasCampo están listos
   };
 
   const handleAgregarCampo = () => {
-    console.log('=== HANDLE AGREGAR CAMPO EJECUTADO ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('isButtonClicked:', isButtonClicked);
-    console.log('Stack trace:', new Error().stack);
-    
-    // Prevenir ejecuciones múltiples
-    if (isButtonClicked) {
-      console.log('⚠️ PREVENIENDO DOBLE CLIC - handleAgregarCampo ya se ejecutó');
-      return;
-    }
+    if (isButtonClicked) return;
     
     setIsButtonClicked(true);
     setFormDataWithLog({
@@ -502,21 +559,8 @@ const FieldsManagement: React.FC = () => {
     });
     setIsEditing(false);
     setShowAddModal(true);
-    // Scroll al modal
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 100);
-    // Inicializar mapa cuando se abre el modal
-    setTimeout(() => {
-      if (mapLoaded && mapRef.current) {
-        // Limpiar mapa existente si hay uno
-        if (map) {
-          setMap(null);
-          setDrawingManager(null);
-        }
-        initializeMapInForm(undefined, false);
-      }
-    }, 100);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+    // El mapa se inicializa en el useEffect cuando el modal y modoCoordenadasCampo están listos
   };
 
   const handleVerMapa = () => {
@@ -541,133 +585,152 @@ const FieldsManagement: React.FC = () => {
       mapRef.current.innerHTML = '';
     }
 
-    // Usar ubicación por defecto
-    const mapInstance = new window.google.maps.Map(mapRef.current, {
-      center: GOOGLE_MAPS_CONFIG.DEFAULT_CENTER,
-      zoom: GOOGLE_MAPS_CONFIG.DEFAULT_ZOOM,
-      mapTypeId: 'satellite',
-      mapTypeControl: true,
-      streetViewControl: false,
-      fullscreenControl: true
-    });
+    // Función auxiliar para inicializar el mapa completo con un centro específico
+    const initializeMapWithLocation = (center: {lat: number; lng: number} = getMapCenter()) => {
+      const mapInstance = new window.google.maps.Map(mapRef.current!, {
+        center: center,
+        zoom: GOOGLE_MAPS_CONFIG.DEFAULT_ZOOM,
+        mapTypeId: 'satellite',
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+        disableDoubleClickZoom: true
+      });
 
-    setMapModal(mapInstance);
+      setMapModal(mapInstance);
+      setUserLocation(center);
 
-    // Agregar Drawing Manager
-    const drawingManagerInstance = new window.google.maps.drawing.DrawingManager({
-      drawingMode: null,
-      drawingControl: true,
-      drawingControlOptions: {
-        position: window.google.maps.ControlPosition.TOP_CENTER,
-        drawingModes: [window.google.maps.drawing.OverlayType.POLYGON]
-      }
-    });
+      // TerraDraw para dibujar polígonos (reemplaza DrawingManager deprecado)
+      const adapter = new TerraDrawGoogleMapsAdapter({ map: mapInstance, lib: window.google.maps, coordinatePrecision: 9 });
+      const drawInstance = new TerraDraw({
+        adapter,
+        modes: [
+          new TerraDrawPolygonMode({
+            showCoordinatePoints: true,
+            styles: {
+              fillColor: '#4CAF50',
+              outlineColor: '#4CAF50',
+              outlineWidth: 2
+            }
+          }),
+          new TerraDrawRenderMode({ modeName: 'static', styles: {} } as ConstructorParameters<typeof TerraDrawRenderMode>[0])
+        ]
+      });
+      // Iniciar TerraDraw cuando el mapa esté completamente renderizado (evita addEventListener null)
+      const iniciarTerraDrawModal = () => {
+        drawInstance.start();
+        drawInstance.setMode('static');
+        setTerraDraw(drawInstance);
+      };
+      window.google.maps.event.addListenerOnce(mapInstance, 'idle', iniciarTerraDrawModal);
 
-    drawingManagerInstance.setMap(mapInstance);
-    setDrawingManager(drawingManagerInstance);
-
-    // Dibujar campos existentes
-    campos.forEach((campo, index) => {
-      if (campo.coordenadas.length > 2) {
-        const polygon = new window.google.maps.Polygon({
-          paths: campo.coordenadas,
-          strokeColor: getEstadoColor(campo.estado),
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          fillColor: getEstadoColor(campo.estado),
-          fillOpacity: 0.35,
-          map: mapInstance
-        });
-
-        // Info window para cada campo
+      drawInstance.on('finish', (id: string | number, context: { action?: string }) => {
+        if (context?.action !== 'draw') return;
+        const snapshot = drawInstance.getSnapshot();
+        const poligono = snapshot.find((f: any) => f.id === id || f.geometry?.type === 'Polygon');
+        if (!poligono?.geometry?.coordinates?.[0]) return;
+        const coordsGeo = poligono.geometry.coordinates[0] as [number, number][];
+        const { coordenadas, superficie } = extraerCoordenadasYSuperficie(coordsGeo);
+        if (coordenadas.length < 3) return;
+        setFormData(prev => ({ ...prev, coordenadas, superficie }));
+        requestAnimationFrame(() => drawInstance.setMode('static'));
+        const bounds = new window.google.maps.LatLngBounds();
+        coordenadas.forEach((c: {lat: number; lng: number}) => bounds.extend(new window.google.maps.LatLng(c.lat, c.lng)));
+        const superficieTexto = superficie > 0 ? `${superficie} ha` : '< 0.01 ha';
         const infoWindow = new window.google.maps.InfoWindow({
-          content: `
-            <div style="padding: 15px; min-width: 250px; font-family: Arial, sans-serif;">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                <div style="
-                  width: 12px; 
-                  height: 12px; 
-                  background-color: ${getEstadoColor(campo.estado)}; 
-                  border-radius: 50%;
-                  border: 1px solid ${getEstadoColor(campo.estado)};
-                "></div>
-                <h3 style="margin: 0; color: #1f2937; font-size: 16px;">${campo.nombre}</h3>
-              </div>
-              <div style="margin-bottom: 8px;">
-                <span style="color: #6b7280; font-size: 12px;"><strong>📍 Ubicación:</strong></span>
-                <div style="color: #374151; font-size: 13px; margin-top: 2px;">${campo.ubicacion}</div>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                <div>
-                  <span style="color: #6b7280; font-size: 12px;"><strong>📏 Superficie:</strong></span>
-                  <div style="color: #374151; font-size: 13px;">${campo.superficie.toFixed(2)} ha</div>
+          content: `<div style="padding: 10px;"><h4 style="margin: 0 0 10px 0;">Nuevo Campo</h4><p style="margin: 5px 0;"><strong>Superficie:</strong> ${superficieTexto}</p><p style="margin: 5px 0;"><strong>Coordenadas:</strong> ${coordenadas.length} puntos</p></div>`
+        });
+        infoWindow.setPosition(bounds.getCenter());
+        infoWindow.open(mapInstance);
+      });
+
+      // Dibujar campos existentes
+      campos.forEach((campo, index) => {
+        if (campo.coordenadas.length > 2) {
+          const polygon = new window.google.maps.Polygon({
+            paths: campo.coordenadas,
+            strokeColor: getEstadoColor(campo.estado),
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: getEstadoColor(campo.estado),
+            fillOpacity: 0.35,
+            map: mapInstance
+          });
+
+          // Info window para cada campo
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: `
+              <div style="padding: 15px; min-width: 250px; font-family: Arial, sans-serif;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <div style="
+                    width: 12px; 
+                    height: 12px; 
+                    background-color: ${getEstadoColor(campo.estado)}; 
+                    border-radius: 50%;
+                    border: 1px solid ${getEstadoColor(campo.estado)};
+                  "></div>
+                  <h3 style="margin: 0; color: #1f2937; font-size: 16px;">${campo.nombre}</h3>
                 </div>
-                <div>
-                  <span style="color: #6b7280; font-size: 12px;"><strong>🏷️ Estado:</strong></span>
-                  <div style="color: #374151; font-size: 13px;">${getEstadoTexto(campo.estado)}</div>
-                </div>
-              </div>
-              ${campo.descripcion ? `
                 <div style="margin-bottom: 8px;">
-                  <span style="color: #6b7280; font-size: 12px;"><strong>📝 Descripción:</strong></span>
-                  <div style="color: #374151; font-size: 13px; margin-top: 2px;">${campo.descripcion}</div>
+                  <span style="color: #6b7280; font-size: 12px;"><strong>📍 Ubicación:</strong></span>
+                  <div style="color: #374151; font-size: 13px; margin-top: 2px;">${campo.ubicacion}</div>
                 </div>
-              ` : ''}
-              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
-                <span style="color: #6b7280; font-size: 11px;">
-                  🗓️ Creado: ${formatDate(campo.fechaCreacion)}
-                </span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                  <div>
+                    <span style="color: #6b7280; font-size: 12px;"><strong>📏 Superficie:</strong></span>
+                    <div style="color: #374151; font-size: 13px;">${campo.superficie.toFixed(2)} ha</div>
+                  </div>
+                  <div>
+                    <span style="color: #6b7280; font-size: 12px;"><strong>🏷️ Estado:</strong></span>
+                    <div style="color: #374151; font-size: 13px;">${getEstadoTexto(campo.estado)}</div>
+                  </div>
+                </div>
+                ${campo.descripcion ? `
+                  <div style="margin-bottom: 8px;">
+                    <span style="color: #6b7280; font-size: 12px;"><strong>📝 Descripción:</strong></span>
+                    <div style="color: #374151; font-size: 13px; margin-top: 2px;">${campo.descripcion}</div>
+                  </div>
+                ` : ''}
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+                  <span style="color: #6b7280; font-size: 11px;">
+                    🗓️ Creado: ${formatDate(campo.fechaCreacion)}
+                  </span>
+                </div>
               </div>
-            </div>
-          `
-        });
+            `
+          });
 
-        polygon.addListener('click', () => {
-          infoWindow.setPosition(polygon.getPath().getArray()[0]);
-          infoWindow.open(mapInstance);
-        });
-      }
-    });
-
-    // Escuchar eventos de dibujo
-    window.google.maps.event.addListener(drawingManagerInstance, 'polygoncomplete', (polygon: any) => {
-      const path = polygon.getPath();
-      const coordinates = path.getArray().map((latLng: any) => ({
-        lat: latLng.lat(),
-        lng: latLng.lng()
-      }));
-
-      // Calcular superficie aproximada
-      const area = window.google.maps.geometry.spherical.computeArea(path);
-      const superficie = Math.round((area / 10000) * 100) / 100; // Convertir a hectáreas con 2 decimales
-
-      setFormData(prev => ({
-        ...prev,
-        coordenadas: coordinates,
-        superficie: superficie
-      }));
-
-      // Calcular el centro del polígono
-      const bounds = new window.google.maps.LatLngBounds();
-      coordinates.forEach((coord: {lat: number; lng: number}) => {
-        bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
+          polygon.addListener('click', () => {
+            infoWindow.setPosition(polygon.getPath().getArray()[0]);
+            infoWindow.open(mapInstance);
+          });
+        }
       });
-      const center = bounds.getCenter();
+    };
 
-      // Agregar marcador con información
-      const infoWindow = new window.google.maps.InfoWindow({
-        content: `
-          <div style="padding: 10px;">
-            <h4 style="margin: 0 0 10px 0;">Nuevo Campo</h4>
-            <p style="margin: 5px 0;"><strong>Superficie:</strong> ${superficie} ha</p>
-            <p style="margin: 5px 0;"><strong>Coordenadas:</strong> ${coordinates.length} puntos</p>
-          </div>
-        `
-      });
-
-      infoWindow.setPosition(center);
-      infoWindow.open(mapInstance);
-    });
+    // Intentar obtener ubicación del usuario
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          initializeMapWithLocation(location);
+        },
+          (error) => {
+            console.warn('⚠️ No se pudo obtener la ubicación del usuario:', error.message);
+            initializeMapWithLocation();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      initializeMapWithLocation();
+    }
   };
 
   const initializeMapInForm = (existingCoordinates?: Array<{lat: number; lng: number}>, isEditMode?: boolean) => {
@@ -678,101 +741,115 @@ const FieldsManagement: React.FC = () => {
       mapRef.current.innerHTML = '';
     }
 
-    // Usar ubicación por defecto
-    const mapInstance = new window.google.maps.Map(mapRef.current, {
-      center: GOOGLE_MAPS_CONFIG.DEFAULT_CENTER,
-      zoom: 15,
-      mapTypeId: 'satellite',
-      mapTypeControl: true,
-      streetViewControl: false,
-      fullscreenControl: true
-    });
+    // Función auxiliar para inicializar el mapa completo con un centro específico
+    const createMapInstance = (center: {lat: number; lng: number}) => {
+      const mapInstance = new window.google.maps.Map(mapRef.current!, {
+        center: center,
+        zoom: 15,
+        mapTypeId: 'satellite',
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+        disableDoubleClickZoom: true
+      });
 
-    setMap(mapInstance);
+      setMap(mapInstance);
+      setUserLocation(center);
 
-    // Agregar Drawing Manager
-    const drawingManagerInstance = new window.google.maps.drawing.DrawingManager({
-      drawingMode: null,
-      drawingControl: true,
-      drawingControlOptions: {
-        position: window.google.maps.ControlPosition.TOP_CENTER,
-        drawingModes: [window.google.maps.drawing.OverlayType.POLYGON]
+      // TerraDraw para dibujar polígonos (reemplaza DrawingManager deprecado)
+      const adapter = new TerraDrawGoogleMapsAdapter({ map: mapInstance, lib: window.google.maps, coordinatePrecision: 9 });
+      const drawInstance = new TerraDraw({
+        adapter,
+        modes: [
+          new TerraDrawPolygonMode({
+            showCoordinatePoints: true,
+            styles: {
+              fillColor: getEstadoColor(formData.estado),
+              outlineColor: getEstadoColor(formData.estado),
+              outlineWidth: 2
+            }
+          }),
+          new TerraDrawRenderMode({ modeName: 'static', styles: {} } as ConstructorParameters<typeof TerraDrawRenderMode>[0])
+        ]
+      });
+      // Iniciar TerraDraw cuando el mapa esté completamente renderizado (evita addEventListener null)
+      const iniciarTerraDraw = () => {
+        drawInstance.start();
+        drawInstance.setMode('static');
+        setTerraDraw(drawInstance);
+      };
+      window.google.maps.event.addListenerOnce(mapInstance, 'idle', iniciarTerraDraw);
+
+      // Si estamos editando, mostrar el polígono existente
+      const coordinatesToUse = existingCoordinates || formData.coordenadas;
+      if (isEditMode && coordinatesToUse.length > 2) {
+        const polygon = new window.google.maps.Polygon({
+          paths: coordinatesToUse,
+          strokeColor: getEstadoColor(formData.estado),
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: getEstadoColor(formData.estado),
+          fillOpacity: 0.35,
+          map: mapInstance
+        });
+
+        const bounds = new window.google.maps.LatLngBounds();
+        coordinatesToUse.forEach(coord => {
+          bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
+        });
+        mapInstance.fitBounds(bounds);
       }
-    });
 
-    drawingManagerInstance.setMap(mapInstance);
-    setDrawingManager(drawingManagerInstance);
-
-    // Si estamos editando, mostrar el polígono existente
-    const coordinatesToUse = existingCoordinates || formData.coordenadas;
-    if (isEditMode && coordinatesToUse.length > 2) {
-      const polygon = new window.google.maps.Polygon({
-        paths: coordinatesToUse,
-        strokeColor: getEstadoColor(formData.estado),
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: getEstadoColor(formData.estado),
-        fillOpacity: 0.35,
-        map: mapInstance
+      drawInstance.on('finish', (id: string | number, context: { action?: string }) => {
+        if (context?.action !== 'draw') return;
+        const snapshot = drawInstance.getSnapshot();
+        const poligono = snapshot.find((f: any) => f.id === id || f.geometry?.type === 'Polygon');
+        if (!poligono?.geometry?.coordinates?.[0]) return;
+        const coordsGeo = poligono.geometry.coordinates[0] as [number, number][];
+        const { coordenadas, superficie } = extraerCoordenadasYSuperficie(coordsGeo);
+        if (coordenadas.length < 3) return;
+        setFormData(prev => ({ ...prev, coordenadas, superficie }));
+        setIsDrawingMode(false);
+        requestAnimationFrame(() => drawInstance.setMode('static'));
+        const bounds = new window.google.maps.LatLngBounds();
+        coordenadas.forEach((c: {lat: number; lng: number}) => bounds.extend(new window.google.maps.LatLng(c.lat, c.lng)));
+        const superficieTexto = superficie > 0 ? `${superficie} ha` : '< 0.01 ha';
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `<div style="padding: 10px;"><h4 style="margin: 0 0 10px 0;">Campo Dibujado</h4><p style="margin: 5px 0;"><strong>Superficie:</strong> ${superficieTexto}</p><p style="margin: 5px 0;"><strong>Coordenadas:</strong> ${coordenadas.length} puntos</p></div>`
+        });
+        infoWindow.setPosition(bounds.getCenter());
+        infoWindow.open(mapInstance);
       });
+    };
 
-      // Ajustar el zoom para mostrar el polígono
-      const bounds = new window.google.maps.LatLngBounds();
-      coordinatesToUse.forEach(coord => {
-        bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
-      });
-      mapInstance.fitBounds(bounds);
+    // Si estamos editando y hay coordenadas existentes, usarlas directamente
+    if (isEditMode && existingCoordinates && existingCoordinates.length > 0) {
+      createMapInstance(existingCoordinates[0]);
+    } else {
+      // Intentar obtener la ubicación del usuario automáticamente
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const location = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            createMapInstance(location);
+          },
+          (error) => {
+            console.warn('⚠️ No se pudo obtener la ubicación del usuario:', error.message);
+            createMapInstance(getMapCenter());
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        createMapInstance(getMapCenter());
+      }
     }
-
-    // Escuchar eventos de dibujo
-    window.google.maps.event.addListener(drawingManagerInstance, 'polygoncomplete', (polygon: any) => {
-      const path = polygon.getPath();
-      const coordinates = path.getArray().map((latLng: any) => ({
-        lat: latLng.lat(),
-        lng: latLng.lng()
-      }));
-
-      // Calcular superficie aproximada
-      const area = window.google.maps.geometry.spherical.computeArea(path);
-      const superficie = Math.round((area / 10000) * 100) / 100; // Convertir a hectáreas con 2 decimales
-
-      setFormData(prev => ({
-        ...prev,
-        coordenadas: coordinates,
-        superficie: superficie
-      }));
-
-      // Desactivar modo de dibujo
-      setIsDrawingMode(false);
-      drawingManagerInstance.setDrawingMode(null);
-
-      // Cambiar color del polígono según el estado
-      polygon.setOptions({
-        strokeColor: getEstadoColor(formData.estado),
-        fillColor: getEstadoColor(formData.estado)
-      });
-
-      // Calcular el centro del polígono
-      const bounds = new window.google.maps.LatLngBounds();
-      coordinates.forEach((coord: {lat: number; lng: number}) => {
-        bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
-      });
-      const center = bounds.getCenter();
-
-      // Mostrar información del área
-      const infoWindow = new window.google.maps.InfoWindow({
-        content: `
-          <div style="padding: 10px;">
-            <h4 style="margin: 0 0 10px 0;">Campo Dibujado</h4>
-            <p style="margin: 5px 0;"><strong>Superficie:</strong> ${superficie} ha</p>
-            <p style="margin: 5px 0;"><strong>Coordenadas:</strong> ${coordinates.length} puntos</p>
-          </div>
-        `
-      });
-
-      infoWindow.setPosition(center);
-      infoWindow.open(mapInstance);
-    });
   };
 
   const handleSaveField = async () => {
@@ -788,7 +865,12 @@ const FieldsManagement: React.FC = () => {
     }
 
     if (!formData.coordenadas || formData.coordenadas.length < 3) {
-      alert('⚠️ Debes dibujar el polígono del campo en el mapa para definir su área');
+      alert('⚠️ Debes definir el polígono del campo: dibuja en el mapa o ingresa al menos 3 coordenadas (lat/lng) válidas.');
+      return;
+    }
+    const algunaInvalida = formData.coordenadas.some(c => !coordenadaValida(c.lat, c.lng));
+    if (algunaInvalida) {
+      alert('⚠️ Todas las coordenadas deben ser válidas: latitud entre -90 y 90, longitud entre -180 y 180.');
       return;
     }
 
@@ -872,14 +954,11 @@ const FieldsManagement: React.FC = () => {
           return;
         }
 
-        console.log('Intentando eliminar campo con ID:', campoId);
         
         await camposService.eliminar(campoId);
 
-        console.log('Campo eliminado exitosamente');
         
         // Con eliminación lógica, recargar la lista de campos para reflejar el cambio
-        console.log('Campo eliminado exitosamente (eliminación lógica)');
         alert('Campo eliminado correctamente');
         // Recargar la lista de campos para mostrar solo los activos
         cargarCampos();
@@ -891,8 +970,6 @@ const FieldsManagement: React.FC = () => {
   };
 
   const closeModal = () => {
-    console.log('=== CLOSE MODAL EJECUTADO ===');
-    console.log('Timestamp:', new Date().toISOString());
     setShowDetailsModal(false);
     setShowEditModal(false);
     setShowAddModal(false);
@@ -907,22 +984,52 @@ const FieldsManagement: React.FC = () => {
     // Limpiar estados del mapa
     setMap(null);
     setMapModal(null);
-    setDrawingManager(null);
+    setTerraDraw(prev => {
+      if (prev) {
+        try { prev.stop(); } catch { /* ignorar */ }
+      }
+      return null;
+    });
     setUserLocation(null);
     setLocationError(null);
     setIsDrawingMode(false);
+    setModoCoordenadasCampo('mapa');
   };
 
   const handleInputChange = (field: keyof FormData, value: any) => {
-    console.log('=== HANDLE INPUT CHANGE EJECUTADO ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('Field:', field, 'Value:', value);
-    console.log('Current formData:', formData);
-    console.log('Stack trace:', new Error().stack);
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  /** Actualiza una coordenada en modo manual y recalcula superficie si hay ≥3 puntos válidos. */
+  const actualizarCoordenadaManual = (indice: number, campo: 'lat' | 'lng', valorStr: string) => {
+    const valor = parseFloat(valorStr);
+    setFormData(prev => {
+      const nuevaLista = [...(prev.coordenadas || [])];
+      if (!nuevaLista[indice]) nuevaLista[indice] = { lat: 0, lng: 0 };
+      nuevaLista[indice] = { ...nuevaLista[indice], [campo]: Number.isNaN(valor) ? 0 : valor };
+      const todasValidas = nuevaLista.length >= 3 && nuevaLista.every(c => coordenadaValida(c.lat, c.lng));
+      const superficie = todasValidas ? calcularSuperficieHectareas(nuevaLista) : prev.superficie;
+      return { ...prev, coordenadas: nuevaLista, superficie };
+    });
+  };
+
+  const agregarPuntoManual = () => {
+    setFormData(prev => ({
+      ...prev,
+      coordenadas: [...(prev.coordenadas || []), { lat: 0, lng: 0 }]
+    }));
+  };
+
+  const quitarPuntoManual = (indice: number) => {
+    setFormData(prev => {
+      const nuevaLista = prev.coordenadas.filter((_, i) => i !== indice);
+      const todasValidas = nuevaLista.length >= 3 && nuevaLista.every(c => coordenadaValida(c.lat, c.lng));
+      const superficie = todasValidas ? calcularSuperficieHectareas(nuevaLista) : prev.superficie;
+      return { ...prev, coordenadas: nuevaLista, superficie };
+    });
   };
 
   if (loading) {
@@ -962,7 +1069,7 @@ const FieldsManagement: React.FC = () => {
           fontSize: '1.5rem', 
           marginBottom: '1rem' 
         }}>
-          ❌ Error
+          <Icon name="XCircle" size={24} style={{ marginRight: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }} /> Error
         </div>
         <p style={{ color: '#666' }}>{error}</p>
         <button 
@@ -993,7 +1100,7 @@ const FieldsManagement: React.FC = () => {
         borderRadius: '10px', 
         marginBottom: '20px' 
       }}>
-        <h1 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>🏞️ Gestión de Campos</h1>
+        <h1 style={{ margin: '0 0 10px 0', fontSize: '24px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Icon name="Map" size={28} /> Gestión de Campos</h1>
         <p style={{ margin: '0', opacity: '0.9' }}>
           Administra los campos agrícolas con información meteorológica específica por ubicación
         </p>
@@ -1069,12 +1176,6 @@ const FieldsManagement: React.FC = () => {
         <PermissionGate permission="canCreateFields">
           <button 
             onClick={(e) => {
-              console.log('=== BOTÓN AGREGAR CAMPO CLICKEADO ===');
-              console.log('Timestamp:', new Date().toISOString());
-              console.log('Event:', e);
-              console.log('Event type:', e.type);
-              console.log('Event target:', e.target);
-              console.log('Stack trace:', new Error().stack);
               e.preventDefault();
               e.stopPropagation();
               handleAgregarCampo();
@@ -1092,7 +1193,7 @@ const FieldsManagement: React.FC = () => {
               gap: '0.5rem'
             }}
           >
-            ➕ Agregar Campo
+            <Icon name="Plus" size={20} style={{ display: 'inline-block' }} /> Agregar Campo
           </button>
         </PermissionGate>
         
@@ -1111,7 +1212,7 @@ const FieldsManagement: React.FC = () => {
             gap: '0.5rem'
           }}
         >
-          🗺️ Ver Mapa
+          <Icon name="Map" size={20} style={{ display: 'inline-block' }} /> Ver Mapa
         </button>
       </div>
 
@@ -1175,7 +1276,7 @@ const FieldsManagement: React.FC = () => {
               }}>
                 <div>
                   <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                    📍 Ubicación
+                    <Icon name="MapPin" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Ubicación
                   </div>
                   <div style={{ fontSize: '0.95rem', color: '#374151' }}>
                     {campo.ubicacion}
@@ -1184,7 +1285,7 @@ const FieldsManagement: React.FC = () => {
                 
                 <div>
                   <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                    📏 Superficie
+                    <Icon name="Ruler" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Superficie
                   </div>
                   <div style={{ fontSize: '0.95rem', color: '#374151' }}>
                     {campo.superficie.toFixed(2)} hectáreas
@@ -1193,7 +1294,7 @@ const FieldsManagement: React.FC = () => {
                 
                 <div>
                   <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                    📅 Fecha de Creación
+                    <Icon name="CalendarDays" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Fecha de Creación
                   </div>
                   <div style={{ fontSize: '0.95rem', color: '#374151' }}>
                     {formatDate(campo.fechaCreacion)}
@@ -1202,7 +1303,7 @@ const FieldsManagement: React.FC = () => {
                 
                 <div>
                   <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                    🗺️ Coordenadas
+                    <Icon name="Map" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Coordenadas
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#374151', fontFamily: 'monospace' }}>
                     {campo.coordenadas[0]?.lat.toFixed(4)}, {campo.coordenadas[0]?.lng.toFixed(4)}
@@ -1219,7 +1320,7 @@ const FieldsManagement: React.FC = () => {
                   marginBottom: '0.75rem'
                 }}>
                   <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                    📝 Descripción
+                    <Icon name="FileText" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Descripción
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#374151' }}>
                     {campo.descripcion}
@@ -1248,7 +1349,7 @@ const FieldsManagement: React.FC = () => {
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
                 >
-                  👁️ Ver Detalles
+                  <Icon name="Eye" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Ver Detalles
                 </button>
                 
                 <PermissionGate permission="canEditFields">
@@ -1267,7 +1368,7 @@ const FieldsManagement: React.FC = () => {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
                   >
-                    ✏️ Editar
+                    <Icon name="Pencil" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Editar
                   </button>
                 </PermissionGate>
                 
@@ -1287,7 +1388,7 @@ const FieldsManagement: React.FC = () => {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
                   >
-                    🗑️ Eliminar
+                    <Icon name="Trash2" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Eliminar
                   </button>
                 </PermissionGate>
               </div>
@@ -1346,11 +1447,11 @@ const FieldsManagement: React.FC = () => {
             }}>
               <div>
                 <h2 style={{ margin: 0, color: '#1f2937' }}>
-                  🗺️ Mapa de Campos
+                  <Icon name="Map" size={24} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> Mapa de Campos
                 </h2>
                 {locationError && (
                   <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
-                    ⚠️ {locationError}
+                    <Icon name="AlertTriangle" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> {locationError}
                   </div>
                 )}
               </div>
@@ -1366,7 +1467,7 @@ const FieldsManagement: React.FC = () => {
                     cursor: 'pointer'
                   }}
                 >
-                  ✕ Cerrar
+                  <Icon name="X" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Cerrar
                 </button>
               </div>
             </div>
@@ -1381,7 +1482,7 @@ const FieldsManagement: React.FC = () => {
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="🔍 Buscar lugar, dirección, ciudad..."
+                  placeholder="Buscar lugar, dirección, ciudad..."
                   value={searchQuery}
                   onChange={handleSearchInputChange}
                   style={{
@@ -1424,7 +1525,7 @@ const FieldsManagement: React.FC = () => {
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                       >
                         <div style={{ fontWeight: '500', color: '#1f2937', marginBottom: '0.25rem' }}>
-                          📍 {place.name}
+                          <Icon name="MapPin" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> {place.name}
                         </div>
                         <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                           {place.formatted_address}
@@ -1464,7 +1565,7 @@ const FieldsManagement: React.FC = () => {
                 opacity: 0.95
               }}>
                 <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', color: '#1f2937' }}>
-                  🎨 Estados de Campos
+                  <Icon name="Palette" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Estados de Campos
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1515,7 +1616,7 @@ const FieldsManagement: React.FC = () => {
                 opacity: 0.95
               }}>
                 <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', color: '#1f2937' }}>
-                  📊 Resumen de Campos
+                  <Icon name="BarChart" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Resumen de Campos
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <div style={{ fontSize: '0.75rem', color: '#374151' }}>
@@ -1542,12 +1643,6 @@ const FieldsManagement: React.FC = () => {
               }}>
                 <button
                   onClick={(e) => {
-                    console.log('=== BOTÓN MI UBICACIÓN CLICKEADO ===');
-                    console.log('Event:', e);
-                    console.log('Current formData:', formData);
-                    console.log('showAddModal:', showAddModal);
-                    console.log('showEditModal:', showEditModal);
-                    console.log('isEditing:', isEditing);
                     e.stopPropagation();
                     getUserLocation();
                   }}
@@ -1567,7 +1662,7 @@ const FieldsManagement: React.FC = () => {
                   }}
                   title="Centrar en mi ubicación"
                 >
-                  📍 Mi ubicación
+                  <Icon name="MapPin" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Mi ubicación
                 </button>
                 
                 <button
@@ -1591,7 +1686,7 @@ const FieldsManagement: React.FC = () => {
                   }}
                   title="Centrar en todos los campos"
                 >
-                  🎯 Todos los campos
+                  <Icon name="Target" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Todos los campos
                 </button>
               </div>
               
@@ -1602,18 +1697,41 @@ const FieldsManagement: React.FC = () => {
                   left: '50%',
                   transform: 'translate(-50%, -50%)',
                   textAlign: 'center',
-                  color: '#666'
+                  color: '#666',
+                  zIndex: 1000,
+                  backgroundColor: 'white',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  maxWidth: '400px'
                 }}>
-                  <div style={{ 
-                    width: '40px', 
-                    height: '40px', 
-                    border: '4px solid #f3f3f3', 
-                    borderTop: '4px solid #4CAF50', 
-                    borderRadius: '50%', 
-                    animation: 'spin 1s linear infinite',
-                    margin: '0 auto 1rem'
-                  }}></div>
-                  <p>Cargando mapa...</p>
+                  {mapError ? (
+                    <>
+                      <Icon name="AlertTriangle" size={32} />
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#dc2626' }}>
+                        Google Maps no disponible
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>
+                        {mapError}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.5rem' }}>
+                        Puedes continuar usando la aplicación sin mapas.
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ 
+                        width: '40px', 
+                        height: '40px',
+                        border: '4px solid #e5e7eb',
+                        borderTopColor: '#3b82f6',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        margin: '0 auto 0.5rem'
+                      }}></div>
+                      <div>Cargando mapa...</div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -1742,7 +1860,9 @@ const FieldsManagement: React.FC = () => {
             overflowY: 'auto'
           }}>
             <h2 style={{ margin: '0 0 1.5rem 0', color: '#1f2937' }}>
-              {isEditing ? '✏️ Editar Campo' : '➕ Agregar Nuevo Campo'}
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Icon name={isEditing ? "Pencil" : "Plus"} size={24} /> {isEditing ? 'Editar Campo' : 'Agregar Nuevo Campo'}
+              </span>
             </h2>
             
             <form onSubmit={(e) => { e.preventDefault(); handleSaveField(); }}>
@@ -1810,15 +1930,52 @@ const FieldsManagement: React.FC = () => {
                 backgroundColor: '#e5e7eb' 
               }} />
 
-              {/* Mapa - Parte Media */}
+              {/* Coordenadas del campo: mapa o ingreso manual */}
               <div style={{ marginBottom: '2rem' }}>
                 <div style={{ marginBottom: '1rem' }}>
                   <h3 style={{ margin: '0 0 0.5rem 0', color: '#374151', fontSize: '1.1rem' }}>
-                    🗺️ Dibujar Campo en el Mapa
+                    <Icon name="Map" size={20} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> Definir perímetro del campo
                   </h3>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => setModoCoordenadasCampo('mapa')}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.375rem',
+                        border: modoCoordenadasCampo === 'mapa' ? '2px solid #4CAF50' : '1px solid #d1d5db',
+                        background: modoCoordenadasCampo === 'mapa' ? '#dcfce7' : 'white',
+                        color: modoCoordenadasCampo === 'mapa' ? '#166534' : '#374151',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <Icon name="Map" size={18} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} /> Dibujar en el mapa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModoCoordenadasCampo('manual')}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.375rem',
+                        border: modoCoordenadasCampo === 'manual' ? '2px solid #4CAF50' : '1px solid #d1d5db',
+                        background: modoCoordenadasCampo === 'manual' ? '#dcfce7' : 'white',
+                        color: modoCoordenadasCampo === 'manual' ? '#166534' : '#374151',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <Icon name="Edit" size={18} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} /> Ingresar coordenadas manualmente
+                    </button>
+                  </div>
+
+                  {modoCoordenadasCampo === 'mapa' && (
+                  <>
                   <div style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0', lineHeight: '1.5' }}>
                     <p style={{ margin: '0 0 0.5rem 0' }}>
-                      <strong>📋 Instrucciones para marcar el campo:</strong>
+                      <strong><Icon name="Clipboard" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Instrucciones para marcar el campo:</strong>
                     </p>
                     <ol style={{ margin: '0 0 0.5rem 0', paddingLeft: '1.5rem' }}>
                       <li>Usa el <strong>buscador</strong> en la parte superior para encontrar la ubicación del campo</li>
@@ -1828,7 +1985,7 @@ const FieldsManagement: React.FC = () => {
                       <li>Haz doble clic para cerrar el polígono y completar el dibujo</li>
                     </ol>
                     <p style={{ margin: '0', color: '#10b981', fontWeight: '500' }}>
-                      ✅ La superficie se calculará automáticamente al completar el dibujo
+                      <Icon name="CheckCircle" size={16} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> La superficie se calculará automáticamente al completar el dibujo
                     </p>
                   </div>
                   
@@ -1846,7 +2003,7 @@ const FieldsManagement: React.FC = () => {
                       alignItems: 'center',
                       gap: '0.5rem'
                     }}>
-                      <span>✏️</span>
+                      <Icon name="Pencil" size={18} />
                       <span><strong>Modo de dibujo activo</strong> - Haz clic en el mapa para dibujar el polígono del campo</span>
                     </div>
                   )}
@@ -1946,11 +2103,11 @@ const FieldsManagement: React.FC = () => {
                       }}
                       title="Centrar en mi ubicación"
                     >
-                      📍 Mi ubicación
+                      <Icon name="MapPin" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Mi ubicación
                     </button>
                   </div>
 
-                  {/* Botón de herramienta de polígono personalizado */}
+                  {/* Botón de dibujo: Polígono */}
                   <div style={{
                     position: 'absolute',
                     top: '10px',
@@ -1961,8 +2118,10 @@ const FieldsManagement: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (drawingManager) {
-                          drawingManager.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
+                        if (terraDraw) {
+                          terraDraw.clear();
+                          terraDraw.setMode('polygon');
+                          setIsDrawingMode(true);
                         }
                       }}
                       style={{
@@ -1979,9 +2138,26 @@ const FieldsManagement: React.FC = () => {
                         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                       }}
                     >
-                      🔷 Dibujar
+                      <Icon name="Square" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Polígono
                     </button>
                   </div>
+                  {isDrawingMode && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '10px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 1000,
+                      padding: '8px 14px',
+                      backgroundColor: 'rgba(0,0,0,0.75)',
+                      color: 'white',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                    }}>
+                      Polígono: clic en cada vértice → doble clic para cerrar.
+                    </div>
+                  )}
                 </div>
 
                 {/* Instrucciones del mapa */}
@@ -1993,16 +2169,70 @@ const FieldsManagement: React.FC = () => {
                   border: '1px solid #0ea5e9'
                 }}>
                   <h4 style={{ margin: '0 0 0.5rem 0', color: '#0c4a6e', fontSize: '1rem' }}>
-                    💡 Instrucciones para móvil:
+                    <Icon name="Lightbulb" size={18} style={{ marginRight: '0.25rem', display: 'inline-block' }} /> Instrucciones para móvil:
                   </h4>
                   <ul style={{ margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#0c4a6e' }}>
                     <li>Usa los botones + y − para hacer zoom</li>
-                    <li>Haz clic en "🔷 Dibujar" para activar la herramienta</li>
-                    <li>Toca en cada punto del contorno del campo</li>
-                    <li>Doble toque para finalizar el polígono</li>
+                    <li><strong>Polígono:</strong> clic en "Polígono", luego clic en cada vértice. Doble clic para cerrar</li>
                     <li>La superficie se calculará automáticamente</li>
                   </ul>
                   </div>
+                  </>
+                  )}
+
+                  {modoCoordenadasCampo === 'manual' && (
+                  <div style={{
+                    padding: '1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    backgroundColor: '#f9fafb'
+                  }}>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem', lineHeight: '1.5' }}>
+                      Ingresá al menos 3 puntos (latitud, longitud) en orden para definir el perímetro. Mismas condiciones que en el mapa: latitud entre -90 y 90, longitud entre -180 y 180. La superficie se calculará automáticamente.
+                    </p>
+                    {(formData.coordenadas || []).map((coord, index) => (
+                      <div key={index} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: '500', minWidth: '4.5rem' }}>Punto {index + 1}</span>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="Lat (-90 a 90)"
+                          value={coord.lat === 0 && coord.lng === 0 ? '' : coord.lat}
+                          onChange={e => actualizarCoordenadaManual(index, 'lat', e.target.value)}
+                          style={{ width: '120px', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                        />
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="Lng (-180 a 180)"
+                          value={coord.lat === 0 && coord.lng === 0 ? '' : coord.lng}
+                          onChange={e => actualizarCoordenadaManual(index, 'lng', e.target.value)}
+                          style={{ width: '120px', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => quitarPuntoManual(index)}
+                          style={{ padding: '0.5rem 0.75rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={agregarPuntoManual}
+                      style={{ marginTop: '0.5rem', padding: '0.5rem 1rem', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                    >
+                      + Agregar punto
+                    </button>
+                    {formData.coordenadas.length >= 3 && formData.coordenadas.every(c => coordenadaValida(c.lat, c.lng)) && (
+                      <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: '#059669', fontWeight: '500' }}>
+                        <Icon name="CheckCircle" size={16} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
+                        Superficie calculada: {formData.superficie > 0 ? `${formData.superficie.toFixed(2)} ha` : '< 0.01 ha'}
+                      </p>
+                    )}
+                  </div>
+                  )}
                 </div>
               </div>
 
@@ -2116,7 +2346,7 @@ const FieldsManagement: React.FC = () => {
               {formData.coordenadas.length > 0 && (
                 <div style={{ marginBottom: '2rem' }}>
                   <h3 style={{ margin: '0 0 0.5rem 0', color: '#374151', fontSize: '1.1rem' }}>
-                    📍 Coordenadas del Campo
+                    <Icon name="MapPin" size={20} style={{ marginRight: '0.5rem', display: 'inline-block' }} /> Coordenadas del Campo
                   </h3>
                   <div style={{
                     padding: '1rem',

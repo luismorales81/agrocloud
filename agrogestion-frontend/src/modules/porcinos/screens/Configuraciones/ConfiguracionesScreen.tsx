@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { configuracionService } from '../../services/configuracionService';
+import {
+  configuracionService,
+  CLAVE_CONFIRMACION_CALENDARIO_SOLO_CON_RACION_REAL,
+} from '../../services/configuracionService';
 import { catalogosService } from '../../services/catalogosService';
 import { parametrosService } from '../../services/parametrosService';
 import { SemanticIcon, Icon } from '../../../../components/icons';
@@ -11,7 +14,6 @@ import type {
   CausaMortalidadPorcino,
   MotivoBajaPorcino,
   EsquemaSanitarioPorcino,
-  TipoCorralPorcino,
   TipoParto,
   UbicacionInterna,
   ParametrosEstablecimientoPorcino,
@@ -24,12 +26,10 @@ type TabType =
   | 'parametros-productivos'
   | 'datos-economicos'
   | 'razas'
-  | 'tipos-alimento'
   | 'tipos-servicio'
   | 'causas-mortalidad'
   | 'motivos-baja'
   | 'esquemas-sanitarios'
-  | 'tipos-corral'
   | 'tipos-parto'
   | 'ubicaciones-internas'
   | 'configuraciones-generales';
@@ -65,12 +65,10 @@ const ConfiguracionesScreen: React.FC = () => {
     { id: 'parametros-productivos' as TabType, nombre: 'Productivos', icono: 'BarChart' },
     { id: 'datos-economicos' as TabType, nombre: 'Económicos', icono: 'DollarSign' },
     { id: 'razas' as TabType, nombre: 'Razas', icono: 'PiggyBank' },
-    { id: 'tipos-alimento' as TabType, nombre: 'Alimentos', icono: 'Wheat' },
     { id: 'tipos-servicio' as TabType, nombre: 'Servicios', icono: 'Heart' },
     { id: 'causas-mortalidad' as TabType, nombre: 'Mortalidad', icono: 'Skull' },
     { id: 'motivos-baja' as TabType, nombre: 'Motivos Baja', icono: 'Clipboard' },
     { id: 'esquemas-sanitarios' as TabType, nombre: 'Sanitarios', icono: 'Syringe' },
-    { id: 'tipos-corral' as TabType, nombre: 'Corrales', icono: 'Home' },
     { id: 'tipos-parto' as TabType, nombre: 'Tipos Parto', icono: 'Baby' },
     { id: 'ubicaciones-internas' as TabType, nombre: 'Ubicaciones', icono: 'MapPin' },
     { id: 'configuraciones-generales' as TabType, nombre: 'Generales', icono: 'Settings' },
@@ -192,9 +190,6 @@ const ConfiguracionesScreen: React.FC = () => {
             {tabActiva === 'razas' && (
               <RazasTab mostrarMensajeExito={mostrarMensajeExito} mostrarMensajeError={mostrarMensajeError} />
             )}
-            {tabActiva === 'tipos-alimento' && (
-              <TiposAlimentoTab />
-            )}
             {tabActiva === 'tipos-servicio' && (
               <TiposServicioTab />
             )}
@@ -206,9 +201,6 @@ const ConfiguracionesScreen: React.FC = () => {
             )}
             {tabActiva === 'esquemas-sanitarios' && (
               <EsquemasSanitariosTab />
-            )}
-            {tabActiva === 'tipos-corral' && (
-              <TiposCorralTab />
             )}
             {tabActiva === 'tipos-parto' && (
               <TiposPartoTab />
@@ -1251,71 +1243,6 @@ const EsquemasSanitariosTab: React.FC = () => {
   );
 };
 
-const TiposCorralTab: React.FC = () => {
-  const [tipos, setTipos] = useState<TipoCorralPorcino[]>([]);
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [formData, setFormData] = useState<Partial<TipoCorralPorcino>>({ tipo: 'SALA_GESTACION' });
-
-  useEffect(() => {
-    cargarTipos();
-  }, []);
-
-  const cargarTipos = async () => {
-    try {
-      const data = await catalogosService.listarTiposCorral();
-      setTipos(data);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  const handleGuardar = async () => {
-    try {
-      await catalogosService.guardarTipoCorral(formData);
-      await cargarTipos();
-      setMostrarFormulario(false);
-      setFormData({ tipo: 'SALA_GESTACION' });
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Tipos de Corral</h2>
-        <button onClick={() => setMostrarFormulario(true)} style={botonEstilo('#10b981')}>➕ Agregar</button>
-      </div>
-      {mostrarFormulario && (
-        <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem' }}>
-          <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
-            <CampoFormulario label="Nombre *" value={formData.nombre || ''} onChange={(val) => setFormData({ ...formData, nombre: val })} editando={true} tipo="text" />
-            <CampoFormulario label="Tipo *" value={formData.tipo || 'SALA_GESTACION'} onChange={(val) => setFormData({ ...formData, tipo: val as any })} editando={true} tipo="select" opciones={[
-              { valor: 'SALA_GESTACION', etiqueta: 'Sala de Gestación' },
-              { valor: 'MATERNIDAD', etiqueta: 'Maternidad' },
-              { valor: 'RECRIA', etiqueta: 'Recría' },
-              { valor: 'ENGORDE', etiqueta: 'Engorde' },
-              { valor: 'ENFERMERIA', etiqueta: 'Enfermería' },
-              { valor: 'OTRO', etiqueta: 'Otro' },
-            ]} />
-            <CampoFormulario label="Capacidad Máxima" value={formData.capacidadMaxima?.toString() || ''} onChange={(val) => setFormData({ ...formData, capacidadMaxima: parseInt(val) || undefined })} editando={true} tipo="number" />
-            <CampoFormulario label="Descripción" value={formData.descripcion || ''} onChange={(val) => setFormData({ ...formData, descripcion: val })} editando={true} tipo="text" />
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-            <button onClick={handleGuardar} style={botonEstilo('#10b981')}>💾 Guardar</button>
-            <button onClick={() => { setMostrarFormulario(false); setFormData({ tipo: 'SALA_GESTACION' }); }} style={botonEstilo('#6b7280')}>✕ Cancelar</button>
-          </div>
-        </div>
-      )}
-      <TablaCatalogos datos={tipos} columnas={[
-        { clave: 'nombre', etiqueta: 'Nombre' },
-        { clave: 'tipo', etiqueta: 'Tipo' },
-        { clave: 'capacidadMaxima', etiqueta: 'Capacidad Máx.' },
-      ]} onEditar={() => {}} onEliminar={(item) => item.id && catalogosService.eliminarTipoCorral(item.id)} />
-    </div>
-  );
-};
-
 // Componente genérico para catálogos simples (simplificado)
 const CatalogoTab: React.FC<{
   titulo: string;
@@ -1690,6 +1617,8 @@ const UbicacionesInternasTab: React.FC = () => {
 
 const ConfiguracionesGeneralesTab: React.FC<{ mostrarMensajeExito: (texto: string) => void; mostrarMensajeError: (texto: string) => void }> = ({ mostrarMensajeExito, mostrarMensajeError }) => {
   const [configuraciones, setConfiguraciones] = useState<ConfiguracionPorcino[]>([]);
+  const [exigirKgRealCalendario, setExigirKgRealCalendario] = useState(false);
+  const [guardandoPoliticaCalendario, setGuardandoPoliticaCalendario] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [formData, setFormData] = useState<Partial<ConfiguracionPorcino>>({
@@ -1701,16 +1630,40 @@ const ConfiguracionesGeneralesTab: React.FC<{ mostrarMensajeExito: (texto: strin
     cargarConfiguraciones();
   }, []);
 
-  const cargarConfiguraciones = async () => {
-    setLoading(true);
+  const cargarConfiguraciones = async (opciones?: { sinPantallaCarga?: boolean }) => {
+    if (!opciones?.sinPantallaCarga) {
+      setLoading(true);
+    }
     try {
       const data = await configuracionService.listar();
       setConfiguraciones(data);
+      const politica = data.find((c: ConfiguracionPorcino) => c.clave === CLAVE_CONFIRMACION_CALENDARIO_SOLO_CON_RACION_REAL);
+      const activa =
+        politica != null &&
+        (String(politica.valor).trim().toLowerCase() === 'true' || String(politica.valor).trim() === '1');
+      setExigirKgRealCalendario(activa);
     } catch (error) {
       console.error('Error al cargar configuraciones:', error);
       mostrarMensajeError('Error al cargar configuraciones');
     } finally {
-      setLoading(false);
+      if (!opciones?.sinPantallaCarga) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleCambiarPoliticaCalendario = async (activo: boolean) => {
+    setGuardandoPoliticaCalendario(true);
+    try {
+      await configuracionService.guardarPoliticaConfirmacionCalendarioSoloConKgReal(activo);
+      setExigirKgRealCalendario(activo);
+      await cargarConfiguraciones({ sinPantallaCarga: true });
+      mostrarMensajeExito('Política del calendario de alimentación actualizada');
+    } catch (error) {
+      console.error('Error al guardar política del calendario:', error);
+      mostrarMensajeError('No se pudo guardar la política del calendario');
+    } finally {
+      setGuardandoPoliticaCalendario(false);
     }
   };
 
@@ -1756,6 +1709,10 @@ const ConfiguracionesGeneralesTab: React.FC<{ mostrarMensajeExito: (texto: strin
     );
   }
 
+  const configuracionesSinPoliticaCalendario = configuraciones.filter(
+    (c) => c.clave !== CLAVE_CONFIRMACION_CALENDARIO_SOLO_CON_RACION_REAL
+  );
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
@@ -1778,6 +1735,48 @@ const ConfiguracionesGeneralesTab: React.FC<{ mostrarMensajeExito: (texto: strin
         </button>
       </div>
 
+      <div
+        style={{
+          marginBottom: '1.5rem',
+          padding: '1.25rem',
+          borderRadius: '0.5rem',
+          border: '1px solid #e5e7eb',
+          backgroundColor: '#fffbeb',
+        }}
+      >
+        <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', fontWeight: 700, color: '#92400e' }}>
+          <Icon name="Calendar" size={20} style={{ marginRight: '0.35rem', verticalAlign: 'text-bottom' }} />
+          Calendario de alimentación
+        </h3>
+        <p style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', color: '#78350f' }}>
+          Controla si se puede confirmar un día con consumos aún en modo estimado (sin kg real de ración cargado).
+        </p>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            cursor: guardandoPoliticaCalendario ? 'wait' : 'pointer',
+            fontWeight: 500,
+            color: '#1f2937',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={exigirKgRealCalendario}
+            disabled={guardandoPoliticaCalendario}
+            onChange={(e) => void handleCambiarPoliticaCalendario(e.target.checked)}
+          />
+          Exigir kg real en todos los consumos antes de confirmar el día
+        </label>
+        <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#78716c' }}>
+          Clave interna:{' '}
+          <code style={{ background: '#fef3c7', padding: '0.1rem 0.25rem' }}>
+            {CLAVE_CONFIRMACION_CALENDARIO_SOLO_CON_RACION_REAL}
+          </code>
+        </p>
+      </div>
+
       {mostrarFormulario && (
         <div style={{
           padding: '1.5rem',
@@ -1798,7 +1797,7 @@ const ConfiguracionesGeneralesTab: React.FC<{ mostrarMensajeExito: (texto: strin
                 type="text"
                 value={formData.clave || ''}
                 onChange={(e) => setFormData({ ...formData, clave: e.target.value.toUpperCase().replace(/\s/g, '_') })}
-                placeholder="EJ: DIAS_CACHORRA (no usar DIAS_GESTACION, DIAS_LACTANCIA, etc. - están en Parámetros Productivos)"
+                placeholder="Ej.: DIAS_CACHORRA, CONFIRMAR_CALENDARIO_SOLO_CON_REAL (true/false). No usar claves de Parámetros Productivos."
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -1917,7 +1916,7 @@ const ConfiguracionesGeneralesTab: React.FC<{ mostrarMensajeExito: (texto: strin
         </div>
       )}
 
-      {configuraciones.length === 0 ? (
+      {configuracionesSinPoliticaCalendario.length === 0 ? (
         <div style={{
           padding: '3rem',
           textAlign: 'center',
@@ -1926,12 +1925,12 @@ const ConfiguracionesGeneralesTab: React.FC<{ mostrarMensajeExito: (texto: strin
           borderRadius: '0.5rem'
         }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚙️</div>
-          <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>No hay configuraciones</p>
-          <p style={{ fontSize: '0.875rem' }}>Crea una nueva configuración para comenzar</p>
+          <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>No hay otras configuraciones manuales</p>
+          <p style={{ fontSize: '0.875rem' }}>La política del calendario se gestiona arriba. Podés agregar más claves con «Nueva configuración».</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-          {configuraciones.map(config => (
+          {configuracionesSinPoliticaCalendario.map(config => (
             <div
               key={config.id}
               style={{

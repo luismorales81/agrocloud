@@ -1,7 +1,7 @@
 package com.agrocloud.model.dto;
 
-import com.agrocloud.model.entity.Insumo;
-import com.agrocloud.model.entity.Insumo.TipoInsumo;
+import com.agrocloud.core.inventory.domain.Insumo;
+import com.agrocloud.core.inventory.domain.Insumo.TipoInsumo;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

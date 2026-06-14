@@ -1,7 +1,16 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.repository.*;
+import com.agrocloud.core.infrastructure.UserRepository;
+import com.agrocloud.core.infrastructure.EgresoRepository;
+import com.agrocloud.core.infrastructure.IngresoRepository;
+import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
+import com.agrocloud.cultivos.infrastructure.LaborRepository;
+import com.agrocloud.cultivos.infrastructure.MaquinariaRepository;
+import com.agrocloud.cultivos.infrastructure.FieldRepository;
+import com.agrocloud.cultivos.infrastructure.PlotRepository;
+import com.agrocloud.cultivos.infrastructure.CultivoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -14,34 +23,42 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/test/dashboard")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"})
 public class TestDashboardController {
 
     @Autowired
+    @Qualifier("userRepositoryCore")
     private UserRepository userRepository;
 
     @Autowired
+    @Qualifier("fieldRepositoryCultivos")
     private FieldRepository fieldRepository;
 
     @Autowired
+    @Qualifier("plotRepositoryCultivos")
     private PlotRepository plotRepository;
 
     @Autowired
+    @Qualifier("cultivoRepositoryCultivos")
     private CultivoRepository cultivoRepository;
 
     @Autowired
+    @Qualifier("insumoRepositoryInventario")
     private InsumoRepository insumoRepository;
 
     @Autowired
+    @Qualifier("maquinariaRepositoryCultivos")
     private MaquinariaRepository maquinariaRepository;
 
     @Autowired
+    @Qualifier("laborRepositoryCultivos")
     private LaborRepository laborRepository;
 
     @Autowired
+    @Qualifier("ingresoRepositoryCore")
     private IngresoRepository ingresoRepository;
 
     @Autowired
+    @Qualifier("egresoRepositoryCore")
     private EgresoRepository egresoRepository;
 
     /**
@@ -204,7 +221,7 @@ public class TestDashboardController {
             
             // Probar countByEstado
             try {
-                long pendientes = userRepository.countByEstado(com.agrocloud.model.entity.EstadoUsuario.PENDIENTE);
+                long pendientes = userRepository.countByEstado(com.agrocloud.core.domain.EstadoUsuario.PENDIENTE);
                 methods.put("countByEstado", "OK - " + pendientes + " usuarios pendientes");
             } catch (Exception e) {
                 methods.put("countByEstado", "ERROR: " + e.getMessage());

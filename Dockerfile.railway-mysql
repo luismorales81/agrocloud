@@ -1,3 +1,5 @@
+# ========== LEGACY - NO USAR PARA PRODUCCIÓN ==========
+# Para producción usar: agrogestion-backend/Dockerfile (SPRING_PROFILES_ACTIVE=prod o railway-mysql por env).
 # Dockerfile para Railway con MySQL
 FROM eclipse-temurin:17-jdk-alpine as build
 

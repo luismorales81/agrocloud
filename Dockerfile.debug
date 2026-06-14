@@ -1,3 +1,5 @@
+# ========== LEGACY - NO USAR PARA PRODUCCIÓN ==========
+# Solo para debug. Producción: agrogestion-backend/Dockerfile
 # Dockerfile para AgroCloud Backend con Debug
 FROM openjdk:17-slim
 

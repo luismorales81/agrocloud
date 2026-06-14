@@ -1,7 +1,8 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.*;
-import com.agrocloud.service.MultiTenantService;
+import com.agrocloud.core.domain.*;
+import com.agrocloud.core.application.MultiTenantService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,11 +23,11 @@ import java.util.Set;
  */
 @RestController
 @RequestMapping("/api/multitenant")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
 @Tag(name = "Multi-Tenant", description = "Gestión del sistema multiempresa")
 public class MultiTenantController {
 
     @Autowired
+    @Qualifier("multiTenantServiceCore")
     private MultiTenantService multiTenantService;
 
     // Endpoints para gestión de usuarios

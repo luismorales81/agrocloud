@@ -46,6 +46,22 @@ const AyudaSistema: React.FC = () => {
         </div>
         
         <div className="space-y-4">
+          <div className="border-l-4 border-indigo-500 pl-4 bg-indigo-50/50">
+            <h5 className="font-semibold text-gray-800">Paso 0 (recomendado): Configuración de Estados y Tareas</h5>
+            <p className="text-sm text-gray-600 mt-1 mb-2">
+              Para que las labores y los lotes usen estados y tareas coherentes, conviene configurar primero el esquema por tipo de cultivo.
+            </p>
+            <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600">
+              <li>Ve a <strong>Cultivos → Configuración</strong></li>
+              <li>En la pestaña <strong>Configuración del Módulo</strong> verás la pantalla de Estados y Tareas</li>
+              <li>Selecciona o crea un <strong>tipo de cultivo</strong> (ej: Soja, Maíz)</li>
+              <li>Define <strong>estados</strong> (nombre, color, icono, si es inicial o final)</li>
+              <li>Configura <strong>transiciones</strong> entre estados (qué cambios están permitidos)</li>
+              <li>Asigna <strong>tareas</strong> (tipos de labor) a cada estado</li>
+              <li>Opcional: usa <strong>Copiar plantilla</strong> para basarte en una plantilla global</li>
+            </ol>
+          </div>
+
           <div className="border-l-4 border-green-500 pl-4">
             <h5 className="font-semibold text-gray-800">Paso 1: Configurar Campos</h5>
             <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 mt-2">
@@ -107,8 +123,8 @@ const AyudaSistema: React.FC = () => {
               <li>Ve a <strong>Producción → Labores</strong></li>
               <li>Haz clic en <strong>"Nueva Labor"</strong></li>
               <li>Selecciona el lote donde se realizará</li>
-              <li>Elige tipo de labor (Siembra, Fertilización, Riego, etc.)</li>
-              <li>Selecciona cultivo si aplica</li>
+              <li>Elige tipo de labor: si el lote está &quot;Disponible&quot; y aún no tiene cultivo, verás tareas de plantilla (Arado, Rastra, Siembra); si ya tiene cultivo, las opciones salen de la <strong>Configuración de Estados y Tareas</strong> del tipo de cultivo del lote.</li>
+              <li>Selecciona cultivo si aplica (en Siembra se asigna el cultivo al lote)</li>
               <li>Define fecha de realización</li>
               <li>Agrega insumos utilizados y cantidades</li>
               <li>Registra maquinaria y mano de obra</li>
@@ -223,27 +239,25 @@ const AyudaSistema: React.FC = () => {
             
             <div>
               <h5 className="font-semibold text-gray-700 mb-3">🔄 Estados de Lote</h5>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
-                  <span><strong>Preparación:</strong> Listo para sembrar</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                  <span><strong>Siembra:</strong> Recién sembrado</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                  <span><strong>Crecimiento:</strong> En desarrollo</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
-                  <span><strong>Cosecha:</strong> Listo para cosechar</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-gray-500 rounded-full"></span>
-                  <span><strong>Descanso:</strong> En barbecho</span>
-                </div>
+              <p className="text-sm text-gray-600 mb-2">
+                Los estados ya no son fijos: se definen en <strong>Cultivos → Configuración → Configuración del Módulo</strong> (pantalla <strong>Configuración de Estados y Tareas</strong>). Allí puedes:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <li>Crear <strong>tipos de cultivo</strong> (Soja, Maíz, etc.) y usar plantillas o personalizar por empresa</li>
+                <li>Definir <strong>estados</strong> con nombre, color, icono, orden, y marcar si es estado inicial o final</li>
+                <li>Configurar <strong>transiciones</strong> (qué cambios de estado están permitidos y si requieren motivo)</li>
+                <li>Asignar <strong>tareas</strong> (tipos de labor) a cada estado; esas tareas serán las que aparezcan al registrar una labor en un lote de ese tipo</li>
+              </ul>
+              <p className="text-sm text-amber-700 mt-2">
+                Si no has configurado estados y tareas para el tipo de cultivo del lote, en Labores puede mostrarse el mensaje &quot;Configuración Requerida&quot;; en ese caso configura primero en Configuración del Módulo.
+              </p>
+              <div className="mt-3 p-3 bg-slate-50 rounded border border-slate-200">
+                <h6 className="font-semibold text-gray-700 mb-2">📌 Cómo se determinan las tareas disponibles</h6>
+                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <li><strong>Lote en estado &quot;Disponible&quot; sin cultivo asignado:</strong> El lote no tiene tipo de cultivo hasta que se registra la Siembra. Aun así, el sistema muestra tareas: usa las <strong>plantillas globales</strong> (Soja, Maíz, Trigo, etc.) y toma las tareas del estado &quot;Disponible&quot; de esas plantillas. Verás por ejemplo <strong>Arado</strong>, <strong>Rastra</strong> y <strong>Siembra</strong>. Así puedes registrar la Siembra y en esa misma acción se asigna el cultivo al lote.</li>
+                  <li><strong>Lote con cultivo asignado:</strong> Las tareas disponibles se obtienen de la configuración de estados y tareas del <strong>tipo de cultivo</strong> del lote (la que definís en Configuración del Módulo para ese tipo).</li>
+                  <li>En ningún caso es obligatorio completar todas las tareas de un estado para pasar al siguiente; las tareas definen qué labores podés registrar en cada estado.</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -1719,6 +1733,30 @@ const AyudaSistema: React.FC = () => {
               <li>Integraciones</li>
               <li>Backup y mantenimiento</li>
             </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              🌱 Configuración del Módulo Cultivos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 mb-3">
+              <strong>Dónde:</strong> Menú Cultivos → <strong>Configuración</strong>. Incluye tres pestañas:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 mb-3">
+              <li><strong>Configuración del Módulo:</strong> Estados y tareas por tipo de cultivo (tipos de cultivo, estados de lote, transiciones, tareas/labores por estado). Es la pantalla &quot;Configuración de Estados y Tareas&quot;.</li>
+              <li><strong>Usuarios:</strong> Gestión de usuarios de la empresa.</li>
+              <li><strong>Configuración General:</strong> Parámetros clave/valor del sistema (crear y editar configuraciones generales).</li>
+            </ul>
+            <p className="text-gray-600 text-sm mb-3">
+              La configuración de estados y tareas es la que determina qué estados puede tener un lote y qué tipos de labor se ofrecen al registrar una labor según el tipo de cultivo del lote.
+            </p>
+            <div className="p-3 bg-slate-50 rounded border border-slate-200 text-sm text-gray-600">
+              <strong>Comportamiento:</strong> Si el lote está en &quot;Disponible&quot; y aún no tiene tipo de cultivo, las tareas se obtienen por <strong>plantillas</strong> (estado &quot;Disponible&quot; de las plantillas globales), mostrando por ejemplo Arado, Rastra y Siembra. Al registrar la Siembra se asigna el cultivo; desde entonces las tareas salen de la configuración de ese tipo de cultivo. No es obligatorio completar todas las tareas de un estado para cambiar al siguiente.
+            </div>
           </CardContent>
         </Card>
       </div>

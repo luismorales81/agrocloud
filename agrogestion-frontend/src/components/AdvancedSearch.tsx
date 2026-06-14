@@ -31,63 +31,7 @@ const AdvancedSearch: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Datos mock para búsqueda
-  const mockData: SearchResult[] = [
-    {
-      id: '1',
-      type: 'campo',
-      title: 'Campo Norte',
-      description: 'Campo principal para cultivo de soja - 25.5 ha',
-      url: '/fields',
-      icon: '🌾',
-      metadata: { area: 25.5, cultivo: 'Soja', estado: 'Activo' }
-    },
-    {
-      id: '2',
-      type: 'lote',
-      title: 'Lote A1',
-      description: 'Lote con soja de primera - 12.5 ha',
-      url: '/plots',
-      icon: '🏞️',
-      metadata: { area: 12.5, cultivo: 'Soja', estado: 'En crecimiento' }
-    },
-    {
-      id: '3',
-      type: 'insumo',
-      title: 'Glifosato 48%',
-      description: 'Herbicida sistémico - Stock: 200 litros',
-      url: '/inputs',
-      icon: '🧪',
-      metadata: { stock: 200, unidad: 'LITROS', proveedor: 'Syngenta' }
-    },
-    {
-      id: '4',
-      type: 'maquinaria',
-      title: 'Tractor Principal',
-      description: 'John Deere 5075E - 75 HP',
-      url: '/machinery',
-      icon: '🚜',
-      metadata: { marca: 'John Deere', modelo: '5075E', estado: 'Operativa' }
-    },
-    {
-      id: '5',
-      type: 'labor',
-      title: 'Siembra de soja',
-      description: 'Siembra de soja de primera en Lote A1',
-      url: '/labors',
-      icon: '🔧',
-      metadata: { fecha: '2024-11-15', estado: 'Completada', costo: 1250 }
-    },
-    {
-      id: '6',
-      type: 'usuario',
-      title: 'Juan Pérez',
-      description: 'Técnico agrícola - Activo',
-      url: '/users',
-      icon: '👤',
-      metadata: { rol: 'Técnico', email: 'juan@agrocloud.com', estado: 'Activo' }
-    }
-  ];
+  // Los datos de búsqueda se obtendrán del backend cuando se implemente el endpoint
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -113,28 +57,10 @@ const AdvancedSearch: React.FC = () => {
     setLoading(true);
     setIsOpen(true);
 
-    // Simular búsqueda
+    // TODO: Implementar búsqueda en el backend cuando esté disponible
+    // Por ahora, no se muestran resultados ya que no hay datos mock
     setTimeout(() => {
-      const filteredResults = mockData.filter(item => {
-        // Búsqueda por texto
-        const matchesQuery = 
-          item.title.toLowerCase().includes(query.toLowerCase()) ||
-          item.description.toLowerCase().includes(query.toLowerCase()) ||
-          Object.values(item.metadata || {}).some(value => 
-            String(value).toLowerCase().includes(query.toLowerCase())
-          );
-
-        // Filtros por tipo
-        const matchesType = filters.type.length === 0 || filters.type.includes(item.type);
-
-        // Filtros por estado
-                const matchesStatus = !filters.status || filters.status.length === 0 ||
-          (item.metadata?.estado && filters.status.includes(item.metadata.estado));
-
-        return matchesQuery && matchesType && matchesStatus;
-      });
-
-      setResults(filteredResults);
+      setResults([]);
       setLoading(false);
     }, 300);
   };

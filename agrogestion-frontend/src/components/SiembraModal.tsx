@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { cultivosService, lotesService } from '../services/apiServices';
+import { Icon } from '../core/components/Icon';
 
 interface Lote {
   id?: number;
@@ -69,12 +70,12 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
       };
       
       const data = await lotesService.sembrar(lote.id!, siembraData);
-      alert(`✅ ${data.message || 'Lote sembrado exitosamente'}`);
+      alert(`${data.message || 'Lote sembrado exitosamente'}`);
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Error al sembrar:', error);
-      alert('❌ Error de conexión. Por favor, intente nuevamente.');
+      alert('Error de conexión. Por favor, intente nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -111,7 +112,7 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
           paddingBottom: '10px'
         }}>
           <h2 style={{ margin: 0, color: '#2e7d32', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            🌱 Sembrar Lote
+            <Icon name="Sprout" size={20} /> Sembrar Lote
           </h2>
           <button
             onClick={onClose}
@@ -120,10 +121,13 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
-              color: '#666'
+              color: '#666',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            ✕
+            <Icon name="X" size={20} />
           </button>
         </div>
 
@@ -274,7 +278,15 @@ const SiembraModal: React.FC<SiembraModalProps> = ({ lote, onClose, onSuccess })
                 fontWeight: 'bold'
               }}
             >
-              {loading ? '🔄 Sembrando...' : '🌱 Confirmar Siembra'}
+              {loading ? (
+                <>
+                  <Icon name="RefreshCcw" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Sembrando...
+                </>
+              ) : (
+                <>
+                  <Icon name="Sprout" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Confirmar Siembra
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { cultivosService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
+import { Icon } from './icons';
 
 interface Cultivo {
   id?: number;
@@ -175,7 +176,9 @@ const CultivosManagement: React.FC = () => {
         borderRadius: '10px', 
         marginBottom: '20px' 
       }}>
-        <h1 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>🌱 Gestión de Cultivos</h1>
+        <h1 style={{ margin: '0 0 10px 0', fontSize: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Icon name="Sprout" size={24} /> Gestión de Cultivos
+        </h1>
         <p style={{ margin: '0', opacity: '0.9' }}>
           Administra los cultivos disponibles para tus lotes
         </p>
@@ -197,7 +200,7 @@ const CultivosManagement: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            ➕ Agregar Nuevo Cultivo
+            <Icon name="Plus" size={16} style={{ marginRight: '4px' }} /> Agregar Nuevo Cultivo
           </button>
         </PermissionGate>
       </div>
@@ -212,7 +215,10 @@ const CultivosManagement: React.FC = () => {
           border: '1px solid #ddd'
         }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#333' }}>
-            {editingCultivo ? '✏️ Editar Cultivo' : '📝 Nuevo Cultivo'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name={editingCultivo ? "Pencil" : "FileText"} size={18} />
+              {editingCultivo ? 'Editar Cultivo' : 'Nuevo Cultivo'}
+            </span>
           </h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -373,8 +379,8 @@ const CultivosManagement: React.FC = () => {
                   fontSize: '14px'
                 }}
               >
-                <option value="ACTIVO">✅ Activo</option>
-                <option value="INACTIVO">❌ Inactivo</option>
+                <option value="ACTIVO">Activo</option>
+                <option value="INACTIVO">Inactivo</option>
               </select>
             </div>
           </div>
@@ -414,7 +420,16 @@ const CultivosManagement: React.FC = () => {
                 opacity: loading || !formData.nombre || !formData.variedad ? 0.6 : 1
               }}
             >
-              {loading ? '💾 Guardando...' : (editingCultivo ? '💾 Actualizar' : '💾 Guardar Cultivo')}
+              {loading ? (
+                <>
+                  <Icon name="Loader" size={14} style={{ marginRight: '4px' }} /> Guardando...
+                </>
+              ) : (
+                <>
+                  <Icon name="Save" size={14} style={{ marginRight: '4px' }} />
+                  {editingCultivo ? 'Actualizar' : 'Guardar Cultivo'}
+                </>
+              )}
             </button>
             
             <button
@@ -429,7 +444,7 @@ const CultivosManagement: React.FC = () => {
                 fontSize: '14px'
               }}
             >
-              ❌ Cancelar
+              <Icon name="XCircle" size={14} style={{ marginRight: '4px' }} /> Cancelar
             </button>
           </div>
         </div>
@@ -441,7 +456,7 @@ const CultivosManagement: React.FC = () => {
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="🔍 Buscar cultivos por nombre, variedad o descripción..."
+          placeholder="Buscar cultivos por nombre, variedad o descripción..."
           style={{
             width: '100%',
             padding: '12px',
@@ -465,12 +480,14 @@ const CultivosManagement: React.FC = () => {
           borderBottom: '1px solid #ddd',
           fontWeight: 'bold'
         }}>
-          📋 Cultivos Registrados ({filteredCultivos.length})
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Icon name="Clipboard" size={18} /> Cultivos Registrados ({filteredCultivos.length})
+          </span>
         </div>
         
         {loading ? (
           <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-            🔄 Cargando cultivos...
+            <Icon name="Loader" size={18} style={{ marginRight: '8px' }} /> Cargando cultivos...
           </div>
         ) : filteredCultivos.length === 0 ? (
           <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
@@ -488,12 +505,7 @@ const CultivosManagement: React.FC = () => {
               }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ 
-                      fontSize: '20px', 
-                      marginRight: '10px' 
-                    }}>
-                      🌱
-                    </span>
+                    <Icon name="Sprout" size={20} style={{ marginRight: '10px' }} />
                     <h4 style={{ margin: '0', color: '#333' }}>
                       {cultivo.nombre} - {cultivo.variedad}
                     </h4>
@@ -506,7 +518,10 @@ const CultivosManagement: React.FC = () => {
                       background: cultivo.estado === 'ACTIVO' ? '#dcfce7' : '#fee2e2',
                       color: cultivo.estado === 'ACTIVO' ? '#166534' : '#991b1b'
                     }}>
-                      {cultivo.estado === 'ACTIVO' ? '✅ Activo' : '❌ Inactivo'}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Icon name={cultivo.estado === 'ACTIVO' ? "CheckCircle" : "XCircle"} size={12} />
+                        {cultivo.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'}
+                      </span>
                     </span>
                   </div>
                   <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '14px' }}>
@@ -544,7 +559,7 @@ const CultivosManagement: React.FC = () => {
                         fontSize: '12px'
                       }}
                     >
-                      ✏️ Editar
+                      <Icon name="Pencil" size={14} style={{ marginRight: '4px' }} /> Editar
                     </button>
                   </PermissionGate>
                   <PermissionGate permission="canDeleteCultivos">
@@ -560,7 +575,7 @@ const CultivosManagement: React.FC = () => {
                         fontSize: '12px'
                       }}
                     >
-                      🗑️ Eliminar
+                      <Icon name="Trash2" size={14} style={{ marginRight: '4px' }} /> Eliminar
                     </button>
                   </PermissionGate>
                 </div>

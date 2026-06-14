@@ -1,6 +1,6 @@
 package com.agrocloud.dto;
 
-import com.agrocloud.model.entity.EstadoUsuario;
+import com.agrocloud.core.domain.EstadoUsuario;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;

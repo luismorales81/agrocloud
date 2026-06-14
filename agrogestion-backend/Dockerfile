@@ -1,48 +1,35 @@
 # ============================================================
-# DOCKERFILE SIMPLIFICADO - Spring Boot para Railway
-# AgroGestion Backend
+# DOCKERFILE PRODUCCIÓN - AgroGestion Backend (Render/Railway/Fly.io)
 # ============================================================
+# Perfil activo: definir SPRING_PROFILES_ACTIVE en el entorno (ej: prod, railway-mysql).
+# No se fija perfil ni credenciales en la imagen.
 
-# ============================================================
-# ETAPA 1: BUILD (Compilación con Maven)
-# ============================================================
+# ETAPA 1: Build
 FROM maven:3.9.5-eclipse-temurin-17 AS build
 
-# Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de configuración de Maven
 COPY pom.xml .
-
-# Descargar dependencias (para cache de Docker)
 RUN mvn dependency:go-offline -B
 
-# Copiar código fuente
 COPY src ./src
-
-# Compilar la aplicación (saltando tests)
 RUN mvn clean package -DskipTests
 
-# ============================================================
-# ETAPA 2: RUNTIME (Ejecución con JRE)
-# ============================================================
+# ETAPA 2: Runtime
 FROM eclipse-temurin:17-jre-alpine AS runtime
 
-# Instalar herramientas necesarias
 RUN apk add --no-cache wget
 
-# Establecer directorio de trabajo
 WORKDIR /app
-
-# Copiar el JAR desde la etapa de build
 COPY --from=build /app/target/*.jar app.jar
 
-# Exponer puerto
+# Puerto (cloud inyecta PORT; Spring lee server.port=${PORT:8080})
 EXPOSE 8080
 
-# Variables de entorno por defecto
-ENV SPRING_PROFILES_ACTIVE=testing
+# Perfil y opciones por variable de entorno, no hardcodeados
 ENV JAVA_OPTS="-Xmx512m -Xms256m"
 
-# Comando de arranque
-ENTRYPOINT ["java", "-jar", "app.jar"]
+HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

@@ -1,0 +1,45 @@
+package com.agrocloud.model.enums;
+
+import java.util.Arrays;
+import java.util.Optional;
+
+/**
+ * Códigos canónicos de módulos ({@code modules.code}, {@code @RequiresModule}, interceptor de acceso).
+ * Los literales en anotaciones deben coincidir con {@link #getCodigo()}.
+ * <p>
+ * Cada código corresponde a una fila en {@code company_modules} por empresa: {@link #AVICOLA_CARNE} y
+ * {@link #AVICOLA_PONEDORAS} son módulos distintos (sin exclusión mutua); la empresa puede tener uno,
+ * ambos o ninguno habilitado según {@code enabled} en cada relación.
+ * </p>
+ */
+public enum ModuloSistema {
+
+    CULTIVOS("CULTIVOS"),
+    PORCINOS("PORCINOS"),
+    AVICOLA_CRIANZA("AVICOLA_CRIANZA"),
+    AVICOLA_HUEVOS("AVICOLA_HUEVOS"),
+    /** Carne / parrillero (API {@code /api/avicola-carne}), independiente de crianza e huevos. */
+    AVICOLA_CARNE("AVICOLA_CARNE"),
+    /** Ponedoras / recría (módulo propio; no confundir con {@link #AVICOLA_HUEVOS}). */
+    AVICOLA_PONEDORAS("AVICOLA_PONEDORAS");
+
+    private final String codigo;
+
+    ModuloSistema(String codigo) {
+        this.codigo = codigo;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public static Optional<ModuloSistema> desdeCodigo(String codigo) {
+        if (codigo == null || codigo.isBlank()) {
+            return Optional.empty();
+        }
+        String normalizado = codigo.trim();
+        return Arrays.stream(values())
+                .filter(m -> m.codigo.equalsIgnoreCase(normalizado))
+                .findFirst();
+    }
+}

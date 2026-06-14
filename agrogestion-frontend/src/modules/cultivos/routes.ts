@@ -1,91 +1,49 @@
+import { lazy, ComponentType } from 'react';
 import { ModuleRoute } from '../../core/types/module.types';
-import FieldsManagement from '../../components/FieldsManagement';
-import LotesManagement from '../../components/LotesManagement';
-import CultivosManagement from '../../components/CultivosManagement';
-import InsumosUnificados from '../../components/InsumosUnificados';
-import MaquinariaManagement from '../../components/MaquinariaManagement';
-import LaboresManagement from '../../components/LaboresManagement';
-import ReportsManagement from '../../components/ReportsManagement';
-import FinanzasManagement from '../../components/FinanzasManagement';
-import InventarioGranosManagement from '../../components/InventarioGranosManagement';
-import CalendarioDashboard from '../../components/CalendarioDashboard';
-import AdminUsuarios from '../../components/AdminUsuarios';
-import AyudaSistema from '../../components/AyudaSistema';
+
+const CalendarioDashboard = lazy(() => import('../../components/CalendarioDashboard'));
+const FieldsManagement = lazy(() => import('../../components/FieldsManagement'));
+const LotesManagement = lazy(() => import('../../components/LotesManagement'));
+const CultivosManagement = lazy(() => import('../../components/CultivosManagement'));
+const InsumosUnificados = lazy(() => import('../../components/InsumosUnificados'));
+const MaquinariaManagement = lazy(() => import('../../components/MaquinariaManagement'));
+const LaboresManagement = lazy(() => import('../../components/LaboresManagement'));
+const ReportsManagement = lazy(() => import('../../components/ReportsManagement'));
+const FinanzasManagement = lazy(() => import('../../components/FinanzasManagement'));
+const InventarioGranosManagement = lazy(() => import('../../components/InventarioGranosManagement'));
+const AdminUsuarios = lazy(() => import('../../components/AdminUsuarios'));
+const AyudaSistema = lazy(() => import('../../components/AyudaSistema'));
+const ConfiguracionUnificadaScreen = lazy(() => import('../../components/ConfiguracionUnificadaScreen'));
+const ExpedienteTrazabilidadCultivos = lazy(() =>
+  import('../../components/trazabilidad/pantallasExpedientePorModulo').then(m => ({
+    default: m.ExpedienteTrazabilidadCultivos,
+  }))
+);
+
+function ruta(
+  path: string,
+  name: string,
+  component: ComponentType<any>,
+  permisos?: string[]
+): ModuleRoute {
+  return { path, name, component, permisos };
+}
 
 /**
- * Rutas del módulo de Cultivos
+ * Rutas del módulo de Cultivos (carga diferida por pantalla).
  */
 export const cultivosRoutes: ModuleRoute[] = [
-  {
-    path: '/cultivos/dashboard',
-    name: 'Dashboard',
-    component: CalendarioDashboard,
-  },
-  {
-    path: '/cultivos/campos',
-    name: 'Campos',
-    component: FieldsManagement,
-    permisos: ['canViewFields'],
-  },
-  {
-    path: '/cultivos/lotes',
-    name: 'Lotes',
-    component: LotesManagement,
-    permisos: ['canViewLotes'],
-  },
-  {
-    path: '/cultivos/cultivos',
-    name: 'Cultivos',
-    component: CultivosManagement,
-    permisos: ['canViewCultivos'],
-  },
-  {
-    path: '/cultivos/insumos',
-    name: 'Insumos',
-    component: InsumosUnificados,
-    permisos: ['canViewInsumos'],
-  },
-  {
-    path: '/cultivos/maquinaria',
-    name: 'Maquinaria',
-    component: MaquinariaManagement,
-    permisos: ['canViewMaquinaria'],
-  },
-  {
-    path: '/cultivos/labores',
-    name: 'Labores',
-    component: LaboresManagement,
-    permisos: ['canViewLabores'],
-  },
-  {
-    path: '/cultivos/reportes',
-    name: 'Reportes',
-    component: ReportsManagement,
-    permisos: ['canViewReports'],
-  },
-  {
-    path: '/cultivos/finanzas',
-    name: 'Finanzas',
-    component: FinanzasManagement,
-    permisos: ['canViewFinances'],
-  },
-  {
-    path: '/cultivos/inventario',
-    name: 'Inventario Granos',
-    component: InventarioGranosManagement,
-    permisos: ['canViewInventario'],
-  },
-  {
-    path: '/cultivos/usuarios',
-    name: 'Usuarios',
-    component: AdminUsuarios,
-    permisos: ['canManageUsers'],
-  },
-  {
-    path: '/cultivos/ayuda',
-    name: 'Ayuda',
-    component: AyudaSistema,
-    permisos: ['canManageUsers'],
-  },
+  ruta('/cultivos/dashboard', 'Calendario', CalendarioDashboard),
+  ruta('/cultivos/campos', 'Campos', FieldsManagement, ['canViewFields']),
+  ruta('/cultivos/lotes', 'Lotes', LotesManagement, ['canViewLotes']),
+  ruta('/cultivos/cultivos', 'Cultivos', CultivosManagement, ['canViewCultivos']),
+  ruta('/cultivos/insumos', 'Insumos', InsumosUnificados, ['canViewInsumos']),
+  ruta('/cultivos/maquinaria', 'Maquinaria', MaquinariaManagement, ['canViewMaquinaria']),
+  ruta('/cultivos/labores', 'Labores', LaboresManagement, ['canViewLabores']),
+  ruta('/cultivos/reportes', 'Reportes', ReportsManagement, ['canViewReports']),
+  ruta('/cultivos/trazabilidad-expediente', 'Expediente trazabilidad', ExpedienteTrazabilidadCultivos, ['canViewLotes']),
+  ruta('/cultivos/finanzas', 'Finanzas', FinanzasManagement, ['canViewFinances']),
+  ruta('/cultivos/inventario', 'Inventario Granos', InventarioGranosManagement, ['canViewInventario']),
+  ruta('/cultivos/configuracion', 'Configuración', ConfiguracionUnificadaScreen, ['canManageUsers']),
+  ruta('/cultivos/ayuda', 'Ayuda', AyudaSistema, ['canManageUsers']),
 ];
-

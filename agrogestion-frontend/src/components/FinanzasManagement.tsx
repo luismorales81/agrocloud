@@ -6,6 +6,8 @@ import Badge from './ui/Badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
 import { ingresosService, egresosService, camposService, insumosService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
+import { Icon } from '../core/components/Icon';
+import { useCurrencyContext } from '../contexts/CurrencyContext';
 
 interface Ingreso {
   id?: number;
@@ -78,6 +80,7 @@ interface Insumo {
 }
 
 const FinanzasManagement: React.FC = () => {
+  const { formatCurrency } = useCurrencyContext();
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [egresos, setEgresos] = useState<Egreso[]>([]);
   const [lotes, setLotes] = useState<Lote[]>([]);
@@ -583,12 +586,6 @@ const FinanzasManagement: React.FC = () => {
     }
   };
 
-  const formatearMoneda = (monto: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS'
-    }).format(monto);
-  };
 
   const formatearFecha = (fecha: string | undefined) => {
     if (!fecha) return 'Sin fecha';
@@ -710,16 +707,18 @@ const FinanzasManagement: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">💰 Gestión Financiera</h1>
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <Icon name="DollarSign" size={24} /> Gestión Financiera
+        </h1>
         <div className="flex gap-2">
           <PermissionGate permission="canCreateFinances">
             <Button onClick={() => abrirModal('ingreso')} className="bg-green-600 hover:bg-green-700">
-              ➕ Nuevo Ingreso
+              <Icon name="Plus" size={16} style={{ marginRight: '4px' }} /> Nuevo Ingreso
             </Button>
           </PermissionGate>
           <PermissionGate permission="canCreateFinances">
             <Button onClick={() => abrirModal('egreso')} className="bg-red-600 hover:bg-red-700">
-              ➖ Nuevo Egreso
+              <Icon name="Minus" size={16} style={{ marginRight: '4px' }} /> Nuevo Egreso
             </Button>
           </PermissionGate>
         </div>
@@ -732,7 +731,7 @@ const FinanzasManagement: React.FC = () => {
              <div className="text-center">
                <p className="text-sm text-gray-600">Total Ingresos</p>
                <p className="text-2xl font-bold text-green-600">
-                 {formatearMoneda(ingresos.reduce((sum, ingreso) => sum + ingreso.monto, 0))}
+                 {formatCurrency(ingresos.reduce((sum, ingreso) => sum + ingreso.monto, 0))}
                </p>
                <p className="text-xs text-gray-500">{ingresos.length} registros</p>
              </div>
@@ -743,7 +742,7 @@ const FinanzasManagement: React.FC = () => {
              <div className="text-center">
                <p className="text-sm text-gray-600">Total Egresos</p>
                <p className="text-2xl font-bold text-red-600">
-                 {formatearMoneda(egresos.reduce((sum, egreso) => sum + (egreso.costoTotal || egreso.monto || 0), 0))}
+                 {formatCurrency(egresos.reduce((sum, egreso) => sum + (egreso.costoTotal || egreso.monto || 0), 0))}
                </p>
                <p className="text-xs text-gray-500">{egresos.length} registros</p>
              </div>
@@ -758,7 +757,7 @@ const FinanzasManagement: React.FC = () => {
                   egresos.reduce((sum, egreso) => sum + (egreso.costoTotal || egreso.monto || 0), 0)) >= 0 
                    ? 'text-green-600' : 'text-red-600'
                }`}>
-                 {formatearMoneda(
+                 {formatCurrency(
                    ingresos.reduce((sum, ingreso) => sum + ingreso.monto, 0) - 
                    egresos.reduce((sum, egreso) => sum + (egreso.costoTotal || egreso.monto || 0), 0)
                  )}
@@ -774,7 +773,9 @@ const FinanzasManagement: React.FC = () => {
          {/* Gráfico de Ingresos por Tipo */}
          <Card>
            <CardHeader>
-             <CardTitle>📊 Ingresos por Tipo</CardTitle>
+             <CardTitle className="flex items-center gap-2">
+               <Icon name="BarChart" size={18} /> Ingresos por Tipo
+             </CardTitle>
            </CardHeader>
            <CardContent>
              {(() => {
@@ -794,7 +795,7 @@ const FinanzasManagement: React.FC = () => {
                        <div key={tipo} className="space-y-1">
                          <div className="flex justify-between text-sm">
                            <span className="text-gray-700">{tipo.replace('_', ' ')}</span>
-                           <span className="font-medium">{formatearMoneda(monto)}</span>
+                           <span className="font-medium">{formatCurrency(monto)}</span>
                          </div>
                          <div className="w-full bg-gray-200 rounded-full h-2">
                            <div 
@@ -820,7 +821,9 @@ const FinanzasManagement: React.FC = () => {
          {/* Gráfico de Egresos por Tipo */}
          <Card>
            <CardHeader>
-             <CardTitle>📊 Egresos por Tipo</CardTitle>
+             <CardTitle className="flex items-center gap-2">
+               <Icon name="BarChart" size={18} /> Egresos por Tipo
+             </CardTitle>
            </CardHeader>
            <CardContent>
              {(() => {
@@ -845,7 +848,7 @@ const FinanzasManagement: React.FC = () => {
                        <div key={tipo} className="space-y-1">
                          <div className="flex justify-between text-sm">
                            <span className="text-gray-700">{tipo.replace('_', ' ')}</span>
-                           <span className="font-medium">{formatearMoneda(monto)}</span>
+                           <span className="font-medium">{formatCurrency(monto)}</span>
                          </div>
                          <div className="w-full bg-gray-200 rounded-full h-2">
                            <div 
@@ -881,7 +884,7 @@ const FinanzasManagement: React.FC = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              📈 Ingresos ({ingresos.length})
+              <Icon name="TrendingUp" size={16} style={{ marginRight: '4px' }} /> Ingresos ({ingresos.length})
             </button>
                          <button
                onClick={() => setActiveTab('egresos')}
@@ -891,7 +894,7 @@ const FinanzasManagement: React.FC = () => {
                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                }`}
              >
-               📉 Egresos ({egresos.length})
+               <Icon name="TrendingDown" size={16} style={{ marginRight: '4px' }} /> Egresos ({egresos.length})
              </button>
 
           </nav>
@@ -904,7 +907,9 @@ const FinanzasManagement: React.FC = () => {
           {/* Filtros para Ingresos */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>🔍 Filtros y Búsqueda - Ingresos</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Icon name="Search" size={18} /> Filtros y Búsqueda - Ingresos
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -917,7 +922,7 @@ const FinanzasManagement: React.FC = () => {
                     type="text"
                     placeholder="Buscar por concepto, descripción o cliente..."
                     value={busquedaIngresos}
-                    onChange={(e) => setBusquedaIngresos(e.target.value)}
+                    onChange={(valor) => setBusquedaIngresos(valor)}
                     className="w-full h-10"
                   />
                 </div>
@@ -977,7 +982,7 @@ const FinanzasManagement: React.FC = () => {
                     className="w-full h-10 text-sm"
                     size="sm"
                   >
-                    🗑️ Limpiar
+                    <Icon name="Trash2" size={16} style={{ marginRight: '4px' }} /> Limpiar
                   </Button>
                 </div>
               </div>
@@ -987,7 +992,9 @@ const FinanzasManagement: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>📈 Lista de Ingresos</span>
+                <span className="flex items-center gap-2">
+                  <Icon name="TrendingUp" size={18} /> Lista de Ingresos
+                </span>
                 <span className="text-sm text-gray-500">
                   {obtenerIngresosFiltrados().length} elemento{obtenerIngresosFiltrados().length !== 1 ? 's' : ''}
                 </span>
@@ -996,7 +1003,9 @@ const FinanzasManagement: React.FC = () => {
             <CardContent>
             {loading ? (
               <div className="text-center py-8">
-                <p>⏳ Cargando ingresos...</p>
+                <p className="flex items-center gap-2">
+                  <Icon name="Loader" size={16} /> Cargando ingresos...
+                </p>
               </div>
             ) : (() => {
               const ingresosFiltrados = obtenerIngresosFiltrados();
@@ -1028,7 +1037,7 @@ const FinanzasManagement: React.FC = () => {
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
-                        📅 {formatearFecha(ingreso.fecha || ingreso.fechaIngreso)} • {ingreso.tipoIngreso.replace('_', ' ')}
+                        <Icon name="Calendar" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {formatearFecha(ingreso.fecha || ingreso.fechaIngreso)} • {ingreso.tipoIngreso.replace('_', ' ')}
                         {ingreso.lote && ` • Lote: ${ingreso.lote.nombre}`}
                       </p>
                       {ingreso.descripcion && (
@@ -1040,7 +1049,7 @@ const FinanzasManagement: React.FC = () => {
                     </div>
                     <div className="text-right space-y-2">
                       <p className="text-xl font-bold text-green-600">
-                        {formatearMoneda(ingreso.monto)}
+                        {formatCurrency(ingreso.monto)}
                       </p>
                       <div className="flex flex-col gap-2">
                         <Select
@@ -1063,7 +1072,7 @@ const FinanzasManagement: React.FC = () => {
                             onClick={() => handleDeleteIngreso(ingreso.id!)}
                             className="text-red-600 hover:text-red-900 text-sm"
                           >
-                            🗑️ Eliminar
+                            <Icon name="Trash2" size={16} style={{ marginRight: '4px' }} /> Eliminar
                           </Button>
                         </PermissionGate>
                       </div>
@@ -1085,7 +1094,7 @@ const FinanzasManagement: React.FC = () => {
                           variant="outline"
                           size="sm"
                         >
-                          ⏮️ Primera
+                          <Icon name="ChevronsLeft" size={16} style={{ marginRight: '4px' }} /> Primera
                         </Button>
                         <Button
                           onClick={() => setPaginaIngresos(p => Math.max(1, p - 1))}
@@ -1093,7 +1102,7 @@ const FinanzasManagement: React.FC = () => {
                           variant="outline"
                           size="sm"
                         >
-                          ⬅️ Anterior
+                          <Icon name="ChevronLeft" size={16} style={{ marginRight: '4px' }} /> Anterior
                         </Button>
                         <span className="px-3 py-1 text-sm">
                           Página {paginaIngresos} de {totalPaginas}
@@ -1104,7 +1113,7 @@ const FinanzasManagement: React.FC = () => {
                           variant="outline"
                           size="sm"
                         >
-                          Siguiente ➡️
+                          Siguiente <Icon name="ChevronRight" size={16} style={{ marginLeft: '4px' }} />
                         </Button>
                         <Button
                           onClick={() => setPaginaIngresos(totalPaginas)}
@@ -1112,7 +1121,7 @@ const FinanzasManagement: React.FC = () => {
                           variant="outline"
                           size="sm"
                         >
-                          Última ⏭️
+                          Última <Icon name="ChevronsRight" size={16} style={{ marginLeft: '4px' }} />
                         </Button>
                       </div>
                     </div>
@@ -1130,7 +1139,9 @@ const FinanzasManagement: React.FC = () => {
           {/* Filtros para Egresos */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>🔍 Filtros y Búsqueda - Egresos</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Icon name="Search" size={18} /> Filtros y Búsqueda - Egresos
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1143,7 +1154,7 @@ const FinanzasManagement: React.FC = () => {
                     type="text"
                     placeholder="Buscar por concepto, descripción o proveedor..."
                     value={busquedaEgresos}
-                    onChange={(e) => setBusquedaEgresos(e.target.value)}
+                    onChange={(valor) => setBusquedaEgresos(valor)}
                     className="w-full h-10"
                   />
                 </div>
@@ -1203,7 +1214,7 @@ const FinanzasManagement: React.FC = () => {
                     className="w-full h-10 text-sm"
                     size="sm"
                   >
-                    🗑️ Limpiar
+                    <Icon name="Trash2" size={16} style={{ marginRight: '4px' }} /> Limpiar
                   </Button>
                 </div>
               </div>
@@ -1213,7 +1224,9 @@ const FinanzasManagement: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>📉 Lista de Egresos</span>
+                <span className="flex items-center gap-2">
+                  <Icon name="TrendingDown" size={18} /> Lista de Egresos
+                </span>
                 <span className="text-sm text-gray-500">
                   {obtenerEgresosFiltrados().length} elemento{obtenerEgresosFiltrados().length !== 1 ? 's' : ''}
                 </span>
@@ -1222,7 +1235,9 @@ const FinanzasManagement: React.FC = () => {
             <CardContent>
             {loading ? (
               <div className="text-center py-8">
-                <p>⏳ Cargando egresos...</p>
+                <p className="flex items-center gap-2">
+                  <Icon name="Loader" size={16} /> Cargando egresos...
+                </p>
               </div>
             ) : (() => {
               const egresosFiltrados = obtenerEgresosFiltrados();
@@ -1265,7 +1280,7 @@ const FinanzasManagement: React.FC = () => {
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
-                        📅 {formatearFecha(egreso.fecha || egreso.fechaEgreso)}
+                        <Icon name="Calendar" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {formatearFecha(egreso.fecha || egreso.fechaEgreso)}
                         {(egreso.lote?.nombre || egreso.loteNombre) && ` • Lote: ${egreso.lote?.nombre || egreso.loteNombre}`}
                         {egreso.insumo && ` • Insumo: ${egreso.insumo.nombre}`}
                       </p>
@@ -1278,7 +1293,7 @@ const FinanzasManagement: React.FC = () => {
                     </div>
                     <div className="text-right space-y-2">
                       <p className="text-xl font-bold text-red-600">
-                        {formatearMoneda(egreso.costoTotal || egreso.monto || 0)}
+                        {formatCurrency(egreso.costoTotal || egreso.monto || 0)}
                       </p>
                       <div className="flex flex-col gap-2">
                         <Select
@@ -1301,7 +1316,7 @@ const FinanzasManagement: React.FC = () => {
                             onClick={() => handleDeleteEgreso(egreso.id!)}
                             className="text-red-600 hover:text-red-900 text-sm"
                           >
-                            🗑️ Eliminar
+                            <Icon name="Trash2" size={16} style={{ marginRight: '4px' }} /> Eliminar
                           </Button>
                         </PermissionGate>
                       </div>
@@ -1323,7 +1338,7 @@ const FinanzasManagement: React.FC = () => {
                           variant="outline"
                           size="sm"
                         >
-                          ⏮️ Primera
+                          <Icon name="ChevronsLeft" size={16} style={{ marginRight: '4px' }} /> Primera
                         </Button>
                         <Button
                           onClick={() => setPaginaEgresos(p => Math.max(1, p - 1))}
@@ -1331,7 +1346,7 @@ const FinanzasManagement: React.FC = () => {
                           variant="outline"
                           size="sm"
                         >
-                          ⬅️ Anterior
+                          <Icon name="ChevronLeft" size={16} style={{ marginRight: '4px' }} /> Anterior
                         </Button>
                         <span className="px-3 py-1 text-sm">
                           Página {paginaEgresos} de {totalPaginas}
@@ -1342,7 +1357,7 @@ const FinanzasManagement: React.FC = () => {
                           variant="outline"
                           size="sm"
                         >
-                          Siguiente ➡️
+                          Siguiente <Icon name="ChevronRight" size={16} style={{ marginLeft: '4px' }} />
                         </Button>
                         <Button
                           onClick={() => setPaginaEgresos(totalPaginas)}
@@ -1350,7 +1365,7 @@ const FinanzasManagement: React.FC = () => {
                           variant="outline"
                           size="sm"
                         >
-                          Última ⏭️
+                          Última <Icon name="ChevronsRight" size={16} style={{ marginLeft: '4px' }} />
                         </Button>
                       </div>
                     </div>
@@ -1370,9 +1385,11 @@ const FinanzasManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">📈 Nuevo Ingreso</h2>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Icon name="TrendingUp" size={20} /> Nuevo Ingreso
+              </h2>
               <Button onClick={cerrarModal} className="text-gray-500 hover:text-gray-700">
-                ❌
+                <Icon name="X" size={20} />
               </Button>
             </div>
             
@@ -1442,7 +1459,7 @@ const FinanzasManagement: React.FC = () => {
               {/* Campos opcionales expandibles */}
               <details className="group">
                 <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
-                  📋 Información Adicional (opcional)
+                  <Icon name="Clipboard" size={16} style={{ marginRight: '4px' }} /> Información Adicional (opcional)
                 </summary>
                 <div className="mt-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1571,10 +1588,18 @@ const FinanzasManagement: React.FC = () => {
 
               <div className="flex justify-end space-x-3">
                 <Button type="button" onClick={cerrarModal}>
-                  ❌ Cancelar
+                  <Icon name="X" size={20} /> Cancelar
                 </Button>
                 <Button type="submit" disabled={loading}>
-                  {loading ? '⏳ Guardando...' : '💾 Guardar Ingreso'}
+                  {loading ? (
+                    <>
+                      <Icon name="Loader" size={16} style={{ marginRight: '4px' }} /> Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="Save" size={16} style={{ marginRight: '4px' }} /> Guardar Ingreso
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
@@ -1587,9 +1612,11 @@ const FinanzasManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">📉 Nuevo Egreso</h2>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Icon name="TrendingDown" size={20} /> Nuevo Egreso
+              </h2>
               <Button onClick={cerrarModal} className="text-gray-500 hover:text-gray-700">
-                ❌
+                <Icon name="X" size={20} />
               </Button>
             </div>
             
@@ -1611,7 +1638,7 @@ const FinanzasManagement: React.FC = () => {
                   />
                   {egresoForm.insumo?.id && (
                     <p className="text-xs text-blue-600 mt-1">
-                      ℹ️ Concepto bloqueado - usa el nombre del insumo seleccionado. Para modificarlo, edita el insumo desde Administración de Insumos
+                      <Icon name="Info" size={14} style={{ marginRight: '4px' }} /> Concepto bloqueado - usa el nombre del insumo seleccionado. Para modificarlo, edita el insumo desde Administración de Insumos
                     </p>
                   )}
                 </div>
@@ -1666,7 +1693,7 @@ const FinanzasManagement: React.FC = () => {
               {/* Campos opcionales expandibles */}
               <details className="group">
                 <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
-                  📋 Información Adicional (opcional)
+                  <Icon name="Clipboard" size={16} style={{ marginRight: '4px' }} /> Información Adicional (opcional)
                 </summary>
                 <div className="mt-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1807,7 +1834,7 @@ const FinanzasManagement: React.FC = () => {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="nuevo">
-                                ➕ Crear nuevo insumo
+                                + Crear nuevo insumo
                               </SelectItem>
                               {insumos.map(insumo => (
                                 <SelectItem key={insumo.id} value={insumo.id.toString()}>
@@ -1832,13 +1859,13 @@ const FinanzasManagement: React.FC = () => {
                               required
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                              ✨ Se creará automáticamente un nuevo insumo en el inventario
+                              <Icon name="Sparkles" size={14} style={{ marginRight: '4px' }} /> Se creará automáticamente un nuevo insumo en el inventario
                             </p>
                           </div>
                         )}
 
                         <p className="text-xs text-gray-500 mt-1">
-                          💡 Al registrar un egreso de insumos, el inventario se actualiza automáticamente
+                          <Icon name="Lightbulb" size={14} style={{ marginRight: '4px' }} /> Al registrar un egreso de insumos, el inventario se actualiza automáticamente
                         </p>
                       </div>
 
@@ -1864,7 +1891,7 @@ const FinanzasManagement: React.FC = () => {
                       </Select>
                       {egresoForm.insumo?.id && (
                         <p className="text-xs text-blue-600 mt-1">
-                          ℹ️ Para modificar la unidad de medida, edita el insumo desde Administración de Insumos
+                          <Icon name="Info" size={14} style={{ marginRight: '4px' }} /> Para modificar la unidad de medida, edita el insumo desde Administración de Insumos
                         </p>
                       )}
                     </div>
@@ -1954,7 +1981,7 @@ const FinanzasManagement: React.FC = () => {
 
               <div className="flex justify-end space-x-3">
                 <Button type="button" onClick={cerrarModal}>
-                  ❌ Cancelar
+                  <Icon name="X" size={20} /> Cancelar
                 </Button>
                 <Button type="submit" disabled={loading}>
                   {loading ? '⏳ Guardando...' : '💾 Guardar Egreso'}

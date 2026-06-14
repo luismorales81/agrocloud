@@ -1,0 +1,17 @@
+{
+  "name": "docs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pdf:brief": "node generar-brief-interesados-pdf.mjs",
+    "pdf:propuesta": "node generar-brief-interesados-pdf.mjs PROPUESTA-CLIENTE-AGROGESTION.md PROPUESTA-CLIENTE-AGROGESTION.pdf"
+  },
+  "dependencies": {
+    "pdfkit": "^0.15.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

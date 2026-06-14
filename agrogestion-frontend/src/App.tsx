@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import FieldsManagement from './components/FieldsManagement';
 import LotesManagement from './components/LotesManagement';
 import CultivosManagement from './components/CultivosManagement';
@@ -29,29 +31,23 @@ import CurrencySelector from './components/CurrencySelector';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { EmpresaProvider, useEmpresa } from './contexts/EmpresaContext';
 import { CurrencyProvider, useCurrencyContext } from './contexts/CurrencyContext';
+import { ModuleProvider } from './core/context/ModuleContext';
 import { useCurrencyUpdate } from './hooks/useCurrencyUpdate';
 import { usePermissions } from './hooks/usePermissions';
 import ProtectedRouteComponent from './components/ProtectedRoute';
+import CalendarioDashboard from './components/CalendarioDashboard';
+import ModularDashboard from './components/ModularDashboard';
+import ModuleSelectorScreen from './screens/ModuleSelectorScreen';
 import api, { authService } from './services/api';
+import muiTheme from './theme/muiTheme';
+import { Icon } from './components/icons';
 
 // Dashboard con menú lateral
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   
-  // Verificar que el contexto de empresa esté disponible
   const empresaContext = useEmpresa();
-  const { rolUsuario } = empresaContext || {}; // Obtener rol del contexto de empresa
-  
-  if (!empresaContext) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Cargando contexto de empresa...</p>
-      </div>
-    </div>;
-  }
-  
-  const { empresaActiva, esAdministrador, esAsesor, esOperario, esContador, esTecnico, esSoloLectura, tienePermisoFinanciero } = empresaContext;
+  const { rolUsuario, empresaActiva, esAdministrador, esAsesor, esOperario, esContador, esTecnico, esSoloLectura, tienePermisoFinanciero } = empresaContext;
   const { formatCurrency, selectedCurrency, exchangeType, rateInfo, realRates, changeCurrency, changeExchangeType } = useCurrencyContext();
   useCurrencyUpdate(); // Forzar actualización cuando cambie la moneda
 
@@ -273,456 +269,7 @@ const Dashboard: React.FC = () => {
         );
       case 'dashboard':
       default:
-  return (
-          <div style={{ padding: '2rem' }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          marginBottom: '2rem'
-        }}>
-          <h1 style={{ 
-            fontSize: '2rem', 
-            fontWeight: 'bold', 
-            color: '#1f2937'
-          }}>
-                📊 Dashboard
-          </h1>
-          
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            {/* Selector de Empresa */}
-            {empresaActiva && (
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '0.375rem',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                border: '1px solid #e5e7eb',
-                padding: '0.5rem'
-              }}>
-                <EmpresaSelector />
-              </div>
-            )}
-            
-            {/* Selector de Moneda */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '0.375rem',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e5e7eb',
-              padding: '0.5rem'
-            }}>
-              <select
-                value={selectedCurrency === 'ARS' ? 'ARS' : exchangeType}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  if (value === 'ARS') {
-                    changeCurrency('ARS');
-                  } else if (value === 'oficial' || value === 'blue') {
-                    changeCurrency('USD');
-                    changeExchangeType(value);
-                  }
-                  // Forzar actualización inmediata
-                  setTimeout(() => {
-                    window.dispatchEvent(new Event('currencyUpdate'));
-                  }, 100);
-                }}
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  minWidth: '180px'
-                }}
-              >
-                <option value="ARS">💰 ARS (Pesos Argentinos)</option>
-                <option value="oficial">
-                  💵 USD Oficial {realRates?.oficial ? `($${realRates.oficial.toFixed(2)})` : ''}
-                </option>
-                <option value="blue">
-                  💙 USD Blue {realRates?.blue ? `($${realRates.blue.toFixed(2)})` : ''}
-                </option>
-              </select>
-            </div>
-            
-            {/* Botón Cerrar Sesión */}
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: 'pointer'
-              }}
-            >
-              Cerrar sesión
-            </button>
-          </div>
-        </div>
-        
-        <div style={{ 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-          color: 'white', 
-          padding: '1.5rem', 
-          borderRadius: '0.5rem', 
-          marginBottom: '2rem' 
-        }}>
-          <h2 style={{ marginBottom: '0.5rem' }}>
-            Bienvenido, {user?.name || 'Usuario'}!
-          </h2>
-          <p style={{ opacity: '0.9' }}>
-            Rol: {rolUsuario ? rolUsuario.replace(/_/g, ' ').split(' ').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ') : 'Usuario'}
-          </p>
-        </div>
-        
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-          gap: '1.5rem' 
-        }}>
-          {/* Tarjetas Financieras - Solo para usuarios con permiso financiero */}
-          {tienePermisoFinanciero() && (
-            <>
-              {/* Balance Operativo (Corto plazo) */}
-              <div style={{ 
-                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                color: 'white',
-                padding: '1.5rem',
-                borderRadius: '0.5rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-              }}
-              onClick={() => setActivePage('balance')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>📊</span>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Balance Operativo</h3>
-                    <p style={{ margin: 0, opacity: '0.9', fontSize: '1.2rem', fontWeight: 'bold' }}>{formatCurrency(dashboardStats.balanceOperativo)}</p>
-                  </div>
-                </div>
-                <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Ingresos - Egresos (Flujo de caja)</p>
-              </div>
-
-              {/* Balance Patrimonial (Largo plazo) */}
-              <div style={{ 
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
-                padding: '1.5rem',
-                borderRadius: '0.5rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-              }}
-              onClick={() => setActivePage('balance')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>💰</span>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Balance Patrimonial</h3>
-                    <p style={{ margin: 0, opacity: '0.9', fontSize: '1.2rem', fontWeight: 'bold' }}>{formatCurrency(dashboardStats.balancePatrimonial)}</p>
-                  </div>
-                </div>
-                <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Incluye valor de activos</p>
-              </div>
-
-              {/* Desglose Financiero */}
-              <div style={{ 
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                color: 'white',
-                padding: '1.5rem',
-                borderRadius: '0.5rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-              }}
-              onClick={() => setActivePage('finanzas')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>📈</span>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Desglose Financiero</h3>
-                    <div style={{ fontSize: '0.9rem', opacity: '0.9' }}>
-                      <div>Ingresos: {formatCurrency(dashboardStats.totalIngresos)}</div>
-                      <div>Egresos: {formatCurrency(dashboardStats.totalEgresos)}</div>
-                      <div>Activos: {formatCurrency(dashboardStats.valorActivos)}</div>
-                    </div>
-                  </div>
-                </div>
-                <p style={{ opacity: '0.9', fontSize: '0.85rem', margin: 0 }}>Detalle de ingresos, egresos y activos</p>
-              </div>
-            </>
-          )}
-
-          {/* Campos */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('fields')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🌾</span>
-              <div>
-                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Campos</h3>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.campos} registrados</p>
-              </div>
-            </div>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Administra tus terrenos y lotes</p>
-          </div>
-
-          {/* Lotes */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('plots')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🔲</span>
-              <div>
-                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Lotes</h3>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.lotes} activos</p>
-              </div>
-            </div>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Gestiona las parcelas de cultivo</p>
-          </div>
-
-          {/* Cultivos */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('crops')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🌱</span>
-              <div>
-                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Cultivos</h3>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.cultivos} en curso</p>
-              </div>
-            </div>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de plantaciones y variedades</p>
-          </div>
-
-          {/* Cosechas - DESHABILITADO: Ahora se gestiona desde Lotes
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('cosechas')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🌾</span>
-              <div>
-                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Cosechas</h3>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.cosechas} registradas</p>
-              </div>
-            </div>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Registro de cosechas y rendimientos</p>
-          </div> */}
-
-          {/* Insumos */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('insumos-unificados')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🧪</span>
-              <div>
-                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Insumos</h3>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.insumos} en inventario</p>
-              </div>
-            </div>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Gestión de fertilizantes y productos</p>
-          </div>
-
-          {/* Maquinaria */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('machinery')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>🚜</span>
-              <div>
-                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Maquinaria</h3>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.maquinaria} equipos</p>
-              </div>
-            </div>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de equipos y mantenimiento</p>
-          </div>
-
-          {/* Labores */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
-          onClick={() => setActivePage('labors')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>⚒️</span>
-              <div>
-                <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Labores</h3>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{dashboardStats.labores} tareas</p>
-              </div>
-            </div>
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Seguimiento de tareas agrícolas</p>
-          </div>
-
-          {/* Finanzas - Solo para usuarios con permiso financiero */}
-          {tienePermisoFinanciero() && (
-            <div style={{ 
-              backgroundColor: 'white', 
-              padding: '1.5rem',
-              borderRadius: '0.5rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-            }}
-            onClick={() => setActivePage('finanzas')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '2rem', marginRight: '0.75rem' }}>💳</span>
-                <div>
-                  <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem' }}>Finanzas</h3>
-                  <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Control completo</p>
-                </div>
-              </div>
-              <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Control de ingresos y egresos</p>
-            </div>
-          )}
-        </div>
-          </div>
-        );
+        return <CalendarioDashboard />;
     }
   };
 
@@ -809,7 +356,7 @@ const Dashboard: React.FC = () => {
           label: 'Recursos & Stock',
           icon: '📦',
           items: [
-            { id: 'insumos-unificados', label: 'Insumos & Agroquímicos', icon: '🧪', permission: 'canViewInsumos' },
+            { id: 'insumos-unificados', label: 'Insumos & Agroquímicos', icon: '?', permission: 'canViewInsumos' },
             { id: 'machinery', label: 'Maquinaria', icon: '🚜', permission: 'canViewMaquinaria' },
             { id: 'inventario', label: 'Inventario Granos', icon: '📦', permission: 'canViewFinances' }
           ]
@@ -1097,7 +644,7 @@ const Dashboard: React.FC = () => {
               cursor: 'pointer'
             }}
           >
-            ☰
+            <Icon name="Menu" size={24} color="white" />
           </button>
         )}
 
@@ -1130,7 +677,7 @@ const Dashboard: React.FC = () => {
             zIndex: 1000,
             borderBottom: '1px solid #f59e0b'
           }}>
-            📡 Modo Offline - Trabajando con datos locales
+            <Icon name="WifiOff" size={16} style={{ marginRight: '0.5rem', display: 'inline' }} /> Modo Offline - Trabajando con datos locales
           </div>
         )}
     </div>
@@ -1165,7 +712,16 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
       <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/select-module" element={<ProtectedRoute><ModuleSelectorScreen /></ProtectedRoute>} />
+      <Route path="/dashboard/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/cultivos/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/porcinos/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/avicola-crianza/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/avicola-huevos/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/avicola-carne/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/avicola-ponedoras/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      {/* Mantener ruta legacy para compatibilidad */}
+      <Route path="/dashboard-legacy" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
@@ -1174,15 +730,20 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <EmpresaProvider>
-        <CurrencyProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
-        </CurrencyProvider>
-      </EmpresaProvider>
-    </AuthProvider>
+    <ThemeProvider theme={muiTheme}>
+      <CssBaseline />
+      <AuthProvider>
+        <EmpresaProvider>
+          <CurrencyProvider>
+            <ModuleProvider>
+              <Router>
+                <AppRoutes />
+              </Router>
+            </ModuleProvider>
+          </CurrencyProvider>
+        </EmpresaProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

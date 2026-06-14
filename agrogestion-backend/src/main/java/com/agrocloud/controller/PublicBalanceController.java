@@ -1,24 +1,23 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.dto.BalanceDTO;
-import com.agrocloud.service.BalanceService;
+import com.agrocloud.core.application.BalanceService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
-/**
- * Controlador público para el balance de costos y beneficios.
- * No requiere autenticación para facilitar las pruebas.
- */
 @RestController
 @RequestMapping("/api/public/balance")
-@CrossOrigin(origins = "*")
+@Profile("dev")
 public class PublicBalanceController {
 
     @Autowired
+    @Qualifier("balanceServiceCore")
     private BalanceService balanceService;
 
     /**

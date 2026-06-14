@@ -10,6 +10,9 @@ interface InputProps {
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  min?: string;
+  max?: string;
+  step?: string;
   'data-testid'?: string;
 }
 
@@ -23,6 +26,9 @@ const Input: React.FC<InputProps> = ({
   required = false,
   disabled = false,
   className = '',
+  min,
+  max,
+  step,
   'data-testid': dataTestId,
 }) => {
   return (
@@ -37,6 +43,9 @@ const Input: React.FC<InputProps> = ({
         type={type}
         placeholder={placeholder}
         value={value}
+        min={min}
+        max={max}
+        step={step}
         onChange={(e) => {
           if (e && e.target) {
             onChange(e.target.value);

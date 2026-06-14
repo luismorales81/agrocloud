@@ -1,4 +1,7 @@
-# Dockerfile para AgroCloud Backend
+# ========== LEGACY - NO USAR PARA PRODUCCIÓN ==========
+# Para producción usar: agrogestion-backend/Dockerfile
+# Este archivo fija perfil railway-h2; el perfil debe definirse por variable de entorno.
+# Dockerfile para AgroCloud Backend (solo referencia/legacy)
 FROM maven:3.9.5-eclipse-temurin-17 AS build
 
 # Establecer directorio de trabajo
@@ -34,5 +37,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/ || exit 1
 
-# Ejecutar la aplicación con perfil Railway H2 (fallback)
-ENTRYPOINT ["java", "-Dspring.profiles.active=railway-h2", "-jar", "app.jar"]
+# Perfil por variable de entorno (ej: SPRING_PROFILES_ACTIVE=prod). No fijar en imagen.
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS:-} -jar app.jar"]

@@ -3,6 +3,7 @@ import api from '../services/api';
 import { API_ENDPOINTS } from '../services/apiEndpoints';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/admin-forms.css';
+import { Icon } from '../core/components/Icon';
 
 interface Empresa {
   id: number;
@@ -401,14 +402,14 @@ const AdminEmpresas: React.FC = () => {
             onClick={() => setShowCrearEmpresaForm(true)}
             className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
-            🏢 Crear Nueva Empresa
+            <Icon name="Building" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Crear Nueva Empresa
           </button>
         )}
         <button
           onClick={() => setShowAsignarForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2"
         >
-          ➕ Asignar Usuario a Empresa
+          <Icon name="Plus" size={16} /> Asignar Usuario a Empresa
         </button>
       </div>
 
@@ -578,12 +579,14 @@ const AdminEmpresas: React.FC = () => {
         <div className="admin-modal">
           <div className="admin-modal-content admin-form-large">
             <div className="admin-modal-header">
-              <h3 className="admin-modal-title">🏢 Crear Nueva Empresa</h3>
+              <h3 className="admin-modal-title flex items-center gap-2">
+                <Icon name="Building" size={20} /> Crear Nueva Empresa
+              </h3>
               <button
                 onClick={() => setShowCrearEmpresaForm(false)}
-                className="admin-modal-close"
+                className="admin-modal-close flex items-center justify-center"
               >
-                ✕
+                <Icon name="X" size={20} />
               </button>
             </div>
             
@@ -688,28 +691,32 @@ const AdminEmpresas: React.FC = () => {
         <div className="admin-modal">
           <div className="admin-modal-content" style={{ width: '90vw', maxWidth: '1200px' }}>
             <div className="admin-modal-header">
-              <h3 className="admin-modal-title">➕ Asignar Usuario a Empresa</h3>
+              <h3 className="admin-modal-title flex items-center gap-2">
+                <Icon name="Plus" size={20} /> Asignar Usuario a Empresa
+              </h3>
               <button
                 onClick={() => {
                   setShowAsignarForm(false);
                   limpiarSeleccion();
                 }}
-                className="admin-modal-close"
+                className="admin-modal-close flex items-center justify-center"
               >
-                ✕
+                <Icon name="X" size={20} />
               </button>
             </div>
             
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
               {/* Panel de Selección de Usuario */}
               <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                  👤 Seleccionar Usuario
+                <h4 className="text-lg font-semibold text-gray-900 border-b pb-2 flex items-center gap-2">
+                  <Icon name="User" size={18} /> Seleccionar Usuario
                 </h4>
                 
                 {/* Búsqueda de Usuario */}
                 <div className="admin-field-group">
-                  <label className="admin-label">🔍 Buscar Usuario</label>
+                  <label className="admin-label flex items-center gap-2">
+                    <Icon name="Search" size={14} /> Buscar Usuario
+                  </label>
                   <input
                     type="text"
                     value={busquedaUsuario}
@@ -760,13 +767,15 @@ const AdminEmpresas: React.FC = () => {
 
               {/* Panel de Selección de Empresa */}
               <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                  🏢 Seleccionar Empresa
+                <h4 className="text-lg font-semibold text-gray-900 border-b pb-2 flex items-center gap-2">
+                  <Icon name="Building" size={18} /> Seleccionar Empresa
                 </h4>
                 
                 {/* Búsqueda de Empresa */}
                 <div className="admin-field-group">
-                  <label className="admin-label">🔍 Buscar Empresa</label>
+                  <label className="admin-label flex items-center gap-2">
+                    <Icon name="Search" size={14} /> Buscar Empresa
+                  </label>
                   <input
                     type="text"
                     value={busquedaEmpresa}
@@ -817,8 +826,8 @@ const AdminEmpresas: React.FC = () => {
             {/* Panel de Configuración */}
             {(usuarioSeleccionado || empresaSeleccionada) && (
               <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                  ⚙️ Configuración de Asignación
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Icon name="Settings" size={18} /> Configuración de Asignación
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -846,7 +855,9 @@ const AdminEmpresas: React.FC = () => {
                 {/* Selección de Rol */}
                 <div className="mt-4">
                   <div className="admin-field-group">
-                    <label className="admin-label">🎭 Rol en la Empresa</label>
+                    <label className="admin-label flex items-center gap-2">
+                      <Icon name="UserCog" size={14} /> Rol en la Empresa
+                    </label>
                     <select
                       value={asignacionForm.rol}
                       onChange={(e) => setAsignacionForm({...asignacionForm, rol: e.target.value})}
@@ -884,10 +895,15 @@ const AdminEmpresas: React.FC = () => {
                     : 'admin-btn-disabled'
                 }`}
               >
-                {usuarioSeleccionado && empresaSeleccionada 
-                  ? '✅ Asignar Usuario' 
-                  : '⚠️ Selecciona Usuario y Empresa'
-                }
+                {usuarioSeleccionado && empresaSeleccionada ? (
+                  <>
+                    <Icon name="CheckCircle" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Asignar Usuario
+                  </>
+                ) : (
+                  <>
+                    <Icon name="AlertTriangle" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Selecciona Usuario y Empresa
+                  </>
+                )}
               </button>
             </div>
           </div>

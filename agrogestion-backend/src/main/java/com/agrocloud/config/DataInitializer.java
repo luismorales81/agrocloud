@@ -1,20 +1,21 @@
 package com.agrocloud.config;
 
-import com.agrocloud.model.entity.Empresa;
-import com.agrocloud.model.entity.Role;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.model.entity.UsuarioEmpresa;
+import com.agrocloud.core.domain.Empresa;
+import com.agrocloud.core.domain.Role;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.core.domain.UsuarioEmpresa;
 import com.agrocloud.model.enums.EstadoEmpresa;
 import com.agrocloud.model.enums.EstadoUsuarioEmpresa;
 import com.agrocloud.model.enums.RolEmpresa;
-import com.agrocloud.repository.EmpresaRepository;
-import com.agrocloud.repository.RoleRepository;
-import com.agrocloud.repository.UserRepository;
-import com.agrocloud.repository.UsuarioEmpresaRepository;
-import com.agrocloud.service.RoleService;
+import com.agrocloud.core.infrastructure.EmpresaRepository;
+import com.agrocloud.core.application.RoleService;
+import com.agrocloud.core.infrastructure.RoleRepository;
+import com.agrocloud.core.infrastructure.UserRepository;
+import com.agrocloud.core.infrastructure.UsuarioEmpresaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,18 +30,23 @@ public class DataInitializer implements CommandLineRunner {
     private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
     
     @Autowired
+    @Qualifier("roleServiceCore")
     private RoleService roleService;
     
     @Autowired
+    @Qualifier("roleRepositoryCore")
     private RoleRepository roleRepository;
     
     @Autowired
+    @Qualifier("userRepositoryCore")
     private UserRepository userRepository;
     
     @Autowired
+    @Qualifier("empresaRepositoryCore")
     private EmpresaRepository empresaRepository;
     
     @Autowired
+    @Qualifier("usuarioEmpresaRepositoryCore")
     private UsuarioEmpresaRepository usuarioEmpresaRepository;
     
     @Autowired
@@ -208,11 +214,11 @@ public class DataInitializer implements CommandLineRunner {
             return RolEmpresa.OPERARIO;
         }
         
-        // Para INVITADO, asignar como LECTURA
+        // Para INVITADO, asignar como CONSULTOR_EXTERNO (solo lectura)
         if (usuario.getRoles().stream().anyMatch(r -> "INVITADO".equals(r.getNombre()))) {
-            logger.info("Usuario {} con rol INVITADO asignado como LECTURA", 
+            logger.info("Usuario {} con rol INVITADO asignado como CONSULTOR_EXTERNO",
                        usuario.getEmail());
-            return RolEmpresa.LECTURA;
+            return RolEmpresa.CONSULTOR_EXTERNO;
         }
         
         // Por defecto, asignar como OPERARIO

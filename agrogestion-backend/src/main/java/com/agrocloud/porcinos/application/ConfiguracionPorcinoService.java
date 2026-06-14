@@ -1,0 +1,159 @@
+package com.agrocloud.porcinos.application;
+
+import com.agrocloud.core.application.EmpresaContextService;
+import com.agrocloud.porcinos.domain.ConfiguracionPorcino;
+import com.agrocloud.core.domain.Empresa;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.porcinos.infrastructure.ConfiguracionPorcinoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Service
+public class ConfiguracionPorcinoService {
+
+    @Autowired
+    private ConfiguracionPorcinoRepository configuracionRepository;
+
+    @Autowired
+    private EmpresaContextService empresaContextService;
+
+    /**
+     * Obtener una configuración por clave
+     */
+    @Transactional(readOnly = true)
+    public Optional<ConfiguracionPorcino> obtenerConfiguracion(String clave, User user) {
+        Optional<Empresa> empresaActiva = empresaContextService.obtenerEmpresaPrincipalDelUsuario(user.getId());
+        if (empresaActiva.isEmpty()) {
+            return Optional.empty();
+        }
+        return configuracionRepository.findByClaveAndEmpresaAndActivoTrue(clave, empresaActiva.get());
+    }
+
+    /**
+     * Obtener valor de configuración como Integer
+     */
+    public Integer obtenerValorInteger(String clave, Integer valorPorDefecto, User user) {
+        Optional<ConfiguracionPorcino> config = obtenerConfiguracion(clave, user);
+        if (config.isPresent()) {
+            Integer valor = config.get().getValorComoInteger();
+            return valor != null ? valor : valorPorDefecto;
+        }
+        return valorPorDefecto;
+    }
+
+    /**
+     * Obtener valor de configuración como Double
+     */
+    public Double obtenerValorDouble(String clave, Double valorPorDefecto, User user) {
+        Optional<ConfiguracionPorcino> config = obtenerConfiguracion(clave, user);
+        if (config.isPresent()) {
+            Double valor = config.get().getValorComoDouble();
+            return valor != null ? valor : valorPorDefecto;
+        }
+        return valorPorDefecto;
+    }
+
+    /**
+     * Obtener valor de configuración como booleano (acepta true/1; resto false si existe registro).
+     */
+    public boolean obtenerValorBoolean(String clave, boolean valorPorDefecto, User user) {
+        return obtenerConfiguracion(clave, user)
+            .map(ConfiguracionPorcino::getValorComoBoolean)
+            .orElse(valorPorDefecto);
+    }
+
+    /**
+     * Obtener todas las configuraciones por categoría
+     */
+    @Transactional(readOnly = true)
+    public List<ConfiguracionPorcino> obtenerPorCategoria(String categoria, User user) {
+        Optional<Empresa> empresaActiva = empresaContextService.obtenerEmpresaPrincipalDelUsuario(user.getId());
+        if (empresaActiva.isEmpty()) {
+            return List.of();
+        }
+        return configuracionRepository.findByEmpresaAndCategoriaAndActivoTrue(empresaActiva.get(), categoria);
+    }
+
+    /**
+     * Obtener todas las configuraciones
+     */
+    @Transactional(readOnly = true)
+    public List<ConfiguracionPorcino> obtenerTodas(User user) {
+        Optional<Empresa> empresaActiva = empresaContextService.obtenerEmpresaPrincipalDelUsuario(user.getId());
+        if (empresaActiva.isEmpty()) {
+            return List.of();
+        }
+        return configuracionRepository.findByEmpresaAndActivoTrue(empresaActiva.get());
+    }
+
+    /**
+     * Guardar o actualizar configuración
+     */
+    @Transactional
+    public ConfiguracionPorcino guardarConfiguracion(String clave, String valor, ConfiguracionPorcino.TipoConfig tipo, 
+                                                       String categoria, String descripcion, User user) {
+        Optional<Empresa> empresaActiva = empresaContextService.obtenerEmpresaPrincipalDelUsuario(user.getId());
+        if (empresaActiva.isEmpty()) {
+            throw new RuntimeException("Usuario no tiene empresa activa");
+        }
+
+        Optional<ConfiguracionPorcino> existente = configuracionRepository.findByClaveAndEmpresaAndActivoTrue(clave, empresaActiva.get());
+        
+        if (existente.isPresent()) {
+            ConfiguracionPorcino config = existente.get();
+            config.setValor(valor);
+            config.setTipo(tipo);
+            config.setCategoria(categoria);
+            config.setDescripcion(descripcion);
+            return configuracionRepository.save(config);
+        } else {
+            ConfiguracionPorcino nuevaConfig = new ConfiguracionPorcino(clave, valor, tipo, categoria, empresaActiva.get());
+            nuevaConfig.setDescripcion(descripcion);
+            return configuracionRepository.save(nuevaConfig);
+        }
+    }
+
+    /**
+     * Inicializar configuraciones por defecto para una empresa
+     */
+    @Transactional
+    public void inicializarConfiguracionesPorDefecto(Empresa empresa) {
+        Map<String, Object> configs = new HashMap<>();
+        // Solo mantener configuraciones que NO están en Parámetros Productivos
+        // DIAS_CACHORRA es la única que se usa exclusivamente en Configuraciones Generales (en MadreService)
+        // DIAS_GESTACION, DIAS_LACTANCIA, DIAS_ENTRE_CELOS, DIAS_CONTROL_CELO están duplicadas en Parámetros Productivos y deben eliminarse
+        configs.put("DIAS_CACHORRA", Map.of("valor", "160", "tipo", ConfiguracionPorcino.TipoConfig.NUMERO, "categoria", "ETAPAS", "descripcion", "Días que una cachorra permanece antes de ser adulta"));
+
+        for (Map.Entry<String, Object> entry : configs.entrySet()) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> configData = (Map<String, Object>) entry.getValue();
+            Optional<ConfiguracionPorcino> existente = configuracionRepository.findByClaveAndEmpresaAndActivoTrue(
+                entry.getKey(), empresa);
+            
+            if (existente.isEmpty()) {
+                ConfiguracionPorcino config = new ConfiguracionPorcino(
+                    entry.getKey(),
+                    (String) configData.get("valor"),
+                    (ConfiguracionPorcino.TipoConfig) configData.get("tipo"),
+                    (String) configData.get("categoria"),
+                    empresa
+                );
+                config.setDescripcion((String) configData.get("descripcion"));
+                configuracionRepository.save(config);
+            }
+        }
+    }
+}
+
+
+
+
+
+
+

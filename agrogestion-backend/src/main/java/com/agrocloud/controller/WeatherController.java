@@ -2,7 +2,8 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.WeatherDTO;
 import com.agrocloud.dto.WeatherCurrentDTO;
-import com.agrocloud.service.WeatherService;
+import com.agrocloud.core.application.WeatherService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,12 +13,12 @@ import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/v1/weather")
-@CrossOrigin(origins = "*")
 public class WeatherController {
     
     private static final Logger logger = LoggerFactory.getLogger(WeatherController.class);
     
     @Autowired
+    @Qualifier("weatherServiceCore")
     private WeatherService weatherService;
     
     /**

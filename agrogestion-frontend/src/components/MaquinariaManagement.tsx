@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
 import { maquinariaService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
+import { Icon } from './icons';
 
 interface Maquinaria {
   id?: number;
@@ -253,7 +254,9 @@ const MaquinariaManagement: React.FC = () => {
         borderRadius: '0.5rem',
         marginBottom: '1.5rem'
       }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>🚜 Gestión de Maquinaria</h1>
+        <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Icon name="Tractor" size={24} /> Gestión de Maquinaria
+        </h1>
         <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9 }}>Administra tu flota de maquinaria agrícola</p>
       </div>
 
@@ -293,7 +296,7 @@ const MaquinariaManagement: React.FC = () => {
               fontSize: '0.875rem'
             }}
           >
-            ➕ Nueva Maquinaria
+            <Icon name="Plus" size={16} style={{ marginRight: '4px' }} /> Nueva Maquinaria
           </button>
         </PermissionGate>
       </div>
@@ -425,7 +428,7 @@ const MaquinariaManagement: React.FC = () => {
                                 fontSize: '0.75rem'
                               }}
                             >
-                              ✏️
+                              <Icon name="Pencil" size={14} />
                             </button>
                             <button
                               onClick={() => deleteMaquinaria(maq.id!)}
@@ -439,7 +442,7 @@ const MaquinariaManagement: React.FC = () => {
                             fontSize: '0.75rem'
                           }}
                         >
-                          🗑️
+                          <Icon name="Trash2" size={14} />
                             </button>
                           </>
                         ) : (
@@ -493,7 +496,7 @@ const MaquinariaManagement: React.FC = () => {
                       fontSize: '14px'
                     }}
                   >
-                    ⏮️ Primera
+                    <Icon name="ChevronsLeft" size={14} style={{ marginRight: '4px' }} /> Primera
                   </button>
                   
                   <button
@@ -509,7 +512,7 @@ const MaquinariaManagement: React.FC = () => {
                       fontSize: '14px'
                     }}
                   >
-                    ⬅️ Anterior
+                    <Icon name="ChevronLeft" size={14} style={{ marginRight: '4px' }} /> Anterior
                   </button>
                   
                   <span style={{ 
@@ -534,7 +537,7 @@ const MaquinariaManagement: React.FC = () => {
                       fontSize: '14px'
                     }}
                   >
-                    Siguiente ➡️
+                    Siguiente <Icon name="ChevronRight" size={14} style={{ marginLeft: '4px' }} />
                   </button>
                   
                   <button
@@ -550,7 +553,7 @@ const MaquinariaManagement: React.FC = () => {
                       fontSize: '14px'
                     }}
                   >
-                    Última ⏭️
+                    Última <Icon name="ChevronsRight" size={14} style={{ marginLeft: '4px' }} />
                   </button>
                 </div>
               </div>
@@ -585,7 +588,10 @@ const MaquinariaManagement: React.FC = () => {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0, color: '#374151' }}>
-                {editingMaquinaria ? '✏️ Editar' : '🚜 Nueva'} Maquinaria
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Icon name={editingMaquinaria ? "Pencil" : "Tractor"} size={20} />
+                  {editingMaquinaria ? 'Editar' : 'Nueva'} Maquinaria
+                </span>
               </h2>
               <button
                 onClick={resetForm}
@@ -597,7 +603,7 @@ const MaquinariaManagement: React.FC = () => {
                   color: '#6b7280'
                 }}
               >
-                ✕
+                <Icon name="X" size={24} />
               </button>
             </div>
             
@@ -605,7 +611,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Nombre */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  📝 Nombre de la Maquinaria *
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="FileText" size={16} /> Nombre de la Maquinaria *
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -622,7 +630,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Tipo */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  🚜 Tipo de Maquinaria *
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="Tractor" size={16} /> Tipo de Maquinaria *
+                  </span>
                 </label>
                 <select
                   value={formData.tipo}
@@ -641,7 +651,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Marca */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  🏭 Marca
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="Building" size={16} /> Marca
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -658,7 +670,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Modelo */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  🔧 Modelo
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="Wrench" size={16} /> Modelo
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -675,7 +689,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Año de Fabricación */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  📅 Año de Fabricación
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="Calendar" size={16} /> Año de Fabricación
+                  </span>
                 </label>
                 <input
                   type="number"
@@ -694,7 +710,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Número de Serie */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  🔢 Número de Serie
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="Hash" size={16} /> Número de Serie
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -711,7 +729,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Fecha de Compra */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  📅 Fecha de Compra *
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="Calendar" size={16} /> Fecha de Compra *
+                  </span>
                 </label>
                 <input
                   type="date"
@@ -727,7 +747,9 @@ const MaquinariaManagement: React.FC = () => {
                              {/* Kilómetros de Uso */}
                <div>
                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                   🚗 Kilómetros de Uso Actual *
+                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <Icon name="Gauge" size={16} /> Kilómetros de Uso Actual *
+                   </span>
                  </label>
                  <input
                    type="number"
@@ -745,7 +767,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Estado */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  🔧 Estado Actual *
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="Wrench" size={16} /> Estado Actual *
+                  </span>
                 </label>
                 <select
                   value={formData.estado}
@@ -764,7 +788,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Costo por Hora */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  💰 Costo por Hora de Operación
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="DollarSign" size={16} /> Costo por Hora de Operación
+                  </span>
                 </label>
                 <input
                   type="number"
@@ -782,7 +808,9 @@ const MaquinariaManagement: React.FC = () => {
                              {/* Intervalo de Mantenimiento */}
                <div>
                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                   🔧 Intervalo de Mantenimiento (kilómetros)
+                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <Icon name="Wrench" size={16} /> Intervalo de Mantenimiento (kilómetros)
+                   </span>
                  </label>
                  <input
                    type="number"
@@ -799,7 +827,9 @@ const MaquinariaManagement: React.FC = () => {
                {/* Último Mantenimiento */}
                <div>
                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                   ⏰ Kilómetros del Último Mantenimiento
+                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <Icon name="Clock" size={16} /> Kilómetros del Último Mantenimiento
+                   </span>
                  </label>
                  <input
                    type="number"
@@ -817,7 +847,9 @@ const MaquinariaManagement: React.FC = () => {
                {/* Rendimiento de Combustible */}
                <div>
                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                   ⛽ Rendimiento de Combustible
+                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <Icon name="Fuel" size={16} /> Rendimiento de Combustible
+                   </span>
                  </label>
                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
                    <input
@@ -846,7 +878,9 @@ const MaquinariaManagement: React.FC = () => {
                {/* Costo de Combustible */}
                <div>
                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                   💰 Costo de Combustible por Litro (ARS)
+                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <Icon name="DollarSign" size={16} /> Costo de Combustible por Litro (ARS)
+                   </span>
                  </label>
                  <input
                    type="number"
@@ -864,7 +898,9 @@ const MaquinariaManagement: React.FC = () => {
                {/* Valor Actual */}
                <div>
                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                   💵 Valor Actual de la Maquinaria (ARS)
+                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <Icon name="DollarSign" size={16} /> Valor Actual de la Maquinaria (ARS)
+                   </span>
                  </label>
                  <input
                    type="number"
@@ -882,7 +918,9 @@ const MaquinariaManagement: React.FC = () => {
               {/* Notas */}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', color: '#374151' }}>
-                  📝 Notas Adicionales
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon name="FileText" size={16} /> Notas Adicionales
+                  </span>
                 </label>
                 <textarea
                   placeholder="Información adicional, características especiales, observaciones..."
@@ -910,7 +948,7 @@ const MaquinariaManagement: React.FC = () => {
                   fontWeight: '500'
                 }}
               >
-                ❌ Cancelar
+                <Icon name="XCircle" size={14} style={{ marginRight: '4px' }} /> Cancelar
               </button>
               <button
                 onClick={saveMaquinaria}
@@ -926,7 +964,10 @@ const MaquinariaManagement: React.FC = () => {
                   fontWeight: '500'
                 }}
               >
-                {editingMaquinaria ? '💾 Actualizar Maquinaria' : '💾 Guardar Maquinaria'}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Icon name="Save" size={14} />
+                  {editingMaquinaria ? 'Actualizar Maquinaria' : 'Guardar Maquinaria'}
+                </span>
               </button>
             </div>
           </div>

@@ -3,10 +3,11 @@ package com.agrocloud.controller;
 import com.agrocloud.dto.ConfirmacionCambioEstado;
 import com.agrocloud.dto.ProponerCambioEstadoRequest;
 import com.agrocloud.dto.RespuestaCambioEstado;
-import com.agrocloud.model.entity.Plot;
-import com.agrocloud.model.entity.User;
+import com.agrocloud.cultivos.domain.Plot;
+import com.agrocloud.core.domain.User;
 import com.agrocloud.model.enums.EstadoLote;
-import com.agrocloud.service.EstadoLoteService;
+import com.agrocloud.cultivos.application.EstadoLoteService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,10 +26,10 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/estados-lotes")
-@CrossOrigin(origins = "*")
 public class EstadoLoteController {
     
     @Autowired
+    @Qualifier("estadoLoteServiceCultivos")
     private EstadoLoteService estadoLoteService;
     
     /**
@@ -68,7 +69,7 @@ public class EstadoLoteController {
         try {
             User usuario = (User) authentication.getPrincipal();
             
-            estadoLoteService.confirmarCambioEstado(confirmacion, usuario);
+            estadoLoteService.aplicarCambioEstadoManual(confirmacion, usuario);
             
             Map<String, Object> respuesta = new HashMap<>();
             respuesta.put("success", true);

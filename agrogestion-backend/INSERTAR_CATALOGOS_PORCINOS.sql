@@ -17,22 +17,19 @@ SELECT CONCAT('✓ Empresa ID: ', COALESCE(@empresa_id, 'NO ENCONTRADA')) AS ver
 SELECT CONCAT('✓ Usuario ID: ', COALESCE(@admin_user_id, 'NO ENCONTRADO')) AS verificacion;
 
 -- ============================================================================
--- TIPOS DE ALIMENTO
+-- TIPOS DE ALIMENTO (ELIMINADO - REDUNDANTE)
 -- ============================================================================
-
--- NOTA: Las categorías RACION_* fueron eliminadas porque están solapadas con InsumoCompuesto (recetas)
--- Las recetas (raciones) ahora se gestionan completamente en InsumoCompuesto (tipo RACION)
--- que se asocia a etapas mediante RecetaAlimentacionPorEtapa
-INSERT INTO porcinos_tipos_alimento_porcinos (nombre, categoria, porcentaje_proteina, precio_kg, unidad_medida, descripcion, activo, empresa_id, fecha_creacion)
-VALUES
-('Balanceado 18%', 'BALANCEADO', 18.00, 0.45, 'kg', 'Balanceado comercial con 18% de proteína', 1, @empresa_id, NOW()),
-('Balanceado 21%', 'BALANCEADO', 21.00, 0.52, 'kg', 'Balanceado comercial con 21% de proteína', 1, @empresa_id, NOW()),
-('Maíz Propio', 'GRANO_PROPIO', NULL, 0.30, 'kg', 'Maíz producido en el establecimiento', 1, @empresa_id, NOW()),
-('Sorgo Propio', 'GRANO_PROPIO', NULL, 0.28, 'kg', 'Sorgo producido en el establecimiento', 1, @empresa_id, NOW())
--- Raciones eliminadas: ahora se gestionan como InsumoCompuesto tipo RACION asociado a etapas
-ON DUPLICATE KEY UPDATE nombre = nombre;
-
-SELECT CONCAT('✓ Tipos de alimento insertados/actualizados: ', (SELECT COUNT(*) FROM porcinos_tipos_alimento_porcinos WHERE empresa_id = @empresa_id AND activo = 1)) AS resultado;
+-- NOTA: TipoAlimentoPorcino fue eliminado porque es redundante con:
+-- - Recetas: InsumoCompuesto (tipo RACION) asociado a etapas mediante RecetaAlimentacionPorEtapa
+-- - Balanceados comerciales: Insumo (tabla cultivo_insumos)
+-- - Granos propios: Cultivo + InventarioGrano
+-- TipoAlimentoPorcino solo existía como catálogo sin integración funcional
+-- en el sistema de consumo actual (ConsumoDiarioAutomatico)
+-- 
+-- La tabla porcinos_tipos_alimento_porcinos fue eliminada en la migración V1_114
+-- 
+-- INSERT INTO porcinos_tipos_alimento_porcinos ... -- ELIMINADO
+-- SELECT CONCAT('✓ Tipos de alimento insertados/actualizados: ...') -- ELIMINADO
 
 -- ============================================================================
 -- TIPOS DE SERVICIO
@@ -95,19 +92,13 @@ ON DUPLICATE KEY UPDATE nombre = nombre;
 SELECT CONCAT('✓ Esquemas sanitarios insertados/actualizados: ', (SELECT COUNT(*) FROM porcinos_esquemas_sanitarios_porcinos WHERE empresa_id = @empresa_id AND activo = 1)) AS resultado;
 
 -- ============================================================================
--- TIPOS DE CORRAL
+-- TIPOS DE CORRAL (DEPRECADO - ELIMINADO)
 -- ============================================================================
-
-INSERT INTO porcinos_tipos_corral_porcinos (nombre, tipo, descripcion, activo, empresa_id, fecha_creacion)
-VALUES
-('Sala de Gestación', 'SALA_GESTACION', 'Corral para madres gestantes', 1, @empresa_id, NOW()),
-('Maternidad', 'MATERNIDAD', 'Corral para madres en maternidad', 1, @empresa_id, NOW()),
-('Recría', 'RECRIA', 'Corral para animales en recría', 1, @empresa_id, NOW()),
-('Engorde', 'ENGORDE', 'Corral para animales en engorde', 1, @empresa_id, NOW()),
-('Enfermería', 'ENFERMERIA', 'Corral para animales enfermos', 1, @empresa_id, NOW())
-ON DUPLICATE KEY UPDATE nombre = nombre;
-
-SELECT CONCAT('✓ Tipos de corral insertados/actualizados: ', (SELECT COUNT(*) FROM porcinos_tipos_corral_porcinos WHERE empresa_id = @empresa_id AND activo = 1)) AS resultado;
+-- NOTA: La tabla tipos_corral_porcinos fue eliminada porque estaba en superposición 
+-- con UbicacionInterna (porcinos_ubicaciones_internas).
+-- El sistema ahora usa únicamente UbicacionInterna (estructura jerárquica: Galpón → Sala → Corral)
+-- que tiene FK en Madre, Padrillo y Recria.
+-- Use UbicacionInterna para gestionar ubicaciones en lugar de TipoCorralPorcino.
 
 -- ============================================================================
 -- TIPOS DE EVENTO SANITARIO
@@ -207,7 +198,7 @@ SELECT 'MOTIVOS DE BAJA', COUNT(*) FROM porcinos_motivos_baja_porcinos WHERE emp
 UNION ALL
 SELECT 'ESQUEMAS SANITARIOS', COUNT(*) FROM porcinos_esquemas_sanitarios_porcinos WHERE empresa_id = @empresa_id AND activo = 1
 UNION ALL
-SELECT 'TIPOS DE CORRAL', COUNT(*) FROM porcinos_tipos_corral_porcinos WHERE empresa_id = @empresa_id AND activo = 1
+SELECT 'UBICACIONES INTERNAS', COUNT(*) FROM porcinos_ubicaciones_internas WHERE empresa_id = @empresa_id AND activo = 1
 UNION ALL
 SELECT 'TIPOS DE EVENTO SANITARIO', COUNT(*) FROM porcinos_tipos_evento_sanitario WHERE empresa_id = @empresa_id AND activo = 1
 UNION ALL

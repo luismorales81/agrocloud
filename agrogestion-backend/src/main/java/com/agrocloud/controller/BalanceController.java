@@ -1,10 +1,11 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.dto.BalanceDTO;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.BalanceService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.core.application.BalanceService;
+import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,13 +22,14 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/balance")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173"})
 public class BalanceController {
 
     @Autowired
+    @Qualifier("balanceServiceCore")
     private BalanceService balanceService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
     
     /**

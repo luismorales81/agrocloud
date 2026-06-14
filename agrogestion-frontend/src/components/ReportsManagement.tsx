@@ -4,6 +4,7 @@ import { useEmpresa } from '../contexts/EmpresaContext';
 import { exportService } from '../services/ExportService';
 import type { ExportOptions } from '../services/ExportService';
 import { reportesService } from '../services/apiServices';
+import { Icon } from '../core/components/Icon';
 
 // interface ReportData {
 //   id: number;
@@ -61,20 +62,6 @@ const ReportsManagement: React.FC = () => {
   useEffect(() => {
     setPaginaActual(1);
   }, [activeReport]);
-
-  // Datos mock para los reportes
-  const mockRindeData: RindeData[] = [
-    { lote: 'Lote A1', cultivo: 'Soja', superficie: 25.5, rindeReal: 3500, rindeEsperado: 3500, cumplimiento: 100, fechaCosecha: '2024-07-15' },
-    { lote: 'Lote A2', cultivo: 'Maíz', superficie: 30.25, rindeReal: 12500, rindeEsperado: 12500, cumplimiento: 100, fechaCosecha: '2024-07-20' },
-    { lote: 'Lote B1', cultivo: 'Trigo', superficie: 40.0, rindeReal: 4500, rindeEsperado: 4500, cumplimiento: 100, fechaCosecha: '2024-11-15' },
-    { lote: 'Lote B2', cultivo: 'Soja', superficie: 35.75, rindeReal: 3745, rindeEsperado: 3800, cumplimiento: 98.55, fechaCosecha: '2024-07-25' }
-  ];
-
-  const mockProduccionData: ProduccionData[] = [
-    { cultivo: 'Soja', superficieTotal: 61.25, produccionTotal: 214125, rindePromedio: 3622.5, cantidadLotes: 2 },
-    { cultivo: 'Maíz', superficieTotal: 30.25, produccionTotal: 378125, rindePromedio: 12500, cantidadLotes: 1 },
-    { cultivo: 'Trigo', superficieTotal: 40.0, produccionTotal: 180000, rindePromedio: 4500, cantidadLotes: 1 }
-  ];
 
   const generateReport = async (tipo: string) => {
     console.log('🔍 [REPORTS] Iniciando generateReport para tipo:', tipo);
@@ -357,7 +344,9 @@ const ReportsManagement: React.FC = () => {
           marginBottom: '20px',
           border: '1px solid #f59e0b'
         }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#92400e' }}>📊 Estadísticas de Rindes</h3>
+          <h3 style={{ margin: '0 0 15px 0', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Icon name="BarChart" size={20} /> Estadísticas de Rindes
+          </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#92400e' }}>
@@ -392,7 +381,9 @@ const ReportsManagement: React.FC = () => {
             borderBottom: '1px solid #dee2e6',
             fontWeight: 'bold'
           }}>
-            📋 Detalle de Rindes por Lote
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="Clipboard" size={18} /> Detalle de Rindes por Lote
+            </span>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ 
@@ -482,7 +473,7 @@ const ReportsManagement: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      ⏮️ Primera
+                      <Icon name="ChevronsLeft" size={14} style={{ marginRight: '4px' }} /> Primera
                     </button>
                     
                     <button
@@ -498,7 +489,7 @@ const ReportsManagement: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      ⬅️ Anterior
+                      <Icon name="ChevronLeft" size={14} style={{ marginRight: '4px' }} /> Anterior
                     </button>
                     
                     <span style={{ 
@@ -523,7 +514,7 @@ const ReportsManagement: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      Siguiente ➡️
+                      Siguiente <Icon name="ChevronRight" size={14} style={{ marginLeft: '4px' }} />
                     </button>
                     
                     <button
@@ -539,7 +530,7 @@ const ReportsManagement: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      Última ⏭️
+                      Última <Icon name="ChevronsRight" size={14} style={{ marginLeft: '4px' }} />
                     </button>
                   </div>
                 </div>
@@ -579,7 +570,9 @@ const ReportsManagement: React.FC = () => {
           marginBottom: '20px',
           border: '1px solid #10b981'
         }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#065f46' }}>🌾 Resumen de Producción</h3>
+          <h3 style={{ margin: '0 0 15px 0', color: '#065f46', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Icon name="Wheat" size={20} /> Resumen de Producción
+          </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#065f46' }}>
@@ -614,7 +607,9 @@ const ReportsManagement: React.FC = () => {
             borderBottom: '1px solid #dee2e6',
             fontWeight: 'bold'
           }}>
-            📊 Producción por Cultivo
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="BarChart" size={18} /> Producción por Cultivo
+            </span>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ 
@@ -660,7 +655,9 @@ const ReportsManagement: React.FC = () => {
         marginBottom: '20px',
         border: '1px solid #ef4444'
       }}>
-        <h3 style={{ margin: '0 0 15px 0', color: '#991b1b' }}>💰 Análisis de Rentabilidad</h3>
+        <h3 style={{ margin: '0 0 15px 0', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Icon name="DollarSign" size={20} /> Análisis de Rentabilidad
+        </h3>
         <p style={{ color: '#991b1b', margin: '0' }}>
           Análisis de costos por hectárea y rentabilidad por cultivo
         </p>
@@ -678,7 +675,9 @@ const ReportsManagement: React.FC = () => {
           borderBottom: '1px solid #dee2e6',
           fontWeight: 'bold'
         }}>
-          💰 Costos y Rentabilidad por Cultivo
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Icon name="DollarSign" size={18} /> Costos y Rentabilidad por Cultivo
+          </span>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ 
@@ -776,7 +775,9 @@ const ReportsManagement: React.FC = () => {
           marginBottom: '20px',
           border: '1px solid #8b5cf6'
         }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#6b21a8' }}>🌾 Análisis de Cosechas</h3>
+          <h3 style={{ margin: '0 0 15px 0', color: '#6b21a8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Icon name="Wheat" size={20} /> Análisis de Cosechas
+          </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#6b21a8' }}>
@@ -805,7 +806,7 @@ const ReportsManagement: React.FC = () => {
             borderBottom: '1px solid #dee2e6',
             fontWeight: 'bold'
           }}>
-            🌾 Detalle de Cosechas
+            <Icon name="Wheat" size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Detalle de Cosechas
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ 
@@ -866,7 +867,9 @@ const ReportsManagement: React.FC = () => {
         marginBottom: '20px',
         border: '1px solid #06b6d4'
       }}>
-        <h3 style={{ margin: '0 0 15px 0', color: '#155e75' }}>💧 Análisis de Humedad por Ubicación</h3>
+        <h3 style={{ margin: '0 0 15px 0', color: '#155e75', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Icon name="Droplet" size={20} /> Análisis de Humedad por Ubicación
+        </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#155e75' }}>
@@ -901,7 +904,7 @@ const ReportsManagement: React.FC = () => {
           borderBottom: '1px solid #dee2e6',
           fontWeight: 'bold'
         }}>
-          💧 Análisis por Ubicación
+          <Icon name="Droplet" size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Análisis por Ubicación
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ 
@@ -983,7 +986,9 @@ const ReportsManagement: React.FC = () => {
           marginBottom: '20px',
           border: '1px solid #ef4444'
         }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#991b1b' }}>💰 Análisis de Rentabilidad</h3>
+          <h3 style={{ margin: '0 0 15px 0', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Icon name="DollarSign" size={20} /> Análisis de Rentabilidad
+        </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#991b1b' }}>
@@ -1018,7 +1023,7 @@ const ReportsManagement: React.FC = () => {
             borderBottom: '1px solid #dee2e6',
             fontWeight: 'bold'
           }}>
-            💰 Detalle de Rentabilidad
+            <Icon name="DollarSign" size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Detalle de Rentabilidad
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ 
@@ -1101,7 +1106,9 @@ const ReportsManagement: React.FC = () => {
             />
           </div>
           <div>
-            <h1 style={{ margin: '0 0 5px 0', fontSize: '24px' }}>📈 Sistema de Reportes</h1>
+            <h1 style={{ margin: '0 0 5px 0', fontSize: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="TrendingUp" size={24} /> Sistema de Reportes
+            </h1>
             <p style={{ margin: '0', opacity: '0.9' }}>
               Genera y analiza reportes detallados de tu producción agropecuaria
             </p>
@@ -1125,7 +1132,7 @@ const ReportsManagement: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            📊 Rindes
+            <Icon name="BarChart" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Rindes
           </button>
           <button
             onClick={() => setActiveReport('produccion')}
@@ -1140,7 +1147,7 @@ const ReportsManagement: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            🌾 Producción
+            <Icon name="Wheat" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Producción
           </button>
           <button
             onClick={() => setActiveReport('cosechas')}
@@ -1155,7 +1162,7 @@ const ReportsManagement: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            🌾 Cosechas
+            <Icon name="Wheat" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Cosechas
           </button>
           {/* Reporte de Rentabilidad - Solo para usuarios con permiso financiero */}
           {tienePermisoFinanciero && (
@@ -1172,7 +1179,7 @@ const ReportsManagement: React.FC = () => {
                 fontWeight: 'bold'
               }}
             >
-              💰 Rentabilidad
+              <Icon name="DollarSign" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Rentabilidad
             </button>
           )}
         </div>
@@ -1224,7 +1231,7 @@ const ReportsManagement: React.FC = () => {
               color: '#991b1b',
               fontSize: '14px'
             }}>
-              ⚠️ {errorFechas}
+              <Icon name="AlertTriangle" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {errorFechas}
             </div>
           )}
           <button
@@ -1243,7 +1250,15 @@ const ReportsManagement: React.FC = () => {
               opacity: loading ? 0.6 : 1
             }}
           >
-            {loading ? '🔄 Generando...' : '📊 Generar Reporte'}
+            {loading ? (
+              <>
+                <Icon name="RefreshCcw" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Generando...
+              </>
+            ) : (
+              <>
+                <Icon name="BarChart" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Generar Reporte
+              </>
+            )}
           </button>
         </div>
 
@@ -1260,7 +1275,9 @@ const ReportsManagement: React.FC = () => {
             borderRadius: '8px',
             border: '1px solid #e9ecef'
           }}>
-            <span style={{ fontWeight: 'bold', color: '#495057', marginRight: '8px' }}>📤 Exportar:</span>
+            <span style={{ fontWeight: 'bold', color: '#495057', marginRight: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Icon name="Upload" size={16} /> Exportar:
+            </span>
             <button
               onClick={() => exportReport('excel')}
               style={{
@@ -1277,7 +1294,7 @@ const ReportsManagement: React.FC = () => {
                 gap: '4px'
               }}
             >
-              📊 Excel
+              <Icon name="FileSpreadsheet" size={14} style={{ marginRight: '4px' }} /> Excel
             </button>
             <button
               onClick={() => exportReport('pdf')}
@@ -1295,7 +1312,7 @@ const ReportsManagement: React.FC = () => {
                 gap: '4px'
               }}
             >
-              📄 PDF
+              <Icon name="FileText" size={14} style={{ marginRight: '4px' }} /> PDF
             </button>
             <button
               onClick={() => exportReport('csv')}
@@ -1313,7 +1330,7 @@ const ReportsManagement: React.FC = () => {
                 gap: '4px'
               }}
             >
-              📋 CSV
+              <Icon name="FileSpreadsheet" size={14} style={{ marginRight: '4px' }} /> CSV
             </button>
           </div>
         )}
@@ -1328,7 +1345,7 @@ const ReportsManagement: React.FC = () => {
           borderRadius: '10px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
         }}>
-          <div style={{ fontSize: '24px', marginBottom: '10px' }}>🔄</div>
+          <Icon name="RefreshCcw" size={24} style={{ marginBottom: '10px' }} />
           <p style={{ color: '#666', margin: '0' }}>Generando reporte...</p>
         </div>
       )}
@@ -1395,7 +1412,7 @@ const ReportsManagement: React.FC = () => {
           borderRadius: '10px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>📊</div>
+          <Icon name="BarChart" size={48} style={{ marginBottom: '20px' }} />
           <h3 style={{ margin: '0 0 10px 0', color: '#111827' }}>Selecciona un tipo de reporte</h3>
           <p style={{ color: '#6b7280', margin: '0' }}>
             Elige entre Rindes, Producción o Costos para generar un reporte detallado

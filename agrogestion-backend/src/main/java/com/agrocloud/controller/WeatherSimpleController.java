@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.agrocloud.service.WeatherApiUsageService;
+import com.agrocloud.core.application.WeatherApiUsageService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import com.agrocloud.dto.WeatherDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,13 +30,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/weather-simple")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:5173"})
 public class WeatherSimpleController {
     
     private static final Logger logger = LoggerFactory.getLogger(WeatherSimpleController.class);
     
     
     @Autowired
+    @Qualifier("weatherApiUsageServiceCore")
     private WeatherApiUsageService weatherApiUsageService;
     
     @GetMapping("/test")

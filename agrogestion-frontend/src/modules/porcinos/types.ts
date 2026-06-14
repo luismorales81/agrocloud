@@ -68,6 +68,7 @@ export interface HistorialEstado {
  */
 export interface Madre {
   id?: number;
+  activo?: boolean;
   identificacion: string;
   fechaNacimiento: string;
   cantidadTetas: number;
@@ -238,6 +239,22 @@ export interface VentaPorcino {
   updatedAt?: string;
 }
 
+/** Alias: faenas usan el mismo contrato que ventas con tipo FAENA */
+export type Faena = VentaPorcino;
+
+/**
+ * Catálogo legacy de tipos de alimento (UI en configuraciones; sin API dedicada).
+ */
+export interface TipoAlimentoPorcino {
+  id?: number;
+  nombre: string;
+  categoria: string;
+  descripcion?: string;
+  porcentajeProteina?: number;
+  precioKg?: number;
+  unidadMedida?: string;
+}
+
 /**
  * Muerte en recría
  */
@@ -257,6 +274,8 @@ export interface Recria {
   loteId: number;
   loteNombre?: string;
   madreNombre?: string;
+  // Origen de la recría: DESTETE (desde un parto/destete interno) o EXTERNO (compra/ingreso externo)
+  origen?: 'DESTETE' | 'EXTERNO';
   fechaIngreso: string;
   pesoIndividual?: number;
   pesoPromedio: number;
@@ -368,6 +387,8 @@ export interface RecriaIngresoDTO {
   cantidadAnimales: number;
   sexo: Sexo;
   observaciones?: string;
+  /** Origen del lote de recría. En el alta manual siempre será EXTERNO; las recrías por destete se crean desde el módulo de destete. */
+  origen?: 'DESTETE' | 'EXTERNO';
 }
 
 export interface FormulaCreateDTO {
@@ -477,21 +498,15 @@ export interface RazaPorcino {
 }
 
 /**
- * Tipo de alimento configurable
+ * Tipo de alimento configurable (ELIMINADO - REDUNDANTE)
+ * 
+ * NOTA: TipoAlimentoPorcino fue eliminado porque es redundante con:
+ * - Recetas: InsumoCompuesto (tipo RACION) asociado a etapas mediante RecetaAlimentacionPorEtapa
+ * - Balanceados comerciales: Insumo (tabla cultivo_insumos)
+ * - Granos propios: Cultivo + InventarioGrano
+ * TipoAlimentoPorcino solo existía como catálogo sin integración funcional
+ * en el sistema de consumo actual (ConsumoDiarioAutomatico)
  */
-export interface TipoAlimentoPorcino {
-  id?: number;
-  nombre: string;
-  categoria: 'BALANCEADO' | 'GRANO_PROPIO' | 'OTRO';
-  // NOTA: Las categorías RACION_* fueron eliminadas porque están solapadas con InsumoCompuesto
-  // Las recetas (raciones) ahora se gestionan completamente en InsumoCompuesto (tipo RACION)
-  // que se asocia a etapas mediante RecetaAlimentacionPorEtapa
-  porcentajeProteina?: number;
-  precioKg?: number;
-  unidadMedida?: string;
-  descripcion?: string;
-  activo?: boolean;
-}
 
 /**
  * Tipo de servicio reproductivo configurable
@@ -543,18 +558,6 @@ export interface EsquemaSanitarioPorcino {
 }
 
 /**
- * Tipo de corral/nave/sala configurable
- */
-export interface TipoCorralPorcino {
-  id?: number;
-  nombre: string;
-  tipo: 'SALA_GESTACION' | 'MATERNIDAD' | 'RECRIA' | 'ENGORDE' | 'ENFERMERIA' | 'OTRO';
-  capacidadMaxima?: number;
-  descripcion?: string;
-  activo?: boolean;
-}
-
-/**
  * Tipo de parto configurable
  */
 export interface TipoParto {
@@ -600,6 +603,7 @@ export interface ParametrosEstablecimientoPorcino {
   maximaCapacidadRecriaEngorde?: number;
   categoriasHabilitadas?: string;
   ciclosProductivosPropios?: string;
+  realizaFaena?: boolean; // Indica si el establecimiento realiza faenas
 }
 
 /**
@@ -706,15 +710,20 @@ export interface TransferenciaLechon {
   observaciones?: string;
 }
 
+/** Método de obtención del peso en una pesada */
+export type MetodoPesaje = 'BALANZA' | 'MUESTREO' | 'ESTIMADO';
+
 /**
- * Registro de Peso
+ * Registro de Peso (histórico por lote/recría)
  */
 export interface RegistroPeso {
   id?: number;
-  recriaId: number;
+  recriaId?: number;
   fechaPesaje: string;
   pesoPromedio: number;
   cantidadAnimales: number;
+  metodo?: MetodoPesaje;
+  etapaAlMomento?: EtapaRecria;
   observaciones?: string;
 }
 

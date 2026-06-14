@@ -2,11 +2,12 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.InventarioGranoDTO;
 import com.agrocloud.dto.VentaGranoRequest;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.InventarioGranoService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.cultivos.application.InventarioGranoService;
+import com.agrocloud.core.application.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -22,9 +23,11 @@ import java.util.Map;
 public class InventarioGranoController {
 
     @Autowired
+    @Qualifier("inventarioGranoServiceCultivos")
     private InventarioGranoService inventarioService;
 
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
 
     /**

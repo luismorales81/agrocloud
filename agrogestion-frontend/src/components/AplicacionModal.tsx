@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { laboresService, agroquimicosIntegradosService } from '../services/apiServices';
+import type { LaborDetalladoDTO } from '../types/labor.types';
 
 interface AplicacionAgroquimico {
   id?: number;
@@ -27,15 +28,6 @@ interface Agroquimico {
   unidadMedidaInsumo: string;
 }
 
-interface Labor {
-  id: number;
-  tipoLabor: string;
-  fechaInicio: string;
-  loteId: number;
-  loteNombre: string;
-  loteSuperficieHa: number;
-}
-
 interface AplicacionModalProps {
   aplicacion: AplicacionAgroquimico | null;
   agroquimicos: Agroquimico[];
@@ -60,7 +52,7 @@ const AplicacionModal: React.FC<AplicacionModalProps> = ({ aplicacion, agroquimi
     fechaAplicacion: new Date().toISOString().split('T')[0]
   });
 
-  const [labores, setLabores] = useState<Labor[]>([]);
+  const [labores, setLabores] = useState<LaborDetalladoDTO[]>([]);
   const [dosisRecomendada, setDosisRecomendada] = useState<number>(0);
   const [loading, setLoading] = useState(false);
 
@@ -199,7 +191,7 @@ const AplicacionModal: React.FC<AplicacionModalProps> = ({ aplicacion, agroquimi
                   <option value={0}>Seleccionar labor</option>
                   {labores.map(labor => (
                     <option key={labor.id} value={labor.id}>
-                      {labor.tipoLabor} - {labor.loteNombre} ({labor.loteSuperficieHa} ha)
+                      {(labor.tipo ?? labor.nombre ?? 'Labor')} - {labor.loteNombre} ({labor.loteSuperficieHa ?? 0} ha)
                     </option>
                   ))}
                 </select>

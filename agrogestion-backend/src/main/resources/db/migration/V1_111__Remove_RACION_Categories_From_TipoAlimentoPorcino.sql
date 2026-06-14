@@ -1,26 +1,23 @@
 -- ============================================================================
 -- MIGRACIÓN: Eliminar categorías RACION_* de TipoAlimentoPorcino
 -- Versión: V1_111
--- Fecha: 2025-01-XX
--- Descripción: Elimina las categorías RACION_INICIADOR, RACION_TERMINADOR,
---              RACION_GESTACION, RACION_LACTANCIA del ENUM de categoría porque
---              están solapadas con InsumoCompuesto (recetas).
---              Las recetas (raciones) ahora se gestionan completamente en 
---              InsumoCompuesto (tipo RACION) que se asocia a etapas mediante
---              RecetaAlimentacionPorEtapa.
+-- Si la tabla ya no existe (p. ej. eliminada en V1_114), no hace nada (Flyway out-of-order).
 -- ============================================================================
 
--- Primero, actualizar TODOS los registros (activos e inactivos) con categorías RACION_*
--- a 'OTRO' antes de modificar el ENUM, ya que MySQL no permite cambiar un ENUM
--- si hay registros con valores que se van a eliminar
-UPDATE porcinos_tipos_alimento_porcinos
-SET categoria = 'OTRO',
-    activo = 0,
-    fecha_actualizacion = NOW()
-WHERE categoria IN ('RACION_INICIADOR', 'RACION_TERMINADOR', 'RACION_GESTACION', 'RACION_LACTANCIA');
+SET @esquema = DATABASE();
 
--- Modificar el ENUM para eliminar las categorías RACION_*
--- NOTA: Ahora es seguro modificar el ENUM porque ya no hay registros con esas categorías
-ALTER TABLE porcinos_tipos_alimento_porcinos
-MODIFY COLUMN categoria ENUM('BALANCEADO', 'GRANO_PROPIO', 'OTRO') NOT NULL
-COMMENT 'Categorías: BALANCEADO (balanceados comerciales), GRANO_PROPIO (granos propios), OTRO. Las categorías RACION_* fueron eliminadas porque están solapadas con InsumoCompuesto (recetas tipo RACION asociadas a etapas mediante RecetaAlimentacionPorEtapa)';
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA = @esquema AND TABLE_NAME = 'porcinos_tipos_alimento_porcinos') = 0,
+  'SELECT 1',
+  'UPDATE porcinos_tipos_alimento_porcinos SET categoria = ''OTRO'', activo = 0, fecha_actualizacion = NOW() WHERE categoria IN (''RACION_INICIADOR'', ''RACION_TERMINADOR'', ''RACION_GESTACION'', ''RACION_LACTANCIA'')'
+));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA = @esquema AND TABLE_NAME = 'porcinos_tipos_alimento_porcinos') = 0,
+  'SELECT 1',
+  'ALTER TABLE porcinos_tipos_alimento_porcinos MODIFY COLUMN categoria ENUM(''BALANCEADO'', ''GRANO_PROPIO'', ''OTRO'') NOT NULL COMMENT ''Categorías: BALANCEADO, GRANO_PROPIO, OTRO. RACION_* eliminadas (InsumoCompuesto).'''
+));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;

@@ -1,9 +1,10 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Maquinaria;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.service.MaquinariaService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.cultivos.domain.Maquinaria;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.cultivos.application.MaquinariaService;
+import org.springframework.beans.factory.annotation.Qualifier;
+import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,10 +16,10 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/maquinaria")
-@CrossOrigin(origins = "*")
 public class MaquinariaController {
 
     @Autowired
+    @Qualifier("maquinariaServiceCultivos")
     private MaquinariaService maquinariaService;
 
     @Autowired

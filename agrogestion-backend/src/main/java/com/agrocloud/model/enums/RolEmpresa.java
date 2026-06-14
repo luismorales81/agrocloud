@@ -15,6 +15,21 @@ public enum RolEmpresa {
     @Deprecated CONTADOR("Contador - usar JEFE_FINANCIERO"),
     @Deprecated LECTURA("Solo Lectura - usar CONSULTOR_EXTERNO");
 
+    private static final java.util.Set<RolEmpresa> ROLES_LEGACY = java.util.EnumSet.of(
+            PRODUCTOR, ASESOR, TECNICO, CONTADOR, LECTURA
+    );
+
+    /** Roles antiguos que no deben ofrecerse en UI pero pueden existir en BD. */
+    @SuppressWarnings("deprecation")
+    public static java.util.Set<RolEmpresa> rolesLegacy() {
+        return java.util.EnumSet.copyOf(ROLES_LEGACY);
+    }
+
+    /** Indica si el rol almacenado en BD es un nombre legacy (pre-migración). */
+    public static boolean esRolLegacy(RolEmpresa rol) {
+        return rol != null && ROLES_LEGACY.contains(rol);
+    }
+
     private final String descripcion;
 
     RolEmpresa(String descripcion) {

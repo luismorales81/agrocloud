@@ -283,7 +283,7 @@ const EgresosManagement: React.FC = () => {
                   <Input
                     type="date"
                     value={formData.fechaEgreso}
-                    onChange={(e) => setFormData({...formData, fechaEgreso: e.target.value})}
+                    onChange={(valor) => setFormData({...formData, fechaEgreso: valor})}
                     required
                   />
                 </div>
@@ -339,7 +339,7 @@ const EgresosManagement: React.FC = () => {
                         type="number"
                         step="0.01"
                         value={formData.cantidad}
-                        onChange={(e) => setFormData({...formData, cantidad: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, cantidad: valor})}
                         placeholder="0.00"
                         required
                       />
@@ -362,7 +362,7 @@ const EgresosManagement: React.FC = () => {
                       <Input
                         type="text"
                         value={formData.concepto}
-                        onChange={(e) => setFormData({...formData, concepto: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, concepto: valor})}
                         placeholder="Ej: Tractor John Deere"
                         required
                       />
@@ -374,7 +374,7 @@ const EgresosManagement: React.FC = () => {
                       <Input
                         type="text"
                         value={formData.marca}
-                        onChange={(e) => setFormData({...formData, marca: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, marca: valor})}
                         placeholder="Marca de la maquinaria"
                         required
                       />
@@ -386,7 +386,7 @@ const EgresosManagement: React.FC = () => {
                       <Input
                         type="text"
                         value={formData.modelo}
-                        onChange={(e) => setFormData({...formData, modelo: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, modelo: valor})}
                         placeholder="Modelo de la maquinaria"
                         required
                       />
@@ -399,7 +399,7 @@ const EgresosManagement: React.FC = () => {
                         type="number"
                         step="0.01"
                         value={formData.monto}
-                        onChange={(e) => setFormData({...formData, monto: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, monto: valor})}
                         placeholder="0.00"
                         required
                       />
@@ -438,7 +438,7 @@ const EgresosManagement: React.FC = () => {
                       <Input
                         type="date"
                         value={formData.fechaInicio}
-                        onChange={(e) => setFormData({...formData, fechaInicio: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, fechaInicio: valor})}
                         required
                       />
                     </div>
@@ -449,7 +449,7 @@ const EgresosManagement: React.FC = () => {
                       <Input
                         type="date"
                         value={formData.fechaFin}
-                        onChange={(e) => setFormData({...formData, fechaFin: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, fechaFin: valor})}
                         required
                       />
                     </div>
@@ -461,7 +461,7 @@ const EgresosManagement: React.FC = () => {
                         type="number"
                         step="0.01"
                         value={formData.costoDia}
-                        onChange={(e) => setFormData({...formData, costoDia: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, costoDia: valor})}
                         placeholder="0.00"
                         required
                       />
@@ -484,7 +484,7 @@ const EgresosManagement: React.FC = () => {
                       <Input
                         type="text"
                         value={formData.concepto}
-                        onChange={(e) => setFormData({...formData, concepto: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, concepto: valor})}
                         placeholder="Descripción del servicio o gasto"
                         required
                       />
@@ -497,7 +497,7 @@ const EgresosManagement: React.FC = () => {
                         type="number"
                         step="0.01"
                         value={formData.monto}
-                        onChange={(e) => setFormData({...formData, monto: e.target.value})}
+                        onChange={(valor) => setFormData({...formData, monto: valor})}
                         placeholder="0.00"
                         required
                       />

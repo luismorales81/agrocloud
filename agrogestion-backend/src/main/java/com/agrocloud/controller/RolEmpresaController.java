@@ -19,13 +19,7 @@ public class RolEmpresaController {
     /**
      * Roles deprecated que no deben mostrarse en la interfaz
      */
-    private static final Set<RolEmpresa> ROLES_DEPRECATED = Set.of(
-            RolEmpresa.PRODUCTOR,
-            RolEmpresa.ASESOR,
-            RolEmpresa.TECNICO,
-            RolEmpresa.CONTADOR,
-            RolEmpresa.LECTURA
-    );
+    private static final Set<RolEmpresa> ROLES_DEPRECATED = RolEmpresa.rolesLegacy();
 
     /**
      * Obtiene todos los roles de empresa disponibles (excluyendo roles deprecated)

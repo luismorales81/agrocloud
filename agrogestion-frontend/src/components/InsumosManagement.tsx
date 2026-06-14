@@ -17,7 +17,7 @@ interface Insumo {
   stock_minimo: number;
   proveedor: string;
   fecha_vencimiento: string;
-  estado: 'activo' | 'inactivo';
+  estado: string;
   categoria: string;
 }
 

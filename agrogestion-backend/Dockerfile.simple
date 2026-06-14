@@ -1,8 +1,6 @@
-# ============================================================
-# DOCKERFILE SIMPLE - Spring Boot para Railway
-# AgroGestion Backend
-# ============================================================
-
+# ========== LEGACY - NO USAR PARA PRODUCCIÓN ==========
+# Para producción usar: agrogestion-backend/Dockerfile (sin perfil fijo en imagen).
+# DOCKERFILE SIMPLE - Spring Boot para Railway - AgroGestion Backend
 FROM maven:3.9.5-eclipse-temurin-17
 
 # Establecer directorio de trabajo
@@ -23,8 +21,7 @@ RUN mvn clean package -DskipTests
 # Exponer puerto
 EXPOSE 8080
 
-# Variables de entorno por defecto
-ENV SPRING_PROFILES_ACTIVE=railway-mysql
+# Perfil y opciones por variable de entorno (no fijar en imagen)
 ENV JAVA_OPTS="-Xmx512m -Xms256m"
 
 # Comando de arranque

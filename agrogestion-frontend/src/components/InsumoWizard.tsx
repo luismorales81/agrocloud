@@ -8,6 +8,8 @@ interface InsumoWizardProps {
   onClose: () => void;
   insumoEditando?: any;
   onGuardar: () => void;
+  /** Solo insumos generales (avícola u otros módulos sin agroquímicos). */
+  soloInsumoNoAgroquimico?: boolean;
 }
 
 interface DatosInsumo {
@@ -42,11 +44,12 @@ interface DatosInsumo {
   }>;
 }
 
-const InsumoWizard: React.FC<InsumoWizardProps> = ({ 
-  isOpen, 
-  onClose, 
-  insumoEditando, 
-  onGuardar 
+const InsumoWizard: React.FC<InsumoWizardProps> = ({
+  isOpen,
+  onClose,
+  insumoEditando,
+  onGuardar,
+  soloInsumoNoAgroquimico = false,
 }) => {
   // Clases químicas comunes para agroquímicos (ordenadas alfabéticamente)
   const clasesQuimicas = [
@@ -118,7 +121,7 @@ const InsumoWizard: React.FC<InsumoWizardProps> = ({
     { value: 'ML_HA', label: 'ml/ha' }
   ];
   const { user } = useAuth();
-  const { empresa } = useEmpresa();
+  const { empresaActiva } = useEmpresa();
   const [paso, setPaso] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,11 +154,36 @@ const InsumoWizard: React.FC<InsumoWizardProps> = ({
   // Reiniciar estado base al abrir o al cambiar el insumo a editar
   useEffect(() => {
     if (!isOpen) return;
-    setPaso(1);
     setError(null);
     setMostrarConfiguracionDosis(false);
+    if (!insumoEditando && soloInsumoNoAgroquimico) {
+      setTipoInsumo('general');
+      setTipoDetectado(null);
+      setPaso(2);
+      setDatos({
+        nombre: '',
+        descripcion: '',
+        tipo: 'OTROS',
+        unidadMedida: 'KG',
+        precioUnitario: 0,
+        stockActual: 0,
+        stockMinimo: 0,
+        proveedor: '',
+        fechaVencimiento: '',
+        principioActivo: '',
+        concentracion: '',
+        claseQuimica: '',
+        categoriaToxicologica: '',
+        periodoCarenciaDias: 0,
+        dosisMinimaPorHa: 0,
+        dosisMaximaPorHa: 0,
+        unidadDosis: 'LTS',
+        dosisPorTipo: [],
+      });
+      return;
+    }
+    setPaso(1);
     if (!insumoEditando) {
-      // Nuevo registro: reset total
       setTipoInsumo(null);
       setTipoDetectado(null);
       setDatos({
@@ -176,10 +204,10 @@ const InsumoWizard: React.FC<InsumoWizardProps> = ({
         dosisMinimaPorHa: 0,
         dosisMaximaPorHa: 0,
         unidadDosis: 'LTS',
-        dosisPorTipo: []
+        dosisPorTipo: [],
       });
     }
-  }, [isOpen, insumoEditando?.id]);
+  }, [isOpen, insumoEditando?.id, soloInsumoNoAgroquimico]);
 
   // Cargar datos si está editando
   useEffect(() => {
@@ -311,7 +339,11 @@ const InsumoWizard: React.FC<InsumoWizardProps> = ({
   // Manejar cambio de nombre (detección automática)
   const handleNombreChange = (nombre: string) => {
     setDatos(prev => ({ ...prev, nombre }));
-    
+
+    if (soloInsumoNoAgroquimico) {
+      return;
+    }
+
     // Solo hacer detección automática si no estamos editando
     if (!insumoEditando && nombre.length > 2) {
       const esAgroquimico = detectarSiEsAgroquimico(nombre);
@@ -470,7 +502,7 @@ const InsumoWizard: React.FC<InsumoWizardProps> = ({
           proveedor: datos.proveedor,
           fechaVencimiento: datos.fechaVencimiento,
           activo: true,
-          empresa_id: empresa?.id,
+          empresa_id: empresaActiva?.id,
           user_id: user?.id
         });
         
@@ -721,16 +753,16 @@ const InsumoWizard: React.FC<InsumoWizardProps> = ({
                 </div>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                <div 
+              <div className={`grid grid-cols-1 gap-3 sm:gap-4 ${soloInsumoNoAgroquimico ? '' : 'md:grid-cols-2'}`}>
+                <div
                   className={`p-4 sm:p-6 border-2 rounded-lg transition-all ${
                     insumoEditando && tipoInsumo !== 'general'
                       ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
-                      : tipoInsumo === 'general' 
-                        ? 'border-blue-500 bg-blue-50 cursor-pointer' 
+                      : tipoInsumo === 'general'
+                        ? 'border-blue-500 bg-blue-50 cursor-pointer'
                         : 'border-gray-200 hover:border-gray-300 cursor-pointer'
                   }`}
-                  onClick={() => !insumoEditando || tipoInsumo === 'general' ? setTipoInsumo('general') : null}
+                  onClick={() => (!insumoEditando || tipoInsumo === 'general' ? setTipoInsumo('general') : null)}
                 >
                   <div className="text-center">
                     <div className="text-4xl mb-3">📦</div>
@@ -746,29 +778,31 @@ const InsumoWizard: React.FC<InsumoWizardProps> = ({
                   </div>
                 </div>
 
-                <div 
-                  className={`p-4 sm:p-6 border-2 rounded-lg transition-all ${
-                    insumoEditando && tipoInsumo !== 'agroquimico'
-                      ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
-                      : tipoInsumo === 'agroquimico' 
-                        ? 'border-purple-500 bg-purple-50 cursor-pointer' 
-                        : 'border-gray-200 hover:border-gray-300 cursor-pointer'
-                  }`}
-                  onClick={() => !insumoEditando || tipoInsumo === 'agroquimico' ? setTipoInsumo('agroquimico') : null}
-                >
-                  <div className="text-center">
-                    <div className="text-4xl mb-3">🧪</div>
-                    <h4 className="text-lg font-semibold mb-2">Agroquímico</h4>
-                    <p className="text-gray-600 text-sm">
-                      Herbicidas, fungicidas, insecticidas, etc.
-                    </p>
-                    {insumoEditando && tipoInsumo !== 'agroquimico' && (
-                      <p className="text-red-500 text-xs mt-2 font-medium">
-                        🔒 Bloqueado - Este insumo es general
+                {!soloInsumoNoAgroquimico && (
+                  <div
+                    className={`p-4 sm:p-6 border-2 rounded-lg transition-all ${
+                      insumoEditando && tipoInsumo !== 'agroquimico'
+                        ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
+                        : tipoInsumo === 'agroquimico'
+                          ? 'border-purple-500 bg-purple-50 cursor-pointer'
+                          : 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                    }`}
+                    onClick={() => (!insumoEditando || tipoInsumo === 'agroquimico' ? setTipoInsumo('agroquimico') : null)}
+                  >
+                    <div className="text-center">
+                      <div className="text-4xl mb-3">🧪</div>
+                      <h4 className="text-lg font-semibold mb-2">Agroquímico</h4>
+                      <p className="text-gray-600 text-sm">
+                        Herbicidas, fungicidas, insecticidas, etc.
                       </p>
-                    )}
+                      {insumoEditando && tipoInsumo !== 'agroquimico' && (
+                        <p className="text-red-500 text-xs mt-2 font-medium">
+                          🔒 Bloqueado - Este insumo es general
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
@@ -1149,7 +1183,7 @@ const InsumoWizard: React.FC<InsumoWizardProps> = ({
             </div>
             
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-              {paso > 1 && (
+              {paso > 1 && !(soloInsumoNoAgroquimico && paso === 2) && (
                 <button
                   onClick={anteriorPaso}
                   className="px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"

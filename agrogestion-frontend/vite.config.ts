@@ -38,4 +38,48 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // React, React-DOM y React-Router en un chunk (carga crítica)
+            if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) {
+              return 'react-vendor';
+            }
+            // MUI y Emotion (gran librería)
+            if (id.includes('@mui') || id.includes('@emotion')) {
+              return 'mui';
+            }
+            // Axios (muy usada)
+            if (id.includes('axios')) {
+              return 'axios';
+            }
+            // Recharts (gráficos, solo en algunas vistas)
+            if (id.includes('recharts')) {
+              return 'recharts';
+            }
+            // Lucide icons
+            if (id.includes('lucide-react')) {
+              return 'lucide';
+            }
+            // Headless UI y Heroicons
+            if (id.includes('@headlessui') || id.includes('@heroicons')) {
+              return 'ui-icons';
+            }
+            // Google Maps (solo en vistas que usan mapa)
+            if (id.includes('@googlemaps') || id.includes('google.maps')) {
+              return 'maps';
+            }
+            // Resto de dependencias
+            return 'vendor';
+          }
+        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
+      },
+    },
+  },
 })

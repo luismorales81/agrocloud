@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { authService, showNotification } from '../services/api';
+import { authService, mensajeErrorConexionApi, showNotification } from '../services/api';
 
 interface User {
   id: number;
@@ -118,14 +118,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           showNotification('Credenciales inválidas. Por favor, verifica tu email y contraseña.', 'error');
         }
+        return false;
       } else if (error.response?.status === 403) {
         showNotification('Tu cuenta está desactivada. Contacta al administrador.', 'error');
         return false;
       } else if (error.response?.status === 500) {
         showNotification('Error interno del servidor. Inténtalo de nuevo más tarde.', 'error');
         return false;
-      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
-        showNotification('Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.', 'error');
+      } else if (error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK' || !error.response) {
+        showNotification(mensajeErrorConexionApi(error), 'error');
         return false;
       } else {
         showNotification('Error en el inicio de sesión. Inténtalo de nuevo.', 'error');

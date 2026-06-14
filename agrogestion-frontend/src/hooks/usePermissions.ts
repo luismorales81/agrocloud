@@ -59,6 +59,88 @@ export interface Permissions {
   canCreateFinances: boolean;
   canEditFinances: boolean;
   canDeleteFinances: boolean;
+  
+  // Inventario
+  canViewInventario: boolean;
+  
+  // Porcinos - Permisos granulares
+  canViewPorcinos: boolean;
+  
+  // Madres
+  canViewMadres: boolean;
+  canCreateMadres: boolean;
+  canEditMadres: boolean;
+  canDeleteMadres: boolean;
+  
+  // Servicios
+  canViewServicios: boolean;
+  canCreateServicios: boolean;
+  canEditServicios: boolean;
+  canDeleteServicios: boolean;
+  
+  // Gestación
+  canViewGestacion: boolean;
+  canCreateGestacion: boolean;
+  canEditGestacion: boolean;
+  canDeleteGestacion: boolean;
+  
+  // Partos
+  canViewPartos: boolean;
+  canCreatePartos: boolean;
+  canEditPartos: boolean;
+  canDeletePartos: boolean;
+  
+  // Destetes
+  canViewDestetes: boolean;
+  canCreateDestetes: boolean;
+  canEditDestetes: boolean;
+  canDeleteDestetes: boolean;
+  
+  // Recría
+  canViewRecria: boolean;
+  canCreateRecria: boolean;
+  canEditRecria: boolean;
+  canDeleteRecria: boolean;
+  
+  // Padrillos
+  canViewPadrillos: boolean;
+  canCreatePadrillos: boolean;
+  canEditPadrillos: boolean;
+  canDeletePadrillos: boolean;
+  
+  // Ventas
+  canViewVentas: boolean;
+  canCreateVentas: boolean;
+  canEditVentas: boolean;
+  canDeleteVentas: boolean;
+  
+  // Eventos Sanitarios
+  canViewEventosSanitarios: boolean;
+  canCreateEventosSanitarios: boolean;
+  canEditEventosSanitarios: boolean;
+  canDeleteEventosSanitarios: boolean;
+  
+  // Alimentación
+  canViewAlimentacion: boolean;
+  canCreateAlimentacion: boolean;
+  canEditAlimentacion: boolean;
+  canDeleteAlimentacion: boolean;
+  
+  // Inventario Porcinos
+  canViewInventarioPorcinos: boolean;
+  
+  // Configuraciones Porcinos
+  canManageConfiguracionesPorcinos: boolean;
+  
+  // Faena
+  canViewFaena: boolean;
+  canCreateFaena: boolean;
+  canEditFaena: boolean;
+  canDeleteFaena: boolean;
+  
+  // Reportes Porcinos
+  canViewReportesPorcinos: boolean;
+  canExportReportesPorcinos: boolean;
 }
 
 export const usePermissions = (): Permissions => {
@@ -95,16 +177,8 @@ export const usePermissions = (): Permissions => {
   const canAdmin = tienePermisoAdministracion() || isGlobalAdmin;
   const canFinance = tienePermisoFinanciero() || isGlobalAdmin;
 
-  // Debug logs (commented out for cleaner console)
-  // console.log('🔍 [usePermissions] Debug info:', {
-  //   userRoleName: user?.roleName,
-  //   isGlobalAdmin,
-  //   isGlobalSuperAdmin,
-  //   esAdministrador: esAdministrador(),
-  //   isAdmin,
-    canAdmin,
-    canWrite
-  // });
+  // Debug: descomentar para inspeccionar permisos
+  // console.log('🔍 [usePermissions]', { userRoleName: user?.roleName, canAdmin, canWrite });
 
   return {
     // Gestión de campos - SUPERADMIN NO tiene acceso a funcionalidades operativas
@@ -163,6 +237,88 @@ export const usePermissions = (): Permissions => {
     canViewFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
     canCreateFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
     canEditFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
-    canDeleteFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero)
+    canDeleteFinances: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
+    
+    // Inventario
+    canViewInventario: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    
+    // Porcinos - Permiso general (para acceso al módulo)
+    canViewPorcinos: !isGlobalSuperAdmin, // Todos los usuarios excepto SUPERADMIN pueden ver porcinos
+    
+    // Madres - SUPERADMIN NO tiene acceso
+    canViewMadres: !isGlobalSuperAdmin,
+    canCreateMadres: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canEditMadres: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canDeleteMadres: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Servicios - SUPERADMIN NO tiene acceso
+    canViewServicios: !isGlobalSuperAdmin,
+    canCreateServicios: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditServicios: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeleteServicios: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Gestación - SUPERADMIN NO tiene acceso
+    canViewGestacion: !isGlobalSuperAdmin,
+    canCreateGestacion: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditGestacion: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeleteGestacion: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Partos - SUPERADMIN NO tiene acceso
+    canViewPartos: !isGlobalSuperAdmin,
+    canCreatePartos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditPartos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeletePartos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Destetes - SUPERADMIN NO tiene acceso
+    canViewDestetes: !isGlobalSuperAdmin,
+    canCreateDestetes: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditDestetes: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeleteDestetes: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Recría - SUPERADMIN NO tiene acceso
+    canViewRecria: !isGlobalSuperAdmin,
+    canCreateRecria: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditRecria: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeleteRecria: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Padrillos - SUPERADMIN NO tiene acceso
+    canViewPadrillos: !isGlobalSuperAdmin,
+    canCreatePadrillos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canEditPadrillos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    canDeletePadrillos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Ventas - SUPERADMIN NO tiene acceso, solo Admin y Jefe Financiero
+    canViewVentas: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero || isJefeCampo),
+    canCreateVentas: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero || isJefeCampo),
+    canEditVentas: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero || isJefeCampo),
+    canDeleteVentas: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
+    
+    // Eventos Sanitarios - SUPERADMIN NO tiene acceso
+    canViewEventosSanitarios: !isGlobalSuperAdmin,
+    canCreateEventosSanitarios: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditEventosSanitarios: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeleteEventosSanitarios: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Alimentación - SUPERADMIN NO tiene acceso
+    canViewAlimentacion: !isGlobalSuperAdmin,
+    canCreateAlimentacion: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canEditAlimentacion: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    canDeleteAlimentacion: !isGlobalSuperAdmin && (isAdmin || isJefeCampo),
+    
+    // Inventario Porcinos - SUPERADMIN NO tiene acceso
+    canViewInventarioPorcinos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isOperario),
+    
+    // Configuraciones Porcinos - Solo Admin
+    canManageConfiguracionesPorcinos: !isGlobalSuperAdmin && isAdmin,
+    
+    // Faena - SUPERADMIN NO tiene acceso
+    canViewFaena: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero || isJefeCampo),
+    canCreateFaena: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero || isJefeCampo),
+    canEditFaena: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero || isJefeCampo),
+    canDeleteFaena: !isGlobalSuperAdmin && (isAdmin || isJefeFinanciero),
+    
+    // Reportes Porcinos - SUPERADMIN NO tiene acceso
+    canViewReportesPorcinos: !isGlobalSuperAdmin,
+    canExportReportesPorcinos: !isGlobalSuperAdmin && (isAdmin || isJefeCampo || isJefeFinanciero)
   };
 };

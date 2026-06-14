@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api, { agroquimicoIntegradoService } from '../services/api';
+import { Icon } from '../core/components/Icon';
 
 interface CondicionesAmbientales {
   temperatura: number;
@@ -75,8 +76,8 @@ const CondicionesAmbientalesModal: React.FC<CondicionesAmbientalesModalProps> = 
   };
 
   const getCondicionesIcon = () => {
-    if (condicionesAdecuadas) return '✅';
-    return '⚠️';
+    if (condicionesAdecuadas) return <Icon name="CheckCircle" size={16} className="inline" />;
+    return <Icon name="AlertTriangle" size={16} className="inline" />;
   };
 
   const getRecomendaciones = () => {
@@ -106,14 +107,14 @@ const CondicionesAmbientalesModal: React.FC<CondicionesAmbientalesModalProps> = 
       <div className="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
         <div className="mt-3">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              🌡️ Condiciones Ambientales
+            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              <Icon name="Thermometer" size={20} /> Condiciones Ambientales
             </h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
+              className="text-gray-400 hover:text-gray-600 text-2xl flex items-center justify-center"
             >
-              ✕
+              <Icon name="X" size={20} />
             </button>
           </div>
 
@@ -237,7 +238,9 @@ const CondicionesAmbientalesModal: React.FC<CondicionesAmbientalesModalProps> = 
           {/* Recomendaciones */}
           {!condicionesAdecuadas && (
             <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Recomendaciones</h4>
+              <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                <Icon name="AlertTriangle" size={16} /> Recomendaciones
+              </h4>
               <ul className="text-sm text-yellow-700 space-y-1">
                 {getRecomendaciones().map((recomendacion, index) => (
                   <li key={index}>• {recomendacion}</li>
@@ -250,9 +253,9 @@ const CondicionesAmbientalesModal: React.FC<CondicionesAmbientalesModalProps> = 
           <div className="flex justify-between pt-6">
             <button
               onClick={obtenerCondicionesRecomendadas}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2"
             >
-              🌡️ Condiciones Recomendadas
+              <Icon name="Thermometer" size={16} /> Condiciones Recomendadas
             </button>
             <div className="flex space-x-3">
               <button
@@ -263,9 +266,9 @@ const CondicionesAmbientalesModal: React.FC<CondicionesAmbientalesModalProps> = 
               </button>
               <button
                 onClick={handleGuardar}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2"
               >
-                💾 Guardar Condiciones
+                <Icon name="Save" size={16} /> Guardar Condiciones
               </button>
             </div>
           </div>

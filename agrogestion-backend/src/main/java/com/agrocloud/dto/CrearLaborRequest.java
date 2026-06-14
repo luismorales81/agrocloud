@@ -34,6 +34,9 @@ public class CrearLaborRequest {
     
     @JsonProperty("lote")
     private Map<String, Object> lote;
+
+    @JsonProperty("cultivoId")
+    private Long cultivoId;
     
     @JsonProperty("insumosUsados")
     private List<Map<String, Object>> insumosUsados;
@@ -74,6 +77,9 @@ public class CrearLaborRequest {
     
     public Map<String, Object> getLote() { return lote; }
     public void setLote(Map<String, Object> lote) { this.lote = lote; }
+
+    public Long getCultivoId() { return cultivoId; }
+    public void setCultivoId(Long cultivoId) { this.cultivoId = cultivoId; }
     
     public List<Map<String, Object>> getInsumosUsados() { return insumosUsados; }
     public void setInsumosUsados(List<Map<String, Object>> insumosUsados) { this.insumosUsados = insumosUsados; }

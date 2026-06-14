@@ -1,26 +1,23 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Ingreso;
-import com.agrocloud.repository.IngresoRepository;
+import com.agrocloud.core.domain.Ingreso;
+import com.agrocloud.core.infrastructure.IngresoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Controlador público para la gestión de ingresos (sin autenticación).
- * 
- * @author AgroGestion Team
- * @version 1.0.0
- */
 @RestController
 @RequestMapping("/api/public/ingresos")
-@CrossOrigin(origins = "*")
+@Profile("dev")
 public class PublicIngresoController {
 
     @Autowired
-    private IngresoRepository ingresoRepository;
+    @Qualifier("ingresoRepositoryCore")
+        private IngresoRepository ingresoRepository;
 
     /**
      * Obtiene todos los ingresos (público).
@@ -61,7 +58,7 @@ public class PublicIngresoController {
         try {
             // TODO: Implementar autenticación real - por ahora usar usuario admin
             if (ingreso.getUser() == null) {
-                com.agrocloud.model.entity.User usuario = new com.agrocloud.model.entity.User();
+                com.agrocloud.core.domain.User usuario = new com.agrocloud.core.domain.User();
                 usuario.setId(1L); // Admin por defecto hasta implementar autenticación
                 ingreso.setUser(usuario);
             }

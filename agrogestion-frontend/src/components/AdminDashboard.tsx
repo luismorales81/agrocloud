@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../services/apiEndpoints';
+import { Icon } from '../core/components/Icon';
 
 interface AdminStats {
   totalUsuarios: number;
@@ -149,8 +150,8 @@ const AdminDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                🏛️ Dashboard Administrador
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                <Icon name="Building2" size={32} /> Dashboard Administrador
               </h1>
               <p className="mt-1 text-sm text-gray-500">
                 Panel de control del sistema AgroCloud
@@ -167,7 +168,7 @@ const AdminDashboard: React.FC = () => {
                 onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
-                🚪 Cerrar Sesión
+                <Icon name="LogOut" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Cerrar Sesión
               </button>
             </div>
           </div>
@@ -179,12 +180,12 @@ const AdminDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
             {[
-              { id: 'resumen', name: '📊 Resumen', icon: '📊' },
-              { id: 'usuarios', name: '👥 Usuarios', icon: '👥' },
-              { id: 'uso-sistema', name: '💻 Uso del Sistema', icon: '💻' },
-              { id: 'tablas-maestras', name: '⚙️ Tablas Maestras', icon: '⚙️' },
-              { id: 'auditoria', name: '🔒 Auditoría', icon: '🔒' },
-              { id: 'reportes', name: '📈 Reportes', icon: '📈' }
+              { id: 'resumen', name: 'Resumen', icon: 'BarChart' },
+              { id: 'usuarios', name: 'Usuarios', icon: 'Users' },
+              { id: 'uso-sistema', name: 'Uso del Sistema', icon: 'Monitor' },
+              { id: 'tablas-maestras', name: 'Tablas Maestras', icon: 'Settings' },
+              { id: 'auditoria', name: 'Auditoría', icon: 'Lock' },
+              { id: 'reportes', name: 'Reportes', icon: 'TrendingUp' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -195,7 +196,7 @@ const AdminDashboard: React.FC = () => {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                {tab.name}
+                <Icon name={tab.icon} size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {tab.name}
               </button>
             ))}
           </nav>
@@ -208,8 +209,8 @@ const AdminDashboard: React.FC = () => {
           <div className="space-y-6">
             {/* Estadísticas Generales */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                📊 Estadísticas Generales del Sistema
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <Icon name="BarChart" size={24} /> Estadísticas Generales del Sistema
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -218,7 +219,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                        <span className="text-white text-lg">👥</span>
+                        <Icon name="Users" size={20} className="text-white" />
                       </div>
                     </div>
                     <div className="ml-4">
@@ -233,7 +234,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                        <span className="text-white text-lg">🌾</span>
+                        <Icon name="Wheat" size={20} className="text-white" />
                       </div>
                     </div>
                     <div className="ml-4">
@@ -248,7 +249,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
-                        <span className="text-white text-lg">🔲</span>
+                        <Icon name="Square" size={20} className="text-white" />
                       </div>
                     </div>
                     <div className="ml-4">
@@ -263,7 +264,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
-                        <span className="text-white text-lg">💰</span>
+                        <Icon name="DollarSign" size={20} className="text-white" />
                       </div>
                     </div>
                     <div className="ml-4">
@@ -281,8 +282,8 @@ const AdminDashboard: React.FC = () => {
 
             {/* Estado de Usuarios */}
             <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                👥 Estado de Usuarios
+              <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Icon name="Users" size={20} /> Estado de Usuarios
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -293,7 +294,7 @@ const AdminDashboard: React.FC = () => {
                       <p className="text-2xl font-semibold text-green-600">{stats?.usuariosActivos || 0}</p>
                     </div>
                     <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-green-600 text-xl">✅</span>
+                      <Icon name="CheckCircle" size={24} className="text-green-600" />
                     </div>
                   </div>
                 </div>
@@ -305,7 +306,7 @@ const AdminDashboard: React.FC = () => {
                       <p className="text-2xl font-semibold text-yellow-600">{stats?.usuariosPendientes || 0}</p>
                     </div>
                     <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <span className="text-yellow-600 text-xl">⏳</span>
+                      <Icon name="Loader" size={24} className="text-yellow-600" />
                     </div>
                   </div>
                 </div>
@@ -317,7 +318,7 @@ const AdminDashboard: React.FC = () => {
                       <p className="text-2xl font-semibold text-red-600">{stats?.usuariosSuspendidos || 0}</p>
                     </div>
                     <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                      <span className="text-red-600 text-xl">🚫</span>
+                      <Icon name="XCircle" size={24} className="text-red-600" />
                     </div>
                   </div>
                 </div>
@@ -326,14 +327,14 @@ const AdminDashboard: React.FC = () => {
 
             {/* Activos del Sistema */}
             <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                🏗️ Activos del Sistema
+              <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Icon name="Building" size={20} /> Activos del Sistema
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-white rounded-lg shadow p-6 text-center">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-blue-600 text-xl">🌱</span>
+                    <Icon name="Sprout" size={24} className="text-blue-600" />
                   </div>
                   <p className="text-sm font-medium text-gray-500">Cultivos</p>
                   <p className="text-2xl font-semibold text-gray-900">{stats?.totalCultivos || 0}</p>
@@ -341,7 +342,7 @@ const AdminDashboard: React.FC = () => {
 
                 <div className="bg-white rounded-lg shadow p-6 text-center">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-green-600 text-xl">🧪</span>
+                    <Icon name="FlaskConical" size={24} className="text-green-600" />
                   </div>
                   <p className="text-sm font-medium text-gray-500">Insumos</p>
                   <p className="text-2xl font-semibold text-gray-900">{stats?.totalInsumos || 0}</p>
@@ -349,7 +350,7 @@ const AdminDashboard: React.FC = () => {
 
                 <div className="bg-white rounded-lg shadow p-6 text-center">
                   <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-yellow-600 text-xl">🚜</span>
+                    <Icon name="Tractor" size={24} className="text-yellow-600" />
                   </div>
                   <p className="text-sm font-medium text-gray-500">Maquinaria</p>
                   <p className="text-2xl font-semibold text-gray-900">{stats?.totalMaquinaria || 0}</p>
@@ -357,7 +358,7 @@ const AdminDashboard: React.FC = () => {
 
                 <div className="bg-white rounded-lg shadow p-6 text-center">
                   <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-purple-600 text-xl">⚒️</span>
+                    <Icon name="Wrench" size={24} className="text-purple-600" />
                   </div>
                   <p className="text-sm font-medium text-gray-500">Labores</p>
                   <p className="text-2xl font-semibold text-gray-900">{stats?.totalLabores || 0}</p>
@@ -370,11 +371,11 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'usuarios' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">
-                👥 Gestión de Usuarios
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Icon name="Users" size={24} /> Gestión de Usuarios
               </h2>
-              <button className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
-                ➕ Nuevo Usuario
+              <button className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center gap-2">
+                <Icon name="Plus" size={16} /> Nuevo Usuario
               </button>
             </div>
 
@@ -446,7 +447,17 @@ const AdminDashboard: React.FC = () => {
                               ? 'text-green-600 bg-green-100' 
                               : 'text-red-600 bg-red-100'
                           }`}>
-                            {usuario.emailVerified ? '✅ Verificado' : '❌ Pendiente'}
+                            <span className="flex items-center gap-1">
+                              {usuario.emailVerified ? (
+                                <>
+                                  <Icon name="CheckCircle" size={12} /> Verificado
+                                </>
+                              ) : (
+                                <>
+                                  <Icon name="XCircle" size={12} /> Pendiente
+                                </>
+                              )}
+                            </span>
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -454,14 +465,14 @@ const AdminDashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
-                            <button className="text-blue-600 hover:text-blue-900">
-                              ✏️ Editar
+                            <button className="text-blue-600 hover:text-blue-900 flex items-center gap-1">
+                              <Icon name="Pencil" size={14} /> Editar
                             </button>
-                            <button className="text-yellow-600 hover:text-yellow-900">
-                              🔒 {usuario.activo ? 'Suspender' : 'Activar'}
+                            <button className="text-yellow-600 hover:text-yellow-900 flex items-center gap-1">
+                              <Icon name="Lock" size={14} /> {usuario.activo ? 'Suspender' : 'Activar'}
                             </button>
-                            <button className="text-red-600 hover:text-red-900">
-                              🗑️ Eliminar
+                            <button className="text-red-600 hover:text-red-900 flex items-center gap-1">
+                              <Icon name="Trash2" size={14} /> Eliminar
                             </button>
                           </div>
                         </td>

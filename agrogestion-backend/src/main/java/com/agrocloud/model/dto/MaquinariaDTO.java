@@ -1,7 +1,7 @@
 package com.agrocloud.model.dto;
 
-import com.agrocloud.model.entity.Maquinaria;
-import com.agrocloud.model.entity.Maquinaria.EstadoMaquinaria;
+import com.agrocloud.cultivos.domain.Maquinaria;
+import com.agrocloud.cultivos.domain.Maquinaria.EstadoMaquinaria;
 import java.time.LocalDateTime;
 
 /**

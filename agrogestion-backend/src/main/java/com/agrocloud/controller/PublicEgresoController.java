@@ -1,31 +1,29 @@
 package com.agrocloud.controller;
 
-import com.agrocloud.model.entity.Egreso;
-import com.agrocloud.repository.EgresoRepository;
-import com.agrocloud.repository.InsumoRepository;
+import com.agrocloud.core.domain.Egreso;
+import com.agrocloud.core.infrastructure.EgresoRepository;
+import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.math.BigDecimal;
 
-/**
- * Controlador público para la gestión de egresos (sin autenticación).
- * 
- * @author AgroGestion Team
- * @version 1.0.0
- */
 @RestController
 @RequestMapping("/api/public/egresos")
-@CrossOrigin(origins = "*")
+@Profile("dev")
 public class PublicEgresoController {
 
     @Autowired
-    private EgresoRepository egresoRepository;
+    @Qualifier("egresoRepositoryCore")
+        private EgresoRepository egresoRepository;
 
     @Autowired
-    private InsumoRepository insumoRepository;
+    @Qualifier("insumoRepositoryInventario")
+        private InsumoRepository insumoRepository;
 
     /**
      * Obtiene todos los egresos (público).
@@ -66,7 +64,7 @@ public class PublicEgresoController {
         try {
             // TODO: Implementar autenticación real - por ahora usar usuario admin
             if (egreso.getUser() == null) {
-                com.agrocloud.model.entity.User usuario = new com.agrocloud.model.entity.User();
+                com.agrocloud.core.domain.User usuario = new com.agrocloud.core.domain.User();
                 usuario.setId(1L); // Admin por defecto hasta implementar autenticación
                 egreso.setUser(usuario);
             }

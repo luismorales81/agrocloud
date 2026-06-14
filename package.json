@@ -1,0 +1,34 @@
+{
+  "name": "agrogestion",
+  "version": "1.0.0",
+  "description": "Backend Spring Boot + Frontend React (AgroGestion).",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
+  },
+  "devDependencies": {
+    "@benborla29/mcp-server-mysql": "^2.0.8"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "mcp:mysql": "mcp-server-mysql",
+    "pdf:propuesta": "npm run pdf:propuesta --prefix docs",
+    "pdf:brief": "npm run pdf:brief --prefix docs",
+    "agentes:instalar": "node scripts/convertir-agentes-cursor.mjs",
+    "agentes:clonar": "git clone --depth 1 https://github.com/msitarzewski/agency-agents.git vendor/agency-agents"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luismorales81/agrocloud.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/luismorales81/agrocloud/issues"
+  },
+  "homepage": "https://github.com/luismorales81/agrocloud#readme"
+}

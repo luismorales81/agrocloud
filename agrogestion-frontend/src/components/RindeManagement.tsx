@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { lotesService, cultivosService, reportesService } from '../services/apiServices';
 
 interface RindeLote {
   id?: number;
@@ -75,86 +76,90 @@ const RindeManagement: React.FC = () => {
     observaciones: ''
   });
 
-  // Cargar datos
+  // Cargar datos desde el backend
   const loadData = async () => {
     try {
       setLoading(true);
       
-      // Simulación de carga de lotes
-      const mockLotes: Lote[] = [
-        { id: 1, nombre: 'Lote A1', superficie: 25.50, cultivo: 'Soja', campo_id: 1 },
-        { id: 2, nombre: 'Lote A2', superficie: 30.25, cultivo: 'Maíz', campo_id: 1 },
-        { id: 3, nombre: 'Lote B1', superficie: 40.00, cultivo: 'Trigo', campo_id: 2 },
-        { id: 4, nombre: 'Lote B2', superficie: 35.75, cultivo: 'Soja', campo_id: 2 }
-      ];
-      setLotes(mockLotes);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No hay token de autenticación');
+        setLotes([]);
+        setCultivos([]);
+        setRindes([]);
+        return;
+      }
 
-      // Simulación de carga de cultivos
-      const mockCultivos: Cultivo[] = [
-        { id: 1, nombre: 'Soja', variedad: 'DM 53i54', rendimiento_esperado: 3500, unidad_rendimiento: 'kg/ha' },
-        { id: 2, nombre: 'Soja', variedad: 'DM 58i60', rendimiento_esperado: 3800, unidad_rendimiento: 'kg/ha' },
-        { id: 3, nombre: 'Maíz', variedad: 'DK 72-10', rendimiento_esperado: 12500, unidad_rendimiento: 'kg/ha' },
-        { id: 4, nombre: 'Maíz', variedad: 'DK 79-10', rendimiento_esperado: 14000, unidad_rendimiento: 'kg/ha' },
-        { id: 5, nombre: 'Trigo', variedad: 'Klein Pantera', rendimiento_esperado: 4500, unidad_rendimiento: 'kg/ha' }
-      ];
-      setCultivos(mockCultivos);
+      // Cargar lotes desde el backend
+      try {
+        const lotesData = await lotesService.listarCultivo();
+        const lotesMapeados: Lote[] = (Array.isArray(lotesData) ? lotesData : []).map((lote: any) => ({
+          id: lote.id,
+          nombre: lote.nombre,
+          superficie: lote.areaHectareas || 0,
+          cultivo: lote.cultivoActual || '',
+          campo_id: lote.campoId || lote.campo?.id || 0
+        }));
+        setLotes(lotesMapeados);
+      } catch (error) {
+        console.error('Error cargando lotes:', error);
+        setLotes([]);
+      }
 
-      // Simulación de carga de rindes
-      const mockRindes: RindeLote[] = [
-        {
-          id: 1,
-          lote_id: 1,
-          cultivo_id: 1,
-          superficie_ha: 25.50,
-          fecha_siembra: '2024-03-15',
-          densidad_siembra: 300000,
-          variedad_semilla: 'DM 53i54',
-          fertilizante_nitrogeno: 0,
-          fertilizante_fosforo: 40,
-          fertilizante_potasio: 0,
-          otros_insumos: '{"herbicida": "Glifosato 3L/ha"}',
-          fecha_cosecha: '2024-07-15',
-          cantidad_cosechada: 89250,
-          cantidad_esperada: 87500,
-          unidad_cosecha: 'kg',
-          rinde_real: 3500,
-          rinde_esperado: 3500,
-          diferencia_rinde: 0,
-          porcentaje_cumplimiento: 102,
-          clima_favorable: true,
-          plagas_enfermedades: false,
-          riego_suficiente: true,
-          observaciones: 'Rinde excelente, condiciones climáticas óptimas'
-        },
-        {
-          id: 2,
-          lote_id: 2,
-          cultivo_id: 3,
-          superficie_ha: 30.25,
-          fecha_siembra: '2024-03-10',
-          densidad_siembra: 70000,
-          variedad_semilla: 'DK 72-10',
-          fertilizante_nitrogeno: 120,
-          fertilizante_fosforo: 60,
-          fertilizante_potasio: 30,
-          otros_insumos: '{"fungicida": "Azoxystrobin 0.5L/ha"}',
-          fecha_cosecha: '2024-07-20',
-          cantidad_cosechada: 378125,
-          cantidad_esperada: 375000,
-          unidad_cosecha: 'kg',
-          rinde_real: 12500,
-          rinde_esperado: 12500,
-          diferencia_rinde: 0,
-          porcentaje_cumplimiento: 100.8,
-          clima_favorable: true,
-          plagas_enfermedades: false,
-          riego_suficiente: true,
-          observaciones: 'Maíz con muy buen desarrollo, fertilización adecuada'
-        }
-      ];
-      setRindes(mockRindes);
+      // Cargar cultivos desde el backend
+      try {
+        const cultivosData = await cultivosService.listar();
+        const cultivosMapeados: Cultivo[] = (Array.isArray(cultivosData) ? cultivosData : []).map((cultivo: any) => ({
+          id: cultivo.id,
+          nombre: cultivo.nombre,
+          variedad: cultivo.variedad || '',
+          rendimiento_esperado: cultivo.rendimientoEsperado || 0,
+          unidad_rendimiento: cultivo.unidadRendimiento || 'kg/ha'
+        }));
+        setCultivos(cultivosMapeados);
+      } catch (error) {
+        console.error('Error cargando cultivos:', error);
+        setCultivos([]);
+      }
+
+      // Cargar rindes desde el backend (usando reporte de rendimiento)
+      try {
+        const rindesData = await reportesService.obtenerRendimiento();
+        const rindesMapeados: RindeLote[] = (Array.isArray(rindesData) ? rindesData : []).map((rinde: any) => ({
+          id: rinde.loteId,
+          lote_id: rinde.loteId,
+          cultivo_id: rinde.cultivoId,
+          superficie_ha: rinde.superficieHectareas ? parseFloat(rinde.superficieHectareas.toString()) : 0,
+          fecha_siembra: rinde.fechaSiembra || '',
+          densidad_siembra: 0, // No disponible en el reporte
+          variedad_semilla: rinde.variedadSemilla || '',
+          fertilizante_nitrogeno: 0, // No disponible en el reporte
+          fertilizante_fosforo: 0, // No disponible en el reporte
+          fertilizante_potasio: 0, // No disponible en el reporte
+          otros_insumos: '',
+          fecha_cosecha: rinde.fechaCosecha || '',
+          cantidad_cosechada: rinde.rendimientoReal ? parseFloat(rinde.rendimientoReal.toString()) * (rinde.superficieHectareas ? parseFloat(rinde.superficieHectareas.toString()) : 0) : 0,
+          cantidad_esperada: rinde.rendimientoEsperado ? parseFloat(rinde.rendimientoEsperado.toString()) * (rinde.superficieHectareas ? parseFloat(rinde.superficieHectareas.toString()) : 0) : 0,
+          unidad_cosecha: rinde.unidadRendimiento || 'kg',
+          rinde_real: rinde.rendimientoReal ? parseFloat(rinde.rendimientoReal.toString()) : 0,
+          rinde_esperado: rinde.rendimientoEsperado ? parseFloat(rinde.rendimientoEsperado.toString()) : 0,
+          diferencia_rinde: rinde.diferenciaRendimiento ? parseFloat(rinde.diferenciaRendimiento.toString()) : 0,
+          porcentaje_cumplimiento: rinde.porcentajeCumplimiento ? parseFloat(rinde.porcentajeCumplimiento.toString()) : 0,
+          clima_favorable: true, // No disponible en el reporte
+          plagas_enfermedades: false, // No disponible en el reporte
+          riego_suficiente: true, // No disponible en el reporte
+          observaciones: rinde.observaciones || ''
+        }));
+        setRindes(rindesMapeados);
+      } catch (error) {
+        console.error('Error cargando rindes:', error);
+        setRindes([]);
+      }
     } catch (error) {
       console.error('Error cargando datos:', error);
+      setLotes([]);
+      setCultivos([]);
+      setRindes([]);
     } finally {
       setLoading(false);
     }

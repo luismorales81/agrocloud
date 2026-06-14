@@ -25,6 +25,10 @@ interface HistorialCosecha {
   requiereDescanso: boolean;
   diasDescansoRecomendados: number;
   fechaCreacion: string;
+  /** Alias planos opcionales si el backend envía nombres ya resueltos */
+  cultivoNombre?: string;
+  loteNombre?: string;
+  porcentajeCumplimiento?: number;
 }
 
 interface HistorialCosechasModalProps {

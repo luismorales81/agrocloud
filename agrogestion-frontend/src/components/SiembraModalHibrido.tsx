@@ -209,7 +209,7 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
 
       const nuevaMaquinaria: MaquinariaAsignada = {
         descripcion: `${maquinaria.nombre} - ${maquinaria.tipo}`,
-        proveedor: null, // Propia no tiene proveedor
+        proveedor: undefined,
         tipoMaquinaria: 'PROPIA',
         costoTotal: costo,
         observaciones: `${horas} horas × $${maquinaria.costoPorHora}/h`
@@ -229,7 +229,7 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
         proveedor: formMaquinaria.proveedor,
         tipoMaquinaria: 'ALQUILADA',
         costoTotal: parseFloat(formMaquinaria.costo),
-        observaciones: formMaquinaria.observaciones || null
+        observaciones: formMaquinaria.observaciones || undefined
       };
 
       setMaquinarias([...maquinarias, nuevaMaquinaria]);
@@ -247,10 +247,10 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
     const nuevaManoObra: ManoObra = {
       descripcion: formManoObra.descripcion,
       cantidadPersonas: parseInt(formManoObra.cantidadPersonas),
-      proveedor: formManoObra.proveedor || null,
+      proveedor: formManoObra.proveedor || undefined,
       costoTotal: parseFloat(formManoObra.costo),
-      horasTrabajo: formManoObra.horas ? parseFloat(formManoObra.horas) : null,
-      observaciones: formManoObra.observaciones || null
+      horasTrabajo: formManoObra.horas ? parseFloat(formManoObra.horas) : undefined,
+      observaciones: formManoObra.observaciones || undefined
     };
 
     setManoObras([...manoObras, nuevaManoObra]);

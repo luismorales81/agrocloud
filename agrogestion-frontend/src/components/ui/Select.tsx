@@ -12,6 +12,7 @@ interface SelectTriggerProps {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
+  className?: string;
 }
 
 interface SelectContentProps {
@@ -39,15 +40,17 @@ export const Select: React.FC<SelectProps> = ({
   disabled = false 
 }) => {
   // Extraer opciones de los SelectItem
-  const options: { value: string; label: string }[] = [];
+  const options: { value: string; label: React.ReactNode }[] = [];
   
   React.Children.forEach(children, (child) => {
     if (React.isValidElement(child) && child.type === SelectContent) {
-      React.Children.forEach(child.props.children, (item: any) => {
+      const contenido = child.props as { children?: React.ReactNode };
+      React.Children.forEach(contenido.children, (item) => {
         if (React.isValidElement(item) && item.type === SelectItem) {
+          const propsItem = item.props as { value: string; children?: React.ReactNode };
           options.push({
-            value: item.props.value,
-            label: item.props.children
+            value: propsItem.value,
+            label: propsItem.children ?? ''
           });
         }
       });
@@ -72,8 +75,8 @@ export const Select: React.FC<SelectProps> = ({
 };
 
 // Componentes de compatibilidad (no se usan en la versión simplificada)
-export const SelectTrigger: React.FC<SelectTriggerProps> = ({ children }) => {
-  return <>{children}</>;
+export const SelectTrigger: React.FC<SelectTriggerProps> = ({ children, className }) => {
+  return <span className={className}>{children}</span>;
 };
 
 export const SelectContent: React.FC<SelectContentProps> = ({ children }) => {

@@ -190,8 +190,8 @@ const CosechasManagement: React.FC = () => {
         return;
       }
 
-      // Cargar lotes
-      const lotesData = await lotesService.listar();
+      // Cargar solo lotes de cultivo (excluir porcinos)
+      const lotesData = await lotesService.listarCultivo();
         const lotesMapeados: Lote[] = lotesData
           .filter((lote: any) => {
             // Incluir todos los lotes activos (no solo los que tienen cultivo actual)

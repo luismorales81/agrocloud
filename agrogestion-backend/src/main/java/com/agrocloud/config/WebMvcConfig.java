@@ -20,7 +20,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
         registry.addInterceptor(loggingSecurityInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/public/**", "/api/health", "/actuator/**");
+                .excludePathPatterns("/api/health", "/actuator/**");
     }
 }
 

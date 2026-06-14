@@ -1,3 +1,5 @@
+# ========== LEGACY - NO USAR PARA PRODUCCIÓN ==========
+# App simple de diagnóstico. Producción: agrogestion-backend/Dockerfile
 # Dockerfile para AgroCloud Simple App
 FROM eclipse-temurin:17-jdk-alpine
 

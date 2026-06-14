@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { authService } from '../services/apiServices';
+import { authService, usuariosService } from '../services/apiServices';
+import { Icon } from '../core/components/Icon';
 
 interface User {
   id: number;
@@ -101,7 +102,12 @@ const UsersManagement: React.FC = () => {
     console.log('📋 [UsersManagement] formData:', formData);
     try {
       setFormLoading(true);
-      await authService.register(formData);
+      await usuariosService.crear({
+        firstName: formData.name,
+        email: formData.email,
+        password: formData.password,
+        roleIds: [formData.roleId],
+      });
       
       console.log('✅ [UsersManagement] Usuario creado exitosamente');
       alert('✅ Usuario creado exitosamente');
@@ -109,13 +115,14 @@ const UsersManagement: React.FC = () => {
       setShowForm(false);
       loadUsers();
       loadStats();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [UsersManagement] Error en catch:', error);
-      if (error.response) {
-        console.error('❌ [UsersManagement] Error response:', error.response.status, error.response.data);
-        alert('Error creando usuario: ' + (error.response.data || error.response.statusText));
+      const err = error as { message?: string; response?: { status?: number; data?: unknown; statusText?: string } };
+      if (err.response) {
+        console.error('❌ [UsersManagement] Error response:', err.response.status, err.response.data);
+        alert('Error creando usuario: ' + (err.response.data ?? err.response.statusText ?? ''));
       } else {
-        alert('Error creando usuario: ' + error.message);
+        alert('Error creando usuario: ' + (err.message ?? String(error)));
       }
     } finally {
       setFormLoading(false);
@@ -288,7 +295,9 @@ const UsersManagement: React.FC = () => {
           padding: '20px', 
           borderRadius: '10px' 
         }}>
-          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>📊 Actividad del Sistema</h3>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Icon name="BarChart" size={18} /> Actividad del Sistema
+          </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ margin: '0', fontSize: '12px', opacity: '0.8' }}>Sesiones Hoy</p>
@@ -316,8 +325,8 @@ const UsersManagement: React.FC = () => {
           borderRadius: '10px', 
           padding: '20px' 
         }}>
-          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#333' }}>
-            👥 Usuarios Más Activos (Últimos 30 días)
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#333', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Icon name="Users" size={18} /> Usuarios Más Activos (Últimos 30 días)
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {[
@@ -357,8 +366,8 @@ const UsersManagement: React.FC = () => {
           borderRadius: '10px', 
           padding: '20px' 
         }}>
-          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#333' }}>
-            🏢 Empresas Más Activas
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#333', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Icon name="Building" size={18} /> Empresas Más Activas
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {[
@@ -413,7 +422,7 @@ const UsersManagement: React.FC = () => {
             fontWeight: 'bold'
           }}
         >
-          ➕ Agregar Nuevo Usuario
+          <Icon name="Plus" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Agregar Nuevo Usuario
         </button>
       </div>
 
@@ -427,7 +436,9 @@ const UsersManagement: React.FC = () => {
           border: '1px solid #ddd'
         }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#333' }}>
-            {selectedUser ? '📝 Editar Usuario' : '📝 Nuevo Usuario'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Icon name="FileText" size={16} /> {selectedUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+            </span>
           </h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -542,7 +553,15 @@ const UsersManagement: React.FC = () => {
                 opacity: formLoading ? 0.6 : 1
               }}
             >
-              {formLoading ? '💾 Guardando...' : (selectedUser ? '💾 Actualizar Usuario' : '💾 Crear Usuario')}
+              {formLoading ? (
+                <>
+                  <Icon name="Loader" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Guardando...
+                </>
+              ) : (
+                <>
+                  <Icon name="Save" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {selectedUser ? 'Actualizar Usuario' : 'Crear Usuario'}
+                </>
+              )}
             </button>
             
             <button
@@ -563,7 +582,7 @@ const UsersManagement: React.FC = () => {
                 fontSize: '14px'
               }}
             >
-              ❌ Cancelar
+              <Icon name="XCircle" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Cancelar
             </button>
           </div>
         </div>
@@ -580,7 +599,7 @@ const UsersManagement: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              🔍 Buscar:
+              <Icon name="Search" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Buscar:
             </label>
             <input
               type="text"
@@ -599,7 +618,7 @@ const UsersManagement: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              🏷️ Rol:
+              <Icon name="Tag" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Rol:
             </label>
             <select
               value={filterRole}
@@ -621,7 +640,7 @@ const UsersManagement: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              📊 Estado:
+              <Icon name="BarChart" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Estado:
             </label>
             <select
               value={filterActive === null ? '' : filterActive.toString()}
@@ -655,12 +674,14 @@ const UsersManagement: React.FC = () => {
           borderBottom: '1px solid #ddd',
           fontWeight: 'bold'
         }}>
-          📋 Usuarios ({filteredUsers.length})
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Icon name="Clipboard" size={16} /> Usuarios ({filteredUsers.length})
+          </span>
         </div>
         
         {loading ? (
           <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-            🔄 Cargando usuarios...
+            <Icon name="RefreshCcw" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Cargando usuarios...
           </div>
         ) : filteredUsers.length === 0 ? (
           <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
@@ -680,7 +701,7 @@ const UsersManagement: React.FC = () => {
                 <div>
                   <h4 style={{ margin: '0 0 5px 0', color: '#333' }}>{user.name}</h4>
                   <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '14px' }}>
-                    📧 {user.email}
+                    <Icon name="Mail" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {user.email}
                   </p>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <span style={{ 
@@ -691,7 +712,17 @@ const UsersManagement: React.FC = () => {
                       fontSize: '12px',
                       fontWeight: 'bold'
                     }}>
-                      {user.active ? '✅ Activo' : '❌ Inactivo'}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        {user.active ? (
+                          <>
+                            <Icon name="CheckCircle" size={12} /> Activo
+                          </>
+                        ) : (
+                          <>
+                            <Icon name="XCircle" size={12} /> Inactivo
+                          </>
+                        )}
+                      </span>
                     </span>
                     <span style={{ 
                       background: '#e3f2fd',
@@ -700,7 +731,7 @@ const UsersManagement: React.FC = () => {
                       borderRadius: '12px',
                       fontSize: '12px'
                     }}>
-                      🏷️ {user.roleName}
+                      <Icon name="Tag" size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} /> {user.roleName}
                     </span>
                     {user.emailVerified && (
                       <span style={{ 
@@ -733,7 +764,7 @@ const UsersManagement: React.FC = () => {
                       fontSize: '12px'
                     }}
                   >
-                    ✏️ Editar
+                    <Icon name="Pencil" size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} /> Editar
                   </button>
                   <button
                     onClick={() => toggleUserStatus(user.id)}
@@ -747,7 +778,15 @@ const UsersManagement: React.FC = () => {
                       fontSize: '12px'
                     }}
                   >
-                    {user.active ? '⏸️ Desactivar' : '▶️ Activar'}
+                    {user.active ? (
+                      <>
+                        <Icon name="PauseCircle" size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} /> Desactivar
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="PlayCircle" size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} /> Activar
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => deleteUser(user.id)}
@@ -761,7 +800,7 @@ const UsersManagement: React.FC = () => {
                       fontSize: '12px'
                     }}
                   >
-                    🗑️ Eliminar
+                    <Icon name="Trash2" size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} /> Eliminar
                   </button>
                 </div>
               </div>

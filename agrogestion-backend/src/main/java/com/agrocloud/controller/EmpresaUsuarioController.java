@@ -1,16 +1,17 @@
 package com.agrocloud.controller;
 
 import com.agrocloud.dto.UsuarioEmpresaDTO;
-import com.agrocloud.model.entity.User;
-import com.agrocloud.model.entity.UsuarioEmpresa;
+import com.agrocloud.core.domain.User;
+import com.agrocloud.core.domain.UsuarioEmpresa;
 import com.agrocloud.model.enums.EstadoUsuarioEmpresa;
 import com.agrocloud.model.enums.RolEmpresa;
-import com.agrocloud.model.entity.UsuarioEmpresaRol;
-import com.agrocloud.service.EmpresaUsuarioService;
-import com.agrocloud.service.UserService;
+import com.agrocloud.core.domain.UsuarioEmpresaRol;
+import com.agrocloud.core.application.EmpresaUsuarioService;
+import com.agrocloud.core.application.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -26,15 +27,16 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/empresa-usuario")
-@CrossOrigin(origins = "*")
 public class EmpresaUsuarioController {
     
     private static final Logger logger = LoggerFactory.getLogger(EmpresaUsuarioController.class);
     
     @Autowired
+    @Qualifier("empresaUsuarioServiceCore")
     private EmpresaUsuarioService empresaUsuarioService;
     
     @Autowired
+    @Qualifier("userServiceCore")
     private UserService userService;
     
     /**

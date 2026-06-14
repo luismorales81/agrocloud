@@ -12,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class HealthController {
 
     private static final String BACKEND_VERSION = "1.1.0";

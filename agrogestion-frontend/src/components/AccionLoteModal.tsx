@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { lotesService } from '../services/apiServices';
+import { Icon } from '../core/components/Icon';
 
 interface Lote {
   id?: number;
@@ -9,7 +10,7 @@ interface Lote {
   estado: string;
 }
 
-type TipoAccion = 'abandonar' | 'limpiar' | 'forraje';
+type TipoAccion = 'abandonar' | 'forraje';
 
 interface AccionLoteModalProps {
   lote: Lote;
@@ -31,7 +32,8 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
     switch (accion) {
       case 'abandonar':
         return {
-          titulo: '⚠️ Abandonar Cultivo',
+          titulo: 'Abandonar Cultivo',
+          icono: 'AlertTriangle',
           color: '#F44336',
           colorFondo: '#ffebee',
           colorBorde: '#ef5350',
@@ -39,19 +41,10 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
           requiereCantidad: false,
           mensajeConfirmacion: '¿Está seguro de abandonar este cultivo?'
         };
-      case 'limpiar':
-        return {
-          titulo: '🚜 Limpiar Cultivo',
-          color: '#607D8B',
-          colorFondo: '#f5f5f5',
-          colorBorde: '#90a4ae',
-          descripcion: 'Esta acción eliminará el cultivo y dejará el lote disponible para nueva siembra',
-          requiereCantidad: false,
-          mensajeConfirmacion: 'El cultivo será eliminado completamente. ¿Continuar?'
-        };
       case 'forraje':
         return {
-          titulo: '🐄 Convertir a Forraje',
+          titulo: 'Convertir a Forraje',
+          icono: 'Cow',
           color: '#795548',
           colorFondo: '#efebe9',
           colorBorde: '#a1887f',
@@ -85,10 +78,6 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
           data = await lotesService.abandonar(lote.id!, formData.motivo);
           break;
         
-        case 'limpiar':
-          data = await lotesService.limpiar(lote.id!, formData.motivo);
-          break;
-        
         case 'forraje':
           const cosechaData = {
             fechaCosecha: new Date().toISOString().split('T')[0],
@@ -110,7 +99,7 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
       }
     } catch (error) {
       console.error('Error al ejecutar acción:', error);
-      alert('❌ Error de conexión. Por favor, intente nuevamente.');
+      alert('Error de conexión. Por favor, intente nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -147,7 +136,7 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
           paddingBottom: '10px'
         }}>
           <h2 style={{ margin: 0, color: config.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {config.titulo}
+            <Icon name={config.icono} size={20} /> {config.titulo}
           </h2>
           <button
             onClick={onClose}
@@ -156,10 +145,13 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
-              color: '#666'
+              color: '#666',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            ✕
+            <Icon name="X" size={20} />
           </button>
         </div>
 
@@ -190,8 +182,9 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
           marginBottom: '20px',
           border: '1px solid #FFB74D'
         }}>
-          <div style={{ fontSize: '13px', color: '#e65100' }}>
-            <strong>⚠️ Advertencia:</strong> {config.descripcion}
+          <div style={{ fontSize: '13px', color: '#e65100', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Icon name="AlertTriangle" size={14} />
+            <strong>Advertencia:</strong> {config.descripcion}
           </div>
         </div>
 
@@ -205,9 +198,9 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
               value={formData.motivo}
               onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
               placeholder={
-                accion === 'abandonar' ? 'Ej: Plaga de langostas, pérdida total' :
-                accion === 'limpiar' ? 'Ej: Cambio de plan de siembra, preparación para otro cultivo' :
-                'Ej: Cultivo inmaduro, necesidad de forraje'
+                accion === 'abandonar'
+                  ? 'Ej: Plaga de langostas, pérdida total'
+                  : 'Ej: Cultivo inmaduro, necesidad de forraje'
               }
               rows={3}
               required
@@ -294,7 +287,9 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
             fontSize: '13px',
             color: '#1e40af'
           }}>
-            <strong>⚡ {config.mensajeConfirmacion}</strong>
+            <strong style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Icon name="Zap" size={14} /> {config.mensajeConfirmacion}
+            </strong>
           </div>
 
           {/* Botones */}
@@ -332,7 +327,15 @@ const AccionLoteModal: React.FC<AccionLoteModalProps> = ({ lote, accion, onClose
                 fontWeight: 'bold'
               }}
             >
-              {loading ? '🔄 Procesando...' : '✓ Confirmar'}
+              {loading ? (
+                <>
+                  <Icon name="RefreshCcw" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Procesando...
+                </>
+              ) : (
+                <>
+                  <Icon name="Check" size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Confirmar
+                </>
+              )}
             </button>
           </div>
         </div>

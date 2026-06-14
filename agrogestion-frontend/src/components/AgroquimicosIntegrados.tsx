@@ -7,6 +7,7 @@ import InsumoWizard from './InsumoWizard';
 import SugerenciasDosisModal from './SugerenciasDosisModal';
 import RegistroCantidadRealModal from './RegistroCantidadRealModal';
 import CondicionesAmbientalesModal from './CondicionesAmbientalesModal';
+import { Icon } from '../core/components/Icon';
 
 interface InsumoAgroquimico {
   id: number;
@@ -17,6 +18,7 @@ interface InsumoAgroquimico {
   stockActual: number;
   stockMinimo: number;
   precioUnitario: number;
+  proveedor?: string;
   principioActivo?: string;
   concentracion?: string;
   claseQuimica?: string;
@@ -344,15 +346,15 @@ const AgroquimicosIntegrados: React.FC = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => obtenerSugerencias(agroquimico)}
-                          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2"
                         >
-                          💡 Obtener Sugerencias
+                          <Icon name="Lightbulb" size={16} /> Obtener Sugerencias
                         </button>
                         <button
                           onClick={() => registrarCantidadReal(agroquimico.id)}
-                          className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+                          className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2"
                         >
-                          📊 Registrar Aplicación
+                          <Icon name="BarChart" size={16} /> Registrar Aplicación
                         </button>
                       </div>
                     </div>

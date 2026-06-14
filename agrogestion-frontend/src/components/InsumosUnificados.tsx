@@ -4,6 +4,7 @@ import { useEmpresa } from '../contexts/EmpresaContext';
 import { insumosService } from '../services/apiServices';
 import PermissionGate from './PermissionGate';
 import InsumoWizard from './InsumoWizard';
+import { Icon } from './icons';
 
 interface InsumoUnificado {
   id: number;
@@ -33,7 +34,12 @@ interface InsumoUnificado {
   tienePropiedadesAgroquimicas: boolean;
 }
 
-const InsumosUnificados: React.FC = () => {
+interface InsumosUnificadosProps {
+  /** Vista reducida para avícola huevos: sin agroquímicos ni filtros de cultivos. */
+  vistaSimplificadaAvicola?: boolean;
+}
+
+const InsumosUnificados: React.FC<InsumosUnificadosProps> = ({ vistaSimplificadaAvicola = false }) => {
   const { user } = useAuth();
   const { rolUsuario } = useEmpresa();
   
@@ -42,7 +48,9 @@ const InsumosUnificados: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Estados para filtros
-  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'general' | 'agroquimico'>('todos');
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'general' | 'agroquimico'>(
+    vistaSimplificadaAvicola ? 'general' : 'todos'
+  );
   const [busqueda, setBusqueda] = useState('');
   const [ordenarPor, setOrdenarPor] = useState<'nombre' | 'tipo' | 'stock' | 'precio'>('nombre');
   
@@ -80,9 +88,6 @@ const InsumosUnificados: React.FC = () => {
         };
       });
       
-      // Log para depuración
-      console.log('🔧 [InsumosUnificados] Todos los insumos:', todosLosInsumos);
-      
       setInsumos(todosLosInsumos);
       
     } catch (err) {
@@ -118,14 +123,19 @@ const InsumosUnificados: React.FC = () => {
   };
 
   // Filtrar insumos
-  const insumosFiltrados = insumos.filter(insumo => {
-    const coincideBusqueda = insumo.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-                            insumo.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
-    
-    const coincideTipo = filtroTipo === 'todos' ||
-                        (filtroTipo === 'general' && !insumo.esAgroquimico) ||
-                        (filtroTipo === 'agroquimico' && insumo.esAgroquimico);
-    
+  const insumosFiltrados = insumos.filter((insumo) => {
+    if (vistaSimplificadaAvicola && insumo.esAgroquimico) {
+      return false;
+    }
+    const coincideBusqueda =
+      insumo.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      insumo.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
+
+    const coincideTipo =
+      filtroTipo === 'todos' ||
+      (filtroTipo === 'general' && !insumo.esAgroquimico) ||
+      (filtroTipo === 'agroquimico' && insumo.esAgroquimico);
+
     return coincideBusqueda && coincideTipo;
   });
 
@@ -152,22 +162,22 @@ const InsumosUnificados: React.FC = () => {
   const insumosPaginados = insumosOrdenados.slice(inicio, fin);
 
   // Obtener icono según el tipo
-  const getIcono = (insumo: InsumoUnificado) => {
+  const getIcono = (insumo: InsumoUnificado): string => {
     if (insumo.esAgroquimico) {
       switch (insumo.tipo) {
-        case 'HERBICIDA': return '🌿';
-        case 'FUNGICIDA': return '🍄';
-        case 'INSECTICIDA': return '🐛';
-        case 'FERTILIZANTE': return '🌱';
-        default: return '🧪';
+        case 'HERBICIDA': return 'Leaf';
+        case 'FUNGICIDA': return 'Circle';
+        case 'INSECTICIDA': return 'Bug';
+        case 'FERTILIZANTE': return 'Sprout';
+        default: return 'FlaskConical';
       }
     } else {
       switch (insumo.tipo) {
-        case 'FERTILIZANTE': return '🌱';
-        case 'SEMILLA': return '🌾';
-        case 'HERRAMIENTA': return '🔧';
-        case 'COMBUSTIBLE': return '⛽';
-        default: return '📦';
+        case 'FERTILIZANTE': return 'Sprout';
+        case 'SEMILLA': return 'Wheat';
+        case 'HERRAMIENTA': return 'Wrench';
+        case 'COMBUSTIBLE': return 'Fuel';
+        default: return 'Package';
       }
     }
   };
@@ -186,13 +196,13 @@ const InsumosUnificados: React.FC = () => {
     if (insumo.esAgroquimico) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-          🧪 Agroquímico
+          <Icon name="FlaskConical" size={14} style={{ marginRight: '4px' }} /> Agroquímico
         </span>
       );
     } else {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          📦 Insumo General
+          <Icon name="Package" size={14} style={{ marginRight: '4px' }} /> Insumo General
         </span>
       );
     }
@@ -212,10 +222,12 @@ const InsumosUnificados: React.FC = () => {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Gestión Unificada de Insumos
+            {vistaSimplificadaAvicola ? 'Insumos y stock' : 'Gestión Unificada de Insumos'}
           </h1>
           <p className="text-gray-600">
-            Administra insumos generales y agroquímicos en un solo lugar
+            {vistaSimplificadaAvicola
+              ? 'Listado de insumos con cantidad en stock (para alimentación y sanidad en postura).'
+              : 'Administra insumos generales y agroquímicos en un solo lugar'}
           </p>
         </div>
 
@@ -228,86 +240,105 @@ const InsumosUnificados: React.FC = () => {
               onClick={handleCreate}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
             >
-              ➕ Nuevo Insumo/Agroquímico
+              <Icon name="Plus" size={16} style={{ marginRight: '4px' }} />{' '}
+              {vistaSimplificadaAvicola ? 'Nuevo insumo' : 'Nuevo Insumo/Agroquímico'}
             </button>
           </PermissionGate>
 
-          {/* Filtros */}
-          <div className="flex flex-wrap gap-4 items-center">
-            <select
-              value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="todos">Todos los tipos</option>
-              <option value="general">Solo Insumos Generales</option>
-              <option value="agroquimico">Solo Agroquímicos</option>
-            </select>
+          {!vistaSimplificadaAvicola ? (
+            <div className="flex flex-wrap gap-4 items-center">
+              <select
+                value={filtroTipo}
+                onChange={(e) => setFiltroTipo(e.target.value as 'todos' | 'general' | 'agroquimico')}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="todos">Todos los tipos</option>
+                <option value="general">Solo Insumos Generales</option>
+                <option value="agroquimico">Solo Agroquímicos</option>
+              </select>
 
+              <input
+                type="text"
+                placeholder="Buscar insumos..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+
+              <select
+                value={ordenarPor}
+                onChange={(e) => setOrdenarPor(e.target.value as 'nombre' | 'tipo' | 'stock' | 'precio')}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="nombre">Ordenar por Nombre</option>
+                <option value="tipo">Ordenar por Tipo</option>
+                <option value="stock">Ordenar por Stock</option>
+                <option value="precio">Ordenar por Precio</option>
+              </select>
+            </div>
+          ) : (
             <input
               type="text"
-              placeholder="Buscar insumos..."
+              placeholder="Buscar por nombre…"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
             />
-
-            <select
-              value={ordenarPor}
-              onChange={(e) => setOrdenarPor(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="nombre">Ordenar por Nombre</option>
-              <option value="tipo">Ordenar por Tipo</option>
-              <option value="stock">Ordenar por Stock</option>
-              <option value="precio">Ordenar por Precio</option>
-            </select>
-          </div>
+          )}
         </div>
 
         {/* Estadísticas */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div
+          className={`mb-6 grid grid-cols-1 gap-4 ${
+            vistaSimplificadaAvicola ? 'md:grid-cols-2' : 'md:grid-cols-4'
+          }`}
+        >
           <div className="bg-white p-4 rounded-lg shadow">
             <div className="flex items-center">
-              <div className="text-2xl mr-3">📦</div>
+              <Icon name="Package" size={24} className="mr-3" />
               <div>
-                <p className="text-sm text-gray-600">Total Insumos</p>
-                <p className="text-2xl font-bold text-gray-900">{insumos.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="text-2xl mr-3">🧪</div>
-              <div>
-                <p className="text-sm text-gray-600">Agroquímicos</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {insumos.filter(i => i.esAgroquimico).length}
+                <p className="text-sm text-gray-600">
+                  {vistaSimplificadaAvicola ? 'Insumos listados' : 'Total Insumos'}
                 </p>
+                <p className="text-2xl font-bold text-gray-900">{insumosFiltrados.length}</p>
               </div>
             </div>
           </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="text-2xl mr-3">📦</div>
-              <div>
-                <p className="text-sm text-gray-600">Insumos Generales</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {insumos.filter(i => !i.esAgroquimico).length}
-                </p>
+
+          {!vistaSimplificadaAvicola && (
+            <>
+              <div className="bg-white p-4 rounded-lg shadow">
+                <div className="flex items-center">
+                  <Icon name="FlaskConical" size={24} className="mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-600">Agroquímicos</p>
+                    <p className="text-2xl font-bold text-purple-600">
+                      {insumos.filter((i) => i.esAgroquimico).length}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          
+
+              <div className="bg-white p-4 rounded-lg shadow">
+                <div className="flex items-center">
+                  <Icon name="Package" size={24} className="mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-600">Insumos Generales</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {insumos.filter((i) => !i.esAgroquimico).length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
           <div className="bg-white p-4 rounded-lg shadow">
             <div className="flex items-center">
-              <div className="text-2xl mr-3">⚠️</div>
+              <Icon name="AlertTriangle" size={24} className="mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Stock Bajo</p>
                 <p className="text-2xl font-bold text-red-600">
-                  {insumos.filter(i => i.stockActual <= i.stockMinimo).length}
+                  {insumosFiltrados.filter((i) => i.stockActual <= i.stockMinimo).length}
                 </p>
               </div>
             </div>
@@ -326,8 +357,8 @@ const InsumosUnificados: React.FC = () => {
                 <li key={insumo.id} className={`px-6 py-4 hover:bg-gray-50 ${getColor(insumo)}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <div className="text-2xl">
-                        {getIcono(insumo)}
+                      <div>
+                        <Icon name={getIcono(insumo)} size={24} />
                       </div>
                       
                       <div className="flex-1">
@@ -335,7 +366,7 @@ const InsumosUnificados: React.FC = () => {
                           <h3 className="text-lg font-medium text-gray-900">
                             {insumo.nombre}
                           </h3>
-                          {getEtiquetaTipo(insumo)}
+                          {!vistaSimplificadaAvicola && getEtiquetaTipo(insumo)}
                         </div>
                         
                         <p className="text-sm text-gray-600 mb-2">
@@ -343,15 +374,21 @@ const InsumosUnificados: React.FC = () => {
                         </p>
                         
                         <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                          <span>Stock: {insumo.stockActual} {insumo.unidadMedida}</span>
-                          <span>Precio: ${insumo.precioUnitario}</span>
-                          <span>Tipo: {insumo.tipo}</span>
-                          
-                          {insumo.esAgroquimico && insumo.principioActivo && (
+                          <span>
+                            Cantidad: {insumo.stockActual} {insumo.unidadMedida}
+                          </span>
+                          {!vistaSimplificadaAvicola && (
+                            <>
+                              <span>Precio: ${insumo.precioUnitario}</span>
+                              <span>Tipo: {insumo.tipo}</span>
+                            </>
+                          )}
+
+                          {!vistaSimplificadaAvicola && insumo.esAgroquimico && insumo.principioActivo && (
                             <span>Principio: {insumo.principioActivo}</span>
                           )}
-                          
-                          {insumo.esAgroquimico && insumo.concentracion && (
+
+                          {!vistaSimplificadaAvicola && insumo.esAgroquimico && insumo.concentracion && (
                             <span>Concentración: {insumo.concentracion}</span>
                           )}
                         </div>
@@ -432,6 +469,7 @@ const InsumosUnificados: React.FC = () => {
           onClose={handleWizardClose}
           insumoEditando={editingInsumo}
           onGuardar={handleWizardSave}
+          soloInsumoNoAgroquimico={vistaSimplificadaAvicola}
         />
       </div>
     </PermissionGate>

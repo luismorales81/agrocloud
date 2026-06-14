@@ -1,0 +1,172 @@
+/**
+ * Estilos para PDF — Brief AgroGestion / AgroCloud
+ * Usar con: npx md-to-pdf BRIEF-PARA-INTERESADOS.md --stylesheet brief-interesados-pdf.css
+ */
+
+@page {
+  size: A4;
+  margin: 18mm 16mm 20mm 16mm;
+}
+
+html {
+  font-size: 11pt;
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  color: #1c1917;
+  line-height: 1.55;
+  max-width: 100%;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+h1 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #14532d;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5rem 0;
+  padding: 0.5rem 0 0.45rem 0;
+  border-top: 5px solid #14532d;
+  border-bottom: 2px solid #22c55e;
+}
+
+/* Subtítulo meta bajo h1 */
+h1 + p {
+  font-size: 0.92rem;
+  color: #57534e;
+  margin-top: 0.35rem;
+  margin-bottom: 1.25rem;
+}
+
+h2 {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #166534;
+  margin: 1.35rem 0 0.65rem 0;
+  padding-left: 0.5rem;
+  border-left: 4px solid #22c55e;
+  page-break-after: avoid;
+}
+
+h3 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #15803d;
+  margin: 1rem 0 0.45rem 0;
+  page-break-after: avoid;
+}
+
+p {
+  margin: 0.5rem 0 0.65rem 0;
+  orphans: 3;
+  widows: 3;
+}
+
+ul,
+ol {
+  margin: 0.45rem 0 0.75rem 0;
+  padding-left: 1.35rem;
+}
+
+li {
+  margin: 0.25rem 0;
+}
+
+li::marker {
+  color: #16a34a;
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, #bbf7d0, transparent);
+  margin: 1.15rem 0;
+}
+
+/* Tablas */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0 1rem 0;
+  font-size: 0.88rem;
+  page-break-inside: avoid;
+}
+
+thead th {
+  background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
+  color: #14532d;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #86efac;
+}
+
+tbody td {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #d9f99d;
+  vertical-align: top;
+}
+
+tbody tr:nth-child(even) {
+  background: #fafaf9;
+}
+
+tbody tr:nth-child(odd) {
+  background: #fff;
+}
+
+/* Código inline */
+code {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.84em;
+  background: #f0fdf4;
+  color: #14532d;
+  padding: 0.12em 0.4em;
+  border-radius: 3px;
+  border: 1px solid #bbf7d0;
+}
+
+/* Énfasis */
+strong {
+  color: #14532d;
+  font-weight: 600;
+}
+
+/* Nota al pie / disclaimer itálico */
+em:only-child,
+p em {
+  color: #57534e;
+}
+
+blockquote,
+p:last-of-type em {
+  font-style: italic;
+}
+
+/* Último párrafo disclaimer */
+body > p:last-child,
+body > em:last-child {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e7e5e4;
+  font-size: 0.82rem;
+  color: #78716c;
+}
+
+/* Separadores --- a veces renderizan como hr; ya cubierto */
+
+a {
+  color: #15803d;
+  text-decoration: none;
+}
+
+/* Evitar cortes feos */
+h1, h2, h3 {
+  page-break-after: avoid;
+}
+
+table, pre, blockquote {
+  page-break-inside: avoid;
+}

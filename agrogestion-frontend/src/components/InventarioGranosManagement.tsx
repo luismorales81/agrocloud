@@ -5,6 +5,7 @@ import { Button } from './ui/Button';
 import Badge from './ui/Badge';
 import VentaGranoModal from './VentaGranoModal';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
+import { Icon } from '../core/components/Icon';
 
 interface InventarioGrano {
   id: number;
@@ -140,9 +141,11 @@ const InventarioGranosManagement: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">📦 Inventario de Granos</h1>
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <Icon name="Package" size={24} /> Inventario de Granos
+        </h1>
         <Button onClick={cargarInventario} className="bg-blue-600 hover:bg-blue-700">
-          🔄 Actualizar
+          <Icon name="RefreshCcw" size={16} style={{ marginRight: '4px' }} /> Actualizar
         </Button>
       </div>
 
@@ -192,7 +195,7 @@ const InventarioGranosManagement: React.FC = () => {
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="🔍 Buscar por cultivo, lote o variedad..."
+                placeholder="Buscar por cultivo, lote o variedad..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg"
@@ -225,12 +228,16 @@ const InventarioGranosManagement: React.FC = () => {
       {/* Lista de Inventario */}
       <Card>
         <CardHeader>
-          <CardTitle>📦 Stock de Granos</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Icon name="Package" size={18} /> Stock de Granos
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8">
-              <p>⏳ Cargando inventario...</p>
+              <p className="flex items-center gap-2">
+                <Icon name="Loader" size={16} /> Cargando inventario...
+              </p>
             </div>
           ) : inventarioFiltrado.length === 0 ? (
             <div className="text-center py-8">
@@ -273,17 +280,29 @@ const InventarioGranosManagement: React.FC = () => {
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                      <p>📍 Lote: <span className="font-medium">{item.loteNombre}</span></p>
-                      <p>📅 Cosechado: <span className="font-medium">{formatearFecha(item.fechaIngreso)}</span></p>
-                      <p>📦 Cantidad Inicial: <span className="font-medium">{item.cantidadInicial} {item.unidadMedida}</span></p>
-                      <p>✅ Disponible: <span className="font-medium text-green-600">{item.cantidadDisponible} {item.unidadMedida}</span></p>
-                      <p>📊 Vendido: <span className="font-medium">{item.cantidadVendida} {item.unidadMedida}</span> ({(100 - item.porcentajeDisponible).toFixed(1)}%)</p>
-                      <p>💰 Costo Unitario: <span className="font-medium">{formatCurrency(item.costoUnitario)}/{item.unidadMedida}</span></p>
+                      <p className="flex items-center gap-1">
+                        <Icon name="MapPin" size={14} /> Lote: <span className="font-medium">{item.loteNombre}</span>
+                      </p>
+                      <p className="flex items-center gap-1">
+                        <Icon name="Calendar" size={14} /> Cosechado: <span className="font-medium">{formatearFecha(item.fechaIngreso)}</span>
+                      </p>
+                      <p className="flex items-center gap-1">
+                        <Icon name="Package" size={14} /> Cantidad Inicial: <span className="font-medium">{item.cantidadInicial} {item.unidadMedida}</span>
+                      </p>
+                      <p className="flex items-center gap-1">
+                        <Icon name="CheckCircle" size={14} /> Disponible: <span className="font-medium text-green-600">{item.cantidadDisponible} {item.unidadMedida}</span>
+                      </p>
+                      <p className="flex items-center gap-1">
+                        <Icon name="BarChart" size={14} /> Vendido: <span className="font-medium">{item.cantidadVendida} {item.unidadMedida}</span> ({(100 - item.porcentajeDisponible).toFixed(1)}%)
+                      </p>
+                      <p className="flex items-center gap-1">
+                        <Icon name="DollarSign" size={14} /> Costo Unitario: <span className="font-medium">{formatCurrency(item.costoUnitario)}/{item.unidadMedida}</span>
+                      </p>
                     </div>
 
                     {item.ubicacionAlmacenamiento && (
                       <p className="text-sm text-gray-500 mt-2">
-                        🏪 Ubicación: {item.ubicacionAlmacenamiento}
+                        <Icon name="Store" size={14} style={{ marginRight: '4px' }} /> Ubicación: {item.ubicacionAlmacenamiento}
                       </p>
                     )}
                   </div>
@@ -303,7 +322,7 @@ const InventarioGranosManagement: React.FC = () => {
                         onClick={() => abrirModalVenta(item)}
                         className="bg-green-600 hover:bg-green-700 text-sm w-full"
                       >
-                        💵 Vender
+                        <Icon name="DollarSign" size={16} style={{ marginRight: '4px' }} /> Vender
                       </Button>
                     )}
                   </div>
@@ -321,7 +340,7 @@ const InventarioGranosManagement: React.FC = () => {
                         onClick={() => setPaginaActual(1)}
                         disabled={paginaActual === 1}
                       >
-                        ⏮️ Primera
+                        <Icon name="ChevronsLeft" size={16} style={{ marginRight: '4px' }} /> Primera
                       </Button>
                       <Button
                         variant="outline"
@@ -329,7 +348,7 @@ const InventarioGranosManagement: React.FC = () => {
                         onClick={() => setPaginaActual(paginaActual - 1)}
                         disabled={paginaActual === 1}
                       >
-                        ⬅️ Anterior
+                        <Icon name="ChevronLeft" size={16} style={{ marginRight: '4px' }} /> Anterior
                       </Button>
                     </div>
 
@@ -346,7 +365,7 @@ const InventarioGranosManagement: React.FC = () => {
                         onClick={() => setPaginaActual(paginaActual + 1)}
                         disabled={paginaActual === totalPaginas}
                       >
-                        Siguiente ➡️
+                        Siguiente <Icon name="ChevronRight" size={16} style={{ marginLeft: '4px' }} />
                       </Button>
                       <Button
                         variant="outline"
@@ -354,7 +373,7 @@ const InventarioGranosManagement: React.FC = () => {
                         onClick={() => setPaginaActual(totalPaginas)}
                         disabled={paginaActual === totalPaginas}
                       >
-                        Última ⏭️
+                        Última <Icon name="ChevronsRight" size={16} style={{ marginLeft: '4px' }} />
                       </Button>
                     </div>
                   </div>

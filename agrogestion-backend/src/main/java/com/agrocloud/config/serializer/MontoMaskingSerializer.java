@@ -1,6 +1,6 @@
 package com.agrocloud.config.serializer;
 
-import com.agrocloud.service.EnmascaramientoDatosService;
+import com.agrocloud.core.application.EnmascaramientoDatosService;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -30,7 +30,7 @@ public class MontoMaskingSerializer extends JsonSerializer<BigDecimal> implement
     private EnmascaramientoDatosService getEnmascaramientoService() {
         if (applicationContext == null) {
             // Si el contexto aún no está inicializado, crear instancia temporal
-            return new com.agrocloud.service.EnmascaramientoDatosService();
+            return new EnmascaramientoDatosService();
         }
         return applicationContext.getBean(EnmascaramientoDatosService.class);
     }

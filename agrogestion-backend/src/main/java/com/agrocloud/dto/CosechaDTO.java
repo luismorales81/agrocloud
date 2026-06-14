@@ -1,6 +1,6 @@
 package com.agrocloud.dto;
 
-import com.agrocloud.model.entity.HistorialCosecha;
+import com.agrocloud.cultivos.domain.HistorialCosecha;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 

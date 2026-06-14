@@ -56,6 +56,18 @@ if (isProduction && !VITE_API_BASE_URL && !VITE_API_URL) {
 }
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
 
+/** URL base usada por Axios (útil para mensajes de error en login). */
+export const URL_BASE_API = BASE_URL;
+
+/** Mensaje claro cuando no hay respuesta del servidor (backend caído, CORS, URL incorrecta). */
+export function mensajeErrorConexionApi(error: AxiosError): string {
+  const destino = URL_BASE_API.startsWith('/') ? `${window.location.origin}${URL_BASE_API}` : URL_BASE_API;
+  if (error.code === 'ECONNABORTED') {
+    return `Tiempo de espera agotado al contactar ${destino}. Verificá que el backend esté en ejecución (puerto 8080).`;
+  }
+  return `No se pudo conectar con el servidor (${destino}). En local: ejecutá el backend en el puerto 8080 y el frontend con "npm run dev".`;
+}
+
 // Crear instancia de Axios
 const api = axios.create({
   baseURL: BASE_URL,
@@ -110,7 +122,7 @@ const api = axios.create({
   }
 );
 
-  // Interceptor para agregar token a las peticiones
+  // Interceptor para agregar token y empresa activa a las peticiones
   api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -119,6 +131,18 @@ const api = axios.create({
       config.headers.Authorization = `Bearer ${token}`;
     } else {
       console.log('⚠️ [API] No hay token disponible para:', config.url);
+    }
+    // Enviar empresa activa para comprobación módulo/empresa/usuario en el backend
+    const rawEmpresa = localStorage.getItem('empresaActiva');
+    if (rawEmpresa) {
+      try {
+        const empresa = JSON.parse(rawEmpresa);
+        if (empresa?.id != null) {
+          config.headers['X-Company-Id'] = String(empresa.id);
+        }
+      } catch {
+        // ignorar si no es JSON válido
+      }
     }
     return config;
   },

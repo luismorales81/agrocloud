@@ -26,6 +26,12 @@ public class LaborDetalladoDTO {
     private Boolean activo;
     private Long empresaId;
     private Long userId;
+    private LocalDate fechaRealizacion;
+    private Long cultivoId;
+    private Boolean overdue;
+    private BigDecimal loteSuperficie;
+    private String loteCultivo;
+    private String loteCampo;
     
     // Nuevos campos para costos detallados
     private BigDecimal costoMaquinaria;
@@ -135,6 +141,24 @@ public class LaborDetalladoDTO {
     
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
+
+    public LocalDate getFechaRealizacion() { return fechaRealizacion; }
+    public void setFechaRealizacion(LocalDate fechaRealizacion) { this.fechaRealizacion = fechaRealizacion; }
+
+    public Long getCultivoId() { return cultivoId; }
+    public void setCultivoId(Long cultivoId) { this.cultivoId = cultivoId; }
+
+    public Boolean getOverdue() { return overdue; }
+    public void setOverdue(Boolean overdue) { this.overdue = overdue; }
+
+    public BigDecimal getLoteSuperficie() { return loteSuperficie; }
+    public void setLoteSuperficie(BigDecimal loteSuperficie) { this.loteSuperficie = loteSuperficie; }
+
+    public String getLoteCultivo() { return loteCultivo; }
+    public void setLoteCultivo(String loteCultivo) { this.loteCultivo = loteCultivo; }
+
+    public String getLoteCampo() { return loteCampo; }
+    public void setLoteCampo(String loteCampo) { this.loteCampo = loteCampo; }
     
     public BigDecimal getCostoMaquinaria() { return costoMaquinaria; }
     public void setCostoMaquinaria(BigDecimal costoMaquinaria) { this.costoMaquinaria = costoMaquinaria; }
