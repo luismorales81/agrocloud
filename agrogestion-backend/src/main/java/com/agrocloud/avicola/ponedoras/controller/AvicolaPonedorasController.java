@@ -59,9 +59,10 @@ public class AvicolaPonedorasController {
     @GetMapping("/galpones")
     public ResponseEntity<List<AvicolaPonedorasGalponRespuesta>> listarGalpones(
             @RequestParam(required = false) AvicolaPonedorasGalponEstado estado,
+            @RequestParam(required = false) Boolean delPeriodoActivo,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioGalpon.listarGalpones(estado));
+        return ResponseEntity.ok(servicioGalpon.listarGalpones(estado, delPeriodoActivo));
     }
 
     @PostMapping("/galpones")

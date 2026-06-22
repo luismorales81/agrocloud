@@ -39,6 +39,17 @@ const AyudaSistema: React.FC = () => {
       </div>
 
       <div>
+        <h4 className="text-lg font-semibold text-gray-700 mb-3">📅 Tiempo por módulo</h4>
+        <ul className="list-disc list-inside space-y-2 text-gray-600">
+          <li><strong>Cultivos:</strong> campaña agrícola + ciclo de cultivo por lote (siembra → cosecha).</li>
+          <li><strong>Porcinos:</strong> período de gestión para reportes; unidad operativa = lote de recría/engorde. Reproducción continua (madres, partos).</li>
+          <li><strong>Avícola:</strong> período de gestión para finanzas; unidad operativa = lote o galpón según submódulo.</li>
+          <li>Elegí empresa y período en la barra superior. Período cerrado = solo lectura.</li>
+          <li>Administración de períodos: menú <strong>Períodos de gestión</strong> en cada módulo (solo administradores).</li>
+        </ul>
+      </div>
+
+      <div>
         <h4 className="text-lg font-semibold text-gray-700 mb-3">🚀 Guía de Configuración Inicial</h4>
         <div className="bg-blue-50 p-4 rounded-lg mb-4">
           <p className="text-blue-800 font-medium mb-2">📋 Checklist de Configuración Inicial</p>

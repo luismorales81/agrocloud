@@ -9,9 +9,12 @@ import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.cultivos.infrastructure.FieldRepository;
 import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import com.agrocloud.cultivos.infrastructure.LaborRepository;
+import com.agrocloud.cultivos.infrastructure.CicloCultivoRepository;
 import com.agrocloud.core.application.UserService;
 import com.agrocloud.core.application.EmpresaContextService;
+import com.agrocloud.config.CampanaRequestContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +46,10 @@ public class PlotService {
     private EmpresaContextService empresaContextService;
     @Autowired
     private LaborQueryService laborQueryService;
+
+    @Autowired
+    @Qualifier("cicloCultivoRepositoryCultivos")
+    private CicloCultivoRepository cicloCultivoRepository;
 
     public List<Plot> getLotesByUser(User user) {
         try {
@@ -125,8 +132,23 @@ public class PlotService {
     }
 
     public List<Plot> getLotesCultivoByUser(User user) {
-        return getLotesByUser(user).stream()
+        List<Plot> lotes = getLotesByUser(user).stream()
                 .filter(p -> p.getTipoUso() == null || p.getTipoUso() == Plot.TipoUsoLote.CULTIVO)
+                .collect(Collectors.toList());
+        return filtrarLotesPorCampanaActiva(lotes);
+    }
+
+    private List<Plot> filtrarLotesPorCampanaActiva(List<Plot> lotes) {
+        Long campanaId = CampanaRequestContext.getCampanaId();
+        if (campanaId == null || lotes.isEmpty()) {
+            return lotes;
+        }
+        List<Long> loteIdsCampana = cicloCultivoRepository.findDistinctLoteIdsByCampanaId(campanaId);
+        if (loteIdsCampana.isEmpty()) {
+            return lotes;
+        }
+        return lotes.stream()
+                .filter(p -> loteIdsCampana.contains(p.getId()))
                 .collect(Collectors.toList());
     }
 

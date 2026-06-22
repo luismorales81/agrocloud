@@ -88,6 +88,9 @@ public class Labor {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    @Column(name = "ciclo_cultivo_id")
+    private Long cicloCultivoId;
+
     // Campos de auditoría para anulación
     @Size(max = 1000, message = "El motivo de anulación no puede exceder 1000 caracteres")
     @Column(name = "motivo_anulacion", length = 1000)
@@ -271,6 +274,14 @@ public class Labor {
 
     public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public Long getCicloCultivoId() {
+        return cicloCultivoId;
+    }
+
+    public void setCicloCultivoId(Long cicloCultivoId) {
+        this.cicloCultivoId = cicloCultivoId;
     }
 
     public java.util.List<LaborInsumo> getInsumosUsados() {

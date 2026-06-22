@@ -58,6 +58,10 @@ public class AdminGlobalService {
     @Qualifier("usuarioEmpresaRolRepositoryCore")
     private UsuarioEmpresaRolRepository usuarioEmpresaRolRepository;
 
+    @Autowired
+    @Qualifier("campanaServiceCore")
+    private CampanaService campanaService;
+
     /**
      * Obtiene el dashboard del administrador global
      */
@@ -218,6 +222,7 @@ public class AdminGlobalService {
         System.out.println("💾 [AdminGlobalService] Guardando empresa en base de datos...");
         empresa = empresaRepository.save(empresa);
         System.out.println("✅ [AdminGlobalService] Empresa guardada con ID: " + empresa.getId());
+        campanaService.asegurarCampanaActivaPorDefecto(empresa.getId());
 
         return empresa;
     }

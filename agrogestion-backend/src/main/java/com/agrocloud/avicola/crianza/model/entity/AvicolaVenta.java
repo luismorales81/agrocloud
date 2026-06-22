@@ -56,6 +56,9 @@ public class AvicolaVenta {
     @Column(name = "ingreso_id")
     private Long ingresoId;
 
+    @Column(name = "campana_id")
+    private Long campanaId;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -154,6 +157,14 @@ public class AvicolaVenta {
 
     public void setIngresoId(Long ingresoId) {
         this.ingresoId = ingresoId;
+    }
+
+    public Long getCampanaId() {
+        return campanaId;
+    }
+
+    public void setCampanaId(Long campanaId) {
+        this.campanaId = campanaId;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -14,11 +14,7 @@ const InventarioGranosManagement = lazy(() => import('../../components/Inventari
 const AdminUsuarios = lazy(() => import('../../components/AdminUsuarios'));
 const AyudaSistema = lazy(() => import('../../components/AyudaSistema'));
 const ConfiguracionUnificadaScreen = lazy(() => import('../../components/ConfiguracionUnificadaScreen'));
-const ExpedienteTrazabilidadCultivos = lazy(() =>
-  import('../../components/trazabilidad/pantallasExpedientePorModulo').then(m => ({
-    default: m.ExpedienteTrazabilidadCultivos,
-  }))
-);
+const RedireccionConfiguracionPeriodos = lazy(() => import('../../components/RedireccionConfiguracionPeriodos'));
 
 function ruta(
   path: string,
@@ -41,9 +37,9 @@ export const cultivosRoutes: ModuleRoute[] = [
   ruta('/cultivos/maquinaria', 'Maquinaria', MaquinariaManagement, ['canViewMaquinaria']),
   ruta('/cultivos/labores', 'Labores', LaboresManagement, ['canViewLabores']),
   ruta('/cultivos/reportes', 'Reportes', ReportsManagement, ['canViewReports']),
-  ruta('/cultivos/trazabilidad-expediente', 'Expediente trazabilidad', ExpedienteTrazabilidadCultivos, ['canViewLotes']),
   ruta('/cultivos/finanzas', 'Finanzas', FinanzasManagement, ['canViewFinances']),
   ruta('/cultivos/inventario', 'Inventario Granos', InventarioGranosManagement, ['canViewInventario']),
   ruta('/cultivos/configuracion', 'Configuración', ConfiguracionUnificadaScreen, ['canManageUsers']),
+  ruta('/cultivos/configuracion/campanas', 'Períodos de gestión', RedireccionConfiguracionPeriodos, ['canManageUsers']),
   ruta('/cultivos/ayuda', 'Ayuda', AyudaSistema, ['canManageUsers']),
 ];

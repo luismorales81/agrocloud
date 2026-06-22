@@ -100,4 +100,12 @@ public interface PlotRepository extends JpaRepository<Plot, Long> {
 
     @Query("SELECT DISTINCT p FROM Plot p JOIN FETCH p.campo c JOIN FETCH c.empresa e WHERE p.id = :id")
     Optional<Plot> findByIdConCampoYEmpresa(@Param("id") Long id);
+
+    /** Lotes activos con cultivo o tipo de cultivo asignado (recálculo diario de estados). */
+    @Query("SELECT p FROM Plot p WHERE p.activo = true AND (p.tipoCultivo IS NOT NULL OR p.cultivo IS NOT NULL)")
+    List<Plot> findActivosConCultivoParaRecalcularEstado();
+
+    @Query("SELECT p FROM Plot p WHERE p.activo = true AND (p.tipoCultivo IS NOT NULL OR p.cultivo IS NOT NULL) "
+           + "AND p.campo.empresa.id = :empresaId")
+    List<Plot> findActivosConCultivoPorEmpresa(@Param("empresaId") Long empresaId);
 }

@@ -122,6 +122,14 @@ public class LaborService {
     @Autowired
     private LaborQueryService laborQueryService;
 
+    @Autowired
+    @Qualifier("cicloCultivoServiceCultivos")
+    private CicloCultivoService cicloCultivoService;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private com.agrocloud.core.application.CampanaContextService campanaContextService;
+
     /**
      * Obtener todas las labores accesibles por el usuario.
      * Delega en LaborQueryService.
@@ -188,6 +196,7 @@ public class LaborService {
             if (lote == null || !laborQueryService.tieneAccesoAlLote(lote, usuario)) {
                 throw new RuntimeException("No tiene permisos para crear labores en este lote");
             }
+            asignarCicloCultivoSiCorresponde(labor, lote);
         }
         
         labor.setUsuario(usuario);
@@ -333,6 +342,7 @@ public class LaborService {
                 throw new RuntimeException("No tiene permisos para crear labores en este lote");
             }
             labor.setLote(lote);
+            asignarCicloCultivoSiCorresponde(labor, lote);
         }
         if (request.getCultivoId() != null) {
             labor.setCultivo(cultivoRepository.findById(request.getCultivoId()).orElse(null));
@@ -2638,5 +2648,17 @@ public class LaborService {
         labor.setCostoTotal(costoTotal);
         
         return laborRepository.save(labor);
+    }
+
+    private void asignarCicloCultivoSiCorresponde(Labor labor, Plot lote) {
+        if (lote == null || labor.getCicloCultivoId() != null) {
+            return;
+        }
+        if (lote.getCicloActivoId() != null) {
+            labor.setCicloCultivoId(lote.getCicloActivoId());
+            return;
+        }
+        cicloCultivoService.obtenerCicloActivo(lote.getId())
+                .ifPresent(c -> labor.setCicloCultivoId(c.getId()));
     }
 }

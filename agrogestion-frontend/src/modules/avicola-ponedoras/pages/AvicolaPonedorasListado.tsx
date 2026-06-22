@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -13,35 +14,50 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material';
 import { Icon } from '../../../components/icons';
 import type { AvicolaPonedorasGalpon } from '../types';
 import { listarGalpones, mensajeErrorPonedoras } from '../services/avicolaPonedorasService';
 import { etiquetaEstadoGalpon, formatearFechaCorta } from '../util/formateo';
+import FiltroDelPeriodoActivo from '../../../components/FiltroDelPeriodoActivo';
+import { useCampana } from '../../../contexts/CampanaContext';
 
 const AvicolaPonedorasListado: React.FC = () => {
   const navigate = useNavigate();
+  const { campanaActiva } = useCampana();
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [galpones, setGalpones] = useState<AvicolaPonedorasGalpon[]>([]);
+  const [filtroEstado, setFiltroEstado] = useState<'ACTIVO' | 'CERRADO' | ''>('ACTIVO');
+  const [filtroDelPeriodo, setFiltroDelPeriodo] = useState(false);
+
+  useEffect(() => {
+    if (filtroEstado !== 'ACTIVO') {
+      setFiltroDelPeriodo(true);
+    }
+  }, [filtroEstado]);
 
   const cargar = useCallback(async () => {
     setCargando(true);
     setError(null);
     try {
-      const lista = await listarGalpones();
+      const lista = await listarGalpones({
+        estado: filtroEstado || undefined,
+        delPeriodoActivo: filtroDelPeriodo,
+      });
       setGalpones(lista);
     } catch (err: unknown) {
       setError(mensajeErrorPonedoras(err));
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [filtroEstado, filtroDelPeriodo]);
 
   useEffect(() => {
     void cargar();
-  }, [cargar]);
+  }, [cargar, campanaActiva?.id]);
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1100 }}>
@@ -77,6 +93,26 @@ const AvicolaPonedorasListado: React.FC = () => {
           {error}
         </Alert>
       )}
+
+      <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" sx={{ mb: 2 }}>
+        <TextField
+          select
+          size="small"
+          label="Estado"
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value as 'ACTIVO' | 'CERRADO' | '')}
+          sx={{ minWidth: 140 }}
+        >
+          <MenuItem value="ACTIVO">Activos</MenuItem>
+          <MenuItem value="CERRADO">Cerrados</MenuItem>
+          <MenuItem value="">Todos</MenuItem>
+        </TextField>
+        <FiltroDelPeriodoActivo
+          activo={filtroDelPeriodo}
+          onChange={setFiltroDelPeriodo}
+          visible={filtroEstado !== 'ACTIVO'}
+        />
+      </Stack>
 
       {!cargando && !error && (
         <TableContainer component={Paper} variant="outlined">

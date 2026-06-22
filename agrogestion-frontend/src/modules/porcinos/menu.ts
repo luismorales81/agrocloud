@@ -117,13 +117,6 @@ export const porcinosMenu: MenuItem[] = [
       permisos: ['canViewReportesPorcinos'],
     },
     {
-      id: 'trazabilidad-expediente',
-      nombre: 'Expediente trazabilidad',
-      icono: 'FileText',
-      ruta: '/porcinos/trazabilidad-expediente',
-      permisos: ['canViewRecria'],
-    },
-    {
       id: 'ayuda',
       nombre: 'Ayuda',
       icono: 'Book',

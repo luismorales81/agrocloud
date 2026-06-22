@@ -44,6 +44,10 @@ public class InventarioGranoService {
     @Autowired
     private InventoryService inventoryService;
 
+    @Autowired
+    @Qualifier("cicloCultivoRepositoryCultivos")
+    private com.agrocloud.cultivos.infrastructure.CicloCultivoRepository cicloCultivoRepository;
+
     /**
      * Crea un registro de inventario automáticamente al cosechar.
      */
@@ -69,6 +73,12 @@ public class InventarioGranoService {
 
         inventario.setVariedad(cosecha.getVariedadSemilla());
         inventario.setEstado("DISPONIBLE");
+        if (cosecha.getCicloCultivoId() != null) {
+            Long campanaId = cicloCultivoRepository.findById(cosecha.getCicloCultivoId())
+                    .map(com.agrocloud.cultivos.domain.CicloCultivo::getCampanaId)
+                    .orElse(null);
+            inventario.setCampanaId(campanaId);
+        }
 
         inventario = inventarioRepository.save(inventario);
         System.out.println("[INVENTARIO_SERVICE] Inventario creado con ID: " + inventario.getId());
@@ -136,6 +146,7 @@ public class InventarioGranoService {
         ingreso.setEstado(Ingreso.EstadoIngreso.PAGADO);
         ingreso.setLote(inventario.getLote());
         ingreso.setUsuario(usuario);
+        ingreso.setCampanaId(inventario.getCampanaId());
         
         Ingreso ingresoGuardado = ingresoRepository.save(ingreso);
         System.out.println("[INVENTARIO_SERVICE] Ingreso creado con ID: " + ingresoGuardado.getId());

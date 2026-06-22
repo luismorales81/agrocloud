@@ -21,7 +21,9 @@ public enum ModuloSistema {
     /** Carne / parrillero (API {@code /api/avicola-carne}), independiente de crianza e huevos. */
     AVICOLA_CARNE("AVICOLA_CARNE"),
     /** Ponedoras / recría (módulo propio; no confundir con {@link #AVICOLA_HUEVOS}). */
-    AVICOLA_PONEDORAS("AVICOLA_PONEDORAS");
+    AVICOLA_PONEDORAS("AVICOLA_PONEDORAS"),
+    /** Engorde bovino a corral (API {@code /api/feedlot}). */
+    FEEDLOT("FEEDLOT");
 
     private final String codigo;
 

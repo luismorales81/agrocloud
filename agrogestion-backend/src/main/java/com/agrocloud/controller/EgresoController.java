@@ -1,6 +1,10 @@
 package com.agrocloud.controller;
 
+import com.agrocloud.config.CampanaRequestContext;
+import com.agrocloud.core.application.CampanaContextService;
+import com.agrocloud.core.domain.Campana;
 import com.agrocloud.core.domain.Egreso;
+import com.agrocloud.core.security.ServicioSeguridadContexto;
 import com.agrocloud.core.inventory.domain.Insumo;
 import com.agrocloud.cultivos.domain.Plot;
 import com.agrocloud.core.domain.User;
@@ -54,12 +58,30 @@ public class EgresoController {
     @Qualifier("egresoServiceCultivos")
     private EgresoService egresoService;
 
+    @Autowired
+    private ServicioSeguridadContexto servicioSeguridadContexto;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private CampanaContextService campanaContextService;
+
     /**
      * Obtiene todos los egresos del usuario autenticado.
      */
     @GetMapping
     public ResponseEntity<List<Egreso>> obtenerEgresos(Authentication authentication) {
         try {
+            Long campanaId = CampanaRequestContext.getCampanaId();
+            if (campanaId != null) {
+                try {
+                    Campana campana = campanaContextService.resolverCampanaActiva(
+                            servicioSeguridadContexto.obtenerEmpresaIdActual());
+                    return ResponseEntity.ok(egresoRepository.findByCampanaIdAndFechaBetweenOrderByFechaDesc(
+                            campana.getId(), campana.getFechaInicio(), campana.getFechaFin()));
+                } catch (Exception ignored) {
+                    // fallback por usuario
+                }
+            }
             Long usuarioId = Long.parseLong(authentication.getName());
             List<Egreso> egresos = egresoRepository.findByUserIdAndFechaBetweenOrderByFechaDesc(
                     usuarioId, LocalDate.now().minusYears(1), LocalDate.now());

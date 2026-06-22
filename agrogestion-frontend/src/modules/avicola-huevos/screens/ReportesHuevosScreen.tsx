@@ -38,18 +38,14 @@ import {
   type FormatoExportacionAvicola,
 } from '../../../utilidades/exportacionAvicola';
 import { esperarRenderizadoGraficos, type SeccionGraficoExportacion } from '../../../utilidades/exportacionConGraficos';
-
-const haceDias = (d: number) => {
-  const x = new Date();
-  x.setDate(x.getDate() - d);
-  return x.toISOString().slice(0, 10);
-};
+import useRangoPeriodoActivo from '../../../hooks/useRangoPeriodoActivo';
 
 const ReportesHuevosScreen: React.FC = () => {
+  const { inicio: inicioPeriodo, fin: finPeriodo } = useRangoPeriodoActivo();
   const [lotes, setLotes] = useState<AvicolaHuevoLoteRespuesta[]>([]);
   const [loteId, setLoteId] = useState<number | ''>('');
-  const [desde, setDesde] = useState(haceDias(30));
-  const [hasta, setHasta] = useState(() => new Date().toISOString().slice(0, 10));
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const [datos, setDatos] = useState<AvicolaHuevosReporteAnalisisRespuesta | null>(null);
   const [cargando, setCargando] = useState(false);
   const [exportando, setExportando] = useState(false);
@@ -59,6 +55,11 @@ const ReportesHuevosScreen: React.FC = () => {
   const refGraficoHuevosPorAve = useRef<HTMLDivElement>(null);
   const refGraficoClima = useRef<HTMLDivElement>(null);
   const refGraficoGastos = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDesde(inicioPeriodo);
+    setHasta(finPeriodo);
+  }, [inicioPeriodo, finPeriodo]);
 
   useEffect(() => {
     let cancelado = false;

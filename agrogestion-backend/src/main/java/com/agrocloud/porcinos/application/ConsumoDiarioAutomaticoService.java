@@ -346,6 +346,7 @@ public class ConsumoDiarioAutomaticoService {
                 );
                 
                 consumo.setLoteId(recria.getLoteId());
+                consumo.setCampanaId(recria.getCampanaId());
                 if (recria.getLoteId() != null && recria.getEmpresa() != null) {
                     String nom = loteParaPorcinosQuery.listarLotesPorcinosPorEmpresa(recria.getEmpresa().getId()).stream()
                         .filter(dto -> recria.getLoteId().equals(dto.id()))

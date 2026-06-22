@@ -11,6 +11,7 @@ Permitir generar un **documento PDF** (y snapshot JSON) con el **detalle del cic
 - **Cultivos:** lote, ciclo de cosecha
 - **Porcinos:** recría, venta
 - **Avícola:** lote huevos, lote crianza/carne, galpón ponedoras
+- **Feedlot:** lote de engorde (`FEEDLOT_LOTE`, implementación v1.5 — ver abajo)
 
 Sin reglas de rechazo comercial (siempre resultado VALIDO). Complementa las certificaciones `LIBRE_AGROQUIMICOS` / `SIN_ANTIBIOTICOS`.
 
@@ -32,6 +33,7 @@ Sin reglas de rechazo comercial (siempre resultado VALIDO). Complementa las cert
 | `AVICOLA_CRIANZA` | Avícola crianza | Lote `avicola_lote` |
 | `AVICOLA_CARNE` | Avícola carne | Lote parrillero |
 | `AVICOLA_PONEDORAS` | Avícola ponedoras | Galpón |
+| `FEEDLOT_LOTE` | Feedlot | Lote de engorde bovino — **v1.5** (`SPEC-MODULO-FEEDLOT.md` §11.2) |
 
 ## Contenido mínimo del PDF (v1)
 
@@ -52,3 +54,4 @@ Pantalla compartida por módulo: elegir tipo de alcance, entidad, generar y desc
 - Trazabilidad genética/genealogía completa de reproductoras
 - Integración con blockchain
 - QR en etiqueta física
+- Expediente feedlot `FEEDLOT_LOTE` (planificado v1.5 feedlot)

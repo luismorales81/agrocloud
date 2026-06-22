@@ -105,7 +105,7 @@ public class GeneradorPdfExpedienteTrazabilidad {
             TrazabilidadReporte reporte,
             HechosExpedienteTrazabilidad hechos,
             User usuario) throws IOException {
-        float altoCaja = 88f;
+        float altoCaja = 100f;
         est.asegurarEspacio(altoCaja + 20);
         float yTop = est.y;
         float yBottom = yTop - altoCaja;
@@ -129,6 +129,15 @@ public class GeneradorPdfExpedienteTrazabilidad {
 
         escribirTexto(est, est.bold, 8, col2, y, "USUARIO", COLOR_TEXTO_SUAVE);
         escribirTexto(est, est.normal, 9, col2, y - 12, sanitizar(usuario.getEmail()), COLOR_TEXTO);
+
+        if (hechos.getCampanaNombre() != null && !hechos.getCampanaNombre().isBlank()) {
+            y -= 28;
+            escribirTexto(est, est.bold, 8, col1, y, "CAMPANA DE GESTION", COLOR_TEXTO_SUAVE);
+            String campanaTxt = hechos.getCampanaCodigo() != null
+                    ? hechos.getCampanaCodigo() + " - " + hechos.getCampanaNombre()
+                    : hechos.getCampanaNombre();
+            escribirTexto(est, est.normal, 9, col1, y - 12, sanitizar(campanaTxt), COLOR_TEXTO);
+        }
 
         String hash = reporte.getHashSnapshot();
         if (hash != null && hash.length() > 20) {

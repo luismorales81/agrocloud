@@ -52,7 +52,7 @@ const AvicolaPonedorasDashboard: React.FC = () => {
     setCargando(true);
     setError(null);
     try {
-      const activos = await listarGalpones('ACTIVO');
+      const activos = await listarGalpones({ estado: 'ACTIVO' });
 
       const muestra = activos.slice(0, MAX_RESUMENES_PARALELOS);
       const resumenes = await Promise.all(

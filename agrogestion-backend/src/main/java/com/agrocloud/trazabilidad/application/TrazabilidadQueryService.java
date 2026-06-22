@@ -14,9 +14,12 @@ import com.agrocloud.cultivos.infrastructure.HistorialCosechaRepository;
 import com.agrocloud.cultivos.infrastructure.LaborInsumoRepository;
 import com.agrocloud.cultivos.infrastructure.LaborRepository;
 import com.agrocloud.core.domain.Empresa;
+import com.agrocloud.core.domain.Campana;
+import com.agrocloud.core.application.CampanaContextService;
 import com.agrocloud.trazabilidad.dto.HechosTrazabilidadDocumento;
 import com.agrocloud.trazabilidad.domain.TrazabilidadCertificacion;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +47,10 @@ public class TrazabilidadQueryService {
     private LaborInsumoRepository laborInsumoRepository;
     @Autowired
     private EventoSanitarioRepository eventoSanitarioRepository;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private CampanaContextService campanaContextService;
 
     public HechosTrazabilidadDocumento construirHechos(
             String entidadTipo,
@@ -134,6 +141,7 @@ public class TrazabilidadQueryService {
             d.getLabores().add(linea);
         }
         if (laborIds.isEmpty()) {
+            enriquecerConCampanaActiva(d, empresa);
             return d;
         }
         List<LaborInsumo> li = laborInsumoRepository.findByLaborIdInWithInsumo(laborIds);
@@ -158,7 +166,18 @@ public class TrazabilidadQueryService {
                 añadirEventos(d, re, r.getId());
             }
         }
+        enriquecerConCampanaActiva(d, empresa);
         return d;
+    }
+
+    private void enriquecerConCampanaActiva(HechosTrazabilidadDocumento doc, Empresa empresa) {
+        try {
+            Campana campana = campanaContextService.resolverCampanaActiva(empresa.getId());
+            doc.setCampanaId(campana.getId());
+            doc.setCampanaCodigo(campana.getCodigo());
+            doc.setCampanaNombre(campana.getNombre());
+        } catch (Exception ignored) {
+        }
     }
 
     private void añadirEventos(HechosTrazabilidadDocumento doc, List<EventoSanitario> re, Long recriaId) {

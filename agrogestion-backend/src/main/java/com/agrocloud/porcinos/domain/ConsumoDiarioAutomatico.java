@@ -38,6 +38,9 @@ public class ConsumoDiarioAutomatico {
     @Column(name = "lote_id")
     private Long loteId;
 
+    @Column(name = "campana_id")
+    private Long campanaId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "madre_id")
     @JsonIgnore
@@ -138,6 +141,8 @@ public class ConsumoDiarioAutomatico {
     public void setRecria(Recria recria) { this.recria = recria; }
     public Long getLoteId() { return loteId; }
     public void setLoteId(Long loteId) { this.loteId = loteId; }
+    public Long getCampanaId() { return campanaId; }
+    public void setCampanaId(Long campanaId) { this.campanaId = campanaId; }
     public Madre getMadre() { return madre; }
     public void setMadre(Madre madre) { this.madre = madre; }
     public String getEtapaAlimentacion() { return etapaAlimentacion; }

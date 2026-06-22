@@ -34,6 +34,13 @@ public interface EgresoRepository extends JpaRepository<Egreso, Long> {
             @Param("fechaInicio") LocalDate fechaInicio,
             @Param("fechaFin") LocalDate fechaFin);
 
+    @Query("SELECT COALESCE(SUM(e.costoTotal), 0) FROM Egreso e WHERE e.campanaId = :campanaId AND e.fecha BETWEEN :fechaInicio AND :fechaFin")
+    BigDecimal calcularTotalEgresosPorCampanaYFecha(@Param("campanaId") Long campanaId,
+                                                    @Param("fechaInicio") LocalDate fechaInicio,
+                                                    @Param("fechaFin") LocalDate fechaFin);
+
+    List<Egreso> findByCampanaIdAndFechaBetweenOrderByFechaDesc(Long campanaId, LocalDate fechaInicio, LocalDate fechaFin);
+
     @Query("SELECT COALESCE(SUM(e.costoTotal), 0) FROM Egreso e WHERE e.tipo = :tipoEgreso AND e.user.id = :usuarioId AND e.fecha BETWEEN :fechaInicio AND :fechaFin")
     BigDecimal calcularTotalEgresosPorTipoYUsuario(
             @Param("tipoEgreso") Egreso.TipoEgreso tipoEgreso,

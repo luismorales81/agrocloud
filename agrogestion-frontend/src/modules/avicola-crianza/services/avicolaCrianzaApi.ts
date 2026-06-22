@@ -1,4 +1,5 @@
 import api from '../../../services/api';
+import { FiltrosListadoOperativo, paramsListadoOperativo } from '../../../core/types/filtrosListadoOperativo';
 
 export type EspecieCrianza =
   | 'POLLO_PARRILLERO'
@@ -75,8 +76,10 @@ function mensajeError(e: unknown): string {
   return 'Error desconocido';
 }
 
-export async function listarLotesCrianza(): Promise<AvicolaLoteRespuesta[]> {
-  const { data } = await api.get<AvicolaLoteRespuesta[]>('/avicola-crianza/lotes');
+export async function listarLotesCrianza(filtros?: FiltrosListadoOperativo): Promise<AvicolaLoteRespuesta[]> {
+  const { data } = await api.get<AvicolaLoteRespuesta[]>('/avicola-crianza/lotes', {
+    params: paramsListadoOperativo(filtros),
+  });
   return Array.isArray(data) ? data : [];
 }
 

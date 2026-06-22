@@ -330,6 +330,11 @@ export const configuracionEstadosService = {
     return response.data;
   },
 
+  async actualizarTransicion(id: number, data: { requiereMotivo?: boolean; activo?: boolean }) {
+    const response = await api.put(API_ENDPOINTS.CONFIGURACION_ESTADOS.TRANSICION(id), data);
+    return response.data;
+  },
+
   async validarTransicion(estadoOrigenId: number, estadoDestinoId: number, empresaId?: number) {
     const params = empresaId ? { estadoOrigenId, estadoDestinoId, empresaId } : { estadoOrigenId, estadoDestinoId };
     const response = await api.get(API_ENDPOINTS.CONFIGURACION_ESTADOS.TRANSICIONES_VALIDAR, { params });
@@ -391,6 +396,12 @@ export const configuracionEstadosService = {
   async validarTarea(estadoId: number, tipoLabor: string, empresaId?: number) {
     const params = empresaId ? { estadoId, tipoLabor, empresaId } : { estadoId, tipoLabor };
     const response = await api.get(API_ENDPOINTS.CONFIGURACION_ESTADOS.TAREAS_VALIDAR, { params });
+    return response.data;
+  },
+
+  async validarConfiguracionCompleta(tipoCultivoId: number, empresaId?: number) {
+    const params = empresaId ? { tipoCultivoId, empresaId } : { tipoCultivoId };
+    const response = await api.get(API_ENDPOINTS.CONFIGURACION_ESTADOS.VALIDACION_COMPLETA, { params });
     return response.data;
   },
 };

@@ -95,14 +95,34 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
       console.log('🔍 [EmpresaContext] Datos recibidos de mis-empresas:', empresas);
       
       setEmpresasUsuario(empresas);
-      
-      // Si hay empresas y no hay empresa activa, seleccionar la primera
-      if (empresas.length > 0 && !empresaActiva) {
-        const primeraEmpresa = empresas[0];
-        await cambiarEmpresaConDatos(primeraEmpresa);
+
+      if (empresas.length === 0) {
+        setEmpresaActiva(null);
+        setRolUsuario(null);
+        localStorage.removeItem('empresaActiva');
+        localStorage.removeItem('rolUsuario');
+        return empresas;
       }
-      
-      return empresas; // Retornar las empresas cargadas
+
+      // Validar empresa guardada contra las empresas reales del usuario (evita X-Company-Id obsoleto)
+      let empresaSeleccionada: UsuarioEmpresa | undefined;
+      const empresaGuardada = localStorage.getItem('empresaActiva');
+      if (empresaGuardada) {
+        try {
+          const parsed = JSON.parse(empresaGuardada) as Empresa;
+          empresaSeleccionada = empresas.find((e: UsuarioEmpresa) => e.empresaId === parsed.id);
+        } catch {
+          // ignorar JSON inválido
+        }
+      }
+      if (!empresaSeleccionada) {
+        empresaSeleccionada = empresas[0];
+      }
+      if (empresaSeleccionada) {
+        await cambiarEmpresaConDatos(empresaSeleccionada);
+      }
+
+      return empresas;
       
     } catch (error) {
       console.error('Error cargando empresas del usuario:', error);

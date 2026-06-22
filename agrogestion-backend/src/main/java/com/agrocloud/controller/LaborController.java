@@ -404,6 +404,25 @@ public class LaborController {
     }
     
     /**
+     * Obtiene las tareas disponibles para un lote específico (usa configuración de estados).
+     */
+    @GetMapping("/tareas-disponibles/lote/{loteId}")
+    public ResponseEntity<Map<String, Object>> getTareasDisponiblesPorLote(
+            @PathVariable Long loteId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            User usuario = obtenerUsuario(userDetails);
+            Long empresaId = usuario.getEmpresa() != null ? usuario.getEmpresa().getId() : null;
+            Map<String, Object> info = laborService.getTareasDisponiblesPorLote(loteId, empresaId);
+            return ResponseEntity.ok(info);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * Obtiene las tareas disponibles según el estado del lote
      */
     @GetMapping("/tareas-disponibles/{estado}")

@@ -3,13 +3,19 @@
  */
 import api from '../../../services/api';
 import { API_ENDPOINTS } from '../../../services/apiEndpoints';
+import { paramsListadoOperativo } from '../../../core/types/filtrosListadoOperativo';
 import type { Recria, RecriaIngresoDTO, MuerteRecria, FiltrosRecria } from '../types';
 
 export const recriaService = {
   async listar(filtros?: FiltrosRecria) {
-    const response = await api.get(API_ENDPOINTS.PORCINOS_RECRIA.LISTAR, {
-      params: filtros,
-    });
+    const params: Record<string, string | boolean> = {
+      ...paramsListadoOperativo({
+        activas: filtros?.activas,
+        delPeriodoActivo: filtros?.delPeriodoActivo,
+      }),
+    };
+    if (filtros?.loteId != null) params.loteId = String(filtros.loteId);
+    const response = await api.get(API_ENDPOINTS.PORCINOS_RECRIA.LISTAR, { params });
     return response.data;
   },
 

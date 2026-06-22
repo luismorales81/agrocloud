@@ -86,6 +86,9 @@ public class InventarioGrano {
     @Column(name = "ubicacion_almacenamiento", length = 200)
     private String ubicacionAlmacenamiento;
 
+    @Column(name = "campana_id")
+    private Long campanaId;
+
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
@@ -250,6 +253,14 @@ public class InventarioGrano {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public Long getCampanaId() {
+        return campanaId;
+    }
+
+    public void setCampanaId(Long campanaId) {
+        this.campanaId = campanaId;
     }
 
     public LocalDateTime getCreatedAt() {

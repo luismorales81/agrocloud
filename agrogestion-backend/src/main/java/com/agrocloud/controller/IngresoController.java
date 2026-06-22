@@ -1,6 +1,12 @@
 package com.agrocloud.controller;
 
+import com.agrocloud.config.CampanaRequestContext;
+import com.agrocloud.core.application.CampanaContextService;
+import com.agrocloud.core.security.ServicioSeguridadContexto;
+import com.agrocloud.core.application.UserService;
+import com.agrocloud.core.domain.Campana;
 import com.agrocloud.core.domain.Ingreso;
+import com.agrocloud.core.domain.User;
 import com.agrocloud.core.infrastructure.IngresoRepository;
 import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,13 +36,37 @@ public class IngresoController {
     @Autowired
     private PlotRepository plotRepository;
 
+    @Autowired
+    @Qualifier("userServiceCore")
+    private UserService userService;
+
+    @Autowired
+    private ServicioSeguridadContexto servicioSeguridadContexto;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private CampanaContextService campanaContextService;
+
     /**
      * Obtiene todos los ingresos del usuario autenticado.
      */
     @GetMapping
     public ResponseEntity<List<Ingreso>> obtenerIngresos(Authentication authentication) {
-        Long usuarioId = Long.parseLong(authentication.getName());
-        List<Ingreso> ingresos = ingresoRepository.findByUserIdOrderByFechaDesc(usuarioId);
+        User user = userService.findByEmailWithAllRelations(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        Long campanaId = CampanaRequestContext.getCampanaId();
+        if (campanaId != null) {
+            try {
+                Campana campana = campanaContextService.resolverCampanaActiva(servicioSeguridadContexto.obtenerEmpresaIdActual());
+                return ResponseEntity.ok(ingresoRepository.findByCampanaIdAndFechaBetweenOrderByFechaDesc(
+                        campana.getId(), campana.getFechaInicio(), campana.getFechaFin()));
+            } catch (Exception e) {
+                return ResponseEntity.ok(ingresoRepository.findByUserIdOrderByFechaDesc(user.getId()));
+            }
+        }
+        List<Ingreso> ingresos = ingresoRepository.findByUserIdOrderByFechaDesc(user.getId());
         return ResponseEntity.ok(ingresos);
     }
 
@@ -60,19 +90,25 @@ public class IngresoController {
      */
     @PostMapping
     public ResponseEntity<Ingreso> crearIngreso(@Valid @RequestBody Ingreso ingreso, Authentication authentication) {
-        Long usuarioId = Long.parseLong(authentication.getName());
+        User user = userService.findByEmailWithAllRelations(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.badRequest().build();
+        }
         
         // Validar que el lote pertenece al usuario si se especifica
         if (ingreso.getLote() != null && ingreso.getLote().getId() != null) {
             Optional<com.agrocloud.cultivos.domain.Plot> lote = plotRepository.findById(ingreso.getLote().getId());
-            if (lote.isEmpty() || !lote.get().getUser().getId().equals(usuarioId)) {
+            if (lote.isEmpty() || !lote.get().getUser().getId().equals(user.getId())) {
                 return ResponseEntity.badRequest().build();
             }
         }
         
-        com.agrocloud.core.domain.User usuario = new com.agrocloud.core.domain.User();
-        usuario.setId(usuarioId);
-        ingreso.setUser(usuario);
+        ingreso.setUser(user);
+        try {
+            Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
+            ingreso.setCampanaId(campanaContextService.resolverCampanaIdActiva(empresaId));
+        } catch (Exception ignored) {
+        }
         
         Ingreso ingresoGuardado = ingresoRepository.save(ingreso);
         return ResponseEntity.ok(ingresoGuardado);

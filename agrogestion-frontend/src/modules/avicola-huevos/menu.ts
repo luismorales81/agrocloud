@@ -46,9 +46,9 @@ export const avicolaHuevosMenu: MenuItem[] = [
     permisos: ['canViewReports'],
   },
   {
-    id: 'trazabilidad-expediente',
-    nombre: 'Expediente trazabilidad',
-    icono: 'FileText',
-    ruta: '/avicola-huevos/trazabilidad-expediente',
+    id: 'periodos-gestion',
+    nombre: 'Períodos de gestión',
+    icono: 'CalendarDays',
+    ruta: '/avicola-huevos/configuracion/periodos',
   },
 ];

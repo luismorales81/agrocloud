@@ -1,4 +1,5 @@
 import api from '../../../services/api';
+import { FiltrosListadoOperativo, paramsListadoOperativo } from '../../../core/types/filtrosListadoOperativo';
 import type {
   AvicolaCarneLote,
   AvicolaCarneLoteCreacionCuerpo,
@@ -32,9 +33,9 @@ export function mensajeErrorCarne(error: unknown): string {
   return 'Ocurrió un error inesperado';
 }
 
-export async function listarLotesCarne(estado?: string): Promise<AvicolaCarneLote[]> {
+export async function listarLotesCarne(filtros?: FiltrosListadoOperativo): Promise<AvicolaCarneLote[]> {
   const { data } = await api.get<AvicolaCarneLote[]>(`${BASE}/lotes`, {
-    params: estado != null && estado !== '' ? { estado } : undefined,
+    params: paramsListadoOperativo(filtros),
   });
   return Array.isArray(data) ? data : [];
 }

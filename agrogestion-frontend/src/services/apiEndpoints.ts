@@ -611,6 +611,12 @@ export const API_ENDPOINTS = {
     // Importación Excel
     IMPORTAR: '/v1/configuracion-estados/importar',
     PLANTILLA_EXCEL: '/v1/configuracion-estados/plantilla-excel',
+    VALIDACION_COMPLETA: '/v1/configuracion-estados/validacion-completa',
+  },
+
+  ESTADOS_LOTES: {
+    PROGRESO: (loteId: number) => `/estados-lotes/lote/${loteId}/progreso`,
+    RECALCULAR_TODOS: '/estados-lotes/recalcular-todos',
   },
 } as const;
 

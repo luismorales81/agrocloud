@@ -69,6 +69,9 @@ public class Ingreso {
     
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
+
+    @Column(name = "campana_id")
+    private Long campanaId;
     
     // Enum para tipos de ingreso
     public enum TipoIngreso {
@@ -232,6 +235,14 @@ public class Ingreso {
     
     public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public Long getCampanaId() {
+        return campanaId;
+    }
+
+    public void setCampanaId(Long campanaId) {
+        this.campanaId = campanaId;
     }
     
     // Método para actualizar fecha de modificación

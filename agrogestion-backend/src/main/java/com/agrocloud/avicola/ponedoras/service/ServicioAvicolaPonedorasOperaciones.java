@@ -215,6 +215,7 @@ public class ServicioAvicolaPonedorasOperaciones {
         c.setCantidad(solicitud.getCantidad());
         c.setTipo(tipo);
         c.setObservaciones(solicitud.getObservaciones());
+        c.setCampanaId(galpon.getCampanaId());
         c = consumoRepository.saveAndFlush(c);
 
         InventoryResult resultado = inventoryService.consumir(
@@ -301,6 +302,7 @@ public class ServicioAvicolaPonedorasOperaciones {
         v.setTotal(solicitud.getTotal());
         v.setComprador(solicitud.getComprador());
         v.setObservaciones(solicitud.getObservaciones());
+        v.setCampanaId(galpon.getCampanaId());
         v = ventaHuevosRepository.save(v);
         return aVentaHuevosRespuesta(v);
     }

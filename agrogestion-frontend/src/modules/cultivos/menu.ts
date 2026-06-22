@@ -61,13 +61,6 @@ export const cultivosMenu: MenuItem[] = [
     permisos: ['canViewReports'],
   },
   {
-    id: 'trazabilidad-expediente',
-    nombre: 'Expediente trazabilidad',
-    icono: 'FileText',
-    ruta: '/cultivos/trazabilidad-expediente',
-    permisos: ['canViewLotes'],
-  },
-  {
     id: 'finances',
     nombre: 'Finanzas',
     icono: 'DollarSign',

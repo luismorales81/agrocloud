@@ -67,6 +67,14 @@ public class EstadoLoteConfig {
     @Column(name = "es_estado_final", nullable = false)
     private Boolean esEstadoFinal = false;
 
+    /** Días desde siembra para alcanzar este estado (avance por tiempo). */
+    @Column(name = "dias_minimos")
+    private Integer diasMinimos;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modo_avance", nullable = false, length = 20)
+    private ModoAvanceEstado modoAvance = ModoAvanceEstado.MIXTO;
+
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
@@ -121,6 +129,10 @@ public class EstadoLoteConfig {
     public void setEsEstadoInicial(Boolean esEstadoInicial) { this.esEstadoInicial = esEstadoInicial; }
     public Boolean getEsEstadoFinal() { return esEstadoFinal; }
     public void setEsEstadoFinal(Boolean esEstadoFinal) { this.esEstadoFinal = esEstadoFinal; }
+    public Integer getDiasMinimos() { return diasMinimos; }
+    public void setDiasMinimos(Integer diasMinimos) { this.diasMinimos = diasMinimos; }
+    public ModoAvanceEstado getModoAvance() { return modoAvance; }
+    public void setModoAvance(ModoAvanceEstado modoAvance) { this.modoAvance = modoAvance; }
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }

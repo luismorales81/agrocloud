@@ -3,7 +3,10 @@ package com.agrocloud.cultivos.application;
 import com.agrocloud.dto.ConfirmacionCambioEstado;
 import com.agrocloud.dto.RespuestaCambioEstado;
 import com.agrocloud.model.TransicionEstadoLote;
+import com.agrocloud.cultivos.domain.EstadoLoteConfig;
 import com.agrocloud.cultivos.domain.Plot;
+import com.agrocloud.cultivos.domain.TransicionEstadoConfig;
+import com.agrocloud.cultivos.util.MapeadorEstadoLoteConfig;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.core.domain.Role;
 import com.agrocloud.core.domain.Empresa;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,12 +38,29 @@ public class EstadoLoteService {
     @Autowired
     private PlotRepository plotRepository;
 
+    @Autowired
+    private ConfiguracionEstadosService configuracionEstadosService;
+
+    @Autowired
+    private ProgresoEstadoLoteService progresoEstadoLoteService;
+
     /**
-     * Proponer cambio de estado con validaciones y mensajes
+     * Proponer cambio de estado con validaciones y mensajes.
+     * Si el lote usa configuración por cultivo, debe indicarse estadoDestinoConfigId.
      */
     public RespuestaCambioEstado proponerCambioEstado(Long loteId, EstadoLote nuevoEstado, String motivo, User usuario) {
+        return proponerCambioEstado(loteId, nuevoEstado, null, motivo, usuario);
+    }
+
+    public RespuestaCambioEstado proponerCambioEstado(Long loteId, EstadoLote nuevoEstado,
+                                                       Long estadoDestinoConfigId, String motivo, User usuario) {
         Plot lote = plotRepository.findById(loteId)
             .orElseThrow(() -> new RuntimeException("Lote no encontrado"));
+
+        Long empresaId = obtenerEmpresaDelLote(lote);
+        if (lote.getEstadoConfigurado() != null || estadoDestinoConfigId != null) {
+            return proponerCambioEstadoConfigurado(lote, estadoDestinoConfigId, motivo, usuario, empresaId);
+        }
 
         RespuestaCambioEstado respuesta = new RespuestaCambioEstado();
         respuesta.setLoteId(loteId);
@@ -84,20 +105,85 @@ public class EstadoLoteService {
         return respuesta;
     }
 
+    private RespuestaCambioEstado proponerCambioEstadoConfigurado(Plot lote, Long estadoDestinoConfigId,
+                                                                   String motivo, User usuario, Long empresaId) {
+        RespuestaCambioEstado respuesta = new RespuestaCambioEstado();
+        respuesta.setLoteId(lote.getId());
+        respuesta.setLoteNombre(lote.getNombre());
+        respuesta.setEstadoActual(lote.getEstado());
+
+        if (estadoDestinoConfigId == null) {
+            respuesta.setRequiereConfirmacion(false);
+            respuesta.setMensaje("Este lote usa estados configurados. Indique el estado destino desde las transiciones permitidas.");
+            return respuesta;
+        }
+
+        EstadoLoteConfig destino = configuracionEstadosService.obtenerEstadoPorId(estadoDestinoConfigId)
+            .orElseThrow(() -> new RuntimeException("Estado destino no encontrado"));
+
+        if (MapeadorEstadoLoteConfig.esEstadoDerivadoPorEvento(destino)) {
+            respuesta.setRequiereConfirmacion(false);
+            respuesta.setMensaje("El estado '" + destino.getNombre() + "' se actualiza automáticamente al registrar siembra o cosecha.");
+            return respuesta;
+        }
+
+        EstadoLoteConfig origen = lote.getEstadoConfigurado();
+        if (origen == null) {
+            respuesta.setRequiereConfirmacion(false);
+            respuesta.setMensaje("El lote no tiene un estado configurado asignado. Registre una labor para recalcular el estado.");
+            return respuesta;
+        }
+
+        if (!configuracionEstadosService.validarTransicion(origen.getId(), destino.getId(), empresaId)) {
+            respuesta.setRequiereConfirmacion(false);
+            respuesta.setMensaje("No se puede cambiar de '" + origen.getNombre() + "' a '" + destino.getNombre()
+                + "'. Configure la transición en Cultivos → Configuración.");
+            return respuesta;
+        }
+
+        Optional<TransicionEstadoConfig> transicionOpt = configuracionEstadosService
+            .buscarTransicion(origen.getId(), destino.getId(), empresaId);
+        if (transicionOpt.isPresent() && Boolean.TRUE.equals(transicionOpt.get().getRequiereMotivo())
+                && (motivo == null || motivo.isBlank())) {
+            respuesta.setRequiereConfirmacion(false);
+            respuesta.setMensaje("Esta transición requiere indicar un motivo.");
+            return respuesta;
+        }
+
+        if (!tienePermisoParaCambiarEstado(usuario, lote, MapeadorEstadoLoteConfig.mapearAEnum(destino))) {
+            respuesta.setRequiereConfirmacion(false);
+            respuesta.setMensaje("Sin permisos para cambiar el estado del lote.");
+            return respuesta;
+        }
+
+        respuesta.setEstadoPropuesto(MapeadorEstadoLoteConfig.mapearAEnum(destino));
+        respuesta.setRequiereConfirmacion(true);
+        respuesta.setMensaje("Cambio propuesto: " + origen.getNombre() + " → " + destino.getNombre()
+            + (motivo != null && !motivo.isBlank() ? "\nMotivo: " + motivo : ""));
+        respuesta.setPuedeCancelar(true);
+        respuesta.setAccionRequerida("¿Confirmar cambio a " + destino.getNombre() + "?");
+        return respuesta;
+    }
+
     /**
      * Aplica un cambio de estado manual confirmado por el usuario.
-     * Los estados derivados SEMBRADO y COSECHADO no pueden setearse por esta vía.
      */
     public void aplicarCambioEstadoManual(ConfirmacionCambioEstado confirmacion, User usuario) {
         if (!confirmacion.isConfirmado()) {
             throw new RuntimeException("El cambio de estado no fue confirmado");
         }
-        if (confirmacion.getEstadoPropuesto() == EstadoLote.SEMBRADO || confirmacion.getEstadoPropuesto() == EstadoLote.COSECHADO) {
-            throw new IllegalStateException("Los estados SEMBRADO y COSECHADO son derivados del dominio y no pueden setearse manualmente.");
-        }
 
         Plot lote = plotRepository.findById(confirmacion.getLoteId())
             .orElseThrow(() -> new RuntimeException("Lote no encontrado"));
+
+        if (confirmacion.getEstadoDestinoConfigId() != null || lote.getEstadoConfigurado() != null) {
+            aplicarCambioEstadoConfiguradoManual(confirmacion, usuario, lote);
+            return;
+        }
+
+        if (confirmacion.getEstadoPropuesto() == EstadoLote.SEMBRADO || confirmacion.getEstadoPropuesto() == EstadoLote.COSECHADO) {
+            throw new IllegalStateException("Los estados SEMBRADO y COSECHADO son derivados del dominio y no pueden setearse manualmente.");
+        }
 
         // Validar permisos nuevamente (por seguridad)
         if (!tienePermisoParaCambiarEstado(usuario, lote, confirmacion.getEstadoPropuesto())) {
@@ -115,6 +201,43 @@ public class EstadoLoteService {
 
         // Log del cambio
         logCambioEstado(lote, confirmacion.getEstadoPropuesto(), confirmacion.getMotivo(), usuario);
+    }
+
+    private void aplicarCambioEstadoConfiguradoManual(ConfirmacionCambioEstado confirmacion, User usuario, Plot lote) {
+        Long estadoDestinoId = confirmacion.getEstadoDestinoConfigId();
+        if (estadoDestinoId == null) {
+            throw new IllegalStateException("Debe indicar el estado destino configurado.");
+        }
+
+        EstadoLoteConfig destino = configuracionEstadosService.obtenerEstadoPorId(estadoDestinoId)
+            .orElseThrow(() -> new RuntimeException("Estado destino no encontrado"));
+
+        if (MapeadorEstadoLoteConfig.esEstadoDerivadoPorEvento(destino)) {
+            throw new IllegalStateException("El estado destino es derivado por evento de dominio.");
+        }
+
+        EstadoLoteConfig origen = lote.getEstadoConfigurado();
+        if (origen == null) {
+            throw new IllegalStateException("El lote no tiene estado configurado asignado.");
+        }
+
+        Long empresaId = obtenerEmpresaDelLote(lote);
+        if (!configuracionEstadosService.validarTransicion(origen.getId(), destino.getId(), empresaId)) {
+            throw new IllegalStateException("La transición ya no es válida.");
+        }
+
+        if (!tienePermisoParaCambiarEstado(usuario, lote, MapeadorEstadoLoteConfig.mapearAEnum(destino))) {
+            throw new RuntimeException("No tienes permisos para realizar este cambio de estado");
+        }
+
+        lote.cambiarEstadoConfigurado(destino, confirmacion.getMotivo());
+        plotRepository.save(lote);
+        logCambioEstado(lote, lote.getEstado(), confirmacion.getMotivo(), usuario);
+    }
+
+    @Transactional(readOnly = true)
+    public com.agrocloud.dto.ProgresoEstadoLoteDTO obtenerProgresoEstado(Long loteId, Long empresaId) {
+        return progresoEstadoLoteService.calcularProgreso(loteId, empresaId);
     }
 
     private boolean tienePermisoParaCambiarEstado(User usuario, Plot lote, EstadoLote nuevoEstado) {

@@ -7,6 +7,7 @@ import { useEmpresa } from '../contexts/EmpresaContext';
 import ModularSidebar from './ModularSidebar';
 import AppNavigator from '../navigation/AppNavigator';
 import ChangePasswordModal from './ChangePasswordModal';
+import BarraContextoGlobal from './BarraContextoGlobal';
 import ModuleSelectorScreen from '../screens/ModuleSelectorScreen';
 
 /**
@@ -33,6 +34,7 @@ const ModularDashboard: React.FC = () => {
         'avicola-huevos',
         'avicola-carne',
         'avicola-ponedoras',
+        'feedlot',
       ];
       const moduleFromUrl =
         pathParts.length > 0 && modulosPorUrl.includes(pathParts[0] as ModuleId)
@@ -89,6 +91,7 @@ const ModularDashboard: React.FC = () => {
       'avicola-huevos',
       'avicola-carne',
       'avicola-ponedoras',
+      'feedlot',
     ];
     const isModuleRoute = pathParts.length > 0 && modulosPorUrl.includes(pathParts[0] as ModuleId);
     
@@ -216,6 +219,7 @@ const ModularDashboard: React.FC = () => {
 
         {/* Navegador modular */}
         <div style={{ paddingTop: isMobile ? '4rem' : '0' }}>
+          <BarraContextoGlobal />
           <AppNavigator />
         </div>
 

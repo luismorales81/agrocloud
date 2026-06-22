@@ -77,6 +77,11 @@ public interface LaborRepository extends JpaRepository<Labor, Long> {
      */
     List<Labor> findByLoteIdAndActivoTrue(Long loteId);
 
+    List<Labor> findByCicloCultivoIdAndActivoTrue(Long cicloCultivoId);
+
+    @Query("SELECT l FROM Labor l WHERE l.lote.id IN :loteIds AND (l.cicloCultivoId IS NULL OR l.cicloCultivoId IN :cicloIds)")
+    List<Labor> findByLoteIdInAndCicloCultivoIdIn(@Param("loteIds") List<Long> loteIds, @Param("cicloIds") List<Long> cicloIds);
+
     /**
      * Buscar todas las labores activas
      */

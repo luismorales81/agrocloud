@@ -408,7 +408,7 @@ Antes de la demo, verificar que existan:
 - [ ] Reportes funcionan y se pueden exportar
 - [ ] Navegación fluida entre pantallas
 - [ ] Ejemplos de Excel descargados para mostrar
-- [ ] Usuario de demo preparado (admin@agrocloud.com)
+- [ ] Usuario de demo preparado (admin@agrocloud.com) — **no usar superman** para recorrer módulos operativos
 - [ ] Conexión a internet estable
 - [ ] Navegador actualizado
 - [ ] Pantalla en modo presentación (si aplica)

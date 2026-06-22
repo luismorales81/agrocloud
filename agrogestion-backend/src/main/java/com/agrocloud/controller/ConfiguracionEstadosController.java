@@ -6,10 +6,14 @@ import com.agrocloud.cultivos.domain.TareaPorEstadoConfig;
 import com.agrocloud.cultivos.domain.TipoCultivo;
 import com.agrocloud.cultivos.domain.TransicionEstadoConfig;
 
+import com.agrocloud.dto.ValidacionConfiguracionEstadosDTO;
+import com.agrocloud.dto.TipoCultivoResumenDTO;
 import com.agrocloud.cultivos.application.ConfiguracionEstadosService;
 import com.agrocloud.cultivos.application.ImportacionConfiguracionEstadosService;
 import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -34,6 +38,8 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/v1/configuracion-estados")
 public class ConfiguracionEstadosController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConfiguracionEstadosController.class);
 
     @Autowired
     private ConfiguracionEstadosService configuracionEstadosService;
@@ -117,12 +123,16 @@ public class ConfiguracionEstadosController {
      * Obtener todos los tipos de cultivo
      */
     @GetMapping("/tipos-cultivo")
-    public ResponseEntity<List<TipoCultivo>> obtenerTiposCultivo() {
+    public ResponseEntity<?> obtenerTiposCultivo() {
         try {
-            List<TipoCultivo> tipos = configuracionEstadosService.obtenerTodosLosTiposCultivo();
+            List<TipoCultivoResumenDTO> tipos = configuracionEstadosService.obtenerTodosLosTiposCultivo().stream()
+                .map(TipoCultivoResumenDTO::desde)
+                .toList();
             return ResponseEntity.ok(tipos);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            logger.error("Error al listar tipos de cultivo", e);
+            return ResponseEntity.internalServerError()
+                .body(Map.of("error", "No se pudieron cargar los tipos de cultivo: " + e.getMessage()));
         }
     }
 
@@ -130,12 +140,16 @@ public class ConfiguracionEstadosController {
      * Obtener solo las plantillas globales
      */
     @GetMapping("/tipos-cultivo/plantillas")
-    public ResponseEntity<List<TipoCultivo>> obtenerPlantillas() {
+    public ResponseEntity<?> obtenerPlantillas() {
         try {
-            List<TipoCultivo> plantillas = configuracionEstadosService.obtenerPlantillas();
+            List<TipoCultivoResumenDTO> plantillas = configuracionEstadosService.obtenerPlantillas().stream()
+                .map(TipoCultivoResumenDTO::desde)
+                .toList();
             return ResponseEntity.ok(plantillas);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            logger.error("Error al listar plantillas de tipos de cultivo", e);
+            return ResponseEntity.internalServerError()
+                .body(Map.of("error", "No se pudieron cargar las plantillas: " + e.getMessage()));
         }
     }
 
@@ -143,13 +157,15 @@ public class ConfiguracionEstadosController {
      * Obtener un tipo de cultivo por ID
      */
     @GetMapping("/tipos-cultivo/{id}")
-    public ResponseEntity<TipoCultivo> obtenerTipoCultivoPorId(@PathVariable Long id) {
+    public ResponseEntity<?> obtenerTipoCultivoPorId(@PathVariable Long id) {
         try {
             Optional<TipoCultivo> tipo = configuracionEstadosService.obtenerTipoCultivoPorId(id);
-            return tipo.map(ResponseEntity::ok)
+            return tipo.map(t -> ResponseEntity.ok(TipoCultivoResumenDTO.desde(t)))
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            logger.error("Error al obtener tipo de cultivo id={}", id, e);
+            return ResponseEntity.internalServerError()
+                .body(Map.of("error", "No se pudo cargar el tipo de cultivo: " + e.getMessage()));
         }
     }
 
@@ -160,11 +176,13 @@ public class ConfiguracionEstadosController {
     public ResponseEntity<?> crearTipoCultivo(@RequestBody TipoCultivo tipoCultivo, @AuthenticationPrincipal UserDetails userDetails) {
         try {
             TipoCultivo creado = configuracionEstadosService.crearTipoCultivo(tipoCultivo);
-            return ResponseEntity.ok(creado);
+            return ResponseEntity.ok(TipoCultivoResumenDTO.desde(creado));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            logger.error("Error al crear tipo de cultivo", e);
+            return ResponseEntity.internalServerError()
+                .body(Map.of("error", "No se pudo crear el tipo de cultivo: " + e.getMessage()));
         }
     }
 
@@ -422,14 +440,14 @@ public class ConfiguracionEstadosController {
     }
 
     /**
-     * Eliminar una transiciÃ³n
+     * Eliminar una transición
      */
     @DeleteMapping("/transiciones/{id}")
     public ResponseEntity<?> eliminarTransicion(@PathVariable Long id) {
         try {
             boolean eliminada = configuracionEstadosService.eliminarTransicion(id);
             if (eliminada) {
-                return ResponseEntity.ok(Map.of("mensaje", "TransiciÃ³n eliminada exitosamente"));
+                return ResponseEntity.ok(Map.of("mensaje", "Transición eliminada exitosamente"));
             }
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -438,7 +456,25 @@ public class ConfiguracionEstadosController {
     }
 
     /**
-     * Validar si una transiciÃ³n es vÃ¡lida
+     * Actualizar una transición existente.
+     */
+    @PutMapping("/transiciones/{id}")
+    public ResponseEntity<?> actualizarTransicion(
+            @PathVariable Long id,
+            @RequestBody TransicionEstadoConfig transicion) {
+        try {
+            Optional<TransicionEstadoConfig> actualizada = configuracionEstadosService.actualizarTransicion(id, transicion);
+            return actualizada.<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Validar si una transición es válida
      */
     @GetMapping("/transiciones/validar")
     public ResponseEntity<Map<String, Object>> validarTransicion(
@@ -591,6 +627,27 @@ public class ConfiguracionEstadosController {
             respuesta.put("mensaje", esPermitida ? "Tarea permitida en este estado" : "Tarea no permitida en este estado");
             
             return ResponseEntity.ok(respuesta);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Validación completa de coherencia (estados, transiciones, tareas).
+     */
+    @GetMapping("/validacion-completa")
+    public ResponseEntity<ValidacionConfiguracionEstadosDTO> validarConfiguracionCompleta(
+            @RequestParam Long tipoCultivoId,
+            @RequestParam(required = false) Long empresaId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            if (empresaId == null && userDetails != null) {
+                User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+                Optional<Long> empresaIdOpt = configuracionEstadosService.obtenerEmpresaIdDelUsuario(user);
+                empresaId = empresaIdOpt.orElse(null);
+            }
+            return ResponseEntity.ok(
+                configuracionEstadosService.validarConfiguracionCompleta(tipoCultivoId, empresaId));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }

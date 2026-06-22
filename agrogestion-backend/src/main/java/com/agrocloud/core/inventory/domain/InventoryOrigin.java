@@ -11,5 +11,7 @@ public enum InventoryOrigin {
     AVICOLA_CARNE,
     AVICOLA_HUEVOS,
     /** Ponedoras / postura (consumo de alimento en galpón). */
-    AVICOLA_PONEDORAS
+    AVICOLA_PONEDORAS,
+    /** Engorde bovino a corral (feedlot). */
+    FEEDLOT
 }

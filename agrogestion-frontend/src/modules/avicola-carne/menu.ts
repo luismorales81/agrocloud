@@ -20,9 +20,9 @@ export const avicolaCarneMenu: MenuItem[] = [
     ruta: '/avicola-carne/lotes',
   },
   {
-    id: 'trazabilidad-expediente',
-    nombre: 'Expediente trazabilidad',
-    icono: 'FileText',
-    ruta: '/avicola-carne/trazabilidad-expediente',
+    id: 'periodos-gestion',
+    nombre: 'Períodos de gestión',
+    icono: 'CalendarDays',
+    ruta: '/avicola-carne/configuracion/periodos',
   },
 ];

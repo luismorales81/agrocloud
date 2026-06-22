@@ -106,3 +106,14 @@ export const configuracionExpedienteAvicolaPonedoras: ConfiguracionExpedienteMod
     return galpones.map((g) => ({ id: g.id, etiqueta: g.nombre ?? `Galpón ${g.id}` }));
   },
 };
+
+export const configuracionExpedienteFeedlot: ConfiguracionExpedienteModulo = {
+  tituloPagina: 'Expediente de trazabilidad — Feedlot',
+  descripcion: 'Ciclo del lote de engorde: pesadas, consumos, mortalidad, sanidad, ventas y closeout.',
+  tiposEntidad: [{ valor: 'FEEDLOT_LOTE', etiqueta: 'Lote de engorde' }],
+  cargarEntidades: async () => {
+    const { listarLotes } = await import('../../modules/feedlot/services/feedlotApi');
+    const lotes = await listarLotes({ delPeriodoActivo: false });
+    return lotes.map((l) => ({ id: l.id, etiqueta: l.nombre ?? `Lote ${l.id}` }));
+  },
+};

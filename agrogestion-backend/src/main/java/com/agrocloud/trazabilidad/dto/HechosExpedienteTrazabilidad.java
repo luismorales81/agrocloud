@@ -17,6 +17,9 @@ public class HechosExpedienteTrazabilidad {
     private String nombreEmpresa;
     private LocalDate fechaCorteDesde;
     private LocalDate fechaCorteHasta;
+    private Long campanaId;
+    private String campanaCodigo;
+    private String campanaNombre;
     private List<Seccion> secciones = new ArrayList<>();
     private List<EventoLinea> lineaTiempo = new ArrayList<>();
 
@@ -36,6 +39,12 @@ public class HechosExpedienteTrazabilidad {
     public void setFechaCorteDesde(LocalDate fechaCorteDesde) { this.fechaCorteDesde = fechaCorteDesde; }
     public LocalDate getFechaCorteHasta() { return fechaCorteHasta; }
     public void setFechaCorteHasta(LocalDate fechaCorteHasta) { this.fechaCorteHasta = fechaCorteHasta; }
+    public Long getCampanaId() { return campanaId; }
+    public void setCampanaId(Long campanaId) { this.campanaId = campanaId; }
+    public String getCampanaCodigo() { return campanaCodigo; }
+    public void setCampanaCodigo(String campanaCodigo) { this.campanaCodigo = campanaCodigo; }
+    public String getCampanaNombre() { return campanaNombre; }
+    public void setCampanaNombre(String campanaNombre) { this.campanaNombre = campanaNombre; }
     public List<Seccion> getSecciones() { return secciones; }
     public void setSecciones(List<Seccion> secciones) { this.secciones = secciones; }
     public List<EventoLinea> getLineaTiempo() { return lineaTiempo; }

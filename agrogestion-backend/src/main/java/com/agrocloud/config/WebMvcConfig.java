@@ -16,11 +16,23 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Autowired
     private LoggingSecurityInterceptor loggingSecurityInterceptor;
 
+    @Autowired
+    private CampanaEscrituraInterceptor campanaEscrituraInterceptor;
+
+    @Autowired
+    private ModuleAccessInterceptor moduleAccessInterceptor;
+
     @Override
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
         registry.addInterceptor(loggingSecurityInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/health", "/actuator/**");
+        registry.addInterceptor(moduleAccessInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api/auth/**", "/api/admin-global/**", "/api/health", "/actuator/**");
+        registry.addInterceptor(campanaEscrituraInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api/auth/**", "/api/health", "/actuator/**", "/api/v1/campanas/**");
     }
 }
 

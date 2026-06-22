@@ -5,6 +5,7 @@ import {
   configuracionExpedienteAvicolaCrianza,
   configuracionExpedienteAvicolaHuevos,
   configuracionExpedienteAvicolaPonedoras,
+  configuracionExpedienteFeedlot,
   configuracionExpedienteCultivos,
   configuracionExpedientePorcinos,
 } from './configuracionesExpediente';
@@ -31,4 +32,8 @@ export const ExpedienteTrazabilidadAvicolaCarne: React.FC = () => (
 
 export const ExpedienteTrazabilidadAvicolaPonedoras: React.FC = () => (
   <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteAvicolaPonedoras} />
+);
+
+export const ExpedienteTrazabilidadFeedlot: React.FC = () => (
+  <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteFeedlot} />
 );

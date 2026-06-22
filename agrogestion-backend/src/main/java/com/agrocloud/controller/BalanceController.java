@@ -1,5 +1,8 @@
 package com.agrocloud.controller;
 
+import com.agrocloud.core.application.CampanaContextService;
+import com.agrocloud.core.domain.Campana;
+import com.agrocloud.core.security.ServicioSeguridadContexto;
 import com.agrocloud.dto.BalanceDTO;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.core.application.BalanceService;
@@ -31,6 +34,13 @@ public class BalanceController {
     @Autowired
     @Qualifier("userServiceCore")
     private UserService userService;
+
+    @Autowired
+    private ServicioSeguridadContexto servicioSeguridadContexto;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private CampanaContextService campanaContextService;
     
     /**
      * Valida que la fecha de fin no sea anterior a la fecha de inicio.
@@ -63,8 +73,17 @@ public class BalanceController {
             if (user == null) {
                 return ResponseEntity.badRequest().build();
             }
-            
-            BalanceDTO balance = balanceService.calcularBalance(user.getId(), fechaInicio, fechaFin);
+
+            BalanceDTO balance;
+            try {
+                Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
+                Campana campana = campanaContextService.resolverCampanaActiva(empresaId);
+                LocalDate inicio = fechaInicio != null ? fechaInicio : campana.getFechaInicio();
+                LocalDate fin = fechaFin != null ? fechaFin : campana.getFechaFin();
+                balance = balanceService.calcularBalancePorCampana(campana.getId(), inicio, fin);
+            } catch (Exception e) {
+                balance = balanceService.calcularBalance(user.getId(), fechaInicio, fechaFin);
+            }
             return ResponseEntity.ok(balance);
         } catch (IllegalArgumentException e) {
             System.err.println("Error de validación en obtenerBalanceGeneral: " + e.getMessage());

@@ -10,7 +10,12 @@ import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.cultivos.infrastructure.LaborRepository;
 import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import com.agrocloud.core.application.UserService;
+import com.agrocloud.config.CampanaRequestContext;
+import com.agrocloud.core.application.CampanaContextService;
+import com.agrocloud.cultivos.domain.CicloCultivo;
+import com.agrocloud.cultivos.infrastructure.CicloCultivoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +40,14 @@ public class LaborQueryService {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private CampanaContextService campanaContextService;
+
+    @Autowired
+    @Qualifier("cicloCultivoRepositoryCultivos")
+    private CicloCultivoRepository cicloCultivoRepository;
 
     /**
      * Obtiene los IDs de lotes accesibles por el usuario.
@@ -118,6 +131,14 @@ public class LaborQueryService {
             List<Long> loteIds = getLoteIdsByUser(user);
             if (loteIds.isEmpty()) {
                 return new ArrayList<>();
+            }
+            Long campanaHeader = CampanaRequestContext.getCampanaId();
+            if (campanaHeader != null) {
+                List<Long> cicloIds = cicloCultivoRepository.findByCampanaIdOrderByFechaSiembraDesc(campanaHeader)
+                        .stream().map(CicloCultivo::getId).toList();
+                if (!cicloIds.isEmpty()) {
+                    return laborRepository.findByLoteIdInAndCicloCultivoIdIn(loteIds, cicloIds);
+                }
             }
             return laborRepository.findByLoteIdInWithFetch(loteIds);
         } catch (Exception e) {

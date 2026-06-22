@@ -37,6 +37,8 @@ public class RecriaController {
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<List<Recria>> getAllRecrias(
+            @RequestParam(required = false) Boolean activas,
+            @RequestParam(required = false) Boolean delPeriodoActivo,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
             User user = obtenerUsuario(userDetails);
@@ -44,7 +46,7 @@ public class RecriaController {
                 return ResponseEntity.badRequest().build();
             }
             
-            List<Recria> recrias = recriaService.obtenerRecriasActivas(user);
+            List<Recria> recrias = recriaService.listarRecrias(user, activas, delPeriodoActivo);
             return ResponseEntity.ok(recrias);
         } catch (Exception e) {
             System.err.println("Error al obtener recrÃ­as: " + e.getMessage());

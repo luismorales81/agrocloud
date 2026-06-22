@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.Comparator;
 
 /**
  * Calcula el EstadoLoteConfig (estado de la configuración) para un lote cuando tiene tipo de cultivo configurado.
@@ -66,21 +67,37 @@ public final class EstadoLoteConfigCalculator {
             return buscarEstadoPorNombre(estadosConfig, "cosecha", "corte", "listo");
         }
 
-        // 5. Con siembra: derivar por días desde fechaSiembra
+        // 5. Con siembra: derivar por días desde fechaSiembra (configurable o fallback)
         LocalDate fechaSiembra = lote.getFechaSiembra();
         if (fechaSiembra == null) {
             return buscarEstadoPorNombre(estadosConfig, "sembrado");
         }
 
         long dias = ChronoUnit.DAYS.between(fechaSiembra, LocalDate.now());
+
+        Optional<EstadoLoteConfig> porDiasConfigurados = derivarPorDiasMinimos(estadosConfig, dias);
+        if (porDiasConfigurados.isPresent()) {
+            return porDiasConfigurados;
+        }
+
+        // Fallback legacy por umbrales fijos
         if (dias < DIAS_EMERGENCIA) {
             return buscarEstadoPorNombre(estadosConfig, "sembrado");
         }
         if (dias < DIAS_ESTABLECIMIENTO) {
             return buscarEstadoPorNombre(estadosConfig, "emergencia", "sembrado");
         }
-        // Establecimiento o en crecimiento
         return buscarEstadoPorNombre(estadosConfig, "establecimiento", "crecimiento", "emergencia");
+    }
+
+    /**
+     * Selecciona el estado con mayor orden cuyo diasMinimos <= días transcurridos.
+     */
+    private static Optional<EstadoLoteConfig> derivarPorDiasMinimos(List<EstadoLoteConfig> estados, long dias) {
+        return estados.stream()
+            .filter(e -> e.getDiasMinimos() != null)
+            .filter(e -> dias >= e.getDiasMinimos())
+            .max(Comparator.comparing(EstadoLoteConfig::getOrden));
     }
 
     private static Optional<EstadoLoteConfig> buscarEstadoPostCosecha(List<EstadoLoteConfig> estados) {

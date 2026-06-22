@@ -1,4 +1,5 @@
 import api from '../../../services/api';
+import { FiltrosListadoOperativo, paramsListadoOperativo } from '../../../core/types/filtrosListadoOperativo';
 
 export interface AvicolaHuevoLoteRespuesta {
   id: number;
@@ -65,8 +66,10 @@ function mensajeError(e: unknown): string {
   return 'Error desconocido';
 }
 
-export async function listarLotesHuevos(): Promise<AvicolaHuevoLoteRespuesta[]> {
-  const { data } = await api.get<AvicolaHuevoLoteRespuesta[]>('/avicola-huevos/lotes');
+export async function listarLotesHuevos(filtros?: FiltrosListadoOperativo): Promise<AvicolaHuevoLoteRespuesta[]> {
+  const { data } = await api.get<AvicolaHuevoLoteRespuesta[]>('/avicola-huevos/lotes', {
+    params: paramsListadoOperativo(filtros),
+  });
   return Array.isArray(data) ? data : [];
 }
 

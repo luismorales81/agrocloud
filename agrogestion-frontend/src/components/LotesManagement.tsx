@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { usePermissions } from '../hooks/usePermissions';
+import useContextoOperativo from '../hooks/useContextoOperativo';
 import AccionLoteModal from './AccionLoteModal';
 import EstadoLoteDisplay from './EstadoLoteDisplay';
 import ResetLoteModal from './ResetLoteModal';
@@ -58,6 +59,7 @@ const LotesManagement: React.FC = () => {
   // Versión actualizada con modales simplificados - v2.0
   const { formatCurrency } = useCurrencyContext();
   const permissions = usePermissions();
+  const { campanaId } = useContextoOperativo();
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [campos, setCampos] = useState<Campo[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -176,7 +178,7 @@ const LotesManagement: React.FC = () => {
 
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [campanaId]);
   
   // Cerrar menú dropdown al hacer clic fuera
   useEffect(() => {

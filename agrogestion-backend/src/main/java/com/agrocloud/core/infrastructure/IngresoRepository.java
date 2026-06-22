@@ -34,6 +34,13 @@ public interface IngresoRepository extends JpaRepository<Ingreso, Long> {
                                                   @Param("fechaInicio") LocalDate fechaInicio,
                                                   @Param("fechaFin") LocalDate fechaFin);
 
+    @Query("SELECT COALESCE(SUM(i.monto), 0) FROM Ingreso i WHERE i.campanaId = :campanaId AND i.fecha BETWEEN :fechaInicio AND :fechaFin")
+    BigDecimal calcularTotalIngresosPorCampanaYFecha(@Param("campanaId") Long campanaId,
+                                                     @Param("fechaInicio") LocalDate fechaInicio,
+                                                     @Param("fechaFin") LocalDate fechaFin);
+
+    List<Ingreso> findByCampanaIdAndFechaBetweenOrderByFechaDesc(Long campanaId, LocalDate fechaInicio, LocalDate fechaFin);
+
     @Query("SELECT COALESCE(SUM(i.monto), 0) FROM Ingreso i WHERE i.tipoIngreso = :tipoIngreso AND i.fecha BETWEEN :fechaInicio AND :fechaFin")
     BigDecimal calcularTotalIngresosPorTipoYFecha(@Param("tipoIngreso") Ingreso.TipoIngreso tipoIngreso,
                                                   @Param("fechaInicio") LocalDate fechaInicio,

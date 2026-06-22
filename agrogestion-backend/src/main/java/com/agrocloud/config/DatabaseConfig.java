@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
- * Configuración JPA multi-módulo (legacy, core, cultivos, porcinos, avícola, trazabilidad).
+ * Configuración JPA multi-módulo (legacy, core, cultivos, porcinos, avícola, trazabilidad, feedlot).
  */
 @Configuration
 @EnableJpaRepositories(basePackages = "com.agrocloud")
@@ -16,7 +16,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
         "com.agrocloud.cultivos.domain",
         "com.agrocloud.porcinos.domain",
         "com.agrocloud.avicola",
-        "com.agrocloud.trazabilidad"
+        "com.agrocloud.trazabilidad",
+        "com.agrocloud.feedlot.model.entity"
 })
 @EnableTransactionManagement
 public class DatabaseConfig {

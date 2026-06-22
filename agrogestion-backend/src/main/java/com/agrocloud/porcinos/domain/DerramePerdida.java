@@ -81,6 +81,9 @@ public class DerramePerdida {
     @Column(name = "lote_id")
     private Long loteId;
 
+    @Column(name = "campana_id")
+    private Long campanaId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     @JsonIgnore
@@ -182,6 +185,8 @@ public class DerramePerdida {
     public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
     public Long getLoteId() { return loteId; }
     public void setLoteId(Long loteId) { this.loteId = loteId; }
+    public Long getCampanaId() { return campanaId; }
+    public void setCampanaId(Long campanaId) { this.campanaId = campanaId; }
     public User getUsuario() { return usuario; }
     public void setUsuario(User usuario) { this.usuario = usuario; }
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }

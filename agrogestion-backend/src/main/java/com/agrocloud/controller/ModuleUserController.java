@@ -174,6 +174,8 @@ public class ModuleUserController {
                 return "avicola-carne";
             case "AVICOLA_PONEDORAS":
                 return "avicola-ponedoras";
+            case "FEEDLOT":
+                return "feedlot";
             default:
                 return moduleCode.toLowerCase();
         }
@@ -191,63 +193,69 @@ public class ModuleUserController {
             case "PORCINOS":
                 return "Porcinos";
             case "AVICOLA_CRIANZA":
-                return "AvÃ­cola crianza";
+                return "Avicola crianza";
             case "AVICOLA_HUEVOS":
-                return "AvÃ­cola huevos";
+                return "Avicola huevos";
             case "AVICOLA_CARNE":
-                return "AvÃ­cola carne";
+                return "Avicola carne";
             case "AVICOLA_PONEDORAS":
-                return "AvÃ­cola ponedoras";
+                return "Avicola ponedoras";
+            case "FEEDLOT":
+                return "Engorde a corral (Feedlot)";
             default:
                 return moduleCode;
         }
     }
 
     /**
-     * Obtiene la descripciÃ³n de un mÃ³dulo por su cÃ³digo
+     * Obtiene la descripcion de un modulo por su codigo
      */
     private String getModuleDescription(String moduleCode) {
         switch (moduleCode.toUpperCase()) {
             case "CROPS":
             case "CULTIVOS":
-                return "GestiÃ³n de campos, lotes, cultivos y labores";
+                return "Gestion de campos, lotes, cultivos y labores";
             case "PIGS":
             case "PORCINOS":
-                return "GestiÃ³n de producciÃ³n porcina";
+                return "Gestion de produccion porcina";
             case "AVICOLA_CRIANZA":
                 return "Parrilleros y crianza: lotes, pesadas, mortalidad, ventas, consumos y sanidad.";
             case "AVICOLA_HUEVOS":
-                return "Postura: lotes de puesta, producciÃ³n diaria, consumos y sanidad.";
+                return "Postura: lotes de puesta, produccion diaria, consumos y sanidad.";
             case "AVICOLA_CARNE":
-                return "Carne avÃ­cola: lotes y operaciones (pesadas, mortalidad, ventas, consumos, sanidad).";
+                return "Carne avicola: lotes y operaciones (pesadas, mortalidad, ventas, consumos, sanidad).";
             case "AVICOLA_PONEDORAS":
-                return "Ponedoras y recrÃ­a: gestiÃ³n de explotaciones independiente de carne y huevos.";
+                return "Ponedoras y recria: gestion de explotaciones independiente de carne y huevos.";
+            case "FEEDLOT":
+                return "Engorde bovino a corral: lotes, pesadas, alimento, sanidad, faena y closeout.";
             default:
-                return "MÃ³dulo " + moduleCode;
+                return "Modulo " + moduleCode;
         }
     }
 
     /**
-     * Obtiene el icono de un mÃ³dulo por su cÃ³digo
+     * Obtiene el icono (nombre Lucide) de un modulo por su codigo
      */
     private String getModuleIcon(String moduleCode) {
         switch (moduleCode.toUpperCase()) {
             case "CROPS":
             case "CULTIVOS":
-                return "ðŸŒ¾";
+                return "Wheat";
             case "PIGS":
             case "PORCINOS":
-                return "ðŸ·";
+                return "PiggyBank";
             case "AVICOLA_CRIANZA":
-                return "ðŸ”";
+                return "Bird";
             case "AVICOLA_HUEVOS":
-                return "ðŸ¥š";
+                return "Egg";
             case "AVICOLA_CARNE":
-                return "ðŸ—";
+                return "Drumstick";
             case "AVICOLA_PONEDORAS":
-                return "ðŸ”";
+                return "Egg";
+            case "FEEDLOT":
+                return "Beef";
             default:
-                return "ðŸ“¦";
+                return "Package";
         }
     }
 
@@ -270,6 +278,8 @@ public class ModuleUserController {
                 return "#dc2626";
             case "AVICOLA_PONEDORAS":
                 return "#7c3aed";
+            case "FEEDLOT":
+                return "#b45309";
             default:
                 return "#3b82f6";
         }

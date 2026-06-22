@@ -17,8 +17,11 @@ public interface RecriaRepository extends JpaRepository<Recria, Long> {
 
     List<Recria> findByEmpresaAndActivoTrue(Empresa empresa);
 
-    @Query("SELECT r FROM Recria r WHERE r.empresa = :empresa AND r.activo = true AND r.fechaSalida IS NULL")
+    @Query("SELECT r FROM Recria r WHERE r.empresa = :empresa AND r.activo = true AND r.fechaSalida IS NULL ORDER BY r.fechaIngreso DESC")
     List<Recria> findByEmpresaAndActivas(@Param("empresa") Empresa empresa);
+
+    @Query("SELECT r FROM Recria r WHERE r.empresa = :empresa AND r.activo = true ORDER BY r.fechaIngreso DESC")
+    List<Recria> findByEmpresaTodasActivas(@Param("empresa") Empresa empresa);
 
     Optional<Recria> findByIdAndActivoTrue(Long id);
 

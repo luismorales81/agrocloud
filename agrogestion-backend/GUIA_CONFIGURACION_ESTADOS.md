@@ -89,14 +89,34 @@ Cada tarea tiene:
    - Si hay personalización por empresa, usa esa; si no, usa la plantilla global
 
 3. **Cambiar Estado del Lote**
-   - El sistema valida que la transición sea permitida
-   - Si requiere motivo, solicita justificación
-   - Actualiza el estado del lote
+   - Si el lote usa **estados configurados**, valida contra `cultivo_transiciones_estado` (plantilla o empresa)
+   - Si requiere motivo (`requiereMotivo`), solicita justificación
+   - Estados **Sembrado** y **Cosechado** son derivados por siembra/cosecha (no manual)
+   - Sin configuración, usa la matriz legacy del enum `EstadoLote`
 
 4. **Ver Tareas Disponibles**
    - Al seleccionar un estado, muestra las tareas permitidas
-   - Las tareas obligatorias se destacan
+   - Las tareas **obligatorias** deben completarse para avanzar al siguiente estado (si hay transición)
    - El usuario puede crear labores solo de los tipos permitidos
+
+5. **Camino del lote (Labores)**
+   - Al elegir un lote aparece el panel con estados, próximo paso, tareas pendientes y mensaje de avance
+   - API: `GET /api/estados-lotes/lote/{id}/progreso`
+
+6. **Vista guiada (Configuración)**
+   - Tab **Vista guiada**: diagrama del ciclo, validación automática y asistente paso a paso
+   - API validación: `GET /api/v1/configuracion-estados/validacion-completa`
+
+7. **Recálculo diario automático**
+   - Job a las **01:00** recalcula estados por tiempo/tareas en lotes activos con cultivo
+   - Manual: `POST /api/estados-lotes/recalcular-todos` o botón en Vista guiada
+
+### Campos nuevos por estado
+
+| Campo | Uso |
+|-------|-----|
+| `dias_minimos` | Días desde siembra para alcanzar el estado (avance por tiempo) |
+| `modo_avance` | EVENTO, TIEMPO, TAREAS o MIXTO (orientación en UI) |
 
 ---
 

@@ -1,4 +1,5 @@
 import api from '../../../services/api';
+import { FiltrosListadoOperativo, paramsListadoOperativo } from '../../../core/types/filtrosListadoOperativo';
 import type {
   AvicolaPonedorasGalpon,
   Consumo,
@@ -34,9 +35,9 @@ export function mensajeErrorPonedoras(error: unknown): string {
   return 'Ocurrió un error inesperado';
 }
 
-export async function listarGalpones(estado?: string): Promise<AvicolaPonedorasGalpon[]> {
+export async function listarGalpones(filtros?: FiltrosListadoOperativo): Promise<AvicolaPonedorasGalpon[]> {
   const { data } = await api.get<AvicolaPonedorasGalpon[]>(`${BASE}/galpones`, {
-    params: estado != null && estado !== '' ? { estado } : undefined,
+    params: paramsListadoOperativo(filtros),
   });
   return Array.isArray(data) ? data : [];
 }

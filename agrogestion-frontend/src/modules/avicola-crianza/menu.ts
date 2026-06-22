@@ -39,9 +39,9 @@ export const avicolaCrianzaMenu: MenuItem[] = [
     permisos: ['canViewInsumos'],
   },
   {
-    id: 'trazabilidad-expediente',
-    nombre: 'Expediente trazabilidad',
-    icono: 'FileText',
-    ruta: '/avicola-crianza/trazabilidad-expediente',
+    id: 'periodos-gestion',
+    nombre: 'Períodos de gestión',
+    icono: 'CalendarDays',
+    ruta: '/avicola-crianza/configuracion/periodos',
   },
 ];

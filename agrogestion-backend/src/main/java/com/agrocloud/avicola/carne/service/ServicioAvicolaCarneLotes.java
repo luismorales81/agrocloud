@@ -28,11 +28,13 @@ public class ServicioAvicolaCarneLotes {
 
     @Transactional(readOnly = true)
     public List<AvicolaLoteRespuesta> listarLotes(AvicolaLoteEstado estado) {
+        return listarLotes(estado, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvicolaLoteRespuesta> listarLotes(AvicolaLoteEstado estado, Boolean delPeriodoActivo) {
         Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
-        if (estado != null) {
-            return servicioLote.listarLotesPorEstado(empresaId, estado);
-        }
-        return servicioLote.listarLotes(empresaId);
+        return servicioLote.listarLotes(empresaId, estado, delPeriodoActivo);
     }
 
     @Transactional(readOnly = true)

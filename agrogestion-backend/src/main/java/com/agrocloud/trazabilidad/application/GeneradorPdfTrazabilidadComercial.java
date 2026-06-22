@@ -43,6 +43,12 @@ public class GeneradorPdfTrazabilidadComercial {
                 y = linea(c, normal, 9, MARGEN, y, "Fecha: " + reporte.getGeneradoEn().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                 y = linea(c, normal, 9, MARGEN, y, "Empresa: " + (empresa.getNombre() != null ? empresa.getNombre() : ""));
                 y = linea(c, normal, 9, MARGEN, y, "Usuario: " + usuario.getEmail());
+                if (hechos.getCampanaNombre() != null && !hechos.getCampanaNombre().isBlank()) {
+                    String campanaTxt = hechos.getCampanaCodigo() != null
+                            ? hechos.getCampanaCodigo() + " - " + hechos.getCampanaNombre()
+                            : hechos.getCampanaNombre();
+                    y = linea(c, normal, 9, MARGEN, y, "Campana: " + campanaTxt);
+                }
                 y -= 10;
                 y = linea(c, bold, 11, MARGEN, y, "Alcance");
                 y = parrafoEnvuelto(c, normal, 9, MARGEN, 540, y, hechos.getDescripcionAlcance() != null ? hechos.getDescripcionAlcance() : "-");

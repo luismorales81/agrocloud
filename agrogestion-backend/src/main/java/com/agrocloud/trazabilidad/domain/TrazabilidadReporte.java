@@ -30,7 +30,8 @@ public class TrazabilidadReporte {
         AVICOLA_HUEVOS,
         AVICOLA_CRIANZA,
         AVICOLA_CARNE,
-        AVICOLA_PONEDORAS
+        AVICOLA_PONEDORAS,
+        FEEDLOT_LOTE
     }
 
     @Id

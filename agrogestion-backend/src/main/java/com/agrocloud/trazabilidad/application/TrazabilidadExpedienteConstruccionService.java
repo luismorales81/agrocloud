@@ -14,6 +14,8 @@ import com.agrocloud.avicola.huevos.repository.AvicolaHuevoProduccionDiariaRepos
 import com.agrocloud.avicola.ponedoras.model.entity.*;
 import com.agrocloud.avicola.ponedoras.repository.*;
 import com.agrocloud.core.domain.Empresa;
+import com.agrocloud.core.domain.Campana;
+import com.agrocloud.core.application.CampanaContextService;
 import com.agrocloud.cultivos.domain.Plot;
 import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import com.agrocloud.cultivos.domain.HistorialCosecha;
@@ -27,6 +29,7 @@ import com.agrocloud.trazabilidad.dto.HechosExpedienteTrazabilidad;
 import com.agrocloud.trazabilidad.dto.HechosTrazabilidadDocumento;
 import com.agrocloud.trazabilidad.excepcion.TrazabilidadEntidadInaccesibleExcepcion;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +50,9 @@ public class TrazabilidadExpedienteConstruccionService {
     public static final String CODIGO_EXPEDIENTE = "EXPEDIENTE_CICLO_VIDA";
 
     @Autowired private TrazabilidadQueryService trazabilidadQueryService;
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private CampanaContextService campanaContextService;
     @Autowired private HistorialCosechaRepository historialCosechaRepository;
     @Autowired private AplicacionAgroquimicaRepository aplicacionAgroquimicaRepository;
     @Autowired private PlotRepository plotRepository;
@@ -77,6 +83,13 @@ public class TrazabilidadExpedienteConstruccionService {
     @Autowired private AvicolaPonedorasMuerteRepository avicolaPonedorasMuerteRepository;
     @Autowired private AvicolaPonedorasEventoSanitarioRepository avicolaPonedorasEventoSanitarioRepository;
     @Autowired private AvicolaPonedorasVentaHuevosRepository avicolaPonedorasVentaHuevosRepository;
+    @Autowired private com.agrocloud.feedlot.repository.FeedlotLoteRepository feedlotLoteRepository;
+    @Autowired private com.agrocloud.feedlot.repository.FeedlotPesadaRepository feedlotPesadaRepository;
+    @Autowired private com.agrocloud.feedlot.repository.FeedlotConsumoRepository feedlotConsumoRepository;
+    @Autowired private com.agrocloud.feedlot.repository.FeedlotMuerteRepository feedlotMuerteRepository;
+    @Autowired private com.agrocloud.feedlot.repository.FeedlotEventoSanitarioRepository feedlotEventoSanitarioRepository;
+    @Autowired private com.agrocloud.feedlot.repository.FeedlotVentaRepository feedlotVentaRepository;
+    @Autowired private com.agrocloud.feedlot.service.ServicioFeedlotCloseout servicioFeedlotCloseout;
 
     public HechosExpedienteTrazabilidad construir(String entidadTipo, Long entidadId, Empresa empresa) {
         String tipo = entidadTipo.trim().toUpperCase();
@@ -89,6 +102,7 @@ public class TrazabilidadExpedienteConstruccionService {
             case "AVICOLA_CRIANZA" -> construirAvicolaLoteCrianza(entidadId, empresa);
             case "AVICOLA_CARNE" -> construirAvicolaLoteCarne(entidadId, empresa);
             case "AVICOLA_PONEDORAS" -> construirAvicolaPonedoras(entidadId, empresa);
+            case "FEEDLOT_LOTE" -> construirFeedlotLote(entidadId, empresa);
             default -> throw new IllegalArgumentException("entidadTipo no soportado: " + entidadTipo);
         };
     }
@@ -379,6 +393,71 @@ public class TrazabilidadExpedienteConstruccionService {
         return exp;
     }
 
+    private HechosExpedienteTrazabilidad construirFeedlotLote(Long loteId, Empresa empresa) {
+        com.agrocloud.feedlot.model.entity.FeedlotLote lote = feedlotLoteRepository.buscarPorIdYEmpresaId(loteId, empresa.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Lote feedlot no encontrado: " + loteId));
+        verificarEmpresa(lote.getEmpresaId(), empresa);
+        LocalDate hasta = lote.getFechaCierre() != null ? lote.getFechaCierre() : LocalDate.now();
+        HechosExpedienteTrazabilidad exp = baseExpediente(
+                "Expediente lote feedlot",
+                lote.getNombre(),
+                "Feedlot",
+                "FEEDLOT_LOTE",
+                loteId,
+                empresa,
+                lote.getFechaIngreso(),
+                hasta);
+        HechosExpedienteTrazabilidad.Seccion ident = nuevaSeccion("Identificación");
+        agregarFila(ident, "Nombre", valor(lote.getNombre()));
+        agregarFila(ident, "Corral", lote.getCorral() != null ? valor(lote.getCorral().getNombre()) : "-");
+        agregarFila(ident, "Categoría", lote.getCategoria() != null ? valor(lote.getCategoria().getNombre()) : "-");
+        agregarFila(ident, "Cabezas iniciales", valor(lote.getCabezasInicial()));
+        agregarFila(ident, "Cabezas actuales", valor(lote.getCabezasActuales()));
+        agregarFila(ident, "Estado", valor(lote.getEstado()));
+        agregarFila(ident, "Fecha ingreso", valor(lote.getFechaIngreso()));
+        agregarFila(ident, "Fecha cierre", valor(lote.getFechaCierre()));
+        exp.getSecciones().add(ident);
+
+        agregarEvento(exp, lote.getFechaIngreso(), "Ingreso",
+                "Alta lote " + lote.getNombre() + " — " + lote.getCabezasInicial() + " cabezas");
+
+        for (com.agrocloud.feedlot.model.entity.FeedlotPesada p
+                : feedlotPesadaRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId())) {
+            agregarEvento(exp, p.getFecha(), "Pesada", "Peso promedio " + valor(p.getPesoPromedioKg()) + " kg");
+        }
+        for (com.agrocloud.feedlot.model.entity.FeedlotConsumo c
+                : feedlotConsumoRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId())) {
+            agregarEvento(exp, c.getFecha(), "Consumo", "Alimento " + valor(c.getCantidadKg()) + " kg");
+        }
+        for (com.agrocloud.feedlot.model.entity.FeedlotMuerte m
+                : feedlotMuerteRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId())) {
+            agregarEvento(exp, m.getFecha(), "Mortalidad", m.getCabezas() + " cabezas");
+        }
+        for (com.agrocloud.feedlot.model.entity.FeedlotEventoSanitario s
+                : feedlotEventoSanitarioRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId())) {
+            agregarEvento(exp, s.getFecha(), "Sanidad",
+                    valor(s.getTipo()) + (s.getDescripcion() != null ? " — " + s.getDescripcion() : ""));
+        }
+        for (com.agrocloud.feedlot.model.entity.FeedlotVenta v
+                : feedlotVentaRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId())) {
+            agregarEvento(exp, v.getFecha(), "Venta/Faena",
+                    valor(v.getTipo()) + " — " + v.getCabezas() + " cabezas");
+        }
+
+        com.agrocloud.feedlot.model.dto.FeedlotCloseoutRespuesta closeout =
+                servicioFeedlotCloseout.construirCloseout(lote, empresa.getId());
+        HechosExpedienteTrazabilidad.Seccion kpis = nuevaSeccion("Indicadores de cierre");
+        agregarFila(kpis, "GMD (kg/día)", valor(closeout.getGmd()));
+        agregarFila(kpis, "Conversión alimenticia", valor(closeout.getConversionAlimenticia()));
+        agregarFila(kpis, "Mortalidad %", valor(closeout.getMortalidadPct()));
+        agregarFila(kpis, "Margen", valor(closeout.getMargen()));
+        agregarFila(kpis, "Método closeout", valor(closeout.getMetodoCloseout()));
+        exp.getSecciones().add(kpis);
+
+        ordenarLineaTiempo(exp);
+        return exp;
+    }
+
     private void incorporarAplicacionesAgroquimicas(
             HechosExpedienteTrazabilidad exp, HechosTrazabilidadDocumento hechos) {
         List<Long> laborIds = hechos.getLabores().stream()
@@ -483,7 +562,7 @@ public class TrazabilidadExpedienteConstruccionService {
         }
     }
 
-    private static HechosExpedienteTrazabilidad baseExpediente(
+    private HechosExpedienteTrazabilidad baseExpediente(
             String titulo,
             String subtitulo,
             String modulo,
@@ -501,7 +580,18 @@ public class TrazabilidadExpedienteConstruccionService {
         exp.setNombreEmpresa(empresa.getNombre());
         exp.setFechaCorteDesde(desde);
         exp.setFechaCorteHasta(hasta);
+        enriquecerConCampanaActiva(exp, empresa);
         return exp;
+    }
+
+    private void enriquecerConCampanaActiva(HechosExpedienteTrazabilidad exp, Empresa empresa) {
+        try {
+            Campana campana = campanaContextService.resolverCampanaActiva(empresa.getId());
+            exp.setCampanaId(campana.getId());
+            exp.setCampanaCodigo(campana.getCodigo());
+            exp.setCampanaNombre(campana.getNombre());
+        } catch (Exception ignored) {
+        }
     }
 
     private static TrazabilidadCertificacion certificadoExpediente() {

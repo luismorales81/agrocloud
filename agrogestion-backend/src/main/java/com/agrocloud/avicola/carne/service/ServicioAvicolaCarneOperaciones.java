@@ -187,6 +187,7 @@ public class ServicioAvicolaCarneOperaciones {
         v.setTotal(solicitud.getTotal());
         v.setComprador(solicitud.getComprador());
         v.setObservaciones(solicitud.getObservaciones());
+        v.setCampanaId(lote.getCampanaId());
         return aVentaRespuesta(ventaRepository.save(v));
     }
 
@@ -214,6 +215,7 @@ public class ServicioAvicolaCarneOperaciones {
         c.setCantidad(solicitud.getCantidad());
         c.setTipo(solicitud.getTipo() != null ? solicitud.getTipo() : "MANUAL");
         c.setObservaciones(solicitud.getObservaciones());
+        c.setCampanaId(lote.getCampanaId());
         c = consumoRepository.saveAndFlush(c);
 
         InventoryResult resultado = inventoryService.consumir(

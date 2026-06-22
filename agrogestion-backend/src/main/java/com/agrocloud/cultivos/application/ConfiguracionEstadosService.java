@@ -15,6 +15,7 @@ import com.agrocloud.cultivos.infrastructure.TareaPorEstadoConfigRepository;
 import com.agrocloud.cultivos.infrastructure.TipoCultivoRepository;
 import com.agrocloud.cultivos.infrastructure.TransicionEstadoConfigRepository;
 import com.agrocloud.cultivos.infrastructure.LaborRepository;
+import com.agrocloud.dto.ValidacionConfiguracionEstadosDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -86,9 +87,32 @@ public class ConfiguracionEstadosService {
      */
     @Transactional
     public TipoCultivo crearTipoCultivo(TipoCultivo tipoCultivo) {
-        // Verificar que no exista otro con el mismo nombre
-        if (tipoCultivoRepository.findByNombre(tipoCultivo.getNombre()).isPresent()) {
-            throw new IllegalArgumentException("Ya existe un tipo de cultivo con el nombre: " + tipoCultivo.getNombre());
+        String nombre = tipoCultivo.getNombre() == null ? "" : tipoCultivo.getNombre().trim();
+        if (nombre.isBlank()) {
+            throw new IllegalArgumentException("El nombre del tipo de cultivo es obligatorio");
+        }
+        tipoCultivo.setNombre(nombre);
+        if (tipoCultivo.getEsPlantilla() == null) {
+            tipoCultivo.setEsPlantilla(false);
+        }
+        if (tipoCultivo.getActivo() == null) {
+            tipoCultivo.setActivo(true);
+        }
+
+        Optional<TipoCultivo> existente = tipoCultivoRepository.findByNombreIgnoreCase(nombre);
+        if (existente.isPresent()) {
+            TipoCultivo otro = existente.get();
+            if (Boolean.TRUE.equals(otro.getEsPlantilla()) && Boolean.TRUE.equals(otro.getActivo())) {
+                throw new IllegalArgumentException(
+                    "Ya existe la plantilla \"" + otro.getNombre()
+                        + "\". Selecciónela en el listado para configurar sus estados; no hace falta crearla de nuevo.");
+            }
+            if (Boolean.TRUE.equals(otro.getActivo())) {
+                throw new IllegalArgumentException("Ya existe un tipo de cultivo con el nombre: " + nombre);
+            }
+            throw new IllegalArgumentException(
+                "Ya existe un tipo de cultivo inactivo con el nombre \"" + otro.getNombre()
+                    + "\". Elija otro nombre o reactive el existente desde administración.");
         }
         return tipoCultivoRepository.save(tipoCultivo);
     }
@@ -149,12 +173,13 @@ public class ConfiguracionEstadosService {
             List<EstadoLoteConfig> personalizados = estadoLoteConfigRepository
                 .findByTipoCultivoIdAndEmpresaIdAndActivoTrueOrderByOrdenAsc(tipoCultivoId, empresaId);
             if (!personalizados.isEmpty()) {
-                return personalizados;
+                return deduplicarEstadosPorNombre(personalizados);
             }
         }
 
         // Si no hay personalización, usar plantilla global
-        return estadoLoteConfigRepository.findPlantillasByTipoCultivoId(tipoCultivoId);
+        return deduplicarEstadosPorNombre(
+            estadoLoteConfigRepository.findPlantillasByTipoCultivoId(tipoCultivoId));
     }
 
     /**
@@ -221,6 +246,10 @@ public class ConfiguracionEstadosService {
             estado.setIcono(estadoData.getIcono());
             estado.setEsEstadoInicial(estadoData.getEsEstadoInicial());
             estado.setEsEstadoFinal(estadoData.getEsEstadoFinal());
+            estado.setDiasMinimos(estadoData.getDiasMinimos());
+            if (estadoData.getModoAvance() != null) {
+                estado.setModoAvance(estadoData.getModoAvance());
+            }
 
             return Optional.of(estadoLoteConfigRepository.save(estado));
         }
@@ -268,8 +297,9 @@ public class ConfiguracionEstadosService {
      */
     @Transactional
     public void copiarPlantillaAEmpresa(Long tipoCultivoId, Long empresaId) {
-        // Obtener plantilla
-        List<EstadoLoteConfig> plantilla = estadoLoteConfigRepository.findPlantillasByTipoCultivoId(tipoCultivoId);
+        // Obtener plantilla (sin duplicados por nombre)
+        List<EstadoLoteConfig> plantilla = deduplicarEstadosPorNombre(
+            estadoLoteConfigRepository.findPlantillasByTipoCultivoId(tipoCultivoId));
 
         if (plantilla.isEmpty()) {
             throw new IllegalArgumentException("No existe plantilla para el tipo de cultivo especificado");
@@ -301,19 +331,33 @@ public class ConfiguracionEstadosService {
             nuevoEstado.setOrden(estadoPlantilla.getOrden());
             nuevoEstado.setEsEstadoInicial(estadoPlantilla.getEsEstadoInicial());
             nuevoEstado.setEsEstadoFinal(estadoPlantilla.getEsEstadoFinal());
+            nuevoEstado.setDiasMinimos(estadoPlantilla.getDiasMinimos());
+            nuevoEstado.setModoAvance(estadoPlantilla.getModoAvance());
             nuevoEstado.setActivo(true);
 
             EstadoLoteConfig estadoGuardado = estadoLoteConfigRepository.save(nuevoEstado);
             estadosCreados.put(estadoPlantilla.getId(), estadoGuardado);
         }
 
-        // Copiar transiciones
-        List<TransicionEstadoConfig> transicionesPlantilla = transicionEstadoConfigRepository
-            .findPlantillasByTipoCultivoId(tipoCultivoId);
+        // Copiar transiciones (deduplicadas por par lógico origen→destino)
+        List<TransicionEstadoConfig> transicionesPlantilla = deduplicarTransicionesPorParLogico(
+            transicionEstadoConfigRepository.findPlantillasByTipoCultivoId(tipoCultivoId));
 
         for (TransicionEstadoConfig transicionPlantilla : transicionesPlantilla) {
-            EstadoLoteConfig origenNuevo = estadosCreados.get(transicionPlantilla.getEstadoOrigen().getId());
-            EstadoLoteConfig destinoNuevo = estadosCreados.get(transicionPlantilla.getEstadoDestino().getId());
+            String nombreOrigen = transicionPlantilla.getEstadoOrigen() != null
+                ? transicionPlantilla.getEstadoOrigen().getNombre() : null;
+            String nombreDestino = transicionPlantilla.getEstadoDestino() != null
+                ? transicionPlantilla.getEstadoDestino().getNombre() : null;
+            EstadoLoteConfig origenNuevo = nombreOrigen != null
+                ? estadosCreados.values().stream()
+                    .filter(e -> normalizarNombreEstado(e.getNombre()).equals(normalizarNombreEstado(nombreOrigen)))
+                    .findFirst().orElse(null)
+                : null;
+            EstadoLoteConfig destinoNuevo = nombreDestino != null
+                ? estadosCreados.values().stream()
+                    .filter(e -> normalizarNombreEstado(e.getNombre()).equals(normalizarNombreEstado(nombreDestino)))
+                    .findFirst().orElse(null)
+                : null;
 
             if (origenNuevo != null && destinoNuevo != null) {
                 TransicionEstadoConfig nuevaTransicion = new TransicionEstadoConfig();
@@ -359,14 +403,22 @@ public class ConfiguracionEstadosService {
      */
     @Transactional(readOnly = true)
     public List<TransicionEstadoConfig> obtenerTransicionesPorTipoCultivo(Long tipoCultivoId, Long empresaId) {
+        List<TransicionEstadoConfig> transiciones;
         if (empresaId != null) {
             List<TransicionEstadoConfig> personalizadas = transicionEstadoConfigRepository
                 .findByTipoCultivoIdAndEmpresaIdAndActivoTrue(tipoCultivoId, empresaId);
             if (!personalizadas.isEmpty()) {
-                return personalizadas;
+                transiciones = personalizadas;
+            } else {
+                transiciones = remapearTransicionesAEstadosEmpresa(
+                    transicionEstadoConfigRepository.findPlantillasByTipoCultivoId(tipoCultivoId),
+                    tipoCultivoId,
+                    empresaId);
             }
+        } else {
+            transiciones = transicionEstadoConfigRepository.findPlantillasByTipoCultivoId(tipoCultivoId);
         }
-        return transicionEstadoConfigRepository.findPlantillasByTipoCultivoId(tipoCultivoId);
+        return deduplicarTransicionesPorParLogico(transiciones);
     }
 
     /**
@@ -374,7 +426,9 @@ public class ConfiguracionEstadosService {
      */
     @Transactional(readOnly = true)
     public List<TransicionEstadoConfig> obtenerTransicionesValidasDesdeEstado(Long estadoOrigenId, Long empresaId) {
-        return transicionEstadoConfigRepository.findTransicionesValidasDesdeEstado(estadoOrigenId, empresaId);
+        List<TransicionEstadoConfig> transiciones = transicionEstadoConfigRepository
+            .findTransicionesValidasDesdeEstado(estadoOrigenId, empresaId);
+        return deduplicarTransicionesPorParLogico(transiciones);
     }
 
     /**
@@ -394,7 +448,7 @@ public class ConfiguracionEstadosService {
             throw new IllegalArgumentException("Los estados origen y destino son obligatorios");
         }
 
-        // Validar que no exista ya esta transición
+        // Validar que no exista ya esta transición (por IDs o por par lógico de nombres)
         Optional<TransicionEstadoConfig> existente = transicionEstadoConfigRepository
             .findByEstadoOrigenIdAndEstadoDestinoIdAndEmpresaId(
                 estadoOrigenId,
@@ -415,6 +469,14 @@ public class ConfiguracionEstadosService {
             .orElseThrow(() -> new IllegalArgumentException("Estado origen no encontrado"));
         EstadoLoteConfig estadoDestino = estadoLoteConfigRepository.findById(estadoDestinoId)
             .orElseThrow(() -> new IllegalArgumentException("Estado destino no encontrado"));
+
+        String claveNueva = claveTransicionLogica(estadoOrigen.getNombre(), estadoDestino.getNombre());
+        boolean duplicadaLogica = obtenerTransicionesPorTipoCultivo(tipoCultivoId, empresaId).stream()
+            .anyMatch(t -> claveTransicionLogica(t).equals(claveNueva));
+        if (duplicadaLogica) {
+            throw new IllegalArgumentException(
+                "Ya existe una transición entre \"" + estadoOrigen.getNombre() + "\" y \"" + estadoDestino.getNombre() + "\"");
+        }
 
         // Asignar relaciones
         if (tipoCultivoId != null) {
@@ -448,6 +510,50 @@ public class ConfiguracionEstadosService {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Actualizar una transición existente (requiereMotivo y activo).
+     */
+    @Transactional
+    public Optional<TransicionEstadoConfig> actualizarTransicion(Long id, TransicionEstadoConfig datos) {
+        Optional<TransicionEstadoConfig> transicionOpt = transicionEstadoConfigRepository.findById(id);
+        if (transicionOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        TransicionEstadoConfig transicion = transicionOpt.get();
+        if (datos.getRequiereMotivo() != null) {
+            transicion.setRequiereMotivo(datos.getRequiereMotivo());
+        }
+        if (datos.getActivo() != null) {
+            transicion.setActivo(datos.getActivo());
+        }
+        return Optional.of(transicionEstadoConfigRepository.save(transicion));
+    }
+
+    /**
+     * Obtener transición por ID.
+     */
+    @Transactional(readOnly = true)
+    public Optional<TransicionEstadoConfig> obtenerTransicionPorId(Long id) {
+        return transicionEstadoConfigRepository.findById(id);
+    }
+
+    /**
+     * Busca transición activa origen→destino (empresa o plantilla).
+     */
+    @Transactional(readOnly = true)
+    public Optional<TransicionEstadoConfig> buscarTransicion(Long estadoOrigenId, Long estadoDestinoId, Long empresaId) {
+        if (empresaId != null) {
+            Optional<TransicionEstadoConfig> personalizada = transicionEstadoConfigRepository
+                .findByEstadoOrigenIdAndEstadoDestinoIdAndEmpresaId(estadoOrigenId, estadoDestinoId, empresaId);
+            if (personalizada.isPresent() && Boolean.TRUE.equals(personalizada.get().getActivo())) {
+                return personalizada;
+            }
+        }
+        return transicionEstadoConfigRepository
+            .findByEstadoOrigenIdAndEstadoDestinoIdAndEmpresaId(estadoOrigenId, estadoDestinoId, null)
+            .filter(t -> Boolean.TRUE.equals(t.getActivo()));
     }
 
     // ============================================================================
@@ -661,9 +767,7 @@ public class ConfiguracionEstadosService {
      */
     @Transactional(readOnly = true)
     public boolean validarTransicion(Long estadoOrigenId, Long estadoDestinoId, Long empresaId) {
-        Optional<TransicionEstadoConfig> transicion = transicionEstadoConfigRepository
-            .findByEstadoOrigenIdAndEstadoDestinoIdAndEmpresaId(estadoOrigenId, estadoDestinoId, empresaId);
-        return transicion.isPresent() && transicion.get().getActivo();
+        return buscarTransicion(estadoOrigenId, estadoDestinoId, empresaId).isPresent();
     }
 
     /**
@@ -675,5 +779,196 @@ public class ConfiguracionEstadosService {
             .findTareasDisponiblesPorEstado(estadoId, empresaId);
         return tareas.stream()
             .anyMatch(t -> t.getTipoLabor().equals(tipoLabor) && t.getActivo());
+    }
+
+    /**
+     * Valida coherencia de estados, transiciones y tareas para un tipo de cultivo.
+     */
+    @Transactional(readOnly = true)
+    public ValidacionConfiguracionEstadosDTO validarConfiguracionCompleta(Long tipoCultivoId, Long empresaId) {
+        ValidacionConfiguracionEstadosDTO resultado = new ValidacionConfiguracionEstadosDTO();
+        List<EstadoLoteConfig> estados = obtenerEstadosPorTipoCultivo(tipoCultivoId, empresaId);
+        List<TransicionEstadoConfig> transiciones = obtenerTransicionesPorTipoCultivo(tipoCultivoId, empresaId);
+
+        resultado.setTotalEstados(estados.size());
+        resultado.setTotalTransiciones(transiciones.size());
+
+        int totalTareas = 0;
+        for (EstadoLoteConfig estado : estados) {
+            totalTareas += obtenerTareasPorEstado(estado.getId(), empresaId).size();
+        }
+        resultado.setTotalTareas(totalTareas);
+
+        if (estados.isEmpty()) {
+            agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.ERROR,
+                "SIN_ESTADOS", "No hay estados configurados para este tipo de cultivo.", null, null);
+            resultado.setValida(false);
+            return resultado;
+        }
+
+        long iniciales = estados.stream().filter(e -> Boolean.TRUE.equals(e.getEsEstadoInicial())).count();
+        if (iniciales == 0) {
+            agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.ERROR,
+                "SIN_ESTADO_INICIAL", "Debe definir al menos un estado inicial.", null, null);
+        } else if (iniciales > 1) {
+            agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.ADVERTENCIA,
+                "MULTIPLES_INICIALES", "Hay " + iniciales + " estados iniciales; se recomienda uno solo.", null, null);
+        }
+
+        long finales = estados.stream().filter(e -> Boolean.TRUE.equals(e.getEsEstadoFinal())).count();
+        if (finales == 0) {
+            agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.ADVERTENCIA,
+                "SIN_ESTADO_FINAL", "No hay estados marcados como finales.", null, null);
+        }
+
+        for (EstadoLoteConfig estado : estados) {
+            boolean esInicial = Boolean.TRUE.equals(estado.getEsEstadoInicial());
+            boolean esFinal = Boolean.TRUE.equals(estado.getEsEstadoFinal());
+
+            long entradas = transiciones.stream()
+                .filter(t -> t.getEstadoDestino() != null && t.getEstadoDestino().getId().equals(estado.getId()))
+                .count();
+            long salidas = transiciones.stream()
+                .filter(t -> t.getEstadoOrigen() != null && t.getEstadoOrigen().getId().equals(estado.getId()))
+                .count();
+
+            if (!esInicial && entradas == 0) {
+                agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.ADVERTENCIA,
+                    "SIN_ENTRADA", "No tiene transiciones de entrada.", estado.getId(), estado.getNombre());
+            }
+            if (!esFinal && salidas == 0) {
+                agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.ADVERTENCIA,
+                    "SIN_SALIDA", "No tiene transiciones de salida.", estado.getId(), estado.getNombre());
+            }
+
+            List<TareaPorEstadoConfig> tareas = obtenerTareasPorEstado(estado.getId(), empresaId);
+            if (tareas.isEmpty()) {
+                agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.INFO,
+                    "SIN_TAREAS", "No tiene tareas configuradas.", estado.getId(), estado.getNombre());
+            }
+
+            for (TransicionEstadoConfig tr : transiciones) {
+                if (tr.getEstadoOrigen() != null && tr.getEstadoOrigen().getId().equals(estado.getId())
+                        && tr.getEstadoDestino() != null
+                        && tr.getEstadoDestino().getOrden() != null && estado.getOrden() != null
+                        && tr.getEstadoDestino().getOrden() < estado.getOrden()) {
+                    agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.INFO,
+                        "TRANSICION_RETROCESO",
+                        "Transición hacia '" + tr.getEstadoDestino().getNombre() + "' retrocede en el orden.",
+                        estado.getId(), estado.getNombre());
+                }
+            }
+        }
+
+        if (transiciones.isEmpty()) {
+            agregarAviso(resultado, ValidacionConfiguracionEstadosDTO.TipoAviso.ERROR,
+                "SIN_TRANSICIONES", "No hay transiciones definidas; los lotes no podrán avanzar por cambio manual.", null, null);
+        }
+
+        boolean tieneErrores = resultado.getAvisos().stream()
+            .anyMatch(a -> a.getTipo() == ValidacionConfiguracionEstadosDTO.TipoAviso.ERROR);
+        resultado.setValida(!tieneErrores);
+        return resultado;
+    }
+
+    private void agregarAviso(ValidacionConfiguracionEstadosDTO resultado,
+                              ValidacionConfiguracionEstadosDTO.TipoAviso tipo,
+                              String codigo, String mensaje, Long estadoId, String estadoNombre) {
+        ValidacionConfiguracionEstadosDTO.AvisoConfiguracion aviso = new ValidacionConfiguracionEstadosDTO.AvisoConfiguracion();
+        aviso.setTipo(tipo);
+        aviso.setCodigo(codigo);
+        aviso.setMensaje(mensaje);
+        aviso.setEstadoId(estadoId);
+        aviso.setEstadoNombre(estadoNombre);
+        resultado.getAvisos().add(aviso);
+    }
+
+    /**
+     * Elimina estados duplicados por nombre (conserva el de menor ID).
+     */
+    private List<EstadoLoteConfig> deduplicarEstadosPorNombre(List<EstadoLoteConfig> estados) {
+        Map<String, EstadoLoteConfig> unicos = new LinkedHashMap<>();
+        for (EstadoLoteConfig estado : estados) {
+            String clave = normalizarNombreEstado(estado.getNombre());
+            unicos.merge(clave, estado, (actual, candidato) ->
+                candidato.getId() != null && actual.getId() != null && candidato.getId() < actual.getId()
+                    ? candidato : actual);
+        }
+        return unicos.values().stream()
+            .sorted(Comparator.comparing(EstadoLoteConfig::getOrden, Comparator.nullsLast(Integer::compareTo)))
+            .toList();
+    }
+
+    /**
+     * Elimina transiciones duplicadas por par lógico origen→destino (conserva la de menor ID).
+     */
+    private List<TransicionEstadoConfig> deduplicarTransicionesPorParLogico(List<TransicionEstadoConfig> transiciones) {
+        Map<String, TransicionEstadoConfig> unicas = new LinkedHashMap<>();
+        for (TransicionEstadoConfig transicion : transiciones) {
+            String clave = claveTransicionLogica(transicion);
+            unicas.merge(clave, transicion, (actual, candidato) ->
+                candidato.getId() != null && actual.getId() != null && candidato.getId() < actual.getId()
+                    ? candidato : actual);
+        }
+        return new ArrayList<>(unicas.values());
+    }
+
+    /**
+     * Cuando la empresa tiene estados propios pero usa transiciones de plantilla,
+     * remapea los IDs de origen/destino a los estados de la empresa (solo para lectura).
+     */
+    private List<TransicionEstadoConfig> remapearTransicionesAEstadosEmpresa(
+            List<TransicionEstadoConfig> transicionesPlantilla,
+            Long tipoCultivoId,
+            Long empresaId) {
+        List<EstadoLoteConfig> estadosEmpresa = estadoLoteConfigRepository
+            .findByTipoCultivoIdAndEmpresaIdAndActivoTrueOrderByOrdenAsc(tipoCultivoId, empresaId);
+        if (estadosEmpresa.isEmpty()) {
+            return transicionesPlantilla;
+        }
+
+        Map<String, EstadoLoteConfig> estadosPorNombre = new HashMap<>();
+        for (EstadoLoteConfig estado : deduplicarEstadosPorNombre(estadosEmpresa)) {
+            estadosPorNombre.putIfAbsent(normalizarNombreEstado(estado.getNombre()), estado);
+        }
+
+        List<TransicionEstadoConfig> resultado = new ArrayList<>();
+        for (TransicionEstadoConfig plantilla : transicionesPlantilla) {
+            EstadoLoteConfig origenEmpresa = estadosPorNombre.get(
+                normalizarNombreEstado(plantilla.getEstadoOrigenNombre()));
+            EstadoLoteConfig destinoEmpresa = estadosPorNombre.get(
+                normalizarNombreEstado(plantilla.getEstadoDestinoNombre()));
+            if (origenEmpresa != null && destinoEmpresa != null) {
+                resultado.add(construirVistaTransicion(plantilla, origenEmpresa, destinoEmpresa));
+            }
+        }
+        return resultado.isEmpty() ? transicionesPlantilla : resultado;
+    }
+
+    private TransicionEstadoConfig construirVistaTransicion(
+            TransicionEstadoConfig origen,
+            EstadoLoteConfig estadoOrigen,
+            EstadoLoteConfig estadoDestino) {
+        TransicionEstadoConfig vista = new TransicionEstadoConfig();
+        vista.setId(origen.getId());
+        vista.setTipoCultivo(origen.getTipoCultivo());
+        vista.setEmpresa(origen.getEmpresa());
+        vista.setEstadoOrigen(estadoOrigen);
+        vista.setEstadoDestino(estadoDestino);
+        vista.setRequiereMotivo(origen.getRequiereMotivo());
+        vista.setActivo(origen.getActivo());
+        return vista;
+    }
+
+    private String claveTransicionLogica(TransicionEstadoConfig transicion) {
+        return claveTransicionLogica(transicion.getEstadoOrigenNombre(), transicion.getEstadoDestinoNombre());
+    }
+
+    private String claveTransicionLogica(String origen, String destino) {
+        return normalizarNombreEstado(origen) + "->" + normalizarNombreEstado(destino);
+    }
+
+    private String normalizarNombreEstado(String nombre) {
+        return nombre == null ? "" : nombre.trim().toLowerCase(Locale.ROOT);
     }
 }

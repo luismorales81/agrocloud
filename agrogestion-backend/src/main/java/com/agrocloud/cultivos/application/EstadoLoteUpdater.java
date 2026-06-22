@@ -5,6 +5,7 @@ import com.agrocloud.cultivos.domain.Plot;
 import com.agrocloud.cultivos.domain.TareaPorEstadoConfig;
 import com.agrocloud.cultivos.domain.TipoCultivo;
 import com.agrocloud.cultivos.domain.TransicionEstadoConfig;
+import com.agrocloud.cultivos.util.MapeadorEstadoLoteConfig;
 import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import com.agrocloud.cultivos.domain.HistorialCosecha;
 import com.agrocloud.cultivos.domain.Labor;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Comparator;
 
 /**
  * Actualiza el estado del lote de forma derivada.
@@ -66,7 +68,7 @@ public class EstadoLoteUpdater {
                         || !nuevo.getId().equals(lote.getEstadoConfigurado().getId());
                 if (cambia) {
                     lote.setEstadoConfigurado(nuevo);
-                    lote.setEstado(mapearConfigAEnumParaLegacy(nuevo));
+                    lote.setEstado(MapeadorEstadoLoteConfig.mapearAEnum(nuevo));
                     lote.setFechaUltimoCambioEstado(LocalDateTime.now());
                     lote.setMotivoCambioEstado("Recálculo derivado (config)");
                     plotRepository.save(lote);
@@ -102,11 +104,17 @@ public class EstadoLoteUpdater {
         if (tareas == null || tareas.isEmpty()) {
             return estadoBase;
         }
+        List<TareaPorEstadoConfig> tareasRelevantes = tareas.stream()
+            .filter(t -> Boolean.TRUE.equals(t.getEsObligatoria()))
+            .toList();
+        if (tareasRelevantes.isEmpty()) {
+            tareasRelevantes = tareas;
+        }
         List<Labor> completadas = labores.stream()
             .filter(l -> Boolean.TRUE.equals(l.getActivo()))
             .filter(l -> l.getEstado() == Labor.EstadoLabor.COMPLETADA)
             .toList();
-        for (TareaPorEstadoConfig tarea : tareas) {
+        for (TareaPorEstadoConfig tarea : tareasRelevantes) {
             String tipoTarea = tarea.getTipoLabor();
             if (tipoTarea == null) continue;
             boolean hayLaborCompletada = completadas.stream()
@@ -123,6 +131,8 @@ public class EstadoLoteUpdater {
         }
         List<TransicionEstadoConfig> filtradas = transiciones.stream()
             .filter(t -> t.getTipoCultivoId() == null || tipoCultivoId != null && t.getTipoCultivoId().equals(tipoCultivoId))
+            .filter(t -> t.getEstadoDestino() != null)
+            .sorted(Comparator.comparing(t -> t.getEstadoDestino().getOrden()))
             .toList();
         if (filtradas.isEmpty()) {
             return estadoBase;
@@ -151,20 +161,13 @@ public class EstadoLoteUpdater {
 
     /** Mapeo para compatibilidad con código que lee Plot.estado (enum). */
     private EstadoLote mapearConfigAEnumParaLegacy(EstadoLoteConfig config) {
-        if (config == null || config.getNombre() == null) return EstadoLote.DISPONIBLE;
-        String n = config.getNombre().toLowerCase().replace(" ", "");
-        if (n.contains("disponible")) return EstadoLote.DISPONIBLE;
-        if (n.contains("preparado") || n.contains("preparacion")) return EstadoLote.PREPARADO;
-        if (n.contains("sembrado")) return EstadoLote.SEMBRADO;
-        if (n.contains("emergencia")) return EstadoLote.SEMBRADO;
-        if (n.contains("establecimiento") || n.contains("crecimiento") || n.contains("rebrote")) return EstadoLote.EN_CRECIMIENTO;
-        if (n.contains("corte") || n.contains("listo") || n.contains("cosecha")) return EstadoLote.LISTO_PARA_COSECHA;
-        if (n.contains("dormancia") || n.contains("levantado") || n.contains("cosechado")) return EstadoLote.COSECHADO;
-        if (n.contains("abandonado")) return EstadoLote.ABANDONADO;
-        return EstadoLote.DISPONIBLE;
+        return MapeadorEstadoLoteConfig.mapearAEnum(config);
     }
 
     private Optional<HistorialCosecha> obtenerCosechaVigente(Plot lote) {
+        if (lote.getCicloActivoId() != null) {
+            return Optional.empty();
+        }
         // Si el lote está liberado para una nueva siembra, no considerar cosechas previas
         if (Boolean.TRUE.equals(lote.getLiberadoParaSiembra())) {
             return Optional.empty();

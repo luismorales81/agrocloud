@@ -4,6 +4,8 @@ import { exportService } from '../../../../services/ExportService';
 import type { ExportOptions } from '../../../../services/ExportService';
 import api from '../../../../services/api';
 import { Icon, SemanticIcon } from '../../../../components/icons';
+import useRangoPeriodoActivo from '../../../../hooks/useRangoPeriodoActivo';
+import useConceptoTemporalModulo from '../../../../core/hooks/useConceptoTemporalModulo';
 
 interface Reporte {
   id: string;
@@ -74,6 +76,8 @@ const REPORTES: Reporte[] = [
 
 const ReportesPorcinosScreen: React.FC = () => {
   const { formatCurrency } = useCurrencyContext();
+  const { inicio: inicioPeriodo, fin: finPeriodo } = useRangoPeriodoActivo();
+  const { concepto } = useConceptoTemporalModulo();
   const [activeReport, setActiveReport] = useState<string>('reproductivo');
   const [dateRange, setDateRange] = useState({ inicio: '', fin: '' });
   const [loading, setLoading] = useState(false);
@@ -84,17 +88,10 @@ const ReportesPorcinosScreen: React.FC = () => {
   const [paginaActual, setPaginaActual] = useState(1);
   const [elementosPorPagina] = useState(10);
 
-  // Establecer fechas por defecto (último mes)
+  // Fechas por defecto: período de gestión activo (barra superior)
   useEffect(() => {
-    const hoy = new Date();
-    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-    
-    setDateRange({
-      inicio: primerDiaMes.toISOString().split('T')[0],
-      fin: ultimoDiaMes.toISOString().split('T')[0],
-    });
-  }, []);
+    setDateRange({ inicio: inicioPeriodo, fin: finPeriodo });
+  }, [inicioPeriodo, finPeriodo]);
 
   // Resetear paginación cuando cambie el reporte
   useEffect(() => {
@@ -1194,6 +1191,10 @@ const ReportesPorcinosScreen: React.FC = () => {
             <h1 style={{ margin: '0 0 5px 0', fontSize: '24px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Icon name="BarChart" size={28} /> Sistema de Reportes - Porcinos</h1>
             <p style={{ margin: '0', opacity: '0.9' }}>
               Genera y analiza reportes detallados de tu producción porcina
+            </p>
+            <p style={{ margin: '0.5rem 0 0', opacity: '0.85', fontSize: '13px' }}>
+              {concepto.etiquetaPeriodo}: fechas por defecto del selector superior.
+              Reproducción por rango de fechas; recría y ventas por {concepto.unidadOperativa.toLowerCase()}.
             </p>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { ingresosService, egresosService, camposService, insumosService } from '
 import PermissionGate from './PermissionGate';
 import { Icon } from '../core/components/Icon';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
+import useContextoOperativo from '../hooks/useContextoOperativo';
 
 interface Ingreso {
   id?: number;
@@ -81,6 +82,7 @@ interface Insumo {
 
 const FinanzasManagement: React.FC = () => {
   const { formatCurrency } = useCurrencyContext();
+  const { campanaId } = useContextoOperativo();
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [egresos, setEgresos] = useState<Egreso[]>([]);
   const [lotes, setLotes] = useState<Lote[]>([]);
@@ -253,7 +255,7 @@ const FinanzasManagement: React.FC = () => {
 
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [campanaId]);
 
   const cargarDatos = async () => {
     setLoading(true);

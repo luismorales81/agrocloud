@@ -85,6 +85,9 @@ public class Recria {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    @Column(name = "campana_id")
+    private Long campanaId;
+
     @Version
     @Column(name = "version")
     private Long version;
@@ -172,6 +175,8 @@ public class Recria {
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+    public Long getCampanaId() { return campanaId; }
+    public void setCampanaId(Long campanaId) { this.campanaId = campanaId; }
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
     public Empresa getEmpresa() { return empresa; }

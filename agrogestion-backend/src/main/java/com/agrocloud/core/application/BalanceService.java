@@ -122,6 +122,17 @@ public class BalanceService {
     }
 
     /**
+     * Balance filtrado por campaña (ingresos/egresos etiquetados + rango de fechas de la campaña).
+     */
+    public BalanceDTO calcularBalancePorCampana(Long campanaId, LocalDate fechaInicio, LocalDate fechaFin) {
+        BigDecimal totalIngresos = ingresoRepository.calcularTotalIngresosPorCampanaYFecha(campanaId, fechaInicio, fechaFin);
+        BigDecimal totalEgresos = egresoRepository.calcularTotalEgresosPorCampanaYFecha(campanaId, fechaInicio, fechaFin);
+        if (totalIngresos == null) totalIngresos = BigDecimal.ZERO;
+        if (totalEgresos == null) totalEgresos = BigDecimal.ZERO;
+        return new BalanceDTO(fechaInicio, fechaFin, totalIngresos, totalEgresos);
+    }
+
+    /**
      * Calcula el balance para un lote específico.
      * Incluye movimientos del usuario y sus dependientes sobre ese lote.
      */

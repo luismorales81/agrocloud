@@ -10,6 +10,8 @@ import com.agrocloud.core.infrastructure.EgresoRepository;
 import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
 import com.agrocloud.cultivos.infrastructure.MaquinariaRepository;
 import com.agrocloud.dto.CrearEgresoRequest;
+import com.agrocloud.core.application.CampanaContextService;
+import com.agrocloud.core.security.ServicioSeguridadContexto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -49,6 +51,13 @@ public class EgresoService {
     @Qualifier("userRepositoryCore")
     private UserRepository userRepository;
 
+    @Autowired
+    private ServicioSeguridadContexto servicioSeguridadContexto;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private CampanaContextService campanaContextService;
+
     /**
      * Crea un egreso con lógica de integración automática
      */
@@ -66,6 +75,11 @@ public class EgresoService {
         egreso.setObservaciones(request.getObservaciones());
         egreso.setFechaCreacion(LocalDateTime.now());
         egreso.setFechaActualizacion(LocalDateTime.now());
+        try {
+            egreso.setCampanaId(campanaContextService.resolverCampanaIdActiva(
+                    servicioSeguridadContexto.obtenerEmpresaIdActual()));
+        } catch (Exception ignored) {
+        }
 
         // Lógica específica según el tipo de egreso
         switch (request.getTipoEgreso()) {

@@ -7,16 +7,19 @@ import type { Labor, Lote, Insumo, Maquinaria, MaquinariaAsignada, InsumoUsado, 
 import { mapEstadoToBackend, mapEstadoFromBackend, mapTipoLaborToBackend, mapTipoLaborFromBackend, ESTADOS_LABOR, TODOS_LOS_TIPOS_LABOR } from '../utils/laboresUtils';
 import { useLaboresPermisos } from '../hooks/useLaboresPermisos';
 import { useLaboresData } from '../hooks/useLaboresData';
+import useContextoOperativo from '../hooks/useContextoOperativo';
 import PermissionGate from './PermissionGate';
 import { Icon } from '../core/components/Icon';
 import { Autocomplete, AutocompleteOption } from './ui/Autocomplete';
 import { LaborDetalleCostosModal } from './labores/LaborDetalleCostosModal';
+import ProgresoEstadoLotePanel from './ProgresoEstadoLotePanel';
 
 const LaboresManagement: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const abrirLaborIdProcesado = useRef<number | null>(null);
   const { formatCurrency } = useCurrencyContext();
+  const { campanaId } = useContextoOperativo();
   const { puedeModificarLabor, puedeAnularLabor, puedeEliminarLabor } = useLaboresPermisos();
   const { labores, setLabores, lotes, insumos, setInsumos, maquinaria, cultivos, loading, setLoading, totalElementos, totalPaginas: totalPaginasServidor, loadData, cargarLabores } = useLaboresData();
 
@@ -209,7 +212,7 @@ const LaboresManagement: React.FC = () => {
     loadData();
     // Las tareas se cargan al seleccionar un lote (según estado y configuración)
     setTiposLaborDisponibles([]);
-  }, []);
+  }, [campanaId]);
 
   useEffect(() => {
     const temporizador = window.setTimeout(() => setBusquedaDebounced(searchTerm), 300);
@@ -1633,6 +1636,7 @@ const LaboresManagement: React.FC = () => {
                       <em><Icon name="CheckCircle" size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Solo se mostrarán las labores apropiadas para este estado</em>
                     </div>
                   )}
+                  <ProgresoEstadoLotePanel loteId={formData.lote_id > 0 ? formData.lote_id : null} />
                 </div>
 
                 {/* Tipo de labor - SEGUNDO, filtrado por el estado del lote */}

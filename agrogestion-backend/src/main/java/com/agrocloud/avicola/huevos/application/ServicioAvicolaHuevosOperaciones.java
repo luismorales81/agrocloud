@@ -158,6 +158,7 @@ public class ServicioAvicolaHuevosOperaciones {
         c.setCantidad(solicitud.getCantidad());
         c.setTipo(solicitud.getTipo() != null ? solicitud.getTipo() : "MANUAL");
         c.setObservaciones(solicitud.getObservaciones());
+        c.setCampanaId(l.getCampanaId());
         c = consumoRepository.saveAndFlush(c);
 
         InventoryResult res = inventoryService.consumir(

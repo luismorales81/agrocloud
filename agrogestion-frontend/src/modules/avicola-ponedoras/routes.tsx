@@ -6,7 +6,7 @@ import CalendarioDashboard from '../../components/CalendarioDashboard';
 import AvicolaPonedorasDashboard from './pages/AvicolaPonedorasDashboard';
 import AvicolaPonedorasListado from './pages/AvicolaPonedorasListado';
 import AvicolaPonedorasDetalleGalponScreen from './pages/AvicolaPonedorasDetalleGalponScreen';
-import { ExpedienteTrazabilidadAvicolaPonedoras } from '../../components/trazabilidad/pantallasExpedientePorModulo';
+import GestionPeriodosScreen from '../../components/GestionCampanasScreen';
 
 const ID_MODULO: ModuleId = 'avicola-ponedoras';
 
@@ -59,8 +59,8 @@ export const avicolaPonedorasRoutes: ModuleRoute[] = [
     component: envolverSiModuloPonedorasHabilitado(AvicolaPonedorasListado),
   },
   {
-    path: '/avicola-ponedoras/trazabilidad-expediente',
-    name: 'Expediente trazabilidad',
-    component: envolverSiModuloPonedorasHabilitado(ExpedienteTrazabilidadAvicolaPonedoras),
+    path: '/avicola-ponedoras/configuracion/periodos',
+    name: 'Períodos de gestión',
+    component: envolverSiModuloPonedorasHabilitado(GestionPeriodosScreen),
   },
 ];

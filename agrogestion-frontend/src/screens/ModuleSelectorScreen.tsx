@@ -1,6 +1,9 @@
 import React from 'react';
 import { useModule } from '../core/hooks/useModule';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '../components/icons';
+
+const esIconoLucide = (icono: string): boolean => /^[A-Z][a-zA-Z0-9]*$/.test(icono);
 
 const ModuleSelectorScreen: React.FC = () => {
   const { availableModules, setCurrentModule, loading } = useModule();
@@ -132,9 +135,14 @@ const ModuleSelectorScreen: React.FC = () => {
             <div style={{
               fontSize: '4rem',
               marginBottom: '1rem',
-              lineHeight: 1
+              lineHeight: 1,
+              color: module.color,
             }}>
-              {module.icono}
+              {esIconoLucide(module.icono) ? (
+                <Icon name={module.icono as any} size={64} color={module.color} />
+              ) : (
+                <span>{module.icono}</span>
+              )}
             </div>
             <h3 style={{
               fontSize: '1.5rem',

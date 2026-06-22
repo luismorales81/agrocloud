@@ -7,7 +7,9 @@ import com.agrocloud.avicola.ponedoras.model.dto.AvicolaPonedorasGalponSolicitud
 import com.agrocloud.avicola.ponedoras.model.entity.AvicolaPonedorasGalpon;
 import com.agrocloud.avicola.ponedoras.model.enums.AvicolaPonedorasGalponEstado;
 import com.agrocloud.avicola.ponedoras.repository.AvicolaPonedorasGalponRepository;
+import com.agrocloud.core.application.CampanaContextService;
 import com.agrocloud.core.security.ServicioSeguridadContexto;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,23 +25,35 @@ public class ServicioAvicolaPonedorasGalpon {
     private final ServicioSeguridadContexto servicioSeguridadContexto;
     private final AvicolaPonedorasGalponRepository galponRepository;
     private final AvicolaEstablecimientoRepository establecimientoRepository;
+    private final CampanaContextService campanaContextService;
 
     public ServicioAvicolaPonedorasGalpon(
             ServicioSeguridadContexto servicioSeguridadContexto,
             AvicolaPonedorasGalponRepository galponRepository,
-            AvicolaEstablecimientoRepository establecimientoRepository) {
+            AvicolaEstablecimientoRepository establecimientoRepository,
+            @Qualifier("campanaContextServiceCore") CampanaContextService campanaContextService) {
         this.servicioSeguridadContexto = servicioSeguridadContexto;
         this.galponRepository = galponRepository;
         this.establecimientoRepository = establecimientoRepository;
+        this.campanaContextService = campanaContextService;
     }
 
     @Transactional(readOnly = true)
     public List<AvicolaPonedorasGalponRespuesta> listarGalpones(AvicolaPonedorasGalponEstado estado) {
+        return listarGalpones(estado, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvicolaPonedorasGalponRespuesta> listarGalpones(AvicolaPonedorasGalponEstado estado, Boolean delPeriodoActivo) {
         Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
         List<AvicolaPonedorasGalpon> lista =
                 estado != null
                         ? galponRepository.buscarPorEmpresaIdYEstado(empresaId, estado)
                         : galponRepository.buscarPorEmpresaId(empresaId);
+        if (Boolean.TRUE.equals(delPeriodoActivo)) {
+            Long campanaId = campanaContextService.resolverCampanaIdActiva(empresaId);
+            lista = lista.stream().filter(g -> campanaId.equals(g.getCampanaId())).toList();
+        }
         return lista.stream().map(ServicioAvicolaPonedorasGalpon::aGalponRespuesta).collect(Collectors.toList());
     }
 
@@ -71,6 +85,7 @@ public class ServicioAvicolaPonedorasGalpon {
         g.setEstado(solicitud.getEstado() != null ? solicitud.getEstado() : AvicolaPonedorasGalponEstado.ACTIVO);
         g.setFechaCierre(solicitud.getFechaCierre());
         g.setObservaciones(solicitud.getObservaciones());
+        g.setCampanaId(campanaContextService.resolverCampanaIdActiva(empresaId));
         g = galponRepository.save(g);
         return aGalponRespuesta(g);
     }

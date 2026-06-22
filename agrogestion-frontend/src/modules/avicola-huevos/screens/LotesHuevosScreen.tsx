@@ -36,9 +36,12 @@ import {
   AvicolaHuevoRazaRespuesta,
   mensajeError,
 } from '../services/avicolaHuevosApi';
+import FiltroDelPeriodoActivo from '../../../components/FiltroDelPeriodoActivo';
+import { useCampana } from '../../../contexts/CampanaContext';
 
 const LotesHuevosScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { campanaActiva } = useCampana();
   const [lotes, setLotes] = useState<AvicolaHuevoLoteRespuesta[]>([]);
   const [establecimientos, setEstablecimientos] = useState<AvicolaHuevoEstablecimientoRespuesta[]>([]);
   const [razas, setRazas] = useState<AvicolaHuevoRazaRespuesta[]>([]);
@@ -55,6 +58,14 @@ const LotesHuevosScreen: React.FC = () => {
   const [cantidadInicial, setCantidadInicial] = useState('');
   const [cantidadActual, setCantidadActual] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState<'ACTIVO' | 'CERRADO' | ''>('ACTIVO');
+  const [filtroDelPeriodo, setFiltroDelPeriodo] = useState(false);
+
+  useEffect(() => {
+    if (filtroEstado !== 'ACTIVO') {
+      setFiltroDelPeriodo(true);
+    }
+  }, [filtroEstado]);
 
   const establecimientosActivos = establecimientos.filter((e) => e.activo !== false);
   const razasActivas = razas.filter((r) => r.activo !== false);
@@ -63,7 +74,10 @@ const LotesHuevosScreen: React.FC = () => {
     try {
       setCargando(true);
       const [l, e, r] = await Promise.all([
-        listarLotesHuevos(),
+        listarLotesHuevos({
+          estado: filtroEstado || undefined,
+          delPeriodoActivo: filtroDelPeriodo,
+        }),
         listarEstablecimientosHuevos(),
         listarRazasHuevos(),
       ]);
@@ -76,11 +90,11 @@ const LotesHuevosScreen: React.FC = () => {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [filtroEstado, filtroDelPeriodo]);
 
   useEffect(() => {
     cargar();
-  }, [cargar]);
+  }, [cargar, campanaActiva?.id]);
 
   const abrirNuevo = () => {
     setLoteEditando(null);
@@ -200,6 +214,26 @@ const LotesHuevosScreen: React.FC = () => {
           {error}
         </Alert>
       )}
+
+      <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" sx={{ mb: 2 }}>
+        <TextField
+          select
+          size="small"
+          label="Estado"
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value as 'ACTIVO' | 'CERRADO' | '')}
+          sx={{ minWidth: 140 }}
+        >
+          <MenuItem value="ACTIVO">Activos</MenuItem>
+          <MenuItem value="CERRADO">Cerrados</MenuItem>
+          <MenuItem value="">Todos</MenuItem>
+        </TextField>
+        <FiltroDelPeriodoActivo
+          activo={filtroDelPeriodo}
+          onChange={setFiltroDelPeriodo}
+          visible={filtroEstado !== 'ACTIVO'}
+        />
+      </Stack>
 
       {!cargando && (
         <TableContainer component={Paper}>

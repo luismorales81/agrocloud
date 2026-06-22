@@ -26,6 +26,9 @@ public class AvicolaLote {
     @Column(name = "empresa_id", nullable = false)
     private Long empresaId;
 
+    @Column(name = "campana_id")
+    private Long campanaId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "establecimiento_id", nullable = false)
     private AvicolaEstablecimiento establecimiento;
@@ -88,6 +91,14 @@ public class AvicolaLote {
 
     public void setEmpresaId(Long empresaId) {
         this.empresaId = empresaId;
+    }
+
+    public Long getCampanaId() {
+        return campanaId;
+    }
+
+    public void setCampanaId(Long campanaId) {
+        this.campanaId = campanaId;
     }
 
     public AvicolaEstablecimiento getEstablecimiento() {

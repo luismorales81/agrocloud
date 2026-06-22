@@ -14,9 +14,11 @@ import com.agrocloud.avicola.huevos.repository.AvicolaHuevoEstablecimientoReposi
 import com.agrocloud.avicola.huevos.repository.AvicolaHuevoLoteRepository;
 import com.agrocloud.avicola.huevos.repository.AvicolaHuevoRazaRepository;
 import com.agrocloud.cultivos.application.UtilCentroideCoordenadasCampo;
+import com.agrocloud.core.application.CampanaContextService;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,32 +35,43 @@ public class ServicioAvicolaHuevosLote {
     private final AvicolaHuevoRazaRepository razaRepository;
     private final AvicolaHuevoAjustePlantelRepository ajustePlantelRepository;
     private final ObjectMapper objectMapper;
+    private final CampanaContextService campanaContextService;
 
     public ServicioAvicolaHuevosLote(
             AvicolaHuevoLoteRepository loteRepository,
             AvicolaHuevoEstablecimientoRepository establecimientoRepository,
             AvicolaHuevoRazaRepository razaRepository,
             AvicolaHuevoAjustePlantelRepository ajustePlantelRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            @Qualifier("campanaContextServiceCore") CampanaContextService campanaContextService) {
         this.loteRepository = loteRepository;
         this.establecimientoRepository = establecimientoRepository;
         this.razaRepository = razaRepository;
         this.ajustePlantelRepository = ajustePlantelRepository;
         this.objectMapper = objectMapper;
+        this.campanaContextService = campanaContextService;
     }
 
     @Transactional(readOnly = true)
     public List<AvicolaHuevoLoteRespuesta> listarLotes(Long empresaId) {
-        return loteRepository.listarPorEmpresaId(empresaId).stream()
-                .map(this::aLoteRespuesta)
-                .collect(Collectors.toList());
+        return listarLotes(empresaId, null, null);
     }
 
     @Transactional(readOnly = true)
     public List<AvicolaHuevoLoteRespuesta> listarLotesPorEstado(Long empresaId, AvicolaHuevoLoteEstado estado) {
-        return loteRepository.listarPorEmpresaIdYEstado(empresaId, estado).stream()
-                .map(this::aLoteRespuesta)
-                .collect(Collectors.toList());
+        return listarLotes(empresaId, estado, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvicolaHuevoLoteRespuesta> listarLotes(Long empresaId, AvicolaHuevoLoteEstado estado, Boolean delPeriodoActivo) {
+        List<AvicolaHuevoLote> lotes = estado != null
+                ? loteRepository.listarPorEmpresaIdYEstado(empresaId, estado)
+                : loteRepository.listarPorEmpresaId(empresaId);
+        if (Boolean.TRUE.equals(delPeriodoActivo)) {
+            Long campanaId = campanaContextService.resolverCampanaIdActiva(empresaId);
+            lotes = lotes.stream().filter(l -> campanaId.equals(l.getCampanaId())).toList();
+        }
+        return lotes.stream().map(this::aLoteRespuesta).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -85,6 +98,7 @@ public class ServicioAvicolaHuevosLote {
         l.setCantidadAvesActual(solicitud.getCantidadAvesActual() != null ? solicitud.getCantidadAvesActual() : inicial);
         l.setObservaciones(solicitud.getObservaciones());
         l.setEstado(AvicolaHuevoLoteEstado.ACTIVO);
+        l.setCampanaId(campanaContextService.resolverCampanaIdActiva(empresaId));
         return aLoteRespuesta(loteRepository.save(l));
     }
 

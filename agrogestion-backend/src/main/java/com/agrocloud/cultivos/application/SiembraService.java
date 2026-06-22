@@ -5,6 +5,8 @@ import com.agrocloud.core.domain.Empresa;
 import com.agrocloud.dto.*;
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.exception.BadRequestException;
+import com.agrocloud.cultivos.domain.CicloCultivo;
+import com.agrocloud.core.domain.Campana;
 import com.agrocloud.cultivos.domain.Cultivo;
 import com.agrocloud.cultivos.domain.HistorialCosecha;
 import com.agrocloud.cultivos.domain.Labor;
@@ -80,6 +82,14 @@ public class SiembraService {
     @Autowired
     private EstadoLoteUpdater estadoLoteUpdater;
 
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private com.agrocloud.core.application.CampanaContextService campanaContextService;
+
+    @Autowired
+    @Qualifier("cicloCultivoServiceCultivos")
+    private CicloCultivoService cicloCultivoService;
+
     /**
      * Realiza la siembra de un lote
      */
@@ -94,6 +104,9 @@ public class SiembraService {
         if (!lote.getCampo().getEmpresa().getId().equals(empresa.getId())) {
             throw new BadRequestException("El lote no pertenece a la empresa actual");
         }
+
+        campanaContextService.validarCampanaEditable(empresa.getId());
+        Campana campana = campanaContextService.resolverCampanaActiva(empresa.getId());
         
         // Validar que el lote esté en estado apropiado para sembrar
         if (lote.getEstado() != EstadoLote.DISPONIBLE && 
@@ -122,6 +135,9 @@ public class SiembraService {
         laborSiembra.setUsuario(usuario);
         laborSiembra.setActivo(true);
         laborSiembra.setObservaciones(request.getObservaciones());
+
+        CicloCultivo ciclo = cicloCultivoService.abrirCiclo(lote, cultivo, campana, request.getFechaSiembra());
+        laborSiembra.setCicloCultivoId(ciclo.getId());
         
         laborService.validarSolapamientoT1(lote.getId(), TipoLabor.SIEMBRA, laborSiembra.getFechaInicio(), laborSiembra.getFechaFin(), null);
         
@@ -241,6 +257,8 @@ public class SiembraService {
         if (!lote.getCampo().getEmpresa().getId().equals(empresa.getId())) {
             throw new BadRequestException("El lote no pertenece a la empresa actual");
         }
+
+        campanaContextService.validarCampanaEditable(empresa.getId());
         
         // Validar que el lote esté en estado apropiado para cosechar
         if (!lote.puedeCosechar()) {
@@ -300,12 +318,12 @@ public class SiembraService {
         // Establecer el costo total en la labor
         laborCosecha.setCostoTotal(costoCosecha);
         
-        // Calcular costo TOTAL de producción del lote (TODAS las labores)
-        BigDecimal costoTotalProduccion = costoCosecha; // Empezar con costo de cosecha
-        
-        // Sumar costos de TODAS las labores del lote (siembra, mantenimiento, etc.)
-        List<Labor> todasLasLabores = laborRepository.findByLoteIdAndActivoTrue(lote.getId());
-        for (Labor labor : todasLasLabores) {
+        // Calcular costo TOTAL de producción del ciclo activo (no todas las labores históricas del lote)
+        CicloCultivo ciclo = cicloCultivoService.cerrarCiclo(lote, request.getFechaCosecha());
+        laborCosecha.setCicloCultivoId(ciclo.getId());
+        BigDecimal costoTotalProduccion = costoCosecha;
+        List<Labor> laboresCiclo = laborRepository.findByCicloCultivoIdAndActivoTrue(ciclo.getId());
+        for (Labor labor : laboresCiclo) {
             if (labor.getCostoTotal() != null && labor.getId() != null) {
                 costoTotalProduccion = costoTotalProduccion.add(labor.getCostoTotal());
             }
@@ -313,7 +331,7 @@ public class SiembraService {
         
         System.out.println("[SIEMBRA_SERVICE] Costo total de producción calculado: $" + costoTotalProduccion);
         System.out.println("   - Costo de cosecha: $" + costoCosecha);
-        System.out.println("   - Labores anteriores: " + todasLasLabores.size());
+        System.out.println("   - Labores del ciclo: " + laboresCiclo.size());
         
         laborService.validarSolapamientoT1(lote.getId(), TipoLabor.COSECHA, laborCosecha.getFechaInicio(), laborCosecha.getFechaFin(), null);
         
@@ -398,6 +416,7 @@ public class SiembraService {
         historialCosecha.setDiasDescansoRecomendados(request.getDiasDescansoRecomendados() != null ? request.getDiasDescansoRecomendados() : 0);
         historialCosecha.setObservaciones(request.getObservaciones());
         historialCosecha.setUsuario(usuario);
+        historialCosecha.setCicloCultivoId(ciclo.getId());
         
         // Guardar datos de rentabilidad
         if (request.getPrecioVenta() != null && request.getPrecioVenta().compareTo(BigDecimal.ZERO) > 0) {
@@ -465,6 +484,7 @@ public class SiembraService {
         laborAbandono.setCostoTotal(BigDecimal.ZERO);
         
         laborRepository.save(laborAbandono);
+        cicloCultivoService.abandonarCiclo(lote);
         plotRepository.save(lote);
         estadoLoteUpdater.recalcularEstado(lote.getId());
         return plotRepository.findById(lote.getId()).orElse(lote);
@@ -503,6 +523,7 @@ public class SiembraService {
         laborLimpieza.setCostoTotal(BigDecimal.ZERO);
         
         laborRepository.save(laborLimpieza);
+        cicloCultivoService.abandonarCiclo(lote);
         lote.setCultivoActual(null);
         lote.setFechaSiembra(null);
         lote.setFechaCosechaEsperada(null);

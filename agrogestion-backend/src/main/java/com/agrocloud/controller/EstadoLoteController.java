@@ -7,6 +7,8 @@ import com.agrocloud.cultivos.domain.Plot;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.model.enums.EstadoLote;
 import com.agrocloud.cultivos.application.EstadoLoteService;
+import com.agrocloud.cultivos.application.RecalculoEstadosLoteService;
+import com.agrocloud.dto.ResultadoRecalculoEstadosDTO;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +33,9 @@ public class EstadoLoteController {
     @Autowired
     @Qualifier("estadoLoteServiceCultivos")
     private EstadoLoteService estadoLoteService;
+
+    @Autowired
+    private RecalculoEstadosLoteService recalculoEstadosLoteService;
     
     /**
      * Proponer cambio de estado de un lote
@@ -45,7 +50,8 @@ public class EstadoLoteController {
             
             RespuestaCambioEstado respuesta = estadoLoteService.proponerCambioEstado(
                 request.getLoteId(), 
-                request.getNuevoEstado(), 
+                request.getNuevoEstado(),
+                request.getEstadoDestinoConfigId(),
                 request.getMotivo(),
                 usuario
             );
@@ -193,6 +199,44 @@ public class EstadoLoteController {
         }
     }
     
+    /**
+     * Recalcular estados derivados de lotes activos (manual, equivalente al job diario).
+     */
+    @PostMapping("/recalcular-todos")
+    public ResponseEntity<ResultadoRecalculoEstadosDTO> recalcularTodosLosLotes(
+            @RequestParam(required = false) Long empresaId,
+            Authentication authentication) {
+        try {
+            ResultadoRecalculoEstadosDTO resultado = empresaId != null
+                ? recalculoEstadosLoteService.recalcularLotesPorEmpresa(empresaId)
+                : recalculoEstadosLoteService.recalcularTodosLosLotesActivos();
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Obtener progreso del lote en el camino de estados configurados.
+     */
+    @GetMapping("/lote/{loteId}/progreso")
+    public ResponseEntity<com.agrocloud.dto.ProgresoEstadoLoteDTO> obtenerProgresoEstado(
+            @PathVariable Long loteId,
+            @RequestParam(required = false) Long empresaId,
+            Authentication authentication) {
+        try {
+            if (empresaId == null && authentication != null) {
+                User usuario = (User) authentication.getPrincipal();
+                if (usuario.getEmpresa() != null) {
+                    empresaId = usuario.getEmpresa().getId();
+                }
+            }
+            return ResponseEntity.ok(estadoLoteService.obtenerProgresoEstado(loteId, empresaId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     /**
      * Método auxiliar para obtener lotes que requieren atención
      */

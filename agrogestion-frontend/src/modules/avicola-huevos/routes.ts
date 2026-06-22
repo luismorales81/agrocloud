@@ -10,7 +10,7 @@ import DetalleLoteHuevosScreen from './screens/DetalleLoteHuevosScreen';
 import CalendarioHuevosScreen from './screens/CalendarioHuevosScreen';
 import InsumosHuevosScreen from './screens/InsumosHuevosScreen';
 import ReportesHuevosScreen from './screens/ReportesHuevosScreen';
-import { ExpedienteTrazabilidadAvicolaHuevos } from '../../components/trazabilidad/pantallasExpedientePorModulo';
+import GestionPeriodosScreen from '../../components/GestionCampanasScreen';
 
 /** Compatibilidad con enlaces antiguos a `/avicola-huevos/calendario`. (Sin JSX: este archivo es .ts) */
 const RedirigirCalendarioHuevosAlDashboard = () =>
@@ -79,8 +79,8 @@ export const avicolaHuevosRoutes: ModuleRoute[] = [
     permisos: ['canViewReports'],
   },
   {
-    path: '/avicola-huevos/trazabilidad-expediente',
-    name: 'Expediente trazabilidad',
-    component: ExpedienteTrazabilidadAvicolaHuevos,
+    path: '/avicola-huevos/configuracion/periodos',
+    name: 'Períodos de gestión',
+    component: GestionPeriodosScreen,
   },
 ];

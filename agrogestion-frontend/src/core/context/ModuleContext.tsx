@@ -50,7 +50,7 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
             id: 'cultivos',
             nombre: 'Cultivos',
             descripcion: 'Gestión de campos, lotes, cultivos y labores',
-            icono: '🌾',
+            icono: 'Wheat',
             color: '#10b981',
             habilitado: true,
           },
@@ -58,7 +58,7 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
             id: 'porcinos',
             nombre: 'Porcinos',
             descripcion: 'Gestión de producción porcina',
-            icono: '🐷',
+            icono: 'PiggyBank',
             color: '#f59e0b',
             habilitado: true,
           },
@@ -96,13 +96,17 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
             if (idNormalizado === 'avicola_ponedoras' || idNormalizado === 'AVICOLA_PONEDORAS') {
               idNormalizado = 'avicola-ponedoras';
             }
+            if (idNormalizado === 'FEEDLOT' || idNormalizado === 'feedlot') {
+              idNormalizado = 'feedlot';
+            }
             const id = idNormalizado as ModuleId;
+            const cfg = getModuleById(id);
             return {
               id,
-              nombre: String(m.nombre ?? ''),
-              descripcion: String(m.descripcion ?? ''),
-              icono: String(m.icono ?? '🌾'),
-              color: String(m.color ?? '#10b981'),
+              nombre: cfg?.nombre ?? String(m.nombre ?? ''),
+              descripcion: cfg?.descripcion ?? String(m.descripcion ?? ''),
+              icono: cfg?.icono ?? 'Package',
+              color: cfg?.color ?? String(m.color ?? '#10b981'),
               habilitado: m.habilitado !== false,
             };
           });
@@ -126,7 +130,7 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
               id: 'cultivos',
               nombre: 'Cultivos',
               descripcion: 'Gestión de campos, lotes, cultivos y labores',
-              icono: '🌾',
+              icono: 'Wheat',
               color: '#10b981',
               habilitado: true,
             });
@@ -136,7 +140,7 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
               id: 'porcinos',
               nombre: 'Porcinos',
               descripcion: 'Gestión de producción porcina',
-              icono: '🐷',
+              icono: 'PiggyBank',
               color: '#f59e0b',
               habilitado: true,
             });
@@ -171,7 +175,7 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
             id: 'cultivos',
             nombre: 'Cultivos',
             descripcion: 'Gestión de campos, lotes, cultivos y labores',
-            icono: '🌾',
+            icono: 'Wheat',
             color: '#10b981',
             habilitado: true,
           },
@@ -179,7 +183,7 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
             id: 'porcinos',
             nombre: 'Porcinos',
             descripcion: 'Gestión de producción porcina',
-            icono: '🐷',
+            icono: 'PiggyBank',
             color: '#f59e0b',
             habilitado: true,
           },

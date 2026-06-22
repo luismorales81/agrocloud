@@ -3,21 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import { recriaService } from '../../services/recriaService';
 import type { Recria } from '../../types';
 import { Icon, SemanticIcon } from '../../../../components/icons';
+import FiltroDelPeriodoActivo from '../../../../components/FiltroDelPeriodoActivo';
+import { useCampana } from '../../../../contexts/CampanaContext';
 
 const RecriaListScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { campanaActiva } = useCampana();
   const [recrias, setRecrias] = useState<Recria[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroActivas, setFiltroActivas] = useState(true);
+  const [filtroDelPeriodo, setFiltroDelPeriodo] = useState(false);
+
+  useEffect(() => {
+    setFiltroDelPeriodo(!filtroActivas);
+  }, [filtroActivas]);
 
   useEffect(() => {
     cargarRecrias();
-  }, [filtroActivas]);
+  }, [filtroActivas, filtroDelPeriodo, campanaActiva?.id]);
 
   const cargarRecrias = async () => {
     setLoading(true);
     try {
-      const data = await recriaService.listar({ activas: filtroActivas });
+      const data = await recriaService.listar({
+        activas: filtroActivas,
+        delPeriodoActivo: filtroDelPeriodo,
+      });
       setRecrias(data);
     } catch (error) {
       console.error('Error:', error);
@@ -45,9 +56,14 @@ const RecriaListScreen: React.FC = () => {
   return (
     <div style={{ padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' }}>
-          <Icon name="Circle" size={32} style={{ marginRight: '0.5rem' }} /> Gestión de Recría
-        </h1>
+        <div>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
+            <Icon name="Circle" size={32} style={{ marginRight: '0.5rem' }} /> Gestión de Recría
+          </h1>
+          <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem', marginBottom: 0 }}>
+            Unidad operativa por lote (batch). El período de gestión activo agrupa ventas y consumos al crear cada ingreso.
+          </p>
+        </div>
         <button
           onClick={() => navigate('/porcinos/recria/ingreso')}
           style={{
@@ -72,7 +88,7 @@ const RecriaListScreen: React.FC = () => {
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         marginBottom: '1.5rem'
       }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1f2937' }}>
             Mostrar:
           </label>
@@ -104,8 +120,12 @@ const RecriaListScreen: React.FC = () => {
               fontWeight: '500'
             }}
           >
-            Todas
+            Histórico
           </button>
+          <FiltroDelPeriodoActivo
+            activo={filtroDelPeriodo}
+            onChange={setFiltroDelPeriodo}
+          />
         </div>
       </div>
 

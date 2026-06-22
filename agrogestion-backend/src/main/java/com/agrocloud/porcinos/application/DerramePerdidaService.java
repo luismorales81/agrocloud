@@ -61,6 +61,10 @@ public class DerramePerdidaService {
     private EmpresaContextService empresaContextService;
 
     @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private com.agrocloud.core.application.CampanaContextService campanaContextService;
+
+    @Autowired
     private CultivoRepository cultivoRepository;
 
     /**
@@ -180,6 +184,7 @@ public class DerramePerdidaService {
         }
 
         // Guardar derrame
+        derrameData.setCampanaId(campanaContextService.resolverCampanaIdActiva(empresaOpt.get().getId()));
         DerramePerdida derrameGuardado = derrameRepository.save(derrameData);
 
         // Registrar movimiento de stock (tipo DERRAME, NO permite negativo)

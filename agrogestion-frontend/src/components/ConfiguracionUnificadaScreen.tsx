@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { SemanticIcon, Icon } from './icons';
 import ConfiguracionEstadosScreen from './ConfiguracionEstadosScreen';
 import AdminUsuarios from './AdminUsuarios';
 import ConfiguracionesScreen from '../modules/porcinos/screens/Configuraciones/ConfiguracionesScreen';
+import GestionCampanasScreen from './GestionCampanasScreen';
 import { configuracionService } from '../modules/porcinos/services/configuracionService';
 import type { ConfiguracionPorcino } from '../modules/porcinos/types';
+import useConceptoTemporalModulo from '../core/hooks/useConceptoTemporalModulo';
 
-type TabPrincipal = 'modulo' | 'usuarios' | 'general';
+type TabPrincipal = 'modulo' | 'periodos' | 'usuarios' | 'general';
+
+const TABS_VALIDOS: TabPrincipal[] = ['modulo', 'periodos', 'usuarios', 'general'];
 
 // Hook personalizado para manejar mensajes
 const useMensajes = () => {
@@ -326,17 +330,42 @@ const ConfiguracionGeneralTab: React.FC = () => {
 
 const ConfiguracionUnificadaScreen: React.FC = () => {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tabPrincipal, setTabPrincipal] = useState<TabPrincipal>('modulo');
+  const { concepto } = useConceptoTemporalModulo();
 
   // Detectar el módulo desde la ruta
   const esModuloCultivos = location.pathname.startsWith('/cultivos');
   const esModuloPorcinos = location.pathname.startsWith('/porcinos');
   const nombreModulo = esModuloCultivos ? 'Cultivos' : esModuloPorcinos ? 'Porcinos' : 'Sistema';
 
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && TABS_VALIDOS.includes(tabParam as TabPrincipal)) {
+      setTabPrincipal(tabParam as TabPrincipal);
+    }
+  }, [searchParams]);
+
+  const cambiarTab = (tab: TabPrincipal) => {
+    setTabPrincipal(tab);
+    const params = new URLSearchParams(searchParams);
+    if (tab === 'modulo') {
+      params.delete('tab');
+    } else {
+      params.set('tab', tab);
+    }
+    setSearchParams(params, { replace: true });
+  };
+
   const tabs = [
-    { id: 'modulo' as TabPrincipal, nombre: `Configuración del Módulo`, icono: 'Settings' },
+    { id: 'modulo' as TabPrincipal, nombre: 'Estados y tareas', icono: 'Settings' },
+    {
+      id: 'periodos' as TabPrincipal,
+      nombre: concepto.etiquetaPeriodo === 'Campaña agrícola' ? 'Campañas' : 'Períodos',
+      icono: 'CalendarDays',
+    },
     { id: 'usuarios' as TabPrincipal, nombre: 'Usuarios', icono: 'Users' },
-    { id: 'general' as TabPrincipal, nombre: 'Configuración General', icono: 'Cog' },
+    { id: 'general' as TabPrincipal, nombre: 'General del sistema', icono: 'Cog' },
   ];
 
   return (
@@ -358,7 +387,7 @@ const ConfiguracionUnificadaScreen: React.FC = () => {
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setTabPrincipal(tab.id)}
+            onClick={() => cambiarTab(tab.id)}
             style={{
               padding: '0.75rem 1.5rem',
               backgroundColor: tabPrincipal === tab.id ? '#3b82f6' : 'white',
@@ -397,6 +426,10 @@ const ConfiguracionUnificadaScreen: React.FC = () => {
               </div>
             )}
           </>
+        )}
+
+        {tabPrincipal === 'periodos' && (
+          <GestionCampanasScreen incrustado />
         )}
 
         {tabPrincipal === 'usuarios' && (

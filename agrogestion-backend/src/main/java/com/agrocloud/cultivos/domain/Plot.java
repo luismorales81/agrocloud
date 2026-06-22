@@ -1,5 +1,6 @@
 package com.agrocloud.cultivos.domain;
 
+import com.agrocloud.cultivos.util.MapeadorEstadoLoteConfig;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.model.enums.EstadoLote;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -76,6 +77,9 @@ public class Plot {
     /** Si true, la última cosecha no se considera vigente; el estado derivado puede ser DISPONIBLE. */
     @Column(name = "liberado_para_siembra", nullable = false)
     private Boolean liberadoParaSiembra = false;
+
+    @Column(name = "ciclo_activo_id")
+    private Long cicloActivoId;
 
     @Version
     @Column(name = "version", nullable = false)
@@ -193,6 +197,8 @@ public class Plot {
     public void setTipoUso(TipoUsoLote tipoUso) { this.tipoUso = tipoUso; }
     public Boolean getLiberadoParaSiembra() { return liberadoParaSiembra != null ? liberadoParaSiembra : false; }
     public void setLiberadoParaSiembra(Boolean liberadoParaSiembra) { this.liberadoParaSiembra = Boolean.TRUE.equals(liberadoParaSiembra); }
+    public Long getCicloActivoId() { return cicloActivoId; }
+    public void setCicloActivoId(Long cicloActivoId) { this.cicloActivoId = cicloActivoId; }
 
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
@@ -227,13 +233,7 @@ public class Plot {
     }
     public void cambiarEstadoConfigurado(EstadoLoteConfig nuevoEstado, String motivo) {
         this.estadoConfigurado = nuevoEstado;
-        if (nuevoEstado != null) {
-            try {
-                this.estado = EstadoLote.valueOf(nuevoEstado.getNombre().toUpperCase().replace(" ", "_"));
-            } catch (IllegalArgumentException e) {
-                this.estado = EstadoLote.DISPONIBLE;
-            }
-        }
+        this.estado = MapeadorEstadoLoteConfig.mapearAEnum(nuevoEstado);
         this.fechaUltimoCambioEstado = LocalDateTime.now();
         this.motivoCambioEstado = motivo;
     }

@@ -30,6 +30,7 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 import CurrencySelector from './components/CurrencySelector';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { EmpresaProvider, useEmpresa } from './contexts/EmpresaContext';
+import { CampanaProvider } from './contexts/CampanaContext';
 import { CurrencyProvider, useCurrencyContext } from './contexts/CurrencyContext';
 import { ModuleProvider } from './core/context/ModuleContext';
 import { useCurrencyUpdate } from './hooks/useCurrencyUpdate';
@@ -720,6 +721,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/avicola-huevos/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
       <Route path="/avicola-carne/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
       <Route path="/avicola-ponedoras/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/feedlot/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
       {/* Mantener ruta legacy para compatibilidad */}
       <Route path="/dashboard-legacy" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/login" replace />} />
@@ -734,6 +736,7 @@ const App: React.FC = () => {
       <CssBaseline />
       <AuthProvider>
         <EmpresaProvider>
+          <CampanaProvider>
           <CurrencyProvider>
             <ModuleProvider>
               <Router>
@@ -741,6 +744,7 @@ const App: React.FC = () => {
               </Router>
             </ModuleProvider>
           </CurrencyProvider>
+          </CampanaProvider>
         </EmpresaProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -4,15 +4,19 @@ import com.agrocloud.core.domain.User;
 import com.agrocloud.dto.CosechaDTO;
 
 import com.agrocloud.cultivos.domain.Cultivo;
+import com.agrocloud.cultivos.domain.CicloCultivo;
 import com.agrocloud.cultivos.domain.HistorialCosecha;
 import com.agrocloud.cultivos.domain.Plot;
 
+import com.agrocloud.config.CampanaRequestContext;
+import com.agrocloud.cultivos.infrastructure.CicloCultivoRepository;
 import com.agrocloud.model.enums.EstadoLote;
 import com.agrocloud.cultivos.infrastructure.HistorialCosechaRepository;
 import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +43,10 @@ public class HistorialCosechaService {
 
     @Autowired
     private EstadoLoteUpdater estadoLoteUpdater;
+
+    @Autowired
+    @Qualifier("cicloCultivoRepositoryCultivos")
+    private CicloCultivoRepository cicloCultivoRepository;
 
     /**
      * Crear un nuevo registro en el historial de cosechas directamente.
@@ -75,6 +83,9 @@ public class HistorialCosechaService {
         historial.setDiasDescansoRecomendados(diasDescanso != null ? diasDescanso : 0);
         historial.setObservaciones(observaciones);
         historial.setUsuario(usuario);
+        if (lote.getCicloActivoId() != null) {
+            historial.setCicloCultivoId(lote.getCicloActivoId());
+        }
 
         return historialCosechaRepository.save(historial);
     }
@@ -83,11 +94,13 @@ public class HistorialCosechaService {
      * Obtener historial de cosechas por lote
      */
     public List<HistorialCosecha> getHistorialPorLote(Long loteId, User usuario) {
+        List<HistorialCosecha> historial;
         if (usuario.isAdmin()) {
-            return historialCosechaRepository.findByLoteIdConLoteYCultivo(loteId);
+            historial = historialCosechaRepository.findByLoteIdConLoteYCultivo(loteId);
         } else {
-            return historialCosechaRepository.findAccessibleByUserAndLoteConLoteYCultivo(usuario, loteId);
+            historial = historialCosechaRepository.findAccessibleByUserAndLoteConLoteYCultivo(usuario, loteId);
         }
+        return filtrarHistorialPorCampanaActiva(historial);
     }
 
     @Transactional(readOnly = true)
@@ -101,11 +114,29 @@ public class HistorialCosechaService {
      * Obtener historial de cosechas por usuario
      */
     public List<HistorialCosecha> getHistorialPorUsuario(User usuario) {
+        List<HistorialCosecha> historial;
         if (usuario.isAdmin()) {
-            return historialCosechaRepository.findAllConLoteYCultivo();
+            historial = historialCosechaRepository.findAllConLoteYCultivo();
         } else {
-            return historialCosechaRepository.findAccessibleByUserConLoteYCultivo(usuario);
+            historial = historialCosechaRepository.findAccessibleByUserConLoteYCultivo(usuario);
         }
+        return filtrarHistorialPorCampanaActiva(historial);
+    }
+
+    private List<HistorialCosecha> filtrarHistorialPorCampanaActiva(List<HistorialCosecha> historial) {
+        Long campanaId = CampanaRequestContext.getCampanaId();
+        if (campanaId == null || historial.isEmpty()) {
+            return historial;
+        }
+        List<Long> cicloIds = cicloCultivoRepository.findByCampanaIdOrderByFechaSiembraDesc(campanaId).stream()
+                .map(CicloCultivo::getId)
+                .toList();
+        if (cicloIds.isEmpty()) {
+            return historial;
+        }
+        return historial.stream()
+                .filter(h -> h.getCicloCultivoId() != null && cicloIds.contains(h.getCicloCultivoId()))
+                .collect(Collectors.toList());
     }
 
     /**

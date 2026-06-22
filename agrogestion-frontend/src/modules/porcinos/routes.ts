@@ -39,11 +39,7 @@ const EventosSanitariosScreen = lazy(() => import('./screens/EventosSanitarios/E
 const InventarioPorcinosScreen = lazy(() => import('./screens/Inventario/InventarioPorcinosScreen'));
 const TransferenciasScreen = lazy(() => import('./screens/Transferencias/TransferenciasScreen'));
 const PlanesRecriaListScreen = lazy(() => import('./screens/PlanesRecria/PlanesRecriaListScreen'));
-const ExpedienteTrazabilidadPorcinos = lazy(() =>
-  import('../../components/trazabilidad/pantallasExpedientePorModulo').then(m => ({
-    default: m.ExpedienteTrazabilidadPorcinos,
-  }))
-);
+const GestionPeriodosScreen = lazy(() => import('../../components/RedireccionConfiguracionPeriodos'));
 
 function ruta(
   path: string,
@@ -92,7 +88,7 @@ export const porcinosRoutes: ModuleRoute[] = [
   ruta('/porcinos/eventos-sanitarios', 'Eventos Sanitarios', EventosSanitariosScreen, ['canViewEventosSanitarios']),
   ruta('/porcinos/inventario', 'Inventario', InventarioPorcinosScreen, ['canViewInventarioPorcinos']),
   ruta('/porcinos/configuracion', 'Configuración', ConfiguracionesScreen, ['canManageConfiguracionesPorcinos']),
+  ruta('/porcinos/configuracion/periodos', 'Períodos de gestión', GestionPeriodosScreen),
   ruta('/porcinos/reportes', 'Reportes', ReportesPorcinosScreen, ['canViewReportesPorcinos']),
-  ruta('/porcinos/trazabilidad-expediente', 'Expediente trazabilidad', ExpedienteTrazabilidadPorcinos, ['canViewRecria']),
   ruta('/porcinos/ayuda', 'Ayuda', AyudaPorcinosScreen, ['canViewPorcinos']),
 ];

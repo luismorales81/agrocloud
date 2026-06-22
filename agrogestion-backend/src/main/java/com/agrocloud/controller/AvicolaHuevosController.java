@@ -117,12 +117,10 @@ public class AvicolaHuevosController {
     public ResponseEntity<List<AvicolaHuevoLoteRespuesta>> listarLotes(
             @RequestHeader("X-Company-Id") Long empresaId,
             @RequestParam(required = false) AvicolaHuevoLoteEstado estado,
+            @RequestParam(required = false) Boolean delPeriodoActivo,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        if (estado != null) {
-            return ResponseEntity.ok(servicioLote.listarLotesPorEstado(empresaId, estado));
-        }
-        return ResponseEntity.ok(servicioLote.listarLotes(empresaId));
+        return ResponseEntity.ok(servicioLote.listarLotes(empresaId, estado, delPeriodoActivo));
     }
 
     @GetMapping("/lotes/{loteId}")

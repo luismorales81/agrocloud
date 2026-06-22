@@ -89,6 +89,9 @@ public class HistorialCosecha {
     @Column(name = "costo_total_produccion", precision = 15, scale = 2)
     private BigDecimal costoTotalProduccion = BigDecimal.ZERO;
 
+    @Column(name = "ciclo_cultivo_id")
+    private Long cicloCultivoId;
+
     @CreatedDate
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
@@ -270,6 +273,14 @@ public class HistorialCosecha {
 
     public void setCostoTotalProduccion(BigDecimal costoTotalProduccion) {
         this.costoTotalProduccion = costoTotalProduccion;
+    }
+
+    public Long getCicloCultivoId() {
+        return cicloCultivoId;
+    }
+
+    public void setCicloCultivoId(Long cicloCultivoId) {
+        this.cicloCultivoId = cicloCultivoId;
     }
 
     public LocalDateTime getFechaCreacion() {

@@ -235,6 +235,51 @@ class EstadoDerivadoIntegracionTest {
             Plot actualizado = plotRepository.findById(lote.getId()).orElseThrow();
             assertThat(actualizado.getEstado()).isEqualTo(EstadoLote.COSECHADO);
         }
+
+        @Test
+        @DisplayName("Con ciclo activo, cosecha histórica no fuerza COSECHADO")
+        void conCicloActivo_eHistorialAnterior_recalcular_noUsaCosechaVieja() {
+            Cultivo cultivo = new Cultivo();
+            cultivo.setNombre("Soja");
+            cultivo.setTipo("Soja");
+            cultivo.setVariedad("Test");
+            cultivo.setEmpresa(empresa);
+            cultivo.setUsuario(usuario);
+            cultivo.setActivo(true);
+            cultivo = cultivoRepository.save(cultivo);
+
+            com.agrocloud.cultivos.domain.HistorialCosecha historial = new com.agrocloud.cultivos.domain.HistorialCosecha();
+            historial.setLote(lote);
+            historial.setCultivo(cultivo);
+            historial.setFechaSiembra(LocalDate.now().minusDays(120));
+            historial.setFechaCosecha(LocalDate.now().minusDays(10));
+            historial.setSuperficieHectareas(BigDecimal.ONE);
+            historial.setCantidadCosechada(BigDecimal.valueOf(3000));
+            historial.setUnidadCosecha("kg");
+            historial.setUsuario(usuario);
+            historialCosechaRepository.save(historial);
+
+            lote.setCicloActivoId(999L);
+            lote.setFechaSiembra(LocalDate.now().minusDays(5));
+            lote.setLiberadoParaSiembra(false);
+            plotRepository.save(lote);
+
+            Labor labor = new Labor();
+            labor.setTipoLabor(Labor.TipoLabor.SIEMBRA);
+            labor.setDescripcion("Nueva siembra");
+            labor.setFechaInicio(LocalDate.now().minusDays(5));
+            labor.setEstado(Labor.EstadoLabor.COMPLETADA);
+            labor.setLote(lote);
+            labor.setUsuario(usuario);
+            labor.setActivo(true);
+            labor.setCicloCultivoId(999L);
+            laborRepository.save(labor);
+
+            estadoLoteUpdater.recalcularEstado(lote.getId());
+            Plot actualizado = plotRepository.findById(lote.getId()).orElseThrow();
+            assertThat(actualizado.getEstado()).isNotEqualTo(EstadoLote.COSECHADO);
+            assertThat(actualizado.getEstado()).isEqualTo(EstadoLote.SEMBRADO);
+        }
     }
 
     @Nested

@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Positive;
 public class SolicitudGeneracionExpedienteTrazabilidad {
 
     @NotBlank
-    @Pattern(regexp = "LOTE|COSECHA|RECRIA|VENTA_PORCINO|AVICOLA_HUEVOS|AVICOLA_CRIANZA|AVICOLA_CARNE|AVICOLA_PONEDORAS")
+    @Pattern(regexp = "LOTE|COSECHA|RECRIA|VENTA_PORCINO|AVICOLA_HUEVOS|AVICOLA_CRIANZA|AVICOLA_CARNE|AVICOLA_PONEDORAS|FEEDLOT_LOTE")
     private String entidadTipo;
 
     @NotNull

@@ -79,6 +79,7 @@ public class TipoCultivo {
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
     public LocalDateTime getFechaActualizacion() { return fechaActualizacion; }
     public void setFechaActualizacion(LocalDateTime fechaActualizacion) { this.fechaActualizacion = fechaActualizacion; }
+    @JsonIgnore
     public List<EstadoLoteConfig> getEstados() { return estados; }
     public void setEstados(List<EstadoLoteConfig> estados) { this.estados = estados; }
 }

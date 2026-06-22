@@ -21,9 +21,9 @@ export const avicolaPonedorasMenu: MenuItem[] = [
     ruta: '/avicola-ponedoras/galpones',
   },
   {
-    id: 'trazabilidad-expediente',
-    nombre: 'Expediente trazabilidad',
-    icono: 'FileText',
-    ruta: '/avicola-ponedoras/trazabilidad-expediente',
+    id: 'periodos-gestion',
+    nombre: 'Períodos de gestión',
+    icono: 'CalendarDays',
+    ruta: '/avicola-ponedoras/configuracion/periodos',
   },
 ];

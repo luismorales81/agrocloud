@@ -55,7 +55,7 @@ const AvicolaCarneDashboard: React.FC = () => {
     setCargando(true);
     setError(null);
     try {
-      const activos = await listarLotesCarne('ACTIVO');
+      const activos = await listarLotesCarne({ estado: 'ACTIVO' });
       const totalAves = activos.reduce((acc, l) => acc + (l.cantidadAnimales ?? 0), 0);
 
       const muestra = activos.slice(0, MAX_RESUMENES_PARALELOS);

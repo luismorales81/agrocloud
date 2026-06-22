@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
+import { useCampana } from '../contexts/CampanaContext';
 import { exportService } from '../services/ExportService';
 import type { ExportOptions } from '../services/ExportService';
 import { reportesService } from '../services/apiServices';
@@ -36,6 +37,7 @@ interface ProduccionData {
 const ReportsManagement: React.FC = () => {
   const { formatCurrency } = useCurrencyContext();
   const empresaContext = useEmpresa();
+  const { campanaActiva } = useCampana();
   const tienePermisoFinanciero = empresaContext?.tienePermisoFinanciero() || false;
   
   const [activeReport, setActiveReport] = useState<string>('rindes');
@@ -62,6 +64,16 @@ const ReportsManagement: React.FC = () => {
   useEffect(() => {
     setPaginaActual(1);
   }, [activeReport]);
+
+  useEffect(() => {
+    if (campanaActiva?.fechaInicio && campanaActiva?.fechaFin) {
+      setDateRange({
+        inicio: campanaActiva.fechaInicio,
+        fin: campanaActiva.fechaFin,
+      });
+      setReportData(null);
+    }
+  }, [campanaActiva?.id]);
 
   const generateReport = async (tipo: string) => {
     console.log('🔍 [REPORTS] Iniciando generateReport para tipo:', tipo);

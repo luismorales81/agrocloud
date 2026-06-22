@@ -60,9 +60,10 @@ public class AvicolaCarneController {
     @GetMapping("/lotes")
     public ResponseEntity<List<AvicolaLoteRespuesta>> listarLotes(
             @RequestParam(required = false) AvicolaLoteEstado estado,
+            @RequestParam(required = false) Boolean delPeriodoActivo,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioLotes.listarLotes(estado));
+        return ResponseEntity.ok(servicioLotes.listarLotes(estado, delPeriodoActivo));
     }
 
     @PostMapping("/lotes")

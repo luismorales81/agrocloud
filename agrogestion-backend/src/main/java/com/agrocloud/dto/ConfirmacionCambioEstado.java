@@ -18,6 +18,8 @@ public class ConfirmacionCambioEstado {
     private boolean confirmado;
     private String observaciones;
     private Long laborId; // ID de la labor que generó el cambio (opcional)
+    /** ID del estado destino configurado (cultivo_estados_lote). */
+    private Long estadoDestinoConfigId;
     
     // Constructores
     public ConfirmacionCambioEstado() {}
@@ -98,5 +100,13 @@ public class ConfirmacionCambioEstado {
     
     public void setLaborId(Long laborId) {
         this.laborId = laborId;
+    }
+
+    public Long getEstadoDestinoConfigId() {
+        return estadoDestinoConfigId;
+    }
+
+    public void setEstadoDestinoConfigId(Long estadoDestinoConfigId) {
+        this.estadoDestinoConfigId = estadoDestinoConfigId;
     }
 }

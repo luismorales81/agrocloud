@@ -19,6 +19,9 @@ public class HechosTrazabilidadDocumento {
     private List<LineaHechoLabor> labores = new ArrayList<>();
     private LocalDate fechaCorteDesde;
     private LocalDate fechaCorteHasta;
+    private Long campanaId;
+    private String campanaCodigo;
+    private String campanaNombre;
 
     public String getDescripcionAlcance() { return descripcionAlcance; }
     public void setDescripcionAlcance(String descripcionAlcance) { this.descripcionAlcance = descripcionAlcance; }
@@ -40,6 +43,12 @@ public class HechosTrazabilidadDocumento {
     public void setFechaCorteDesde(LocalDate fechaCorteDesde) { this.fechaCorteDesde = fechaCorteDesde; }
     public LocalDate getFechaCorteHasta() { return fechaCorteHasta; }
     public void setFechaCorteHasta(LocalDate fechaCorteHasta) { this.fechaCorteHasta = fechaCorteHasta; }
+    public Long getCampanaId() { return campanaId; }
+    public void setCampanaId(Long campanaId) { this.campanaId = campanaId; }
+    public String getCampanaCodigo() { return campanaCodigo; }
+    public void setCampanaCodigo(String campanaCodigo) { this.campanaCodigo = campanaCodigo; }
+    public String getCampanaNombre() { return campanaNombre; }
+    public void setCampanaNombre(String campanaNombre) { this.campanaNombre = campanaNombre; }
 
     public static class LineaInsumoLabor {
         private Long idLabor;

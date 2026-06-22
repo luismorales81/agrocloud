@@ -2,6 +2,10 @@ package com.agrocloud.controller;
 
 import com.agrocloud.core.domain.User;
 import com.agrocloud.core.application.ExcelExportService;
+import com.agrocloud.config.CampanaRequestContext;
+import com.agrocloud.core.application.CampanaContextService;
+import com.agrocloud.core.domain.Campana;
+import com.agrocloud.core.security.ServicioSeguridadContexto;
 import org.springframework.beans.factory.annotation.Qualifier;
 import com.agrocloud.porcinos.application.ReportesPorcinoService;
 import com.agrocloud.core.application.UserService;
@@ -36,6 +40,13 @@ public class ReportesPorcinoController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private CampanaContextService campanaContextService;
+
+    @Autowired
+    private ServicioSeguridadContexto servicioSeguridadContexto;
+
     private User obtenerUsuario(UserDetails userDetails) {
         if (userDetails == null) return null;
         return userService.findByEmailWithAllRelations(userDetails.getUsername());
@@ -55,8 +66,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> reporte = reportesService.generarReporteReproductivo(user.getId(), inicio, fin);
             return ResponseEntity.ok(reporte);
@@ -76,8 +88,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> reporte = reportesService.generarReporteMortalidad(user.getId(), inicio, fin);
             return ResponseEntity.ok(reporte);
@@ -118,8 +131,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> reporte = reportesService.generarReporteAlimentacion(user.getId(), inicio, fin);
             return ResponseEntity.ok(reporte);
@@ -139,8 +153,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> reporte = reportesService.generarReporteEconomico(user.getId(), inicio, fin);
             return ResponseEntity.ok(reporte);
@@ -181,8 +196,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> reporte = reportesService.generarReporteSanitario(user.getId(), inicio, fin);
             return ResponseEntity.ok(reporte);
@@ -202,8 +218,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> reporte = reportesService.generarReporteVentas(user.getId(), inicio, fin);
             return ResponseEntity.ok(reporte);
@@ -227,8 +244,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> datos = reportesService.generarReporteReproductivo(user.getId(), inicio, fin);
             byte[] excel = generarExcelReproductivo(datos, inicio, fin);
@@ -255,8 +273,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> datos = reportesService.generarReporteMortalidad(user.getId(), inicio, fin);
             byte[] excel = generarExcelMortalidad(datos, inicio, fin);
@@ -311,8 +330,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> datos = reportesService.generarReporteAlimentacion(user.getId(), inicio, fin);
             byte[] excel = generarExcelAlimentacion(datos, inicio, fin);
@@ -339,8 +359,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> datos = reportesService.generarReporteEconomico(user.getId(), inicio, fin);
             byte[] excel = generarExcelEconomico(datos, inicio, fin);
@@ -395,8 +416,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> datos = reportesService.generarReporteSanitario(user.getId(), inicio, fin);
             byte[] excel = generarExcelSanitario(datos, inicio, fin);
@@ -423,8 +445,9 @@ public class ReportesPorcinoController {
             User user = obtenerUsuario(userDetails);
             if (user == null) return ResponseEntity.badRequest().build();
 
-            LocalDate inicio = fechaInicio != null ? LocalDate.parse(fechaInicio) : LocalDate.now().minusMonths(1);
-            LocalDate fin = fechaFin != null ? LocalDate.parse(fechaFin) : LocalDate.now();
+            LocalDate[] rango = resolverRangoFechasReporte(fechaInicio, fechaFin);
+            LocalDate inicio = rango[0];
+            LocalDate fin = rango[1];
 
             Map<String, Object> datos = reportesService.generarReporteVentas(user.getId(), inicio, fin);
             byte[] excel = generarExcelVentas(datos, inicio, fin);
@@ -814,6 +837,27 @@ public class ReportesPorcinoController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    private LocalDate[] resolverRangoFechasReporte(String fechaInicio, String fechaFin) {
+        if (fechaInicio != null && fechaFin != null) {
+            return new LocalDate[]{LocalDate.parse(fechaInicio), LocalDate.parse(fechaFin)};
+        }
+        if (fechaInicio != null) {
+            return new LocalDate[]{LocalDate.parse(fechaInicio), LocalDate.now()};
+        }
+        if (fechaFin != null) {
+            return new LocalDate[]{LocalDate.now().minusMonths(1), LocalDate.parse(fechaFin)};
+        }
+        try {
+            if (CampanaRequestContext.getCampanaId() != null) {
+                Campana campana = campanaContextService.resolverCampanaActiva(
+                        servicioSeguridadContexto.obtenerEmpresaIdActual());
+                return new LocalDate[]{campana.getFechaInicio(), campana.getFechaFin()};
+            }
+        } catch (Exception ignored) {
+        }
+        return new LocalDate[]{LocalDate.now().minusMonths(1), LocalDate.now()};
     }
 }
 

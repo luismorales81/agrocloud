@@ -1,3 +1,4 @@
+/* @refresh reset */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -38,8 +39,8 @@ interface EventoCalendario {
 }
 
 interface CalendarioDashboardProps {
-  /** Calendario general (cultivos) o calendario propio del módulo avícola huevos. */
-  modoCalendario?: 'general' | 'avicolaHuevos';
+  /** Calendario general (cultivos), avícola huevos o feedlot. */
+  modoCalendario?: 'general' | 'avicolaHuevos' | 'feedlot';
 }
 
 interface RecordatorioForm {
@@ -52,8 +53,73 @@ interface RecordatorioForm {
   loteAvicolaHuevoId?: number | '';
 }
 
-const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendario = 'general' }) => {
+interface BotonVerEnLaboresProps {
+  laborId?: number;
+  onCerrar: () => void;
+  variante: 'cabecera' | 'contenido';
+}
+
+/** Aísla useNavigate para evitar fallos de HMR en el componente principal. */
+const BotonVerEnLabores: React.FC<BotonVerEnLaboresProps> = ({ laborId, onCerrar, variante }) => {
   const navigate = useNavigate();
+
+  const irALabores = () => {
+    onCerrar();
+    navigate('/cultivos/labores', {
+      state: laborId != null ? { abrirLaborId: laborId } : {},
+    });
+  };
+
+  if (variante === 'cabecera') {
+    return (
+      <button
+        type="button"
+        onClick={irALabores}
+        style={{
+          marginTop: '0.75rem',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          padding: '0.4rem 0.75rem',
+          backgroundColor: 'rgba(255, 255, 255, 0.25)',
+          color: 'white',
+          border: '1px solid rgba(255, 255, 255, 0.5)',
+          borderRadius: '0.375rem',
+          cursor: 'pointer',
+          fontSize: '0.8125rem',
+          fontWeight: '500',
+        }}
+      >
+        <Icon name="ExternalLink" size={14} /> Ver detalle en Labores
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={irALabores}
+      style={{
+        marginTop: '0.5rem',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.35rem',
+        padding: '0.35rem 0.65rem',
+        backgroundColor: '#f3f4f6',
+        color: '#374151',
+        border: '1px solid #e5e7eb',
+        borderRadius: '0.375rem',
+        cursor: 'pointer',
+        fontSize: '0.8125rem',
+        fontWeight: '500',
+      }}
+    >
+      <Icon name="ExternalLink" size={14} /> Ver en Labores
+    </button>
+  );
+};
+
+const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendario = 'general' }) => {
   const { user, logout } = useAuth();
   const { empresaActiva, rolUsuario } = useEmpresa();
   const { formatCurrency, selectedCurrency, exchangeType, realRates, changeCurrency, changeExchangeType } = useCurrencyContext();
@@ -134,6 +200,8 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
       const ruta =
         modoCalendario === 'avicolaHuevos'
           ? `/calendario/avicola-huevos?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`
+          : modoCalendario === 'feedlot'
+          ? `/calendario/feedlot?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`
           : `/calendario/eventos?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
 
       const response = await api.get(ruta);
@@ -267,7 +335,12 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
         fechaInicio: formTareaRecurrente.fechaInicio,
         fechaFin: null,
         tipoRepeticion: formTareaRecurrente.tipoRepeticion,
-        ambitoCalendario: modoCalendario === 'avicolaHuevos' ? 'AVICOLA_HUEVOS' : 'GENERAL',
+        ambitoCalendario:
+          modoCalendario === 'avicolaHuevos'
+            ? 'AVICOLA_HUEVOS'
+            : modoCalendario === 'feedlot'
+            ? 'FEEDLOT'
+            : 'GENERAL',
       });
       setMostrarModalTareaRecurrente(false);
       setFormTareaRecurrente({ titulo: '', descripcion: '', fechaInicio: '', tipoRepeticion: 'SEMANAL' });
@@ -521,6 +594,8 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
           <Icon name="CalendarDays" size={32} style={{ marginRight: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }} />{' '}
           {modoCalendario === 'avicolaHuevos'
             ? 'Calendario avícola huevos'
+            : modoCalendario === 'feedlot'
+            ? 'Calendario feedlot'
             : 'Calendario de labores y tareas'}
         </h1>
         
@@ -1194,6 +1269,8 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
             <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>
               {modoCalendario === 'avicolaHuevos'
                 ? 'Visible solo en el calendario de avícola huevos.'
+                : modoCalendario === 'feedlot'
+                ? 'Visible solo en el calendario de feedlot.'
                 : 'Visible en el calendario general.'}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1465,26 +1542,11 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
                     <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9, fontSize: '0.875rem' }}>
                       {laborSeleccionada.loteNombre || 'Sin lote asignado'}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => { setMostrarModalLabor(false); navigate('/cultivos/labores', { state: laborSeleccionada?.id != null ? { abrirLaborId: laborSeleccionada.id } : {} }); }}
-                      style={{
-                        marginTop: '0.75rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        padding: '0.4rem 0.75rem',
-                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                        color: 'white',
-                        border: '1px solid rgba(255, 255, 255, 0.5)',
-                        borderRadius: '0.375rem',
-                        cursor: 'pointer',
-                        fontSize: '0.8125rem',
-                        fontWeight: '500'
-                      }}
-                    >
-                      <Icon name="ExternalLink" size={14} /> Ver detalle en Labores
-                    </button>
+                    <BotonVerEnLabores
+                      laborId={laborSeleccionada?.id}
+                      onCerrar={() => setMostrarModalLabor(false)}
+                      variante="cabecera"
+                    />
                   </div>
                   <button
                     onClick={() => setMostrarModalLabor(false)}
@@ -2151,26 +2213,11 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
                         <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8125rem', color: '#6b7280' }}>
                           Puede ver y editar el detalle completo de esta labor (insumos, costos, fechas) en el módulo Labores.
                         </p>
-                        <button
-                          type="button"
-                          onClick={() => { setMostrarModalLabor(false); navigate('/cultivos/labores', { state: laborSeleccionada?.id != null ? { abrirLaborId: laborSeleccionada.id } : {} }); }}
-                          style={{
-                            marginTop: '0.5rem',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            padding: '0.35rem 0.65rem',
-                            backgroundColor: '#f3f4f6',
-                            color: '#374151',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '0.375rem',
-                            cursor: 'pointer',
-                            fontSize: '0.8125rem',
-                            fontWeight: '500'
-                          }}
-                        >
-                          <Icon name="ExternalLink" size={14} /> Ver en Labores
-                        </button>
+                        <BotonVerEnLabores
+                          laborId={laborSeleccionada?.id}
+                          onCerrar={() => setMostrarModalLabor(false)}
+                          variante="contenido"
+                        />
                       </div>
                     )}
                   </div>

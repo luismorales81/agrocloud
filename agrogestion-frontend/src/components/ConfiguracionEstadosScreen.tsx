@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { configuracionEstadosService } from '../services/apiServices';
+import { estadosLoteService } from '../services/domain/estadosLoteService';
 import { useEmpresa } from '../contexts/EmpresaContext';
 import { SemanticIcon } from './icons';
 import { Icon } from '../core/components/Icon';
+import DiagramaEstadosConfig from './cultivos/DiagramaEstadosConfig';
+import PanelValidacionEstados, { ValidacionConfiguracion } from './cultivos/PanelValidacionEstados';
+import AsistenteConfiguracionEstados from './cultivos/AsistenteConfiguracionEstados';
 
 interface TipoCultivo {
   id: number;
@@ -23,6 +27,8 @@ interface EstadoLoteConfig {
   esEstadoInicial: boolean;
   esEstadoFinal: boolean;
   activo: boolean;
+  diasMinimos?: number | null;
+  modoAvance?: string;
   tipoCultivoId?: number;
   empresaId?: number;
 }
@@ -31,6 +37,8 @@ interface TransicionEstadoConfig {
   id?: number;
   estadoOrigenId: number;
   estadoDestinoId: number;
+  estadoOrigenNombre?: string;
+  estadoDestinoNombre?: string;
   requiereMotivo: boolean;
   activo: boolean;
   tipoCultivoId?: number;
@@ -101,6 +109,8 @@ const ConfiguracionEstadosScreen: React.FC = () => {
     esEstadoInicial: false,
     esEstadoFinal: false,
     activo: true,
+    diasMinimos: null,
+    modoAvance: 'MIXTO',
   });
 
   const [formTransicion, setFormTransicion] = useState<TransicionEstadoConfig>({
@@ -121,10 +131,17 @@ const ConfiguracionEstadosScreen: React.FC = () => {
   });
 
   // Tab activa
-  const [tabActiva, setTabActiva] = useState<'estados' | 'transiciones' | 'tareas'>('estados');
+  const [tabActiva, setTabActiva] = useState<'estados' | 'transiciones' | 'tareas' | 'vista-guiada'>('vista-guiada');
+
+  const [validacion, setValidacion] = useState<ValidacionConfiguracion | null>(null);
+  const [validacionCargando, setValidacionCargando] = useState(false);
+  const [mostrarAsistente, setMostrarAsistente] = useState(false);
+  const [recalculando, setRecalculando] = useState(false);
 
   // Importación Excel
   const [showModalImportar, setShowModalImportar] = useState(false);
+  const [showModalNuevoTipo, setShowModalNuevoTipo] = useState(false);
+  const [nombreNuevoTipo, setNombreNuevoTipo] = useState('');
   const [archivoImportar, setArchivoImportar] = useState<File | null>(null);
   const [nombreTipoImportar, setNombreTipoImportar] = useState('');
   const [importarEnExistente, setImportarEnExistente] = useState(false);
@@ -168,7 +185,7 @@ const ConfiguracionEstadosScreen: React.FC = () => {
         return data.length > 0 ? data[0].id : null;
       });
     } catch (err: any) {
-      setError('Error al cargar tipos de cultivo: ' + (err.message || 'Error desconocido'));
+      setError(obtenerMensajeErrorApi(err, 'Error al cargar tipos de cultivo: '));
     } finally {
       setLoading(false);
     }
@@ -198,6 +215,7 @@ const ConfiguracionEstadosScreen: React.FC = () => {
         }
       }
       setTareas(tareasMap);
+      await cargarValidacion();
     } catch (err: any) {
       setError('Error al cargar configuración: ' + (err.message || 'Error desconocido'));
     } finally {
@@ -205,22 +223,70 @@ const ConfiguracionEstadosScreen: React.FC = () => {
     }
   };
 
+  const cargarValidacion = async () => {
+    if (!tipoCultivoSeleccionado) return;
+    try {
+      setValidacionCargando(true);
+      const data = await configuracionEstadosService.validarConfiguracionCompleta(
+        tipoCultivoSeleccionado,
+        empresaId || undefined
+      );
+      setValidacion(data);
+    } catch {
+      setValidacion(null);
+    } finally {
+      setValidacionCargando(false);
+    }
+  };
+
+  const handleRecalcularEstadosLotes = async () => {
+    if (!confirm('¿Recalcular estados de todos los lotes activos con cultivo? (Equivalente al job diario)')) return;
+    try {
+      setRecalculando(true);
+      const resultado = await estadosLoteService.recalcularTodos(empresaId ?? undefined);
+      setSuccess(
+        `Recálculo completado: ${resultado.lotesActualizados} de ${resultado.lotesProcesados} lotes actualizados.`
+      );
+    } catch (err: any) {
+      setError('Error al recalcular estados: ' + (err.message || 'Error desconocido'));
+    } finally {
+      setRecalculando(false);
+    }
+  };
+
+  const obtenerMensajeErrorApi = (err: any, prefijo: string) => {
+    const data = err?.response?.data;
+    const detalle = data?.error || data?.message || data?.mensaje;
+    return prefijo + (detalle || err?.message || 'Error desconocido');
+  };
+
   const handleCrearTipoCultivo = async () => {
-    const nombre = prompt('Ingrese el nombre del nuevo tipo de cultivo:');
-    if (!nombre) return;
+    const nombre = nombreNuevoTipo.trim();
+    if (!nombre) {
+      setError('Ingrese un nombre para el nuevo perfil de cultivo');
+      return;
+    }
 
     try {
       setLoading(true);
-      await configuracionEstadosService.crearTipoCultivo({
+      setError(null);
+      const creado = await configuracionEstadosService.crearTipoCultivo({
         nombre,
         descripcion: '',
         esPlantilla: false,
         activo: true,
       });
-      setSuccess('Tipo de cultivo creado exitosamente');
+      setShowModalNuevoTipo(false);
+      setNombreNuevoTipo('');
+      setSuccess(
+        `Perfil "${nombre}" creado. Configure estados y transiciones con el Asistente, la Vista guiada o importando Excel.`
+      );
       await cargarTiposCultivo();
+      if (creado?.id) {
+        setTipoCultivoSeleccionado(creado.id);
+      }
     } catch (err: any) {
-      setError('Error al crear tipo de cultivo: ' + (err.message || 'Error desconocido'));
+      setError(obtenerMensajeErrorApi(err, 'Error al crear tipo de cultivo: '));
     } finally {
       setLoading(false);
     }
@@ -431,8 +497,11 @@ const ConfiguracionEstadosScreen: React.FC = () => {
     try {
       setLoading(true);
       if (transicionEditando?.id) {
-        // Actualizar transición (si el backend lo soporta)
-        setError('La actualización de transiciones aún no está implementada');
+        await configuracionEstadosService.actualizarTransicion(transicionEditando.id, {
+          requiereMotivo: formTransicion.requiereMotivo,
+          activo: formTransicion.activo,
+        });
+        setSuccess('Transición actualizada exitosamente');
       } else {
         await configuracionEstadosService.crearTransicion(formTransicion, tipoCultivoSeleccionado, empresaId || undefined);
         setSuccess('Transición creada exitosamente');
@@ -540,9 +609,15 @@ const ConfiguracionEstadosScreen: React.FC = () => {
           <SemanticIcon semanticName="settings" size={32} />
           Configuración de Estados y Tareas
         </h1>
-        <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+        <p style={{ color: '#6b7280', marginBottom: '0.75rem' }}>
           Configure los estados de lotes, transiciones y tareas disponibles para cada tipo de cultivo.
           Puede usar plantillas globales o personalizar por empresa.
+        </p>
+        <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.5rem', maxWidth: '900px' }}>
+          <strong>¿Cuándo usar cada opción?</strong> Los cultivos estándar (Soja, Maíz, Trigo, etc.) ya están como plantillas:
+          selecciónelos en el listado y personalícelos. Use <em>+ Nuevo perfil</em> solo para un cultivo que no figure
+          en la lista (por ejemplo Alfalfa o Cebada). Eso crea el catálogo de estados; después defina estados con el
+          Asistente o importando Excel. El alta de lotes/cultivos en campo se hace desde el módulo Cultivos, no desde aquí.
         </p>
       </div>
 
@@ -613,7 +688,10 @@ const ConfiguracionEstadosScreen: React.FC = () => {
           ))}
         </select>
         <button
-          onClick={handleCrearTipoCultivo}
+          onClick={() => {
+            setNombreNuevoTipo('');
+            setShowModalNuevoTipo(true);
+          }}
           style={{
             padding: '0.5rem 1rem',
             backgroundColor: '#10b981',
@@ -623,8 +701,9 @@ const ConfiguracionEstadosScreen: React.FC = () => {
             cursor: 'pointer',
             fontWeight: '600',
           }}
+          title="Solo para cultivos que no están en la lista de plantillas"
         >
-          + Nuevo Tipo
+          + Nuevo perfil
         </button>
         {tipoCultivoSeleccionado && (
           <button
@@ -676,6 +755,85 @@ const ConfiguracionEstadosScreen: React.FC = () => {
           <Icon name="Upload" size={16} style={{ marginRight: '4px' }} /> Importar desde Excel
         </button>
       </div>
+
+      {/* Modal nuevo perfil de cultivo */}
+      {showModalNuevoTipo && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '0.5rem',
+            maxWidth: '520px',
+            width: '90%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+          }}>
+            <h3 style={{ marginBottom: '0.75rem', fontSize: '1.25rem' }}>Nuevo perfil de cultivo</h3>
+            <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+              Cree un perfil solo si el cultivo no aparece en el listado (Soja, Maíz, etc. ya existen como plantillas).
+              Después deberá definir estados, transiciones y tareas con el Asistente o importando Excel.
+            </p>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Nombre del cultivo</label>
+              <input
+                type="text"
+                value={nombreNuevoTipo}
+                onChange={(e) => setNombreNuevoTipo(e.target.value)}
+                placeholder="Ej: Alfalfa, Cebada..."
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid #d1d5db',
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCrearTipoCultivo();
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowModalNuevoTipo(false);
+                  setNombreNuevoTipo('');
+                }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#e5e7eb',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCrearTipoCultivo}
+                disabled={loading || !nombreNuevoTipo.trim()}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  cursor: loading || !nombreNuevoTipo.trim() ? 'not-allowed' : 'pointer',
+                  opacity: loading || !nombreNuevoTipo.trim() ? 0.6 : 1,
+                  fontWeight: '600',
+                }}
+              >
+                Crear perfil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Importar Excel */}
       {showModalImportar && (
@@ -780,7 +938,23 @@ const ConfiguracionEstadosScreen: React.FC = () => {
             gap: '0.5rem',
             marginBottom: '2rem',
             borderBottom: '2px solid #e5e7eb',
+            flexWrap: 'wrap',
           }}>
+            <button
+              onClick={() => setTabActiva('vista-guiada')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: tabActiva === 'vista-guiada' ? '#059669' : 'transparent',
+                color: tabActiva === 'vista-guiada' ? 'white' : '#6b7280',
+                border: 'none',
+                borderBottom: tabActiva === 'vista-guiada' ? '2px solid #059669' : '2px solid transparent',
+                cursor: 'pointer',
+                fontWeight: '600',
+                borderRadius: '0.5rem 0.5rem 0 0',
+              }}
+            >
+              <Icon name="Map" size={16} style={{ marginRight: '4px' }} /> Vista guiada
+            </button>
             <button
               onClick={() => setTabActiva('estados')}
               style={{
@@ -827,6 +1001,83 @@ const ConfiguracionEstadosScreen: React.FC = () => {
               <Icon name="CheckCircle" size={16} style={{ marginRight: '4px' }} /> Tareas
             </button>
           </div>
+
+          {/* Tab Vista guiada */}
+          {tabActiva === 'vista-guiada' && (
+            <div>
+              <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Vista guiada del ciclo</h2>
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0' }}>
+                    Diagrama del flujo, validación y asistente paso a paso.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setMostrarAsistente(true)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                    }}
+                  >
+                    Asistente paso a paso
+                  </button>
+                  <button
+                    onClick={handleRecalcularEstadosLotes}
+                    disabled={recalculando}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: recalculando ? '#9ca3af' : '#6366f1',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: recalculando ? 'not-allowed' : 'pointer',
+                      fontWeight: '600',
+                    }}
+                  >
+                    {recalculando ? 'Recalculando...' : 'Recalcular lotes ahora'}
+                  </button>
+                  <button
+                    onClick={cargarValidacion}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#e5e7eb',
+                      color: '#374151',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Revalidar
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ background: '#f9fafb', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+                <DiagramaEstadosConfig
+                  estados={estados}
+                  transiciones={transiciones}
+                  tareasPorEstado={tareas}
+                  onSeleccionarEstado={(id) => {
+                    const estado = estados.find((e) => e.id === id);
+                    if (estado) handleAbrirModalEstado(estado);
+                  }}
+                />
+              </div>
+
+              <PanelValidacionEstados validacion={validacion} cargando={validacionCargando} />
+
+              <div style={{ marginTop: '20px', padding: '14px', background: '#eff6ff', borderRadius: '8px', fontSize: '13px', color: '#1e40af' }}>
+                <strong>Recálculo automático:</strong> cada día a la 01:00 el sistema actualiza estados por tiempo (días desde siembra).
+                Use &quot;Recalcular lotes ahora&quot; para forzar la actualización sin esperar al job nocturno.
+              </div>
+            </div>
+          )}
 
           {/* Tab Estados */}
           {tabActiva === 'estados' && (
@@ -1019,9 +1270,9 @@ const ConfiguracionEstadosScreen: React.FC = () => {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <span style={{ fontWeight: '600' }}>{estadoOrigen?.nombre || 'Estado origen'}</span>
+                        <span style={{ fontWeight: '600' }}>{estadoOrigen?.nombre || transicion.estadoOrigenNombre || 'Estado origen'}</span>
                         <span>→</span>
-                        <span style={{ fontWeight: '600' }}>{estadoDestino?.nombre || 'Estado destino'}</span>
+                        <span style={{ fontWeight: '600' }}>{estadoDestino?.nombre || transicion.estadoDestinoNombre || 'Estado destino'}</span>
                         {transicion.requiereMotivo && (
                           <span style={{
                             padding: '0.25rem 0.5rem',
@@ -1034,19 +1285,35 @@ const ConfiguracionEstadosScreen: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <button
-                        onClick={() => transicion.id && handleEliminarTransicion(transicion.id)}
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Icon name="Trash2" size={16} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => handleAbrirModalTransicion(transicion)}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            cursor: 'pointer',
+                          }}
+                          title="Editar transición"
+                        >
+                          <Icon name="Pencil" size={16} />
+                        </button>
+                        <button
+                          onClick={() => transicion.id && handleEliminarTransicion(transicion.id)}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.25rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Icon name="Trash2" size={16} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -1314,6 +1581,48 @@ const ConfiguracionEstadosScreen: React.FC = () => {
                 </label>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+                    Días mínimos desde siembra
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formEstado.diasMinimos ?? ''}
+                    onChange={(e) => setFormEstado({
+                      ...formEstado,
+                      diasMinimos: e.target.value === '' ? null : Number(e.target.value),
+                    })}
+                    placeholder="Ej: 15"
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Modo de avance</label>
+                  <select
+                    value={formEstado.modoAvance || 'MIXTO'}
+                    onChange={(e) => setFormEstado({ ...formEstado, modoAvance: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                    }}
+                  >
+                    <option value="EVENTO">Evento (siembra/cosecha)</option>
+                    <option value="TIEMPO">Por tiempo (días)</option>
+                    <option value="TAREAS">Por tareas completadas</option>
+                    <option value="MIXTO">Mixto</option>
+                  </select>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button
                   onClick={handleGuardarEstado}
@@ -1373,7 +1682,7 @@ const ConfiguracionEstadosScreen: React.FC = () => {
             width: '90%',
           }}>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
-              Nueva Transición
+              {transicionEditando ? 'Editar Transición' : 'Nueva Transición'}
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1382,6 +1691,7 @@ const ConfiguracionEstadosScreen: React.FC = () => {
                 <select
                   value={formTransicion.estadoOrigenId}
                   onChange={(e) => setFormTransicion({ ...formTransicion, estadoOrigenId: Number(e.target.value) })}
+                  disabled={!!transicionEditando}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -1402,6 +1712,7 @@ const ConfiguracionEstadosScreen: React.FC = () => {
                 <select
                   value={formTransicion.estadoDestinoId}
                   onChange={(e) => setFormTransicion({ ...formTransicion, estadoDestinoId: Number(e.target.value) })}
+                  disabled={!!transicionEditando}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -1583,6 +1894,18 @@ const ConfiguracionEstadosScreen: React.FC = () => {
           </div>
         </div>
       )}
+
+      <AsistenteConfiguracionEstados
+        abierto={mostrarAsistente}
+        onCerrar={() => setMostrarAsistente(false)}
+        estados={estados}
+        transiciones={transiciones}
+        tareasPorEstado={tareas}
+        onIrATab={(tab) => { setTabActiva(tab); setMostrarAsistente(false); }}
+        onAbrirModalEstado={() => { setMostrarAsistente(false); handleAbrirModalEstado(); }}
+        onAbrirModalTransicion={() => { setMostrarAsistente(false); handleAbrirModalTransicion(); }}
+        onAbrirModalTarea={(estadoId) => { setMostrarAsistente(false); handleAbrirModalTarea(estadoId); }}
+      />
     </div>
   );
 };

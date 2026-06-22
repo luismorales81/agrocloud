@@ -37,7 +37,7 @@ if (VITE_API_BASE_URL && VITE_API_BASE_URL.includes('/api')) {
 }
 
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
-console.log('%c🚀 API SERVICE INITIALIZED - VERSION 2.2', 'color: #00ff00; font-weight: bold; font-size: 16px');
+console.log('%c🚀 API SERVICE INITIALIZED - VERSION 2.3 (timeout 30s, login 60s)', 'color: #00ff00; font-weight: bold; font-size: 16px');
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
 console.log('%c📡 VITE_API_URL:', 'color: #ffaa00; font-weight: bold', VITE_API_URL || 'NOT SET');
 console.log('%c📡 VITE_API_BASE_URL:', 'color: #ffaa00; font-weight: bold', VITE_API_BASE_URL || 'NOT SET');
@@ -71,7 +71,7 @@ export function mensajeErrorConexionApi(error: AxiosError): string {
 // Crear instancia de Axios
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -126,12 +126,21 @@ const api = axios.create({
   api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    const url = config.url ?? '';
+    const esRutaAuth = url.includes('/auth/') || url.includes('/eula/');
+
     if (token) {
       console.log('🔧 [API] Agregando token a petición:', config.url);
       config.headers.Authorization = `Bearer ${token}`;
     } else {
       console.log('⚠️ [API] No hay token disponible para:', config.url);
     }
+
+    // Sin sesión no enviar contexto de empresa/campaña (evita ruido en login y estados stale)
+    if (!token && esRutaAuth) {
+      return config;
+    }
+
     // Enviar empresa activa para comprobación módulo/empresa/usuario en el backend
     const rawEmpresa = localStorage.getItem('empresaActiva');
     if (rawEmpresa) {
@@ -142,6 +151,18 @@ const api = axios.create({
         }
       } catch {
         // ignorar si no es JSON válido
+      }
+    }
+    const rawCampana = localStorage.getItem('campanaActiva');
+    const esRutaCampanas = url.includes('/v1/campanas');
+    if (rawCampana && !esRutaCampanas) {
+      try {
+        const campana = JSON.parse(rawCampana);
+        if (campana?.id != null) {
+          config.headers['X-Campaign-Id'] = String(campana.id);
+        }
+      } catch {
+        // ignorar
       }
     }
     return config;
@@ -173,22 +194,30 @@ const api = axios.create({
       error.eulaError = error.response.data;
     } else {
       // Log completo para otros errores
-      console.error('❌ [API] Error en respuesta:', {
-        url: error.config?.url,
-        status: error.response?.status,
-        message: error.message,
-        data: error.response?.data
-      });
+      const esTimeout = error.code === 'ECONNABORTED';
+      if (esTimeout) {
+        console.warn('⏱️ [API] Tiempo de espera agotado:', error.config?.url);
+      } else {
+        console.error('❌ [API] Error en respuesta:', {
+          url: error.config?.url,
+          status: error.response?.status,
+          message: error.message,
+          data: error.response?.data
+        });
+      }
     }
     
     if (error.response?.status === 401) {
-      // No limpiar localStorage si es un error de EULA (el usuario aún no está autenticado)
       const isEulaEndpoint = error.config?.url?.includes('/eula/');
-      if (!isEulaEndpoint) {
-        console.log('🔧 [API] Token expirado, limpiando localStorage');
+      const teniaToken = Boolean(error.config?.headers?.Authorization);
+      const enLogin = window.location.pathname === '/login' || window.location.pathname === '/';
+      if (!isEulaEndpoint && teniaToken && !enLogin) {
+        console.log('🔧 [API] Token expirado o inválido, limpiando localStorage');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
+      } else if (!isEulaEndpoint && !teniaToken) {
+        console.log('ℹ️ [API] 401 sin token enviado, no se limpia sesión');
       } else {
         console.log('📄 [API] Error 401 en endpoint EULA, no limpiando localStorage (usuario aún no autenticado)');
       }
@@ -212,8 +241,15 @@ export const showNotification = (message: string, type: 'success' | 'error' | 'i
 export const authService = {
   async login(username: string, password: string) {
     try {
-      // Usar el endpoint real de autenticación
-      const response = await api.post('/auth/login', { email: username, password });
+      // Comprobar que el backend responde antes de intentar login (fallo rápido si no está listo)
+      try {
+        await api.get('/health', { timeout: 8000 });
+      } catch (healthError: any) {
+        console.warn('⚠️ [AuthService] Backend no disponible en /health:', healthError?.message);
+        throw healthError;
+      }
+
+      const response = await api.post('/auth/login', { email: username, password }, { timeout: 60000 });
       console.log('✅ [AuthService] Login exitoso');
       
       return response.data;

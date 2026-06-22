@@ -8,6 +8,7 @@ import com.agrocloud.model.enums.RolEmpresa;
 import com.agrocloud.core.infrastructure.EmpresaRepository;
 import com.agrocloud.core.infrastructure.UsuarioEmpresaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,10 @@ public class EmpresaService {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    @Qualifier("campanaServiceCore")
+    private CampanaService campanaService;
 
     @Transactional(readOnly = true)
     public List<Empresa> obtenerTodasLasEmpresas() {
@@ -76,7 +81,9 @@ public class EmpresaService {
         if (empresa.getFechaFinTrial() == null) empresa.setFechaFinTrial(LocalDate.now().plusDays(30));
         if (empresa.getActivo() == null) empresa.setActivo(true);
         empresa.setCreadoPor(creadoPor);
-        return empresaRepository.save(empresa);
+        Empresa guardada = empresaRepository.save(empresa);
+        campanaService.asegurarCampanaActivaPorDefecto(guardada.getId());
+        return guardada;
     }
 
     public Empresa actualizarEmpresa(Long id, Empresa empresaActualizada) {

@@ -11,6 +11,7 @@ import com.agrocloud.porcinos.domain.DatosEconomicosPorcino;
 import com.agrocloud.porcinos.domain.ParametrosEstablecimientoPorcino;
 import com.agrocloud.porcinos.infrastructure.DatosEconomicosPorcinoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,10 @@ public class VentaPorcinoService {
 
     @Autowired
     private ParametrosPorcinoService parametrosPorcinoService;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private com.agrocloud.core.application.CampanaContextService campanaContextService;
 
     /**
      * Registrar una venta o faena con validaciones completas
@@ -189,6 +194,7 @@ public class VentaPorcinoService {
         ventaData.setEmpresa(empresaActiva.get());
         ventaData.setUsuario(user);
         ventaData.setActivo(true);
+        ventaData.setCampanaId(campanaContextService.resolverCampanaIdActiva(empresaActiva.get().getId()));
 
         if (ventaData.getFecha() == null) {
             ventaData.setFecha(LocalDate.now());

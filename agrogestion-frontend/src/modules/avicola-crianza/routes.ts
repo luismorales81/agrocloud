@@ -9,7 +9,7 @@ import UbicacionEstablecimientosCrianzaScreen from './screens/UbicacionEstableci
 import InsumosCrianzaScreen from './screens/InsumosCrianzaScreen';
 import LotesCrianzaScreen from './screens/LotesCrianzaScreen';
 import DetalleLoteCrianzaScreen from './screens/DetalleLoteCrianzaScreen';
-import { ExpedienteTrazabilidadAvicolaCrianza } from '../../components/trazabilidad/pantallasExpedientePorModulo';
+import GestionPeriodosScreen from '../../components/GestionCampanasScreen';
 
 const RedirigirCatalogoCrianzaAEstablecimientos = () =>
   React.createElement(Navigate, { to: '/avicola-crianza/establecimientos', replace: true });
@@ -62,8 +62,8 @@ export const avicolaCrianzaRoutes: ModuleRoute[] = [
     permisos: ['canViewInsumos'],
   },
   {
-    path: '/avicola-crianza/trazabilidad-expediente',
-    name: 'Expediente trazabilidad',
-    component: ExpedienteTrazabilidadAvicolaCrianza,
+    path: '/avicola-crianza/configuracion/periodos',
+    name: 'Períodos de gestión',
+    component: GestionPeriodosScreen,
   },
 ];

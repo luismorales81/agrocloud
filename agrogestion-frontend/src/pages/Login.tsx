@@ -70,7 +70,11 @@ const Login: React.FC = () => {
       // Log completo para otros errores reales
       console.error('❌ [Login] Error en handleSubmit:', err);
       
-      setError('❌ Error al conectar con el servidor. Por favor, intenta nuevamente.');
+      if (err?.code === 'ECONNABORTED') {
+        setError('⏱️ El servidor tardó demasiado en responder. Verificá que el backend esté corriendo en el puerto 8080 y que haya terminado de iniciar.');
+      } else {
+        setError('❌ Error al conectar con el servidor. Por favor, intenta nuevamente.');
+      }
     } finally {
       setLoading(false);
     }

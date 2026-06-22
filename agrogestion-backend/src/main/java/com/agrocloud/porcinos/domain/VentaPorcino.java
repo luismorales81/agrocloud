@@ -68,6 +68,9 @@ public class VentaPorcino {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    @Column(name = "campana_id")
+    private Long campanaId;
+
     @CreatedDate
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
@@ -125,6 +128,8 @@ public class VentaPorcino {
     public void setUsuario(User usuario) { this.usuario = usuario; }
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+    public Long getCampanaId() { return campanaId; }
+    public void setCampanaId(Long campanaId) { this.campanaId = campanaId; }
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
     public LocalDateTime getFechaActualizacion() { return fechaActualizacion; }

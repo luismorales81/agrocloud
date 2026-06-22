@@ -7,7 +7,7 @@ import AvicolaCarneDashboard from './pages/AvicolaCarneDashboard';
 import AvicolaCarneListadoScreen from './pages/AvicolaCarneListadoScreen';
 import AvicolaCarneLoteNuevoPlaceholder from './pages/AvicolaCarneLoteNuevoPlaceholder';
 import AvicolaCarneDetalleLoteScreen from './pages/AvicolaCarneDetalleLoteScreen';
-import { ExpedienteTrazabilidadAvicolaCarne } from '../../components/trazabilidad/pantallasExpedientePorModulo';
+import GestionPeriodosScreen from '../../components/GestionCampanasScreen';
 
 const ID_MODULO: ModuleId = 'avicola-carne';
 
@@ -65,8 +65,8 @@ export const avicolaCarneRoutes: ModuleRoute[] = [
     component: envolverSiModuloCarneHabilitado(AvicolaCarneListadoScreen),
   },
   {
-    path: '/avicola-carne/trazabilidad-expediente',
-    name: 'Expediente trazabilidad',
-    component: envolverSiModuloCarneHabilitado(ExpedienteTrazabilidadAvicolaCarne),
+    path: '/avicola-carne/configuracion/periodos',
+    name: 'Períodos de gestión',
+    component: envolverSiModuloCarneHabilitado(GestionPeriodosScreen),
   },
 ];

@@ -5,6 +5,7 @@ import { avicolaCrianzaModule } from './avicola-crianza';
 import { avicolaHuevosModule } from './avicola-huevos';
 import { avicolaCarneModule } from './avicola-carne';
 import { avicolaPonedorasModule } from './avicola-ponedoras';
+import { feedlotModule } from './feedlot';
 
 /**
  * Registro centralizado de todos los módulos disponibles
@@ -17,6 +18,7 @@ export const availableModules: ModuleConfig[] = [
   avicolaHuevosModule,
   avicolaCarneModule,
   avicolaPonedorasModule,
+  feedlotModule,
 ];
 
 /**

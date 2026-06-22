@@ -11,6 +11,7 @@ import com.agrocloud.porcinos.domain.Recria;
 import com.agrocloud.porcinos.infrastructure.RecriaRepository;
 import com.agrocloud.porcinos.infrastructure.ParametrosProductivosPorcinoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,10 @@ public class RecriaService {
 
     @Autowired
     private EmpresaContextService empresaContextService;
+
+    @Autowired
+    @Qualifier("campanaContextServiceCore")
+    private com.agrocloud.core.application.CampanaContextService campanaContextService;
 
     @Autowired
     private RecriaStockService recriaStockService;
@@ -73,6 +78,7 @@ public class RecriaService {
         recriaData.setEmpresa(empresaActiva.get());
         recriaData.setUsuario(user);
         recriaData.setActivo(true);
+        recriaData.setCampanaId(campanaContextService.resolverCampanaIdActiva(empresaActiva.get().getId()));
 
         if (recriaData.getFechaIngreso() == null) {
             recriaData.setFechaIngreso(LocalDate.now());
@@ -243,18 +249,38 @@ public class RecriaService {
     }
 
     /**
-     * Obtener recrías activas
+     * Listar recrías con filtros opcionales.
+     * @param activas true = solo abiertas (sin fecha de salida); false = histórico incluye cerradas
+     * @param delPeriodoActivo true = solo registros con campana_id del período activo
      */
     @Transactional(readOnly = true)
-    public List<Recria> obtenerRecriasActivas(User user) {
+    public List<Recria> listarRecrias(User user, Boolean activas, Boolean delPeriodoActivo) {
         Optional<Empresa> empresaActiva = empresaContextService.obtenerEmpresaPrincipalDelUsuario(user.getId());
         if (empresaActiva.isEmpty()) {
             return List.of();
         }
-        List<Recria> recrias = recriaRepository.findByEmpresaAndActivas(empresaActiva.get());
-        // Poblar información adicional y origen derivado para cada recría
+        boolean soloAbiertas = activas == null || activas;
+        List<Recria> recrias = soloAbiertas
+                ? recriaRepository.findByEmpresaAndActivas(empresaActiva.get())
+                : recriaRepository.findByEmpresaTodasActivas(empresaActiva.get());
+
+        if (Boolean.TRUE.equals(delPeriodoActivo)) {
+            Long campanaId = campanaContextService.resolverCampanaIdActiva(empresaActiva.get().getId());
+            recrias = recrias.stream()
+                    .filter(r -> campanaId.equals(r.getCampanaId()))
+                    .toList();
+        }
+
         recrias.forEach(this::poblarInformacionAdicional);
         return recrias;
+    }
+
+    /**
+     * Obtener recrías activas (sin fecha de salida).
+     */
+    @Transactional(readOnly = true)
+    public List<Recria> obtenerRecriasActivas(User user) {
+        return listarRecrias(user, true, false);
     }
 
     /**

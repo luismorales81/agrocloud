@@ -80,6 +80,9 @@ public class Egreso {
     
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
+
+    @Column(name = "campana_id")
+    private Long campanaId;
     
     // Enum para tipos de egreso
     public enum TipoEgreso {
@@ -264,6 +267,14 @@ public class Egreso {
     
     public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public Long getCampanaId() {
+        return campanaId;
+    }
+
+    public void setCampanaId(Long campanaId) {
+        this.campanaId = campanaId;
     }
     
     // Método para calcular costo total automáticamente

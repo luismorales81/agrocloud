@@ -125,8 +125,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else if (error.response?.status === 500) {
         showNotification('Error interno del servidor. Inténtalo de nuevo más tarde.', 'error');
         return false;
-      } else if (error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK' || !error.response) {
-        showNotification(mensajeErrorConexionApi(error), 'error');
+      } else if (error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || !error.response) {
+        const mensaje = error.code === 'ECONNABORTED'
+          ? 'El servidor tardó demasiado en responder. Verificá que el backend esté en ejecución (puerto 8080) y que haya terminado de iniciar.'
+          : mensajeErrorConexionApi(error);
+        showNotification(mensaje, 'error');
         return false;
       } else {
         showNotification('Error en el inicio de sesión. Inténtalo de nuevo.', 'error');

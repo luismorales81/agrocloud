@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   configuracionService,
   CLAVE_CONFIRMACION_CALENDARIO_SOLO_CON_RACION_REAL,
@@ -20,9 +21,11 @@ import type {
   ParametrosProductivosPorcino,
   DatosEconomicosPorcino,
 } from '../../types';
+import GestionCampanasScreen from '../../../../components/GestionCampanasScreen';
 
 type TabType = 
   | 'parametros-establecimiento'
+  | 'periodos-gestion'
   | 'parametros-productivos'
   | 'datos-economicos'
   | 'razas'
@@ -56,12 +59,20 @@ const useMensajes = () => {
 };
 
 const ConfiguracionesScreen: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [tabActiva, setTabActiva] = useState<TabType>('parametros-establecimiento');
   const [loading, setLoading] = useState(false);
   const { mensaje, mostrarMensajeExito, mostrarMensajeError, ocultarMensaje } = useMensajes();
 
+  useEffect(() => {
+    if (searchParams.get('tab') === 'periodos') {
+      setTabActiva('periodos-gestion');
+    }
+  }, [searchParams]);
+
   const tabs = [
     { id: 'parametros-establecimiento' as TabType, nombre: 'Establecimiento', icono: 'Building2' },
+    { id: 'periodos-gestion' as TabType, nombre: 'Períodos', icono: 'CalendarDays' },
     { id: 'parametros-productivos' as TabType, nombre: 'Productivos', icono: 'BarChart' },
     { id: 'datos-economicos' as TabType, nombre: 'Económicos', icono: 'DollarSign' },
     { id: 'razas' as TabType, nombre: 'Razas', icono: 'PiggyBank' },
@@ -180,6 +191,9 @@ const ConfiguracionesScreen: React.FC = () => {
           <>
             {tabActiva === 'parametros-establecimiento' && (
               <ParametrosEstablecimientoTab />
+            )}
+            {tabActiva === 'periodos-gestion' && (
+              <GestionCampanasScreen incrustado />
             )}
             {tabActiva === 'parametros-productivos' && (
               <ParametrosProductivosTab />

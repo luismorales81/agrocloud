@@ -65,7 +65,7 @@ public class SecurityConfig {
                     "/api/v1/cultivos/**", "/api/cosechas/**", "/api/v1/cosechas/**", "/api/insumos/**",
                     "/api/maquinaria/**", "/api/labores/**", "/api/ingresos/**", "/api/egresos/**",
                     "/api/v1/balance/**", "/api/lotes/**", "/api/v1/lotes/**",
-                    "/api/v1/configuracion-estados/**", "/api/trazabilidad/**"
+                    "/api/v1/configuracion-estados/**", "/api/v1/campanas/**", "/api/trazabilidad/**"
                 ).authenticated()
                 .anyRequest().authenticated()
             )
@@ -140,7 +140,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
-            "Authorization", "Content-Type", "X-Company-Id", "Accept", "Origin", "X-Requested-With"
+            "Authorization", "Content-Type", "X-Company-Id", "X-Campaign-Id", "Accept", "Origin", "X-Requested-With"
         ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

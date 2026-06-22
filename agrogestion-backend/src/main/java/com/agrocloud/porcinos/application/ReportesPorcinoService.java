@@ -2,6 +2,7 @@ package com.agrocloud.porcinos.application;
 import com.agrocloud.core.domain.Empresa;
 
 import com.agrocloud.core.application.EmpresaContextService;
+import com.agrocloud.config.CampanaRequestContext;
 import com.agrocloud.core.application.port.LoteParaPorcinosQuery;
 import com.agrocloud.cultivos.domain.Cultivo;
 
@@ -456,7 +457,9 @@ public class ReportesPorcinoService {
         
         // Obtener consumos diarios automáticos del rango de fechas usando el nuevo sistema
         List<ConsumoDiarioAutomatico> consumosDiarios = consumoDiarioAutomaticoRepository
-            .findByEmpresaAndFechaBetween(empresa.get(), fechaInicio, fechaFin);
+            .findByEmpresaAndFechaBetween(empresa.get(), fechaInicio, fechaFin).stream()
+            .filter(c -> coincideConCampanaActiva(c.getCampanaId(), campanaIdDeRecria(c), empresa.get()))
+            .collect(Collectors.toList());
         
         List<Map<String, Object>> consumosData = new ArrayList<>();
         BigDecimal consumoTotalRecetas = BigDecimal.ZERO;
@@ -548,6 +551,7 @@ public class ReportesPorcinoService {
         // Ventas
         List<VentaPorcino> ventas = ventaPorcinoRepository.findByEmpresaAndActivoTrue(empresa.get()).stream()
             .filter(v -> !v.getFecha().isBefore(fechaInicio) && !v.getFecha().isAfter(fechaFin))
+            .filter(v -> coincideConCampanaActiva(v.getCampanaId(), null, empresa.get()))
             .collect(Collectors.toList());
         
         List<Map<String, Object>> ventasData = ventas.stream().map(v -> {
@@ -650,7 +654,7 @@ public class ReportesPorcinoService {
                 if (fechaFin != null && r.getFechaIngreso().isAfter(fechaFin)) {
                     return false;
                 }
-                return true;
+                return coincideConCampanaActiva(r.getCampanaId(), null, empresa.get());
             })
             .collect(Collectors.toList());
         
@@ -763,6 +767,7 @@ public class ReportesPorcinoService {
         
         List<VentaPorcino> ventas = ventaPorcinoRepository.findByEmpresaAndActivoTrue(empresa.get()).stream()
             .filter(v -> !v.getFecha().isBefore(fechaInicio) && !v.getFecha().isAfter(fechaFin))
+            .filter(v -> coincideConCampanaActiva(v.getCampanaId(), null, empresa.get()))
             .collect(Collectors.toList());
         
         List<Map<String, Object>> ventasData = ventas.stream().map(v -> {
@@ -1057,7 +1062,9 @@ public class ReportesPorcinoService {
         
         // Obtener consumos diarios automáticos del período
         List<ConsumoDiarioAutomatico> consumos = consumoDiarioAutomaticoRepository
-            .findByEmpresaAndFechaBetween(empresa, fechaDesde, fechaHasta);
+            .findByEmpresaAndFechaBetween(empresa, fechaDesde, fechaHasta).stream()
+            .filter(c -> coincideConCampanaActiva(c.getCampanaId(), campanaIdDeRecria(c), empresa))
+            .collect(Collectors.toList());
         
         for (ConsumoDiarioAutomatico consumo : consumos) {
             // Calcular costo de la receta
@@ -1207,6 +1214,25 @@ public class ReportesPorcinoService {
             return loteParaPorcinosQuery.obtenerPorId(v.getLoteId()).map(dto -> dto.nombre()).orElse("N/A");
         }
         return "Lote " + v.getLoteId();
+    }
+
+    private Long campanaIdDeRecria(ConsumoDiarioAutomatico consumo) {
+        if (consumo.getRecria() != null) {
+            return consumo.getRecria().getCampanaId();
+        }
+        return null;
+    }
+
+    private boolean coincideConCampanaActiva(Long campanaIdDirecto, Long campanaIdPadre, Empresa empresa) {
+        Long campanaFiltro = CampanaRequestContext.getCampanaId();
+        if (campanaFiltro == null) {
+            return true;
+        }
+        Long efectivo = campanaIdDirecto != null ? campanaIdDirecto : campanaIdPadre;
+        if (efectivo == null) {
+            return true;
+        }
+        return campanaFiltro.equals(efectivo);
     }
 }
 

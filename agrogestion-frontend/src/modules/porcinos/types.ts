@@ -463,6 +463,7 @@ export interface FiltrosRecria {
   fechaIngresoDesde?: string;
   fechaIngresoHasta?: string;
   activas?: boolean;
+  delPeriodoActivo?: boolean;
 }
 
 // ============================================================================

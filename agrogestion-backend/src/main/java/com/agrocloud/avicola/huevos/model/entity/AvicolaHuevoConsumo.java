@@ -39,6 +39,9 @@ public class AvicolaHuevoConsumo {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
+    @Column(name = "campana_id")
+    private Long campanaId;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -105,6 +108,14 @@ public class AvicolaHuevoConsumo {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public Long getCampanaId() {
+        return campanaId;
+    }
+
+    public void setCampanaId(Long campanaId) {
+        this.campanaId = campanaId;
     }
 
     public LocalDateTime getCreatedAt() {

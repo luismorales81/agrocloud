@@ -1,0 +1,26 @@
+﻿# Maven / build
+target/
+build/
+out/
+
+# dependencies
+node_modules/
+
+# git
+.git/
+
+# logs
+*.log
+
+# binaries
+*.jar
+*.war
+*.class
+
+# IDE
+.idea/
+.vscode/
+
+# caches and temp
+.cache/
+.tmp/
