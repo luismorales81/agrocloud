@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import FieldsManagement from './components/FieldsManagement';
@@ -707,6 +707,15 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+const RedirigirAvicolaCarneACrianza: React.FC = () => {
+  const location = useLocation();
+  const destino =
+    location.pathname.replace(/^\/avicola-carne/, '/avicola-crianza') +
+    location.search +
+    location.hash;
+  return <Navigate to={destino} replace />;
+};
+
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -719,9 +728,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/porcinos/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
       <Route path="/avicola-crianza/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
       <Route path="/avicola-huevos/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
-      <Route path="/avicola-carne/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/avicola-carne/*" element={<ProtectedRoute><RedirigirAvicolaCarneACrianza /></ProtectedRoute>} />
       <Route path="/avicola-ponedoras/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
       <Route path="/feedlot/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
+      <Route path="/lecheria/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
       {/* Mantener ruta legacy para compatibilidad */}
       <Route path="/dashboard-legacy" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/login" replace />} />

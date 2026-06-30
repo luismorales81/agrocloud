@@ -17,6 +17,8 @@ public interface InsumoRepository extends JpaRepository<Insumo, Long> {
 
     List<Insumo> findByUserIdAndActivoTrue(Long userId);
 
+    List<Insumo> findByEmpresaIdAndActivoTrue(Long empresaId);
+
     List<Insumo> findByUserIdAndTipo(Long userId, Insumo.TipoInsumo tipo);
 
     @Query("SELECT i FROM Insumo i WHERE i.user.id = :userId AND i.stockActual <= i.stockMinimo")

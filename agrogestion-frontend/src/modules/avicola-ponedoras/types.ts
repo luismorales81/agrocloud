@@ -17,6 +17,7 @@ export interface AvicolaPonedorasGalpon {
   id: number;
   empresaId: number;
   establecimientoId?: number | null;
+  establecimientoNombre?: string | null;
   nombre: string;
   raza?: string | null;
   fechaIngreso: string;
@@ -27,6 +28,25 @@ export interface AvicolaPonedorasGalpon {
   observaciones?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  climaLatitud?: number | null;
+  climaLongitud?: number | null;
+}
+
+export interface AmbienteDiario {
+  id: number;
+  galponId: number;
+  empresaId: number;
+  fecha: string;
+  temperaturaDia?: number | null;
+  humedadDia?: number | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface AmbienteDiarioCuerpo {
+  fecha: string;
+  temperaturaDia?: number | null;
+  humedadDia?: number | null;
 }
 
 /** Alta de galpón (POST). */

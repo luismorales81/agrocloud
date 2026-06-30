@@ -117,7 +117,11 @@ public class ServicioFeedlotDietas {
         Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
         FeedlotLote lote = servicioLotes.obtenerEntidadLote(empresaId, loteId);
         if (lote.getDieta() == null) {
-            throw new IllegalStateException("El lote no tiene dieta asignada");
+            FeedlotConsumoTeoricoRespuesta vacio = new FeedlotConsumoTeoricoRespuesta();
+            vacio.setLoteId(loteId);
+            vacio.setFechaDesde(lote.getFechaIngreso());
+            vacio.setFechaHasta(LocalDate.now());
+            return vacio;
         }
         FeedlotDieta dieta = obtenerEntidadDieta(lote.getDieta().getId());
         LocalDate desde = fechaDesde != null ? fechaDesde : lote.getFechaIngreso();

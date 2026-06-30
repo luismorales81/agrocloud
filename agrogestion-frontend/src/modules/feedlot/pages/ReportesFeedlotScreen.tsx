@@ -36,6 +36,7 @@ import { Icon } from '../../../components/icons';
 import type { FeedlotAnalisisLoteItem } from '../types';
 import {
   exportarReportesExcel,
+  listarLecturasComedero,
   mensajeError,
   obtenerAnalisisLotes,
   obtenerCurvaPeso,
@@ -58,6 +59,9 @@ const ReportesFeedlotScreen: React.FC = () => {
   const [puntosCurva, setPuntosCurva] = useState<
     { fecha: string; peso: number; tipo: string }[]
   >([]);
+  const [loteClimaId, setLoteClimaId] = useState<number | ''>('');
+  const [serieClima, setSerieClima] = useState<{ fecha: string; temperatura?: number; humedad?: number }[]>([]);
+  const [cargandoClima, setCargandoClima] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -114,6 +118,31 @@ const ReportesFeedlotScreen: React.FC = () => {
   useEffect(() => {
     void cargarCurva();
   }, [cargarCurva]);
+
+  const cargarSerieClima = useCallback(async () => {
+    if (loteClimaId === '') {
+      setSerieClima([]);
+      return;
+    }
+    try {
+      setCargandoClima(true);
+      const lecturas = await listarLecturasComedero(Number(loteClimaId));
+      setSerieClima(
+        lecturas
+          .filter((l) => l.temperaturaDia != null || l.humedadDia != null)
+          .map((l) => ({
+            fecha: String(l.fecha).slice(5),
+            temperatura: l.temperaturaDia != null ? Number(l.temperaturaDia) : undefined,
+            humedad: l.humedadDia != null ? Number(l.humedadDia) : undefined,
+          }))
+      );
+    } catch (err: unknown) {
+      setError(mensajeError(err));
+      setSerieClima([]);
+    } finally {
+      setCargandoClima(false);
+    }
+  }, [loteClimaId]);
 
   const datosGmd = useMemo(
     () =>
@@ -343,6 +372,57 @@ const ReportesFeedlotScreen: React.FC = () => {
             {!cargandoCurva && loteCurvaId !== '' && puntosCurva.length === 0 && (
               <Typography variant="body2" color="text.secondary">
                 Sin datos de pesadas para este lote.
+              </Typography>
+            )}
+          </Paper>
+
+          <Paper sx={{ p: 2, mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Temperatura y humedad (lecturas de comedero)
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 220 }}>
+                <InputLabel>Lote</InputLabel>
+                <Select
+                  label="Lote"
+                  value={loteClimaId}
+                  onChange={(ev) => setLoteClimaId(ev.target.value === '' ? '' : Number(ev.target.value))}
+                >
+                  <MenuItem value="">Seleccionar…</MenuItem>
+                  {lotes.map((l) => (
+                    <MenuItem key={l.loteId} value={l.loteId}>
+                      {l.loteNombre ?? `Lote ${l.loteId}`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button variant="outlined" onClick={() => void cargarSerieClima()} disabled={cargandoClima || loteClimaId === ''}>
+                Cargar serie
+              </Button>
+            </Stack>
+            {cargandoClima && (
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <CircularProgress size={20} />
+                <Typography variant="body2">Cargando clima…</Typography>
+              </Stack>
+            )}
+            {!cargandoClima && serieClima.length > 0 && (
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={serieClima}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                  <YAxis yAxisId="temp" tick={{ fontSize: 11 }} unit="°C" />
+                  <YAxis yAxisId="hum" orientation="right" tick={{ fontSize: 11 }} unit="%" />
+                  <Tooltip />
+                  <Legend />
+                  <Line yAxisId="temp" type="monotone" dataKey="temperatura" stroke="#dc2626" name="Temp. °C" dot={{ r: 2 }} />
+                  <Line yAxisId="hum" type="monotone" dataKey="humedad" stroke="#2563eb" name="Humedad %" dot={{ r: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+            {!cargandoClima && loteClimaId !== '' && serieClima.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                Sin lecturas de comedero con temperatura o humedad registradas.
               </Typography>
             )}
           </Paper>

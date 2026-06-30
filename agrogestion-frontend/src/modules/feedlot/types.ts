@@ -43,6 +43,7 @@ export interface FeedlotEstablecimiento {
   empresaId?: number;
   nombre: string;
   ubicacion?: string | null;
+  coordenadas?: string | null;
   capacidadTotalCabezas?: number | null;
   activo?: boolean;
   createdAt?: string;
@@ -52,6 +53,7 @@ export interface FeedlotEstablecimiento {
 export interface FeedlotEstablecimientoSolicitud {
   nombre: string;
   ubicacion?: string | null;
+  coordenadas?: string | null;
   capacidadTotalCabezas?: number | null;
   activo?: boolean;
 }
@@ -104,6 +106,8 @@ export interface FeedlotLote {
   dietaNombre?: string | null;
   createdAt?: string;
   updatedAt?: string | null;
+  climaLatitud?: number | null;
+  climaLongitud?: number | null;
 }
 
 export interface FeedlotLoteSolicitud {
@@ -364,6 +368,8 @@ export interface FeedlotLecturaComedero {
   bunkScore: FeedlotBunkScore | string;
   kgEntregados?: number | null;
   observaciones?: string | null;
+  temperaturaDia?: number | null;
+  humedadDia?: number | null;
   createdAt?: string;
 }
 
@@ -371,6 +377,8 @@ export interface FeedlotLecturaComederoSolicitud {
   fecha: string;
   bunkScore: FeedlotBunkScore | string;
   kgEntregados?: number | null;
+  temperaturaDia?: number | null;
+  humedadDia?: number | null;
   observaciones?: string | null;
 }
 

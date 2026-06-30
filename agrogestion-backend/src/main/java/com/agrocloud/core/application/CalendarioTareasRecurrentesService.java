@@ -141,6 +141,14 @@ public class CalendarioTareasRecurrentesService {
         return construirEventosEnRangoPorAmbito(usuarioId, desde, hasta, AmbitoCalendarioSerie.FEEDLOT);
     }
 
+    /**
+     * Tareas recurrentes del calendario del módulo avícola carne.
+     */
+    public List<Map<String, Object>> construirEventosEnRangoCalendarioAvicolaCrianza(
+            Long usuarioId, LocalDate desde, LocalDate hasta) {
+        return construirEventosEnRangoPorAmbito(usuarioId, desde, hasta, AmbitoCalendarioSerie.AVICOLA_CRIANZA);
+    }
+
     private List<Map<String, Object>> construirEventosEnRangoPorAmbito(
             Long usuarioId, LocalDate desde, LocalDate hasta, AmbitoCalendarioSerie ambito) {
         List<SerieTareaRecurrenteCalendario> series =

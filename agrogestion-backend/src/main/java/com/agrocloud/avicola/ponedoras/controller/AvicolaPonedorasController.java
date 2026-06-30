@@ -3,6 +3,7 @@ package com.agrocloud.avicola.ponedoras.controller;
 import com.agrocloud.annotation.RequiresModule;
 import com.agrocloud.avicola.ponedoras.model.dto.*;
 import com.agrocloud.avicola.ponedoras.model.enums.AvicolaPonedorasGalponEstado;
+import com.agrocloud.avicola.ponedoras.service.ServicioAvicolaPonedorasAmbiente;
 import com.agrocloud.avicola.ponedoras.service.ServicioAvicolaPonedorasGalpon;
 import com.agrocloud.avicola.ponedoras.service.ServicioAvicolaPonedorasOperaciones;
 import com.agrocloud.core.application.UserService;
@@ -14,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -34,14 +36,17 @@ public class AvicolaPonedorasController {
 
     private final ServicioAvicolaPonedorasGalpon servicioGalpon;
     private final ServicioAvicolaPonedorasOperaciones servicioOperaciones;
+    private final ServicioAvicolaPonedorasAmbiente servicioAmbiente;
     private final UserService userService;
 
     public AvicolaPonedorasController(
             ServicioAvicolaPonedorasGalpon servicioGalpon,
             ServicioAvicolaPonedorasOperaciones servicioOperaciones,
+            ServicioAvicolaPonedorasAmbiente servicioAmbiente,
             UserService userService) {
         this.servicioGalpon = servicioGalpon;
         this.servicioOperaciones = servicioOperaciones;
+        this.servicioAmbiente = servicioAmbiente;
         this.userService = userService;
     }
 
@@ -206,5 +211,25 @@ public class AvicolaPonedorasController {
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
         return ResponseEntity.ok(servicioOperaciones.calcularResumen(id));
+    }
+
+    @GetMapping("/galpones/{id}/ambiente-diario")
+    public ResponseEntity<List<AvicolaPonedorasAmbienteDiarioRespuesta>> listarAmbienteDiario(
+            @PathVariable Long id,
+            @RequestParam(required = false) LocalDate desde,
+            @RequestParam(required = false) LocalDate hasta,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioAmbiente.listarAmbienteDiario(id, desde, hasta));
+    }
+
+    @PutMapping("/galpones/{id}/ambiente-diario")
+    @RequiresModule(value = "AVICOLA_PONEDORAS", permission = "write")
+    public ResponseEntity<AvicolaPonedorasAmbienteDiarioRespuesta> guardarAmbienteDiario(
+            @PathVariable Long id,
+            @Valid @RequestBody AvicolaPonedorasAmbienteDiarioSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioAmbiente.guardarAmbienteDiario(id, solicitud));
     }
 }

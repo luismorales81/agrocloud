@@ -2,11 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../services/apiEndpoints';
-import { useAuth } from '../contexts/AuthContext';
-import { useEmpresa } from '../contexts/EmpresaContext';
-import { useCurrencyContext } from '../contexts/CurrencyContext';
-import { useCurrencyUpdate } from '../hooks/useCurrencyUpdate';
-import EmpresaSelector from './EmpresaSelector';
 import { Icon } from '../core/components/Icon';
 import { AccionCalendarioPorcinosModal } from './porcinos/AccionCalendarioPorcinosModal';
 
@@ -50,10 +45,6 @@ interface RecordatorioForm {
 
 const CalendarioPorcinosDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const { empresaActiva, rolUsuario } = useEmpresa();
-  const { formatCurrency, selectedCurrency, exchangeType, realRates, changeCurrency, changeExchangeType } = useCurrencyContext();
-  useCurrencyUpdate();
 
   const [fechaActual, setFechaActual] = useState(new Date());
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
@@ -74,11 +65,6 @@ const CalendarioPorcinosDashboard: React.FC = () => {
   const [eliminandoRecordatorio, setEliminandoRecordatorio] = useState(false);
   const [modalAccion, setModalAccion] = useState<'control_celo' | 'chequeo_gestacion' | 'destete' | 'parto' | null>(null);
   const [eventoParaModal, setEventoParaModal] = useState<EventoCalendario | null>(null);
-
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
-  };
 
   // Obtener primer día del mes y último día del mes
   const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
@@ -329,13 +315,8 @@ const CalendarioPorcinosDashboard: React.FC = () => {
 
   return (
     <div style={{ padding: '2rem' }}>
-      {/* Cabecera con controles */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '2rem'
-      }}>
+      {/* Cabecera */}
+      <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ 
           fontSize: '2rem', 
           fontWeight: 'bold', 
@@ -345,83 +326,6 @@ const CalendarioPorcinosDashboard: React.FC = () => {
             <Icon name="Calendar" size={24} /> Calendario (porcinos y tareas)
           </span>
         </h1>
-        
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem'
-        }}>
-          {/* Selector de Empresa */}
-          {empresaActiva && (
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '0.375rem',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e5e7eb',
-              padding: '0.5rem'
-            }}>
-              <EmpresaSelector />
-            </div>
-          )}
-          
-          {/* Selector de Moneda */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '0.375rem',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e5e7eb',
-            padding: '0.5rem'
-          }}>
-            <select
-              value={selectedCurrency === 'ARS' ? 'ARS' : exchangeType}
-              onChange={(event) => {
-                const value = event.target.value;
-                if (value === 'ARS') {
-                  changeCurrency('ARS');
-                } else if (value === 'oficial' || value === 'blue') {
-                  changeCurrency('USD');
-                  changeExchangeType(value);
-                }
-                setTimeout(() => {
-                  window.dispatchEvent(new Event('currencyUpdate'));
-                }, 100);
-              }}
-              style={{
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                minWidth: '180px'
-              }}
-            >
-              <option value="ARS">ARS (Pesos Argentinos)</option>
-              <option value="oficial">
-                USD Oficial {realRates?.oficial ? `($${realRates.oficial.toFixed(2)})` : ''}
-              </option>
-              <option value="blue">
-                USD Blue {realRates?.blue ? `($${realRates.blue.toFixed(2)})` : ''}
-              </option>
-            </select>
-          </div>
-          
-          {/* Botón Cerrar Sesión */}
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer'
-            }}
-          >
-            Cerrar sesión
-          </button>
-        </div>
       </div>
 
       {/* Encabezado del calendario con navegación */}

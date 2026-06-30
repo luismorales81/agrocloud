@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Relacionada con Insumo (no con la tabla separada de agroquímicos)
  */
 @Entity
-@Table(name = "dosis_insumos")
+@Table(name = "cultivo_dosis_insumos")
 @EntityListeners(AuditingEntityListener.class)
 public class DosisAgroquimico {
 

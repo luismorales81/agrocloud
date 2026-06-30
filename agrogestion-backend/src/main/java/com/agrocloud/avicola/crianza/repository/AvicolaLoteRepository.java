@@ -2,6 +2,7 @@ package com.agrocloud.avicola.crianza.repository;
 
 import com.agrocloud.avicola.crianza.model.entity.AvicolaLote;
 import com.agrocloud.avicola.crianza.model.enums.AvicolaLoteEstado;
+import com.agrocloud.avicola.crianza.model.enums.AvicolaModuloOrigen;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,4 +23,15 @@ public interface AvicolaLoteRepository extends JpaRepository<AvicolaLote, Long> 
 
     @Query("SELECT l FROM AvicolaLote l WHERE l.empresaId = :empresaId AND l.estado = :estado ORDER BY l.fechaIngreso DESC")
     List<AvicolaLote> listarPorEmpresaIdYEstado(@Param("empresaId") Long empresaId, @Param("estado") AvicolaLoteEstado estado);
+
+    @Query("SELECT l FROM AvicolaLote l WHERE l.empresaId = :empresaId AND l.moduloOrigen = :modulo ORDER BY l.fechaIngreso DESC, l.id DESC")
+    List<AvicolaLote> listarPorEmpresaIdYModulo(@Param("empresaId") Long empresaId, @Param("modulo") AvicolaModuloOrigen modulo);
+
+    @Query("SELECT l FROM AvicolaLote l WHERE l.id = :id AND l.empresaId = :empresaId AND l.moduloOrigen = :modulo")
+    Optional<AvicolaLote> buscarPorIdYEmpresaIdYModulo(
+            @Param("id") Long id, @Param("empresaId") Long empresaId, @Param("modulo") AvicolaModuloOrigen modulo);
+
+    @Query("SELECT l FROM AvicolaLote l WHERE l.empresaId = :empresaId AND l.estado = :estado AND l.moduloOrigen = :modulo ORDER BY l.fechaIngreso DESC")
+    List<AvicolaLote> listarPorEmpresaIdYEstadoYModulo(
+            @Param("empresaId") Long empresaId, @Param("estado") AvicolaLoteEstado estado, @Param("modulo") AvicolaModuloOrigen modulo);
 }

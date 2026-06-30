@@ -192,6 +192,48 @@ WHERE @CARGAR_DATOS_DEMO = 1 AND @EST_FEEDLOT_ID IS NOT NULL
       WHERE c.establecimiento_id = @EST_FEEDLOT_ID AND c.nombre = 'Corral C'
   );
 
+-- Insumos alimento demo (balanceados, tipo OTROS) para fases de dieta
+SET @USER_DEMO_ID := (SELECT id FROM usuarios WHERE username = @USUARIO_DEMO LIMIT 1);
+
+INSERT INTO insumos (
+    nombre, tipo, descripcion, unidad_medida, precio_unitario,
+    stock_actual, stock_minimo, proveedor, activo, empresa_id, user_id,
+    fecha_creacion, fecha_actualizacion
+)
+SELECT 'Balanceado engorde 14% PB', 'OTROS', 'Ración para terminación feedlot', 'kg',
+       420.00, 5000.00, 500.00, 'NutriCampo S.A.', TRUE, @EMPRESA_RESUELTA, @USER_DEMO_ID, NOW(), NOW()
+WHERE @CARGAR_DATOS_DEMO = 1 AND @USER_DEMO_ID IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM insumos i
+      WHERE i.empresa_id = @EMPRESA_RESUELTA AND i.nombre = 'Balanceado engorde 14% PB'
+  );
+
+INSERT INTO insumos (
+    nombre, tipo, descripcion, unidad_medida, precio_unitario,
+    stock_actual, stock_minimo, proveedor, activo, empresa_id, user_id,
+    fecha_creacion, fecha_actualizacion
+)
+SELECT 'Maíz molido', 'OTROS', 'Grano de maíz procesado para feedlot', 'kg',
+       280.00, 8000.00, 1000.00, 'Acopio demo', TRUE, @EMPRESA_RESUELTA, @USER_DEMO_ID, NOW(), NOW()
+WHERE @CARGAR_DATOS_DEMO = 1 AND @USER_DEMO_ID IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM insumos i
+      WHERE i.empresa_id = @EMPRESA_RESUELTA AND i.nombre = 'Maíz molido'
+  );
+
+INSERT INTO insumos (
+    nombre, tipo, descripcion, unidad_medida, precio_unitario,
+    stock_actual, stock_minimo, proveedor, activo, empresa_id, user_id,
+    fecha_creacion, fecha_actualizacion
+)
+SELECT 'Heno de alfalfa', 'OTROS', 'Forraje para adaptación inicial', 'kg',
+       350.00, 2000.00, 200.00, 'Forrajes del Valle', TRUE, @EMPRESA_RESUELTA, @USER_DEMO_ID, NOW(), NOW()
+WHERE @CARGAR_DATOS_DEMO = 1 AND @USER_DEMO_ID IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM insumos i
+      WHERE i.empresa_id = @EMPRESA_RESUELTA AND i.nombre = 'Heno de alfalfa'
+  );
+
 -- Resumen final
 SELECT 'FEEDLOT habilitado' AS resultado,
        @EMPRESA_RESUELTA AS empresa_id,

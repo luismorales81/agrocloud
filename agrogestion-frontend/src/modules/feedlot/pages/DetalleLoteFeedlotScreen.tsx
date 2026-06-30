@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
@@ -33,7 +33,7 @@ import {
   YAxis,
 } from 'recharts';
 import { insumosService } from '../../../services/domain/insumosLaboresServices';
-import FeedlotCloseoutModal from '../components/FeedlotCloseoutModal';
+import { Autocomplete } from '../../../components/ui/Autocomplete';
 import type {
   FeedlotAjustePlantel,
   FeedlotBunkScore,
@@ -56,7 +56,6 @@ import {
   actualizarLecturaComedero,
   actualizarPesada,
   cerrarLote,
-  descargarCloseoutPdf,
   eliminarConsumo,
   eliminarEventoSanitario,
   eliminarLecturaComedero,
@@ -83,6 +82,8 @@ import {
   registrarVenta,
 } from '../services/feedlotApi';
 import type { FeedlotCatalogo } from '../types';
+import PanelClimaEstablecimiento from '../../../components/PanelClimaEstablecimiento';
+import BotonRellenarClima from '../../../components/BotonRellenarClima';
 
 const TIPOS_VENTA: { valor: FeedlotTipoVenta; etiqueta: string }[] = [
   { valor: 'FAENA', etiqueta: 'Faena' },
@@ -110,10 +111,54 @@ function etiquetaBunkScore(valor: string): string {
   return BUNK_SCORES.find((b) => b.valor === valor)?.etiqueta ?? valor;
 }
 
+const TIPOS_AGROQUIMICO = new Set(['HERBICIDA', 'FUNGICIDA', 'INSECTICIDA', 'FERTILIZANTE']);
+
+function esAgroquimico(tipo?: string): boolean {
+  return tipo != null && TIPOS_AGROQUIMICO.has(tipo.toUpperCase());
+}
+
+function mapearInsumosDesdeApi(raw: unknown): InsumoOpcion[] {
+  const arr = Array.isArray(raw) ? raw : [];
+  return arr
+    .map((x: Record<string, unknown>) => ({
+      id: Number(x.id),
+      nombre: String(x.nombre ?? x.descripcion ?? `Insumo ${x.id}`),
+      tipo: x.tipo != null ? String(x.tipo) : undefined,
+      unidadMedida:
+        x.unidadMedida != null
+          ? String(x.unidadMedida)
+          : x.unidad_medida != null
+            ? String(x.unidad_medida)
+            : 'kg',
+      stockActual:
+        x.stockActual != null
+          ? Number(x.stockActual)
+          : x.stock_actual != null
+            ? Number(x.stock_actual)
+            : undefined,
+    }))
+    .filter((i) => !Number.isNaN(i.id) && i.id > 0);
+}
+
 interface InsumoOpcion {
   id: number;
   nombre: string;
+  tipo?: string;
+  unidadMedida?: string;
+  stockActual?: number;
 }
+
+type TipoDialogo =
+  | 'pesada'
+  | 'consumo'
+  | 'muerte'
+  | 'sanidad'
+  | 'venta'
+  | 'cierre'
+  | 'ajuste'
+  | 'comedero';
+
+const PROPS_DIALOGO = { disableRestoreFocus: true, fullWidth: true, maxWidth: 'sm' as const };
 
 const DetalleLoteFeedlotScreen: React.FC = () => {
   const { id: idParam } = useParams<{ id: string }>();
@@ -135,10 +180,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
 
   const hoy = () => new Date().toISOString().slice(0, 10);
 
-  const [dialogo, setDialogo] = useState<
-    'pesada' | 'consumo' | 'muerte' | 'sanidad' | 'venta' | 'cierre' | 'ajuste' | 'comedero' | null
-  >(null);
-  const [modalCloseout, setModalCloseout] = useState(false);
+  const [dialogo, setDialogo] = useState<TipoDialogo | null>(null);
   const [ajustes, setAjustes] = useState<FeedlotAjustePlantel[]>([]);
   const [lecturas, setLecturas] = useState<FeedlotLecturaComedero[]>([]);
   const [consumoTeorico, setConsumoTeorico] = useState<FeedlotConsumoTeorico | null>(null);
@@ -186,9 +228,49 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
   const [fLectura, setFLectura] = useState('');
   const [bunkScore, setBunkScore] = useState<FeedlotBunkScore>('UNO');
   const [kgEntregados, setKgEntregados] = useState('');
+  const [tempLectura, setTempLectura] = useState('');
+  const [humLectura, setHumLectura] = useState('');
   const [obsLectura, setObsLectura] = useState('');
 
   const loteCerrado = lote?.estado === 'CERRADO';
+
+  const insumosAlimento = useMemo(
+    () =>
+      insumos
+        .filter((i) => !esAgroquimico(i.tipo))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    [insumos]
+  );
+
+  const insumosSanidad = useMemo(
+    () => [...insumos].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    [insumos]
+  );
+
+  const opcionesInsumoAlimento = useMemo(() => {
+    const lista = [...insumosAlimento];
+    if (insumoConsumo !== '' && !lista.some((i) => i.id === insumoConsumo)) {
+      const actual = insumos.find((i) => i.id === insumoConsumo);
+      if (actual) lista.push(actual);
+    }
+    return lista.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  }, [insumosAlimento, insumos, insumoConsumo]);
+
+  const opcionesInsumoSanidad = useMemo(() => {
+    const lista = [...insumosSanidad];
+    if (insumoSan !== '' && !lista.some((i) => i.id === insumoSan)) {
+      const actual = insumos.find((i) => i.id === insumoSan);
+      if (actual) lista.push(actual);
+    }
+    return lista.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  }, [insumosSanidad, insumos, insumoSan]);
+
+  const abrirDialogo = (tipo: TipoDialogo) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    setDialogo(tipo);
+  };
 
   const recargarListas = useCallback(async () => {
     if (Number.isNaN(loteId)) return;
@@ -230,13 +312,17 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
 
   const cargarConsumoTeorico = useCallback(async () => {
     if (Number.isNaN(loteId)) return;
+    if (!lote?.dietaId) {
+      setConsumoTeorico(null);
+      return;
+    }
     try {
       const datos = await obtenerConsumoTeorico(loteId);
       setConsumoTeorico(datos);
     } catch {
       setConsumoTeorico(null);
     }
-  }, [loteId]);
+  }, [loteId, lote?.dietaId]);
 
   const cargarInicial = useCallback(async () => {
     if (Number.isNaN(loteId)) {
@@ -248,16 +334,10 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
       setCargando(true);
       setError(null);
       const [rawInsumos, motivos] = await Promise.all([
-        insumosService.listar(),
+        insumosService.listar().catch(() => []),
         listarMotivosMuerte(),
       ]);
-      const arr = Array.isArray(rawInsumos) ? rawInsumos : [];
-      setInsumos(
-        arr.map((x: Record<string, unknown>) => ({
-          id: Number(x.id),
-          nombre: String(x.nombre ?? x.descripcion ?? `Insumo ${x.id}`),
-        }))
-      );
+      setInsumos(mapearInsumosDesdeApi(rawInsumos));
       setMotivosMuerte(motivos.filter((m) => m.activo !== false));
       await recargarListas();
     } catch (err: unknown) {
@@ -458,10 +538,17 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         setError('Kg entregados inválidos');
         return;
       }
+      const parseOptDec = (s: string) => {
+        if (!s.trim()) return null;
+        const v = parseFloat(s.replace(',', '.'));
+        return Number.isNaN(v) ? null : v;
+      };
       const cuerpo = {
         fecha: fLectura,
         bunkScore,
         kgEntregados: kg,
+        temperaturaDia: parseOptDec(tempLectura),
+        humedadDia: parseOptDec(humLectura),
         observaciones: obsLectura.trim() || null,
       };
       if (editLecturaId != null) {
@@ -471,14 +558,6 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
       }
       cerrarDialogos();
       await cargarLecturas();
-    } catch (err: unknown) {
-      setError(mensajeError(err));
-    }
-  };
-
-  const descargarPdfCloseout = async (id: number) => {
-    try {
-      await descargarCloseoutPdf(id);
     } catch (err: unknown) {
       setError(mensajeError(err));
     }
@@ -535,6 +614,19 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
       )}
 
       {!cargando && lote && (
+        <PanelClimaEstablecimiento
+          climaLatitud={lote.climaLatitud}
+          climaLongitud={lote.climaLongitud}
+          nombreEstablecimiento={lote.establecimientoNombre}
+          rutaMapa={
+            lote.establecimientoId != null
+              ? `/feedlot/establecimientos-mapa?id=${lote.establecimientoId}`
+              : null
+          }
+        />
+      )}
+
+      {!cargando && lote && (
         <>
           <Tabs value={pestana} onChange={(_, v) => setPestana(v)} sx={{ mb: 2 }} variant="scrollable">
             <Tab label="Resumen" />
@@ -550,17 +642,16 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
           {pestana === 0 && resumen && (
             <Paper sx={{ p: 2 }}>
               <Stack direction="row" flexWrap="wrap" gap={1} mb={2}>
-                <Button variant="outlined" onClick={() => setModalCloseout(true)}>Ver closeout</Button>
                 {!loteCerrado && (
                   <>
-                    <Button variant="outlined" color="warning" onClick={() => setDialogo('cierre')}>
+                    <Button variant="outlined" color="warning" onClick={() => abrirDialogo('cierre')}>
                       Cerrar lote
                     </Button>
                     <Button variant="outlined" onClick={() => {
                       setFAjuste(hoy());
                       setCabAjuste(String(lote?.cabezasActuales ?? ''));
                       setMotivoAjuste('');
-                      setDialogo('ajuste');
+                      abrirDialogo('ajuste');
                     }}>
                       Ajuste plantel
                     </Button>
@@ -661,7 +752,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                   setPesoProm('');
                   setCabMuestreadas('');
                   setObsPesada('');
-                  setDialogo('pesada');
+                  abrirDialogo('pesada');
                 }}
               >
                 Registrar pesada
@@ -692,7 +783,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                               setPesoProm(String(p.pesoPromedioKg));
                               setCabMuestreadas(p.cabezasMuestreadas != null ? String(p.cabezasMuestreadas) : '');
                               setObsPesada(p.observaciones ?? '');
-                              setDialogo('pesada');
+                              abrirDialogo('pesada');
                             }}>Editar</Button>
                             <Button size="small" color="error" onClick={() => void eliminarRegistro('pesada', p.id)}>Eliminar</Button>
                           </TableCell>
@@ -717,7 +808,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                   setCantConsumo('');
                   setMsConsumo('');
                   setObsConsumo('');
-                  setDialogo('consumo');
+                  abrirDialogo('consumo');
                 }}
               >
                 Registrar consumo
@@ -749,7 +840,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                               setCantConsumo(String(c.cantidadKg));
                               setMsConsumo(c.materiaSecaPct != null ? String(c.materiaSecaPct) : '');
                               setObsConsumo(c.observaciones ?? '');
-                              setDialogo('consumo');
+                              abrirDialogo('consumo');
                             }}>Editar</Button>
                             <Button size="small" color="error" onClick={() => void eliminarRegistro('consumo', c.id)}>Eliminar</Button>
                           </TableCell>
@@ -772,9 +863,11 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                   setFLectura(hoy());
                   setBunkScore('UNO');
                   setKgEntregados('');
+                  setTempLectura('');
+                  setHumLectura('');
                   setObsLectura('');
                   setEditLecturaId(null);
-                  setDialogo('comedero');
+                  abrirDialogo('comedero');
                 }}
               >
                 Registrar lectura
@@ -806,8 +899,10 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                                 setFLectura(lec.fecha);
                                 setBunkScore(lec.bunkScore as FeedlotBunkScore);
                                 setKgEntregados(lec.kgEntregados != null ? String(lec.kgEntregados) : '');
+                                setTempLectura(lec.temperaturaDia != null ? String(lec.temperaturaDia) : '');
+                                setHumLectura(lec.humedadDia != null ? String(lec.humedadDia) : '');
                                 setObsLectura(lec.observaciones ?? '');
-                                setDialogo('comedero');
+                                abrirDialogo('comedero');
                               }}
                             >
                               Editar
@@ -887,7 +982,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                   setCabMuerte('');
                   setMotivoMuerte('');
                   setObsMuerte('');
-                  setDialogo('muerte');
+                  abrirDialogo('muerte');
                 }}
               >
                 Registrar muerte
@@ -930,7 +1025,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                   setInsumoSan('');
                   setDiasRetiro('');
                   setObsSan('');
-                  setDialogo('sanidad');
+                  abrirDialogo('sanidad');
                 }}
               >
                 Registrar evento
@@ -965,7 +1060,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                               setInsumoSan(e.insumoId ?? '');
                               setDiasRetiro(e.diasRetiro != null ? String(e.diasRetiro) : '');
                               setObsSan(e.observaciones ?? '');
-                              setDialogo('sanidad');
+                              abrirDialogo('sanidad');
                             }}>Editar</Button>
                             <Button size="small" color="error" onClick={() => void eliminarRegistro('sanidad', e.id)}>Eliminar</Button>
                           </TableCell>
@@ -993,7 +1088,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                   setTotalVenta('');
                   setComprador('');
                   setObsVenta('');
-                  setDialogo('venta');
+                  abrirDialogo('venta');
                 }}
               >
                 Registrar venta / faena
@@ -1027,7 +1122,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         </>
       )}
 
-      <Dialog open={dialogo === 'pesada'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+      <Dialog open={dialogo === 'pesada'} onClose={cerrarDialogos} {...PROPS_DIALOGO}>
         <DialogTitle>{editPesadaId != null ? 'Editar pesada' : 'Nueva pesada'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1043,17 +1138,31 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialogo === 'consumo'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+      <Dialog open={dialogo === 'consumo'} onClose={cerrarDialogos} {...PROPS_DIALOGO}>
         <DialogTitle>{editConsumoId != null ? 'Editar consumo' : 'Consumo de alimento'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField type="date" label="Fecha" InputLabelProps={{ shrink: true }} fullWidth value={fConsumo} onChange={(ev) => setFConsumo(ev.target.value)} />
-            <TextField select label="Insumo" fullWidth value={insumoConsumo} onChange={(ev) => setInsumoConsumo(ev.target.value === '' ? '' : Number(ev.target.value))}>
-              <MenuItem value="">Seleccionar…</MenuItem>
-              {insumos.map((i) => (
-                <MenuItem key={i.id} value={i.id}>{i.nombre}</MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete<InsumoOpcion>
+              label="Insumo (alimento / balanceado)"
+              options={opcionesInsumoAlimento.map((i) => ({
+                value: i.id,
+                label:
+                  i.stockActual != null
+                    ? `${i.nombre} · Stock: ${i.stockActual} ${i.unidadMedida ?? 'kg'}`
+                    : i.nombre,
+                data: i,
+              }))}
+              value={insumoConsumo === '' ? undefined : insumoConsumo}
+              onChange={(value) => setInsumoConsumo(value != null && value !== '' ? Number(value) : '')}
+              placeholder="Buscar alimento por nombre…"
+              emptyMessage={
+                opcionesInsumoAlimento.length === 0
+                  ? 'No hay insumos de alimento en inventario. Carguelos en Insumos feedlot.'
+                  : 'No se encontraron insumos'
+              }
+              maxHeight={280}
+            />
             <TextField label="Cantidad (kg)" fullWidth value={cantConsumo} onChange={(ev) => setCantConsumo(ev.target.value)} />
             <TextField label="Materia seca % (opcional)" fullWidth value={msConsumo} onChange={(ev) => setMsConsumo(ev.target.value)} />
             <TextField label="Observaciones" fullWidth multiline minRows={2} value={obsConsumo} onChange={(ev) => setObsConsumo(ev.target.value)} />
@@ -1065,7 +1174,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialogo === 'muerte'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+      <Dialog open={dialogo === 'muerte'} onClose={cerrarDialogos} {...PROPS_DIALOGO}>
         <DialogTitle>Registrar muerte</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1086,7 +1195,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialogo === 'sanidad'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+      <Dialog open={dialogo === 'sanidad'} onClose={cerrarDialogos} {...PROPS_DIALOGO}>
         <DialogTitle>{editEventoId != null ? 'Editar evento sanitario' : 'Evento sanitario'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1097,12 +1206,23 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
               ))}
             </TextField>
             <TextField label="Descripción" fullWidth multiline minRows={2} value={descSan} onChange={(ev) => setDescSan(ev.target.value)} />
-            <TextField select label="Insumo (opcional)" fullWidth value={insumoSan} onChange={(ev) => setInsumoSan(ev.target.value === '' ? '' : Number(ev.target.value))}>
-              <MenuItem value="">Ninguno</MenuItem>
-              {insumos.map((i) => (
-                <MenuItem key={i.id} value={i.id}>{i.nombre}</MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete<InsumoOpcion>
+              label="Insumo (opcional)"
+              options={opcionesInsumoSanidad.map((i) => ({
+                value: i.id,
+                label: i.nombre,
+                data: i,
+              }))}
+              value={insumoSan === '' ? undefined : insumoSan}
+              onChange={(value) => setInsumoSan(value != null && value !== '' ? Number(value) : '')}
+              placeholder="Buscar insumo sanitario…"
+              emptyMessage={
+                opcionesInsumoSanidad.length === 0
+                  ? 'No hay insumos en inventario'
+                  : 'No se encontraron insumos'
+              }
+              maxHeight={240}
+            />
             <TextField label="Días de retiro (opcional)" type="number" fullWidth value={diasRetiro} onChange={(ev) => setDiasRetiro(ev.target.value)} />
             <TextField label="Observaciones" fullWidth multiline minRows={2} value={obsSan} onChange={(ev) => setObsSan(ev.target.value)} />
           </Stack>
@@ -1113,7 +1233,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialogo === 'venta'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+      <Dialog open={dialogo === 'venta'} onClose={cerrarDialogos} {...PROPS_DIALOGO}>
         <DialogTitle>Registrar venta / faena</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1137,7 +1257,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialogo === 'comedero'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+      <Dialog open={dialogo === 'comedero'} onClose={cerrarDialogos} {...PROPS_DIALOGO}>
         <DialogTitle>{editLecturaId != null ? 'Editar lectura de comedero' : 'Nueva lectura de comedero'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1148,6 +1268,19 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
               ))}
             </TextField>
             <TextField label="Kg entregados (opcional)" fullWidth value={kgEntregados} onChange={(ev) => setKgEntregados(ev.target.value)} />
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <TextField label="Temperatura (°C)" fullWidth value={tempLectura} onChange={(ev) => setTempLectura(ev.target.value)} placeholder="Opcional" />
+              <TextField label="Humedad (%)" fullWidth value={humLectura} onChange={(ev) => setHumLectura(ev.target.value)} placeholder="Opcional" />
+            </Stack>
+            <BotonRellenarClima
+              climaLatitud={lote?.climaLatitud}
+              climaLongitud={lote?.climaLongitud}
+              deshabilitado={loteCerrado}
+              onValores={(v) => {
+                if (v.temperatura != null) setTempLectura(String(v.temperatura));
+                if (v.humedad != null) setHumLectura(String(v.humedad));
+              }}
+            />
             <TextField label="Observaciones" fullWidth multiline minRows={2} value={obsLectura} onChange={(ev) => setObsLectura(ev.target.value)} />
           </Stack>
         </DialogContent>
@@ -1157,7 +1290,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialogo === 'cierre'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+      <Dialog open={dialogo === 'cierre'} onClose={cerrarDialogos} {...PROPS_DIALOGO}>
         <DialogTitle>Cerrar lote</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mt: 1 }}>
@@ -1172,7 +1305,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialogo === 'ajuste'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+      <Dialog open={dialogo === 'ajuste'} onClose={cerrarDialogos} {...PROPS_DIALOGO}>
         <DialogTitle>Ajuste de plantel</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1189,13 +1322,6 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
           <Button variant="contained" onClick={() => void guardarAjuste()}>Registrar ajuste</Button>
         </DialogActions>
       </Dialog>
-
-      <FeedlotCloseoutModal
-        loteId={loteId}
-        abierto={modalCloseout}
-        onCerrar={() => setModalCloseout(false)}
-        onDescargarPdf={(id) => void descargarPdfCloseout(id)}
-      />
     </Box>
   );
 };

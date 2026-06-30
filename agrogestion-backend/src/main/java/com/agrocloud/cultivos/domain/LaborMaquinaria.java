@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import com.agrocloud.model.enums.TipoMaquinaria;
 
 @Entity
-@Table(name = "labor_maquinaria")
+@Table(name = "cultivo_labor_maquinaria")
 public class LaborMaquinaria {
     
     @Id

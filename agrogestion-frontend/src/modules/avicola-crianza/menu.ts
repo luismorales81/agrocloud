@@ -15,7 +15,7 @@ export const avicolaCrianzaMenu: MenuItem[] = [
   },
   {
     id: 'establecimientos',
-    nombre: 'Establecimientos',
+    nombre: 'Galpones',
     icono: 'Warehouse',
     ruta: '/avicola-crianza/establecimientos',
   },
@@ -37,6 +37,12 @@ export const avicolaCrianzaMenu: MenuItem[] = [
     icono: 'Package',
     ruta: '/avicola-crianza/insumos',
     permisos: ['canViewInsumos'],
+  },
+  {
+    id: 'reportes',
+    nombre: 'Reportes',
+    icono: 'BarChart2',
+    ruta: '/avicola-crianza/reportes',
   },
   {
     id: 'periodos-gestion',

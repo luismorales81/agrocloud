@@ -168,6 +168,8 @@ export interface AvicolaPesadaRespuesta {
   fecha: string;
   pesoPromedio: number;
   cantidadPesada?: number;
+  temperaturaAmbiente?: number | null;
+  humedadAmbiente?: number | null;
   observaciones?: string | null;
 }
 
@@ -230,6 +232,8 @@ export async function registrarPesadaCrianza(
     fecha: string;
     pesoPromedio: number;
     cantidadPesada?: number;
+    temperaturaAmbiente?: number | null;
+    humedadAmbiente?: number | null;
     observaciones?: string | null;
   }
 ): Promise<AvicolaPesadaRespuesta> {
@@ -313,6 +317,75 @@ export async function registrarEventoSanitarioCrianza(
     `/avicola-crianza/lotes/${loteId}/eventos-sanitarios`,
     cuerpo
   );
+  return data;
+}
+
+export interface AvicolaCrianzaCierreLoteCuerpo {
+  confirmarConAvesPendientes?: boolean;
+}
+
+export async function cerrarLoteCrianza(
+  loteId: number,
+  cuerpo?: AvicolaCrianzaCierreLoteCuerpo
+): Promise<AvicolaLoteRespuesta> {
+  const { data } = await api.post<AvicolaLoteRespuesta>(`/avicola-crianza/lotes/${loteId}/cierre`, cuerpo ?? {});
+  return data;
+}
+
+export async function actualizarConsumoCrianza(
+  loteId: number,
+  consumoId: number,
+  cuerpo: { fecha: string; cantidad: number; observaciones?: string | null }
+): Promise<AvicolaConsumoRespuesta> {
+  const { data } = await api.put<AvicolaConsumoRespuesta>(
+    `/avicola-crianza/lotes/${loteId}/consumos/${consumoId}`,
+    cuerpo
+  );
+  return data;
+}
+
+export interface AvicolaCrianzaReporteFilaLote {
+  loteId: number;
+  nombreLote?: string;
+  estado?: string;
+  cantidadDisponible?: number;
+  mortalidadPct?: number;
+  conversionAlimenticia?: number;
+  diasEnProduccion?: number;
+}
+
+export interface AvicolaCrianzaReporteResumen {
+  lotesActivos: number;
+  lotesCerrados: number;
+  mortalidadPromedioPct?: number;
+  conversionPromedio?: number;
+  porLote: AvicolaCrianzaReporteFilaLote[];
+}
+
+export interface AvicolaCrianzaCurvaPeso {
+  loteId?: number;
+  nombreLote?: string;
+  fechaIngreso?: string;
+  pesoPromedioIngreso?: number;
+  serie: { fecha?: string; pesoPromedio?: number; cantidadPesada?: number; diasDesdeIngreso?: number }[];
+}
+
+export async function obtenerReporteResumenCrianza(
+  delPeriodoActivo?: boolean
+): Promise<AvicolaCrianzaReporteResumen> {
+  const { data } = await api.get<AvicolaCrianzaReporteResumen>('/avicola-crianza/reportes/resumen', {
+    params: delPeriodoActivo != null ? { delPeriodoActivo } : undefined,
+  });
+  return data;
+}
+
+export async function obtenerReporteAnalisisLotesCrianza(): Promise<AvicolaCrianzaReporteResumen> {
+  const { data } = await api.get<AvicolaCrianzaReporteResumen>('/avicola-crianza/reportes/analisis-lotes');
+  return data;
+}
+
+export async function obtenerCurvaPesoCrianza(loteId: number): Promise<AvicolaCrianzaCurvaPeso> {
+  const { data } = await api.get<AvicolaCrianzaCurvaPeso>(`/avicola-crianza/reportes/lote/${loteId}/curva-peso`);
   return data;
 }
 

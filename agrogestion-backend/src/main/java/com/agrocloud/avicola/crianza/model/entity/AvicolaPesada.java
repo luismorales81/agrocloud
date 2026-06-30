@@ -39,6 +39,12 @@ public class AvicolaPesada {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
+    @Column(name = "temperatura_ambiente", precision = 5, scale = 2)
+    private BigDecimal temperaturaAmbiente;
+
+    @Column(name = "humedad_ambiente", precision = 6, scale = 2)
+    private BigDecimal humedadAmbiente;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -97,6 +103,22 @@ public class AvicolaPesada {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public BigDecimal getTemperaturaAmbiente() {
+        return temperaturaAmbiente;
+    }
+
+    public void setTemperaturaAmbiente(BigDecimal temperaturaAmbiente) {
+        this.temperaturaAmbiente = temperaturaAmbiente;
+    }
+
+    public BigDecimal getHumedadAmbiente() {
+        return humedadAmbiente;
+    }
+
+    public void setHumedadAmbiente(BigDecimal humedadAmbiente) {
+        this.humedadAmbiente = humedadAmbiente;
     }
 
     public LocalDateTime getCreatedAt() {

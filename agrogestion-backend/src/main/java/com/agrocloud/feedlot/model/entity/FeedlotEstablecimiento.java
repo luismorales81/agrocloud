@@ -25,6 +25,9 @@ public class FeedlotEstablecimiento {
     @Column(name = "ubicacion", length = 255)
     private String ubicacion;
 
+    @Column(name = "coordenadas", columnDefinition = "TEXT")
+    private String coordenadas;
+
     @Column(name = "capacidad_total_cabezas")
     private Integer capacidadTotalCabezas;
 
@@ -69,6 +72,14 @@ public class FeedlotEstablecimiento {
 
     public void setUbicacion(String ubicacion) {
         this.ubicacion = ubicacion;
+    }
+
+    public String getCoordenadas() {
+        return coordenadas;
+    }
+
+    public void setCoordenadas(String coordenadas) {
+        this.coordenadas = coordenadas;
     }
 
     public Integer getCapacidadTotalCabezas() {

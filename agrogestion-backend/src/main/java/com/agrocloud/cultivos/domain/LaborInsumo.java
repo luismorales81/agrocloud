@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  * @version 1.0.0
  */
 @Entity
-@Table(name = "labor_insumos")
+@Table(name = "cultivo_labor_insumos")
 public class LaborInsumo {
     
     @Id

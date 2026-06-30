@@ -7,9 +7,8 @@ import java.util.Optional;
  * Códigos canónicos de módulos ({@code modules.code}, {@code @RequiresModule}, interceptor de acceso).
  * Los literales en anotaciones deben coincidir con {@link #getCodigo()}.
  * <p>
- * Cada código corresponde a una fila en {@code company_modules} por empresa: {@link #AVICOLA_CARNE} y
- * {@link #AVICOLA_PONEDORAS} son módulos distintos (sin exclusión mutua); la empresa puede tener uno,
- * ambos o ninguno habilitado según {@code enabled} en cada relación.
+ * Cada código corresponde a una fila en {@code company_modules} por empresa. {@link #AVICOLA_CRIANZA}
+ * cubre engorde parrillero; {@link #AVICOLA_PONEDORAS} y {@link #AVICOLA_HUEVOS} son módulos distintos.
  * </p>
  */
 public enum ModuloSistema {
@@ -18,12 +17,12 @@ public enum ModuloSistema {
     PORCINOS("PORCINOS"),
     AVICOLA_CRIANZA("AVICOLA_CRIANZA"),
     AVICOLA_HUEVOS("AVICOLA_HUEVOS"),
-    /** Carne / parrillero (API {@code /api/avicola-carne}), independiente de crianza e huevos. */
-    AVICOLA_CARNE("AVICOLA_CARNE"),
     /** Ponedoras / recría (módulo propio; no confundir con {@link #AVICOLA_HUEVOS}). */
     AVICOLA_PONEDORAS("AVICOLA_PONEDORAS"),
     /** Engorde bovino a corral (API {@code /api/feedlot}). */
-    FEEDLOT("FEEDLOT");
+    FEEDLOT("FEEDLOT"),
+    /** Explotación lechera multi-especie (API {@code /api/lecheria}). */
+    LECHERIA("LECHERIA");
 
     private final String codigo;
 

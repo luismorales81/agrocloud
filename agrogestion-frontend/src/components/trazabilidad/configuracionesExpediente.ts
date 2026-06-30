@@ -1,9 +1,8 @@
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../services/apiEndpoints';
-import { listarLotesCarne } from '../../modules/avicola-carne/services/avicolaCarneService';
+import { listarLotesCrianza } from '../../modules/avicola-crianza/services/avicolaCrianzaApi';
 import { listarGalpones } from '../../modules/avicola-ponedoras/services/avicolaPonedorasService';
 import { listarLotesHuevos } from '../../modules/avicola-huevos/services/avicolaHuevosApi';
-import { listarLotesCrianza } from '../../modules/avicola-crianza/services/avicolaCrianzaApi';
 import type { TipoEntidadExpediente } from '../../services/trazabilidadExpedienteService';
 
 export interface OpcionEntidad {
@@ -79,20 +78,13 @@ export const configuracionExpedienteAvicolaHuevos: ConfiguracionExpedienteModulo
 
 export const configuracionExpedienteAvicolaCrianza: ConfiguracionExpedienteModulo = {
   tituloPagina: 'Expediente de trazabilidad — Avícola crianza',
-  descripcion: 'Lote de crianza: pesadas, consumos, mortalidad, ventas y sanidad.',
-  tiposEntidad: [{ valor: 'AVICOLA_CRIANZA', etiqueta: 'Lote avícola' }],
+  descripcion: 'Lote parrillero: pesadas, consumos, mortalidad, ventas y sanidad.',
+  tiposEntidad: [
+    { valor: 'AVICOLA_CRIANZA', etiqueta: 'Lote parrillero' },
+    { valor: 'AVICOLA_CARNE', etiqueta: 'Lote parrillero (histórico)' },
+  ],
   cargarEntidades: async () => {
     const lotes = await listarLotesCrianza();
-    return lotes.map((l) => ({ id: l.id, etiqueta: l.nombre ?? `Lote ${l.id}` }));
-  },
-};
-
-export const configuracionExpedienteAvicolaCarne: ConfiguracionExpedienteModulo = {
-  tituloPagina: 'Expediente de trazabilidad — Avícola carne',
-  descripcion: 'Lote parrillero: pesadas, consumos, mortalidad, ventas y sanidad.',
-  tiposEntidad: [{ valor: 'AVICOLA_CARNE', etiqueta: 'Lote parrillero' }],
-  cargarEntidades: async () => {
-    const lotes = await listarLotesCarne();
     return lotes.map((l) => ({ id: l.id, etiqueta: l.nombre ?? `Lote ${l.id}` }));
   },
 };

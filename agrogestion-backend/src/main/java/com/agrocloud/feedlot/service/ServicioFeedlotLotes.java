@@ -11,6 +11,8 @@ import com.agrocloud.feedlot.model.enums.FeedlotCorralEstado;
 import com.agrocloud.feedlot.model.enums.FeedlotLoteEstado;
 import com.agrocloud.feedlot.model.enums.FeedlotTipoTenencia;
 import com.agrocloud.feedlot.repository.*;
+import com.agrocloud.cultivos.application.UtilCentroideCoordenadasCampo;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,7 @@ public class ServicioFeedlotLotes {
     private final FeedlotProveedorOrigenRepository proveedorRepository;
     private final FeedlotDietaRepository dietaRepository;
     private final FeedlotAjustePlantelRepository ajustePlantelRepository;
+    private final ObjectMapper objectMapper;
 
     public ServicioFeedlotLotes(
             ServicioSeguridadContexto servicioSeguridadContexto,
@@ -41,7 +44,8 @@ public class ServicioFeedlotLotes {
             FeedlotRazaRepository razaRepository,
             FeedlotProveedorOrigenRepository proveedorRepository,
             FeedlotDietaRepository dietaRepository,
-            FeedlotAjustePlantelRepository ajustePlantelRepository) {
+            FeedlotAjustePlantelRepository ajustePlantelRepository,
+            ObjectMapper objectMapper) {
         this.servicioSeguridadContexto = servicioSeguridadContexto;
         this.campanaContextService = campanaContextService;
         this.loteRepository = loteRepository;
@@ -51,6 +55,7 @@ public class ServicioFeedlotLotes {
         this.proveedorRepository = proveedorRepository;
         this.dietaRepository = dietaRepository;
         this.ajustePlantelRepository = ajustePlantelRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
@@ -305,6 +310,12 @@ public class ServicioFeedlotLotes {
             if (l.getCorral().getEstablecimiento() != null) {
                 dto.setEstablecimientoId(l.getCorral().getEstablecimiento().getId());
                 dto.setEstablecimientoNombre(l.getCorral().getEstablecimiento().getNombre());
+                UtilCentroideCoordenadasCampo.calcularCentroide(
+                                l.getCorral().getEstablecimiento().getCoordenadas(), objectMapper)
+                        .ifPresent(xy -> {
+                            dto.setClimaLatitud(xy[0]);
+                            dto.setClimaLongitud(xy[1]);
+                        });
             }
         }
         dto.setCampanaId(l.getCampanaId());

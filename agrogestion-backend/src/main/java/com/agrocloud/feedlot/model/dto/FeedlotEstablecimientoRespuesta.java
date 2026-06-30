@@ -8,6 +8,7 @@ public class FeedlotEstablecimientoRespuesta {
     private Long empresaId;
     private String nombre;
     private String ubicacion;
+    private String coordenadas;
     private Integer capacidadTotalCabezas;
     private Boolean activo;
     private LocalDateTime createdAt;
@@ -43,6 +44,14 @@ public class FeedlotEstablecimientoRespuesta {
 
     public void setUbicacion(String ubicacion) {
         this.ubicacion = ubicacion;
+    }
+
+    public String getCoordenadas() {
+        return coordenadas;
+    }
+
+    public void setCoordenadas(String coordenadas) {
+        this.coordenadas = coordenadas;
     }
 
     public Integer getCapacidadTotalCabezas() {

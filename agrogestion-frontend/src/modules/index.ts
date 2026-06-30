@@ -3,9 +3,9 @@ import { cultivosModule } from './cultivos';
 import { porcinosModule } from './porcinos';
 import { avicolaCrianzaModule } from './avicola-crianza';
 import { avicolaHuevosModule } from './avicola-huevos';
-import { avicolaCarneModule } from './avicola-carne';
 import { avicolaPonedorasModule } from './avicola-ponedoras';
 import { feedlotModule } from './feedlot';
+import { lecheriaModule } from './lecheria';
 
 /**
  * Registro centralizado de todos los módulos disponibles
@@ -16,9 +16,9 @@ export const availableModules: ModuleConfig[] = [
   porcinosModule,
   avicolaCrianzaModule,
   avicolaHuevosModule,
-  avicolaCarneModule,
   avicolaPonedorasModule,
   feedlotModule,
+  lecheriaModule,
 ];
 
 /**

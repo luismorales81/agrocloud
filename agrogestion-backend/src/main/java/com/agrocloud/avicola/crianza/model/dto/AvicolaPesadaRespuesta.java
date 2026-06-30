@@ -16,6 +16,8 @@ public class AvicolaPesadaRespuesta {
     private BigDecimal pesoPromedio;
     private Integer cantidadPesada;
     private String observaciones;
+    private BigDecimal temperaturaAmbiente;
+    private BigDecimal humedadAmbiente;
     private LocalDateTime createdAt;
 
     public Long getId() {
@@ -72,6 +74,22 @@ public class AvicolaPesadaRespuesta {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public BigDecimal getTemperaturaAmbiente() {
+        return temperaturaAmbiente;
+    }
+
+    public void setTemperaturaAmbiente(BigDecimal temperaturaAmbiente) {
+        this.temperaturaAmbiente = temperaturaAmbiente;
+    }
+
+    public BigDecimal getHumedadAmbiente() {
+        return humedadAmbiente;
+    }
+
+    public void setHumedadAmbiente(BigDecimal humedadAmbiente) {
+        this.humedadAmbiente = humedadAmbiente;
     }
 
     public LocalDateTime getCreatedAt() {

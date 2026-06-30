@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { ModuleRoute } from '../../core/types/module.types';
-import CalendarioDashboard from '../../components/CalendarioDashboard';
+import CalendarioCrianzaScreen from './screens/CalendarioCrianzaScreen';
 import DashboardCrianzaScreen from './screens/DashboardCrianzaScreen';
 import EstablecimientosCrianzaScreen from './screens/EstablecimientosCrianzaScreen';
 import RazasCrianzaScreen from './screens/RazasCrianzaScreen';
@@ -9,6 +9,7 @@ import UbicacionEstablecimientosCrianzaScreen from './screens/UbicacionEstableci
 import InsumosCrianzaScreen from './screens/InsumosCrianzaScreen';
 import LotesCrianzaScreen from './screens/LotesCrianzaScreen';
 import DetalleLoteCrianzaScreen from './screens/DetalleLoteCrianzaScreen';
+import ReportesCrianzaScreen from './screens/ReportesCrianzaScreen';
 import GestionPeriodosScreen from '../../components/GestionCampanasScreen';
 
 const RedirigirCatalogoCrianzaAEstablecimientos = () =>
@@ -18,7 +19,7 @@ export const avicolaCrianzaRoutes: ModuleRoute[] = [
   {
     path: '/avicola-crianza/dashboard',
     name: 'Calendario',
-    component: CalendarioDashboard,
+    component: CalendarioCrianzaScreen,
   },
   {
     path: '/avicola-crianza/panel',
@@ -60,6 +61,11 @@ export const avicolaCrianzaRoutes: ModuleRoute[] = [
     name: 'Insumos',
     component: InsumosCrianzaScreen,
     permisos: ['canViewInsumos'],
+  },
+  {
+    path: '/avicola-crianza/reportes',
+    name: 'Reportes',
+    component: ReportesCrianzaScreen,
   },
   {
     path: '/avicola-crianza/configuracion/periodos',

@@ -8,13 +8,12 @@ import LotesFeedlotScreen from './pages/LotesFeedlotScreen';
 import FeedlotLoteFormScreen from './pages/FeedlotLoteFormScreen';
 import DetalleLoteFeedlotScreen from './pages/DetalleLoteFeedlotScreen';
 import EstablecimientosFeedlotScreen from './pages/EstablecimientosFeedlotScreen';
+import UbicacionEstablecimientosFeedlotScreen from './pages/UbicacionEstablecimientosFeedlotScreen';
 import CatalogosFeedlotScreen from './pages/CatalogosFeedlotScreen';
 import InsumosFeedlotScreen from './pages/InsumosFeedlotScreen';
 import ReportesFeedlotScreen from './pages/ReportesFeedlotScreen';
 import DietasFeedlotScreen from './pages/DietasFeedlotScreen';
 import CalendarioFeedlotScreen from './pages/CalendarioFeedlotScreen';
-import ConfiguracionCloseoutFeedlotScreen from './pages/ConfiguracionCloseoutFeedlotScreen';
-import { ExpedienteTrazabilidadFeedlot } from '../../components/trazabilidad/pantallasExpedientePorModulo';
 
 const ID_MODULO: ModuleId = 'feedlot';
 
@@ -43,6 +42,11 @@ function envolverSiModuloFeedlotHabilitado(Componente: React.ComponentType): Rea
 
 export const feedlotRoutes: ModuleRoute[] = [
   {
+    path: '/feedlot/dashboard',
+    name: 'Panel',
+    component: envolverSiModuloFeedlotHabilitado(FeedlotDashboardScreen),
+  },
+  {
     path: '/feedlot/panel',
     name: 'Panel',
     component: envolverSiModuloFeedlotHabilitado(FeedlotDashboardScreen),
@@ -66,6 +70,11 @@ export const feedlotRoutes: ModuleRoute[] = [
     path: '/feedlot/lotes',
     name: 'Lotes',
     component: envolverSiModuloFeedlotHabilitado(LotesFeedlotScreen),
+  },
+  {
+    path: '/feedlot/establecimientos-mapa',
+    name: 'Ubicación en mapa',
+    component: envolverSiModuloFeedlotHabilitado(UbicacionEstablecimientosFeedlotScreen),
   },
   {
     path: '/feedlot/establecimientos',
@@ -96,16 +105,6 @@ export const feedlotRoutes: ModuleRoute[] = [
     path: '/feedlot/calendario',
     name: 'Calendario',
     component: envolverSiModuloFeedlotHabilitado(CalendarioFeedlotScreen),
-  },
-  {
-    path: '/feedlot/configuracion/closeout',
-    name: 'Configuración closeout',
-    component: envolverSiModuloFeedlotHabilitado(ConfiguracionCloseoutFeedlotScreen),
-  },
-  {
-    path: '/feedlot/expediente',
-    name: 'Expediente trazabilidad',
-    component: envolverSiModuloFeedlotHabilitado(ExpedienteTrazabilidadFeedlot),
   },
   {
     path: '/feedlot/configuracion/periodos',

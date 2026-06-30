@@ -1,6 +1,7 @@
 package com.agrocloud.avicola.crianza.repository;
 
 import com.agrocloud.avicola.crianza.model.entity.AvicolaEstablecimiento;
+import com.agrocloud.avicola.crianza.model.enums.AvicolaModuloOrigen;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +17,14 @@ public interface AvicolaEstablecimientoRepository extends JpaRepository<AvicolaE
     @Query("SELECT e FROM AvicolaEstablecimiento e WHERE e.empresaId = :empresaId ORDER BY e.nombre ASC")
     List<AvicolaEstablecimiento> listarPorEmpresaId(@Param("empresaId") Long empresaId);
 
+    @Query("SELECT e FROM AvicolaEstablecimiento e WHERE e.empresaId = :empresaId AND e.moduloOrigen = :modulo ORDER BY e.nombre ASC")
+    List<AvicolaEstablecimiento> listarPorEmpresaIdYModulo(
+            @Param("empresaId") Long empresaId, @Param("modulo") AvicolaModuloOrigen modulo);
+
     @Query("SELECT e FROM AvicolaEstablecimiento e WHERE e.id = :id AND e.empresaId = :empresaId")
     Optional<AvicolaEstablecimiento> buscarPorIdYEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    @Query("SELECT e FROM AvicolaEstablecimiento e WHERE e.id = :id AND e.empresaId = :empresaId AND e.moduloOrigen = :modulo")
+    Optional<AvicolaEstablecimiento> buscarPorIdYEmpresaIdYModulo(
+            @Param("id") Long id, @Param("empresaId") Long empresaId, @Param("modulo") AvicolaModuloOrigen modulo);
 }

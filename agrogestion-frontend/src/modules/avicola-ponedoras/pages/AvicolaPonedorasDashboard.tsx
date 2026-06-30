@@ -5,7 +5,11 @@ import {
   Box,
   Button,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Snackbar,
   Stack,
   Table,
@@ -17,8 +21,19 @@ import {
   Typography,
 } from '@mui/material';
 import { Icon } from '../../../components/icons';
-import type { AvicolaPonedorasGalpon } from '../types';
 import {
+  Line,
+  LineChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import type { AmbienteDiario, AvicolaPonedorasGalpon } from '../types';
+import {
+  listarAmbienteDiario,
   listarGalpones,
   mensajeErrorPonedoras,
   obtenerResumenGalpon,
@@ -46,6 +61,9 @@ const AvicolaPonedorasDashboard: React.FC = () => {
     mortalidadPromedioPct: null,
   });
   const [galponesActivos, setGalponesActivos] = useState<AvicolaPonedorasGalpon[]>([]);
+  const [galponClimaId, setGalponClimaId] = useState<number | ''>('');
+  const [serieAmbiente, setSerieAmbiente] = useState<AmbienteDiario[]>([]);
+  const [cargandoAmbiente, setCargandoAmbiente] = useState(false);
   const [snackbarExito, setSnackbarExito] = useState(false);
 
   const cargar = useCallback(async (mostrarExito: boolean) => {
@@ -89,6 +107,9 @@ const AvicolaPonedorasDashboard: React.FC = () => {
         mortalidadPromedioPct,
       });
       setGalponesActivos(activos.slice(0, MAX_GALPONES_TABLA));
+      if (activos.length === 1) {
+        setGalponClimaId(activos[0].id);
+      }
       if (mostrarExito) {
         setSnackbarExito(true);
       }
@@ -102,6 +123,31 @@ const AvicolaPonedorasDashboard: React.FC = () => {
   useEffect(() => {
     void cargar(false);
   }, [cargar]);
+
+  const cargarSerieAmbiente = useCallback(async () => {
+    if (galponClimaId === '') {
+      setSerieAmbiente([]);
+      return;
+    }
+    try {
+      setCargandoAmbiente(true);
+      const datos = await listarAmbienteDiario(Number(galponClimaId));
+      setSerieAmbiente(datos);
+    } catch (err: unknown) {
+      setError(mensajeErrorPonedoras(err));
+      setSerieAmbiente([]);
+    } finally {
+      setCargandoAmbiente(false);
+    }
+  }, [galponClimaId]);
+
+  const puntosAmbiente = serieAmbiente
+    .filter((a) => a.temperaturaDia != null || a.humedadDia != null)
+    .map((a) => ({
+      fecha: String(a.fecha).slice(5),
+      temperatura: a.temperaturaDia != null ? Number(a.temperaturaDia) : undefined,
+      humedad: a.humedadDia != null ? Number(a.humedadDia) : undefined,
+    }));
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1200 }}>
@@ -259,6 +305,57 @@ const AvicolaPonedorasDashboard: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          <Paper variant="outlined" sx={{ p: 2, mt: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Ambiente diario (temperatura y humedad)
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 220 }}>
+                <InputLabel>Galpón</InputLabel>
+                <Select
+                  label="Galpón"
+                  value={galponClimaId}
+                  onChange={(ev) => setGalponClimaId(ev.target.value === '' ? '' : Number(ev.target.value))}
+                >
+                  <MenuItem value="">Seleccionar…</MenuItem>
+                  {galponesActivos.map((g) => (
+                    <MenuItem key={g.id} value={g.id}>
+                      {g.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button variant="outlined" onClick={() => void cargarSerieAmbiente()} disabled={cargandoAmbiente || galponClimaId === ''}>
+                Cargar serie
+              </Button>
+            </Stack>
+            {cargandoAmbiente && (
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <CircularProgress size={20} />
+                <Typography variant="body2">Cargando…</Typography>
+              </Stack>
+            )}
+            {!cargandoAmbiente && puntosAmbiente.length > 0 && (
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={puntosAmbiente}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                  <YAxis yAxisId="temp" tick={{ fontSize: 11 }} unit="°C" />
+                  <YAxis yAxisId="hum" orientation="right" tick={{ fontSize: 11 }} unit="%" />
+                  <Tooltip />
+                  <Legend />
+                  <Line yAxisId="temp" type="monotone" dataKey="temperatura" stroke="#dc2626" name="Temp. °C" dot={{ r: 2 }} />
+                  <Line yAxisId="hum" type="monotone" dataKey="humedad" stroke="#2563eb" name="Humedad %" dot={{ r: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+            {!cargandoAmbiente && galponClimaId !== '' && puntosAmbiente.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                Sin registros de ambiente. Guardalos al registrar postura en el detalle del galpón.
+              </Typography>
+            )}
+          </Paper>
         </>
       )}
 

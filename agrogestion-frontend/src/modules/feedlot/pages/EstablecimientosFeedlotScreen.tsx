@@ -26,7 +26,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ChevronDown, ChevronRight, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronRight, MapPin, Pencil } from 'lucide-react';
 import type { FeedlotCorral, FeedlotEstablecimiento, FeedlotEstadoCorral } from '../types';
 import {
   actualizarCorral,
@@ -247,6 +247,17 @@ const EstablecimientosFeedlotScreen: React.FC = () => {
                     </Typography>
                   </Box>
                   <Chip size="small" label={e.activo !== false ? 'Activo' : 'Inactivo'} />
+                  <IconButton
+                    size="small"
+                    aria-label="Ubicación en mapa"
+                    title="Ubicación en mapa"
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      navigate(`/feedlot/establecimientos-mapa?id=${e.id}`);
+                    }}
+                  >
+                    <MapPin size={16} />
+                  </IconButton>
                   <IconButton
                     size="small"
                     aria-label="Editar establecimiento"

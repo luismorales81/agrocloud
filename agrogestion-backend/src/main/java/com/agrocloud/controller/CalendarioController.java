@@ -312,6 +312,47 @@ public class CalendarioController {
     }
 
     /**
+     * Calendario del módulo avícola crianza (pollos parrilleros).
+     */
+    @GetMapping("/avicola-crianza")
+    public ResponseEntity<Map<String, Object>> getEventosAvicolaCrianza(
+            @RequestParam(required = false) LocalDate fechaInicio,
+            @RequestParam(required = false) LocalDate fechaFin,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = obtenerUsuario(userDetails);
+        if (user == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        final LocalDate fechaInicioFinal = fechaInicio != null ? fechaInicio : LocalDate.now().withDayOfMonth(1);
+        final LocalDate fechaFinFinal = fechaFin != null ? fechaFin : fechaInicioFinal.plusMonths(1).minusDays(1);
+
+        List<Map<String, Object>> tareasRecurrentesCalendario = new ArrayList<>();
+        try {
+            tareasRecurrentesCalendario = calendarioTareasRecurrentesService.construirEventosEnRangoCalendarioAvicolaCrianza(
+                    user.getId(), fechaInicioFinal, fechaFinFinal);
+        } catch (Exception e) {
+            System.err.println("Error al obtener tareas recurrentes avícola crianza: " + e.getMessage());
+        }
+
+        List<Map<String, Object>> todosEventos = new ArrayList<>(tareasRecurrentesCalendario);
+        todosEventos.sort((a, b) -> {
+            String fa = (String) a.get("fecha");
+            String fb = (String) b.get("fecha");
+            if (fa == null || fb == null) {
+                return 0;
+            }
+            return fa.compareTo(fb);
+        });
+
+        Map<String, Object> eventos = new HashMap<>();
+        eventos.put("tareasRecurrentes", tareasRecurrentesCalendario);
+        eventos.put("todos", todosEventos);
+        eventos.put("fechaInicio", fechaInicioFinal.toString());
+        eventos.put("fechaFin", fechaFinFinal.toString());
+        return ResponseEntity.ok(eventos);
+    }
+
+    /**
      * Obtener eventos del calendario especÃ­ficos del mÃ³dulo Porcinos
      * Incluye: Partos, EcografÃ­as, Destetes, Control de Celo, Gestaciones Vencidas
      */

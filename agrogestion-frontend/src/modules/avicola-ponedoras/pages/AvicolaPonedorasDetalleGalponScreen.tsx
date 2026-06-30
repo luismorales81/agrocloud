@@ -52,12 +52,15 @@ import {
   registrarVentaHuevos,
   listarDescarteAves,
   registrarDescarteAves,
+  guardarAmbienteDiario,
   mensajeErrorPonedoras,
 } from '../services/avicolaPonedorasService';
 import {
   exportarOperacionesGalponPonedoras,
   type FormatoExportacionAvicola,
 } from '../../../utilidades/exportacionAvicola';
+import PanelClimaEstablecimiento from '../../../components/PanelClimaEstablecimiento';
+import BotonRellenarClima from '../../../components/BotonRellenarClima';
 
 interface InsumoOpcion {
   id: number;
@@ -104,6 +107,8 @@ const AvicolaPonedorasDetalleGalponScreen: React.FC = () => {
   const [catPost, setCatPost] = useState<HuevoCategoria>('A');
   const [cantPost, setCantPost] = useState('');
   const [obsPost, setObsPost] = useState('');
+  const [tempPost, setTempPost] = useState('');
+  const [humPost, setHumPost] = useState('');
 
   const [fMue, setFMue] = useState(hoy());
   const [cantMue, setCantMue] = useState('');
@@ -220,12 +225,26 @@ const AvicolaPonedorasDetalleGalponScreen: React.FC = () => {
         setError('Cantidad inválida');
         return;
       }
+      const parseOptDec = (s: string) => {
+        if (!s.trim()) return null;
+        const v = parseFloat(s.replace(',', '.'));
+        return Number.isNaN(v) ? null : v;
+      };
+      const temp = parseOptDec(tempPost);
+      const hum = parseOptDec(humPost);
       await registrarPostura(galponId, {
         fecha: fPost,
         categoriaHuevo: catPost,
         cantidad: n,
         observaciones: obsPost.trim() || null,
       });
+      if (temp != null || hum != null) {
+        await guardarAmbienteDiario(galponId, {
+          fecha: fPost,
+          temperaturaDia: temp,
+          humedadDia: hum,
+        });
+      }
       cerrarDialogos();
       await recargarListas();
     } catch (err: unknown) {
@@ -381,6 +400,19 @@ const AvicolaPonedorasDetalleGalponScreen: React.FC = () => {
       )}
 
       {!cargando && galpon && (
+        <PanelClimaEstablecimiento
+          climaLatitud={galpon.climaLatitud}
+          climaLongitud={galpon.climaLongitud}
+          nombreEstablecimiento={galpon.establecimientoNombre ?? undefined}
+          rutaMapa={
+            galpon.establecimientoId != null
+              ? `/avicola-crianza/establecimientos-mapa?id=${galpon.establecimientoId}`
+              : null
+          }
+        />
+      )}
+
+      {!cargando && galpon && (
         <>
           <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
             <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center', mr: 1 }}>
@@ -441,6 +473,8 @@ const AvicolaPonedorasDetalleGalponScreen: React.FC = () => {
                   setFPost(hoy());
                   setCatPost('A');
                   setCantPost('');
+                  setTempPost('');
+                  setHumPost('');
                   setObsPost('');
                   setDialogo('postura');
                 }}
@@ -689,6 +723,23 @@ const AvicolaPonedorasDetalleGalponScreen: React.FC = () => {
               ))}
             </TextField>
             <TextField label="Cantidad (huevos)" type="number" fullWidth value={cantPost} onChange={(ev) => setCantPost(ev.target.value)} inputProps={{ min: 0 }} />
+            <Typography variant="caption" color="text.secondary">
+              Ambiente del día (opcional; se guarda una vez por fecha de postura)
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <TextField label="Temperatura (°C)" fullWidth value={tempPost} onChange={(ev) => setTempPost(ev.target.value)} placeholder="Opcional" />
+              <TextField label="Humedad (%)" fullWidth value={humPost} onChange={(ev) => setHumPost(ev.target.value)} placeholder="Opcional" />
+            </Stack>
+            <BotonRellenarClima
+              climaLatitud={galpon?.climaLatitud}
+              climaLongitud={galpon?.climaLongitud}
+              deshabilitado={galponCerrado}
+              mensajeSinCoordenadas="Configurá la ubicación del establecimiento en Avícola crianza (mapa) para autocompletar."
+              onValores={(v) => {
+                if (v.temperatura != null) setTempPost(String(v.temperatura));
+                if (v.humedad != null) setHumPost(String(v.humedad));
+              }}
+            />
             <TextField label="Observaciones" fullWidth multiline minRows={2} value={obsPost} onChange={(ev) => setObsPost(ev.target.value)} />
           </Stack>
         </DialogContent>

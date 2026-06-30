@@ -32,9 +32,9 @@ const ModularDashboard: React.FC = () => {
         'porcinos',
         'avicola-crianza',
         'avicola-huevos',
-        'avicola-carne',
         'avicola-ponedoras',
         'feedlot',
+        'lecheria',
       ];
       const moduleFromUrl =
         pathParts.length > 0 && modulosPorUrl.includes(pathParts[0] as ModuleId)
@@ -89,9 +89,9 @@ const ModularDashboard: React.FC = () => {
       'porcinos',
       'avicola-crianza',
       'avicola-huevos',
-      'avicola-carne',
       'avicola-ponedoras',
       'feedlot',
+      'lecheria',
     ];
     const isModuleRoute = pathParts.length > 0 && modulosPorUrl.includes(pathParts[0] as ModuleId);
     

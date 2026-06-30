@@ -11,6 +11,8 @@ public class FeedlotLecturaComederoSolicitud {
     private FeedlotBunkScore bunkScore;
     private BigDecimal kgEntregados;
     private String observaciones;
+    private BigDecimal temperaturaDia;
+    private BigDecimal humedadDia;
 
     public LocalDate getFecha() {
         return fecha;
@@ -42,5 +44,21 @@ public class FeedlotLecturaComederoSolicitud {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public BigDecimal getTemperaturaDia() {
+        return temperaturaDia;
+    }
+
+    public void setTemperaturaDia(BigDecimal temperaturaDia) {
+        this.temperaturaDia = temperaturaDia;
+    }
+
+    public BigDecimal getHumedadDia() {
+        return humedadDia;
+    }
+
+    public void setHumedadDia(BigDecimal humedadDia) {
+        this.humedadDia = humedadDia;
     }
 }

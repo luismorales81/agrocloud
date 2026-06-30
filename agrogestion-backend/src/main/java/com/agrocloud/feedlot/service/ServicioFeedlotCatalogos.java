@@ -61,6 +61,7 @@ public class ServicioFeedlotCatalogos {
         e.setEmpresaId(empresaId);
         e.setNombre(solicitud.getNombre().trim());
         e.setUbicacion(normalizarOpcional(solicitud.getUbicacion()));
+        e.setCoordenadas(normalizarJsonCoordenadas(solicitud.getCoordenadas()));
         e.setCapacidadTotalCabezas(solicitud.getCapacidadTotalCabezas());
         if (solicitud.getActivo() != null) {
             e.setActivo(solicitud.getActivo());
@@ -79,6 +80,9 @@ public class ServicioFeedlotCatalogos {
         }
         if (solicitud.getUbicacion() != null) {
             e.setUbicacion(normalizarOpcional(solicitud.getUbicacion()));
+        }
+        if (solicitud.getCoordenadas() != null) {
+            e.setCoordenadas(normalizarJsonCoordenadas(solicitud.getCoordenadas()));
         }
         if (solicitud.getCapacidadTotalCabezas() != null) {
             e.setCapacidadTotalCabezas(solicitud.getCapacidadTotalCabezas());
@@ -297,12 +301,21 @@ public class ServicioFeedlotCatalogos {
         return t.isEmpty() ? null : t;
     }
 
+    private static String normalizarJsonCoordenadas(String json) {
+        if (json == null) {
+            return null;
+        }
+        String t = json.trim();
+        return t.isEmpty() ? null : t;
+    }
+
     private FeedlotEstablecimientoRespuesta aEstablecimientoRespuesta(FeedlotEstablecimiento e) {
         FeedlotEstablecimientoRespuesta dto = new FeedlotEstablecimientoRespuesta();
         dto.setId(e.getId());
         dto.setEmpresaId(e.getEmpresaId());
         dto.setNombre(e.getNombre());
         dto.setUbicacion(e.getUbicacion());
+        dto.setCoordenadas(e.getCoordenadas());
         dto.setCapacidadTotalCabezas(e.getCapacidadTotalCabezas());
         dto.setActivo(e.getActivo());
         dto.setCreatedAt(e.getCreatedAt());

@@ -1,9 +1,9 @@
 # SPEC — Módulo Avícola Carne (engorde / parrillero)
 
-**Versión:** 1.0  
+**Versión:** 1.1  
 **Fecha:** Junio 2026  
 **Metodología:** SDD  
-**Estado:** Pendiente de aprobación  
+**Estado:** Obsoleta — fusionada en `SPEC-MODULO-AVICOLA-CRIANZA.md` v2.0 (junio 2026). No ofertar `AVICOLA_CARNE` a clientes.  
 **Referencia modelo:** `SPEC-MODULO-AVICOLA-HUEVOS.md` (estructura de módulo autocontenido)  
 **Relacionada con:** `SPEC-MODULO-AVICOLA-CRIANZA.md`, `SPEC-CAMPANA-TRANSVERSAL.md`, `SPEC-EXPEDIENTE-TRAZABILIDAD-CICLO-VIDA.md`
 
@@ -57,29 +57,16 @@ El módulo debe ser **operable de punta a punta** por el productor avícola, con
 - Repositorios nativos sobre tablas `avicola_*` compartidas con crianza.
 - Filtro `delPeriodoActivo` en listado de lotes.
 - Migración `V1_140__Modulos_avicola_carne_y_ponedoras.sql` (registro en catálogo `modules`).
+- Migración `V1_156__avicola_modulo_origen_carne.sql` — columna `modulo_origen` en tablas `avicola_*`.
+- API catálogos propios (`/establecimientos`, `/razas`), cierre manual, reportes y calendario `AVICOLA_CARNE`.
+- Pantallas: listado con alta/edición, galpones, razas, mapa, insumos, reportes.
 
-**Frontend**
-
-- Panel resumen (`AvicolaCarneDashboard`) — KPIs agregados.
-- Listado de lotes con filtro por estado y período activo.
-- Detalle de lote con pestañas: Resumen, Pesadas, Muertes, Ventas, Consumos, Sanidad.
-- Exportación de operaciones del lote.
-- Períodos de gestión (`GestionCampanasScreen`).
-- Trazabilidad configurada para `AVICOLA_CARNE`.
-
-### 4.2 Pendiente / stub
+### 4.2 Backlog v2.1
 
 | Ítem | Estado |
 |------|--------|
-| Formulario alta de lote | **Stub** (`AvicolaCarneLoteNuevoPlaceholder`) |
-| Establecimientos (CRUD en módulo) | No existe pantalla; depende de crianza |
-| Razas / líneas de engorde (CRUD) | No existe pantalla |
-| Insumos dentro del módulo | No existe pantalla |
-| Reportes empresa (FCR, mortalidad, comparativa lotes) | No existe backend ni pantalla |
-| Calendario con ámbito `AVICOLA_CARNE` | Usa calendario genérico |
-| Cierre explícito de lote (`POST /lotes/{id}/cierre`) | Solo cierre automático al faenar 100 % |
-| Edición de consumos con reversión inventario | No implementado (sí en huevos) |
-| Dominio de datos aislado (`avicola_carne_*`) | No; comparte `avicola_*` con crianza |
+| EPEF y proyección faena | Pendiente |
+| Dominio `avicola_carne_*` separado | Excluido (fase 2 arquitectura) |
 
 ---
 
@@ -324,13 +311,13 @@ Base: `/api/avicola-carne` — `@RequiresModule("AVICOLA_CARNE")`.
 
 ## 13. Criterios de aceptación (v1)
 
-- [ ] Usuario admin crea un lote desde `/avicola-carne/lotes/nuevo` sin usar otro módulo.
-- [ ] Usuario registra consumo, muerte, pesada, venta y sanidad en lote activo.
-- [ ] Faena total cierra el lote; resumen muestra CA y mortalidad coherentes.
-- [ ] Listado filtra por período activo (`delPeriodoActivo`).
-- [ ] Escrituras bloqueadas con campaña cerrada.
-- [ ] Establecimientos y razas administrables desde el flujo carne (directo o proxy documentado).
-- [ ] Sin regresión en `@RequiresModule("AVICOLA_CARNE")`.
+- [x] Usuario admin crea un lote desde `/avicola-carne/lotes` (diálogo «Nuevo lote») sin usar otro módulo.
+- [x] Usuario registra consumo, muerte, pesada, venta y sanidad en lote activo.
+- [x] Faena total cierra el lote; resumen muestra CA y mortalidad coherentes.
+- [x] Listado filtra por período activo (`delPeriodoActivo`).
+- [x] Escrituras bloqueadas con campaña cerrada (interceptor CORE existente).
+- [x] Establecimientos y razas administrables desde `/avicola-carne/establecimientos` y `/avicola-carne/razas`.
+- [x] Sin regresión en `@RequiresModule("AVICOLA_CARNE")`.
 
 ---
 

@@ -1,7 +1,6 @@
 import React from 'react';
 import TrazabilidadExpedienteScreen from './TrazabilidadExpedienteScreen';
 import {
-  configuracionExpedienteAvicolaCarne,
   configuracionExpedienteAvicolaCrianza,
   configuracionExpedienteAvicolaHuevos,
   configuracionExpedienteAvicolaPonedoras,
@@ -27,7 +26,7 @@ export const ExpedienteTrazabilidadAvicolaCrianza: React.FC = () => (
 );
 
 export const ExpedienteTrazabilidadAvicolaCarne: React.FC = () => (
-  <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteAvicolaCarne} />
+  <TrazabilidadExpedienteScreen configuracion={configuracionExpedienteAvicolaCrianza} />
 );
 
 export const ExpedienteTrazabilidadAvicolaPonedoras: React.FC = () => (

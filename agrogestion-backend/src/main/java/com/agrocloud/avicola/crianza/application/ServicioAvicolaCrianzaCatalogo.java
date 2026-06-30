@@ -6,6 +6,7 @@ import com.agrocloud.avicola.crianza.model.dto.AvicolaRazaRespuesta;
 import com.agrocloud.avicola.crianza.model.dto.AvicolaRazaSolicitud;
 import com.agrocloud.avicola.crianza.model.entity.AvicolaEstablecimiento;
 import com.agrocloud.avicola.crianza.model.entity.AvicolaRaza;
+import com.agrocloud.avicola.crianza.model.enums.AvicolaModuloOrigen;
 import com.agrocloud.avicola.crianza.repository.AvicolaEstablecimientoRepository;
 import com.agrocloud.avicola.crianza.repository.AvicolaRazaRepository;
 import com.agrocloud.exception.ResourceNotFoundException;
@@ -30,15 +31,27 @@ public class ServicioAvicolaCrianzaCatalogo {
 
     @Transactional(readOnly = true)
     public List<AvicolaEstablecimientoRespuesta> listarEstablecimientos(Long empresaId) {
-        return establecimientoRepository.listarPorEmpresaId(empresaId).stream()
+        return listarEstablecimientos(empresaId, AvicolaModuloOrigen.AVICOLA_CRIANZA);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvicolaEstablecimientoRespuesta> listarEstablecimientos(Long empresaId, AvicolaModuloOrigen modulo) {
+        return establecimientoRepository.listarPorEmpresaIdYModulo(empresaId, modulo).stream()
                 .map(this::aEstablecimientoRespuesta)
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public AvicolaEstablecimientoRespuesta crearEstablecimiento(Long empresaId, AvicolaEstablecimientoSolicitud solicitud) {
+        return crearEstablecimiento(empresaId, AvicolaModuloOrigen.AVICOLA_CRIANZA, solicitud);
+    }
+
+    @Transactional
+    public AvicolaEstablecimientoRespuesta crearEstablecimiento(
+            Long empresaId, AvicolaModuloOrigen modulo, AvicolaEstablecimientoSolicitud solicitud) {
         AvicolaEstablecimiento e = new AvicolaEstablecimiento();
         e.setEmpresaId(empresaId);
+        e.setModuloOrigen(modulo);
         e.setNombre(solicitud.getNombre());
         e.setUbicacion(normalizarTextoOpcional(solicitud.getUbicacion()));
         e.setCoordenadas(normalizarJsonCoordenadas(solicitud.getCoordenadas()));
@@ -51,7 +64,13 @@ public class ServicioAvicolaCrianzaCatalogo {
 
     @Transactional
     public AvicolaEstablecimientoRespuesta actualizarEstablecimiento(Long empresaId, Long id, AvicolaEstablecimientoSolicitud solicitud) {
-        AvicolaEstablecimiento e = establecimientoRepository.buscarPorIdYEmpresaId(id, empresaId)
+        return actualizarEstablecimiento(empresaId, id, AvicolaModuloOrigen.AVICOLA_CRIANZA, solicitud);
+    }
+
+    @Transactional
+    public AvicolaEstablecimientoRespuesta actualizarEstablecimiento(
+            Long empresaId, Long id, AvicolaModuloOrigen modulo, AvicolaEstablecimientoSolicitud solicitud) {
+        AvicolaEstablecimiento e = establecimientoRepository.buscarPorIdYEmpresaIdYModulo(id, empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Establecimiento avícola no encontrado"));
         if (solicitud.getNombre() != null) {
             e.setNombre(solicitud.getNombre());
@@ -73,15 +92,26 @@ public class ServicioAvicolaCrianzaCatalogo {
 
     @Transactional(readOnly = true)
     public List<AvicolaRazaRespuesta> listarRazas(Long empresaId) {
-        return razaRepository.listarPorEmpresaId(empresaId).stream()
+        return listarRazas(empresaId, AvicolaModuloOrigen.AVICOLA_CRIANZA);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvicolaRazaRespuesta> listarRazas(Long empresaId, AvicolaModuloOrigen modulo) {
+        return razaRepository.listarPorEmpresaIdYModulo(empresaId, modulo).stream()
                 .map(this::aRazaRespuesta)
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public AvicolaRazaRespuesta crearRaza(Long empresaId, AvicolaRazaSolicitud solicitud) {
+        return crearRaza(empresaId, AvicolaModuloOrigen.AVICOLA_CRIANZA, solicitud);
+    }
+
+    @Transactional
+    public AvicolaRazaRespuesta crearRaza(Long empresaId, AvicolaModuloOrigen modulo, AvicolaRazaSolicitud solicitud) {
         AvicolaRaza r = new AvicolaRaza();
         r.setEmpresaId(empresaId);
+        r.setModuloOrigen(modulo);
         r.setNombre(solicitud.getNombre());
         if (solicitud.getActivo() != null) {
             r.setActivo(solicitud.getActivo());
@@ -91,7 +121,13 @@ public class ServicioAvicolaCrianzaCatalogo {
 
     @Transactional
     public AvicolaRazaRespuesta actualizarRaza(Long empresaId, Long id, AvicolaRazaSolicitud solicitud) {
-        AvicolaRaza r = razaRepository.buscarPorIdYEmpresaId(id, empresaId)
+        return actualizarRaza(empresaId, id, AvicolaModuloOrigen.AVICOLA_CRIANZA, solicitud);
+    }
+
+    @Transactional
+    public AvicolaRazaRespuesta actualizarRaza(
+            Long empresaId, Long id, AvicolaModuloOrigen modulo, AvicolaRazaSolicitud solicitud) {
+        AvicolaRaza r = razaRepository.buscarPorIdYEmpresaIdYModulo(id, empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Raza no encontrada"));
         if (solicitud.getNombre() != null) {
             r.setNombre(solicitud.getNombre());

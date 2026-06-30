@@ -56,6 +56,8 @@ public class ServicioFeedlotBunk {
         lectura.setBunkScore(solicitud.getBunkScore());
         lectura.setKgEntregados(solicitud.getKgEntregados());
         lectura.setObservaciones(solicitud.getObservaciones());
+        lectura.setTemperaturaDia(solicitud.getTemperaturaDia());
+        lectura.setHumedadDia(solicitud.getHumedadDia());
         return aRespuesta(lecturaRepository.save(lectura));
     }
 
@@ -72,6 +74,8 @@ public class ServicioFeedlotBunk {
         lectura.setBunkScore(solicitud.getBunkScore());
         lectura.setKgEntregados(solicitud.getKgEntregados());
         lectura.setObservaciones(solicitud.getObservaciones());
+        lectura.setTemperaturaDia(solicitud.getTemperaturaDia());
+        lectura.setHumedadDia(solicitud.getHumedadDia());
         return aRespuesta(lecturaRepository.save(lectura));
     }
 
@@ -108,6 +112,8 @@ public class ServicioFeedlotBunk {
         dto.setBunkScore(l.getBunkScore());
         dto.setKgEntregados(l.getKgEntregados());
         dto.setObservaciones(l.getObservaciones());
+        dto.setTemperaturaDia(l.getTemperaturaDia());
+        dto.setHumedadDia(l.getHumedadDia());
         dto.setCreatedAt(l.getCreatedAt());
         return dto;
     }

@@ -167,15 +167,16 @@ public class ModuleUserController {
             case "PORCINOS":
                 return "porcinos";
             case "AVICOLA_CRIANZA":
+            case "AVICOLA_CARNE":
                 return "avicola-crianza";
             case "AVICOLA_HUEVOS":
                 return "avicola-huevos";
-            case "AVICOLA_CARNE":
-                return "avicola-carne";
             case "AVICOLA_PONEDORAS":
                 return "avicola-ponedoras";
             case "FEEDLOT":
                 return "feedlot";
+            case "LECHERIA":
+                return "lecheria";
             default:
                 return moduleCode.toLowerCase();
         }
@@ -193,15 +194,16 @@ public class ModuleUserController {
             case "PORCINOS":
                 return "Porcinos";
             case "AVICOLA_CRIANZA":
+            case "AVICOLA_CARNE":
                 return "Avicola crianza";
             case "AVICOLA_HUEVOS":
                 return "Avicola huevos";
-            case "AVICOLA_CARNE":
-                return "Avicola carne";
             case "AVICOLA_PONEDORAS":
                 return "Avicola ponedoras";
             case "FEEDLOT":
                 return "Engorde a corral (Feedlot)";
+            case "LECHERIA":
+                return "Lechería";
             default:
                 return moduleCode;
         }
@@ -219,15 +221,16 @@ public class ModuleUserController {
             case "PORCINOS":
                 return "Gestion de produccion porcina";
             case "AVICOLA_CRIANZA":
+            case "AVICOLA_CARNE":
                 return "Parrilleros y crianza: lotes, pesadas, mortalidad, ventas, consumos y sanidad.";
             case "AVICOLA_HUEVOS":
                 return "Postura: lotes de puesta, produccion diaria, consumos y sanidad.";
-            case "AVICOLA_CARNE":
-                return "Carne avicola: lotes y operaciones (pesadas, mortalidad, ventas, consumos, sanidad).";
             case "AVICOLA_PONEDORAS":
                 return "Ponedoras y recria: gestion de explotaciones independiente de carne y huevos.";
             case "FEEDLOT":
                 return "Engorde bovino a corral: lotes, pesadas, alimento, sanidad, faena y closeout.";
+            case "LECHERIA":
+                return "Gestión lechera multi-especie: animales, lactancia, ordeñe, reproducción, sanidad y ventas.";
             default:
                 return "Modulo " + moduleCode;
         }
@@ -245,15 +248,16 @@ public class ModuleUserController {
             case "PORCINOS":
                 return "PiggyBank";
             case "AVICOLA_CRIANZA":
+            case "AVICOLA_CARNE":
                 return "Bird";
             case "AVICOLA_HUEVOS":
                 return "Egg";
-            case "AVICOLA_CARNE":
-                return "Drumstick";
             case "AVICOLA_PONEDORAS":
                 return "Egg";
             case "FEEDLOT":
                 return "Beef";
+            case "LECHERIA":
+                return "Milk";
             default:
                 return "Package";
         }
@@ -271,15 +275,16 @@ public class ModuleUserController {
             case "PORCINOS":
                 return "#f59e0b";
             case "AVICOLA_CRIANZA":
+            case "AVICOLA_CARNE":
                 return "#0ea5e9";
             case "AVICOLA_HUEVOS":
                 return "#eab308";
-            case "AVICOLA_CARNE":
-                return "#dc2626";
             case "AVICOLA_PONEDORAS":
                 return "#7c3aed";
             case "FEEDLOT":
                 return "#b45309";
+            case "LECHERIA":
+                return "#0284c7";
             default:
                 return "#3b82f6";
         }

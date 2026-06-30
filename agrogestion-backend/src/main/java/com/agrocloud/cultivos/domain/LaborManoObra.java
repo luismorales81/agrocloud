@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "labor_mano_obra")
+@Table(name = "cultivo_labor_mano_obra")
 public class LaborManoObra {
     
     @Id

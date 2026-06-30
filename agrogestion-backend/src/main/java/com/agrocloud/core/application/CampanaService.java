@@ -10,6 +10,7 @@ import com.agrocloud.model.enums.EstadoCampana;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -92,7 +93,9 @@ public class CampanaService {
 
     /**
      * Crea campaña activa por defecto para una empresa nueva o migración.
+     * REQUIRES_NEW: puede ejecutarse desde transacciones de solo lectura (p. ej. paneles).
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Campana asegurarCampanaActivaPorDefecto(Long empresaId) {
         return campanaRepository.findByEmpresaIdAndEstado(empresaId, EstadoCampana.ACTIVA)
                 .orElseGet(() -> {

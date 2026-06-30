@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useModule } from '../../core/hooks/useModule';
 import type { ModuleId, ModuleRoute } from '../../core/types/module.types';
-import CalendarioDashboard from '../../components/CalendarioDashboard';
+import CalendarioPonedorasScreen from './pages/CalendarioPonedorasScreen';
 import AvicolaPonedorasDashboard from './pages/AvicolaPonedorasDashboard';
 import AvicolaPonedorasListado from './pages/AvicolaPonedorasListado';
 import AvicolaPonedorasDetalleGalponScreen from './pages/AvicolaPonedorasDetalleGalponScreen';
@@ -41,7 +41,7 @@ export const avicolaPonedorasRoutes: ModuleRoute[] = [
   {
     path: '/avicola-ponedoras/dashboard',
     name: 'Calendario',
-    component: envolverSiModuloPonedorasHabilitado(CalendarioDashboard),
+    component: envolverSiModuloPonedorasHabilitado(CalendarioPonedorasScreen),
   },
   {
     path: '/avicola-ponedoras/panel',

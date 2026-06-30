@@ -1,6 +1,5 @@
 package com.agrocloud.trazabilidad.application;
 
-import com.agrocloud.avicola.carne.repository.*;
 import com.agrocloud.avicola.crianza.model.entity.*;
 import com.agrocloud.avicola.crianza.repository.*;
 import com.agrocloud.avicola.huevos.model.entity.AvicolaHuevoConsumo;
@@ -71,12 +70,6 @@ public class TrazabilidadExpedienteConstruccionService {
     @Autowired private AvicolaEventoSanitarioRepository avicolaEventoSanitarioRepository;
     @Autowired private AvicolaMuerteRepository avicolaMuerteRepository;
     @Autowired private AvicolaVentaRepository avicolaVentaRepository;
-    @Autowired private AvicolaCarneLoteRepository avicolaCarneLoteRepository;
-    @Autowired private AvicolaCarnePesadaRepository avicolaCarnePesadaRepository;
-    @Autowired private AvicolaCarneConsumoRepository avicolaCarneConsumoRepository;
-    @Autowired private AvicolaCarneEventoSanitarioRepository avicolaCarneEventoSanitarioRepository;
-    @Autowired private AvicolaCarneMuerteRepository avicolaCarneMuerteRepository;
-    @Autowired private AvicolaCarneVentaRepository avicolaCarneVentaRepository;
     @Autowired private AvicolaPonedorasGalponRepository avicolaPonedorasGalponRepository;
     @Autowired private AvicolaPonedorasPosturaRepository avicolaPonedorasPosturaRepository;
     @Autowired private AvicolaPonedorasConsumoRepository avicolaPonedorasConsumoRepository;
@@ -99,8 +92,7 @@ public class TrazabilidadExpedienteConstruccionService {
             case "RECRIA" -> construirRecria(entidadId, empresa);
             case "VENTA_PORCINO" -> construirVentaPorcino(entidadId, empresa);
             case "AVICOLA_HUEVOS" -> construirAvicolaHuevos(entidadId, empresa);
-            case "AVICOLA_CRIANZA" -> construirAvicolaLoteCrianza(entidadId, empresa);
-            case "AVICOLA_CARNE" -> construirAvicolaLoteCarne(entidadId, empresa);
+            case "AVICOLA_CRIANZA", "AVICOLA_CARNE" -> construirAvicolaLoteCrianza(entidadId, empresa);
             case "AVICOLA_PONEDORAS" -> construirAvicolaPonedoras(entidadId, empresa);
             case "FEEDLOT_LOTE" -> construirFeedlotLote(entidadId, empresa);
             default -> throw new IllegalArgumentException("entidadTipo no soportado: " + entidadTipo);
@@ -282,19 +274,6 @@ public class TrazabilidadExpedienteConstruccionService {
                 avicolaEventoSanitarioRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId()),
                 avicolaMuerteRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId()),
                 avicolaVentaRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId()));
-    }
-
-    private HechosExpedienteTrazabilidad construirAvicolaLoteCarne(Long loteId, Empresa empresa) {
-        AvicolaLote lote = avicolaCarneLoteRepository.buscarPorIdYEmpresaId(loteId, empresa.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Lote avícola carne no encontrado: " + loteId));
-        return construirAvicolaLoteGenerico(
-                lote, empresa, "AVICOLA_CARNE", "Avícola carne",
-                "Expediente lote avícola (carne)",
-                avicolaCarnePesadaRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId()),
-                avicolaCarneConsumoRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId()),
-                avicolaCarneEventoSanitarioRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId()),
-                avicolaCarneMuerteRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId()),
-                avicolaCarneVentaRepository.listarPorLoteIdYEmpresaId(loteId, empresa.getId()));
     }
 
     private HechosExpedienteTrazabilidad construirAvicolaLoteGenerico(

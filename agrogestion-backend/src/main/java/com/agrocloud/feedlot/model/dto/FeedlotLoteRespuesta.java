@@ -39,6 +39,8 @@ public class FeedlotLoteRespuesta {
     private String observaciones;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Double climaLatitud;
+    private Double climaLongitud;
 
     public Long getId() {
         return id;
@@ -270,5 +272,21 @@ public class FeedlotLoteRespuesta {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Double getClimaLatitud() {
+        return climaLatitud;
+    }
+
+    public void setClimaLatitud(Double climaLatitud) {
+        this.climaLatitud = climaLatitud;
+    }
+
+    public Double getClimaLongitud() {
+        return climaLongitud;
+    }
+
+    public void setClimaLongitud(Double climaLongitud) {
+        this.climaLongitud = climaLongitud;
     }
 }

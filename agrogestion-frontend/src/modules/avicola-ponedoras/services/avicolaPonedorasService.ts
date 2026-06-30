@@ -1,6 +1,8 @@
 import api from '../../../services/api';
 import { FiltrosListadoOperativo, paramsListadoOperativo } from '../../../core/types/filtrosListadoOperativo';
 import type {
+  AmbienteDiario,
+  AmbienteDiarioCuerpo,
   AvicolaPonedorasGalpon,
   Consumo,
   ConsumoCreacionCuerpo,
@@ -140,5 +142,24 @@ export async function registrarDescarteAves(
 
 export async function obtenerResumenGalpon(galponId: number): Promise<Resumen> {
   const { data } = await api.get<Resumen>(`${BASE}/galpones/${galponId}/resumen`);
+  return data;
+}
+
+export async function listarAmbienteDiario(
+  galponId: number,
+  desde?: string,
+  hasta?: string
+): Promise<AmbienteDiario[]> {
+  const { data } = await api.get<AmbienteDiario[]>(`${BASE}/galpones/${galponId}/ambiente-diario`, {
+    params: { desde, hasta },
+  });
+  return Array.isArray(data) ? data : [];
+}
+
+export async function guardarAmbienteDiario(
+  galponId: number,
+  cuerpo: AmbienteDiarioCuerpo
+): Promise<AmbienteDiario> {
+  const { data } = await api.put<AmbienteDiario>(`${BASE}/galpones/${galponId}/ambiente-diario`, cuerpo);
   return data;
 }

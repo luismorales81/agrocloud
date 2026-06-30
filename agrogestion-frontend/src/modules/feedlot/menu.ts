@@ -55,16 +55,4 @@ export const feedlotMenu: MenuItem[] = [
     icono: 'CalendarDays',
     ruta: '/feedlot/configuracion/periodos',
   },
-  {
-    id: 'expediente',
-    nombre: 'Expediente',
-    icono: 'FileText',
-    ruta: '/feedlot/expediente',
-  },
-  {
-    id: 'config-closeout',
-    nombre: 'Closeout',
-    icono: 'Settings',
-    ruta: '/feedlot/configuracion/closeout',
-  },
 ];

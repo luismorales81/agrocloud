@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -12,7 +12,6 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  MenuItem,
   Paper,
   Stack,
   Switch,
@@ -27,6 +26,7 @@ import {
 } from '@mui/material';
 import { ChevronDown, ChevronRight, Pencil, Plus } from 'lucide-react';
 import { insumosService } from '../../../services/domain/insumosLaboresServices';
+import { Autocomplete } from '../../../components/ui/Autocomplete';
 import { Icon } from '../../../components/icons';
 import type { FeedlotDieta, FeedlotDietaFase, FeedlotDietaFaseSolicitud } from '../types';
 import {
@@ -38,14 +38,17 @@ import {
   mensajeError,
 } from '../services/feedlotApi';
 
-interface InsumoOpcion {
-  id: number;
-  nombre: string;
-}
+import {
+  etiquetaInsumoOpcion,
+  filtrarInsumosAlimento,
+  mapearInsumosDesdeApi,
+  opcionesInsumoConSeleccion,
+  type InsumoOpcionFeedlot,
+} from '../utils/mapearInsumos';
 
 const DietasFeedlotScreen: React.FC = () => {
   const [dietas, setDietas] = useState<FeedlotDieta[]>([]);
-  const [insumos, setInsumos] = useState<InsumoOpcion[]>([]);
+  const [insumos, setInsumos] = useState<InsumoOpcionFeedlot[]>([]);
   const [expandidas, setExpandidas] = useState<Set<number>>(new Set());
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,25 +66,27 @@ const DietasFeedlotScreen: React.FC = () => {
   const [kgMs, setKgMs] = useState('');
   const [insumoFase, setInsumoFase] = useState<number | ''>('');
 
+  const cargarDietas = useCallback(async () => {
+    const lista = await listarDietas();
+    setDietas(lista);
+  }, []);
+
+  const cargarInsumos = useCallback(async () => {
+    const rawInsumos = await insumosService.listar().catch(() => []);
+    setInsumos(filtrarInsumosAlimento(mapearInsumosDesdeApi(rawInsumos)));
+  }, []);
+
   const cargar = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
-      const [lista, rawInsumos] = await Promise.all([listarDietas(), insumosService.listar()]);
-      setDietas(lista);
-      const arr = Array.isArray(rawInsumos) ? rawInsumos : [];
-      setInsumos(
-        arr.map((x: Record<string, unknown>) => ({
-          id: Number(x.id),
-          nombre: String(x.nombre ?? x.descripcion ?? `Insumo ${x.id}`),
-        }))
-      );
+      await Promise.all([cargarDietas(), cargarInsumos()]);
     } catch (err: unknown) {
       setError(mensajeError(err));
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [cargarDietas, cargarInsumos]);
 
   useEffect(() => {
     void cargar();
@@ -89,6 +94,11 @@ const DietasFeedlotScreen: React.FC = () => {
 
   const nomInsumo = (id?: number | null) =>
     id != null ? insumos.find((i) => i.id === id)?.nombre ?? `Insumo ${id}` : '—';
+
+  const opcionesInsumoFase = useMemo(
+    () => opcionesInsumoConSeleccion(insumos, insumos, insumoFase),
+    [insumos, insumoFase]
+  );
 
   const toggleExpandir = (id: number) => {
     setExpandidas((prev) => {
@@ -99,7 +109,13 @@ const DietasFeedlotScreen: React.FC = () => {
     });
   };
 
+  const cerrarDialogoDieta = () => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    setDialogoDieta(false);
+  };
+
   const abrirNuevaDieta = () => {
+    (document.activeElement as HTMLElement | null)?.blur();
     setEditandoDieta(null);
     setNombreDieta('');
     setActivoDieta(true);
@@ -107,6 +123,7 @@ const DietasFeedlotScreen: React.FC = () => {
   };
 
   const abrirEditarDieta = (d: FeedlotDieta) => {
+    (document.activeElement as HTMLElement | null)?.blur();
     setEditandoDieta(d);
     setNombreDieta(d.nombre);
     setActivoDieta(d.activo !== false);
@@ -125,7 +142,7 @@ const DietasFeedlotScreen: React.FC = () => {
         await crearDieta({ nombre: nombreDieta.trim(), activo: activoDieta });
       }
       setDialogoDieta(false);
-      await cargar();
+      await cargarDietas();
     } catch (err: unknown) {
       setError(mensajeError(err));
     }
@@ -173,7 +190,7 @@ const DietasFeedlotScreen: React.FC = () => {
       }
       setDialogoFase(false);
       setExpandidas((prev) => new Set(prev).add(dietaFaseId));
-      await cargar();
+      await cargarDietas();
     } catch (err: unknown) {
       setError(mensajeError(err));
     }
@@ -276,7 +293,7 @@ const DietasFeedlotScreen: React.FC = () => {
                                       <TableCell>Fase</TableCell>
                                       <TableCell align="right">Días desde ingreso</TableCell>
                                       <TableCell align="right">kg MS/cab/día</TableCell>
-                                      <TableCell>Insumo</TableCell>
+                                      <TableCell>Insumo ref.</TableCell>
                                       <TableCell align="right">Acciones</TableCell>
                                     </TableRow>
                                   </TableHead>
@@ -314,7 +331,13 @@ const DietasFeedlotScreen: React.FC = () => {
         </TableContainer>
       )}
 
-      <Dialog open={dialogoDieta} onClose={() => setDialogoDieta(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={dialogoDieta}
+        onClose={cerrarDialogoDieta}
+        fullWidth
+        maxWidth="sm"
+        disableRestoreFocus
+      >
         <DialogTitle>{editandoDieta ? 'Editar dieta' : 'Nueva dieta'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -333,14 +356,20 @@ const DietasFeedlotScreen: React.FC = () => {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogoDieta(false)}>Cancelar</Button>
+          <Button onClick={cerrarDialogoDieta}>Cancelar</Button>
           <Button variant="contained" onClick={() => void guardarDieta()}>
             Guardar
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialogoFase} onClose={() => setDialogoFase(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={dialogoFase}
+        onClose={() => setDialogoFase(false)}
+        fullWidth
+        maxWidth="sm"
+        disableRestoreFocus
+      >
         <DialogTitle>{editandoFase ? 'Editar fase' : 'Nueva fase'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -364,20 +393,34 @@ const DietasFeedlotScreen: React.FC = () => {
               value={kgMs}
               onChange={(ev) => setKgMs(ev.target.value)}
             />
-            <TextField
-              select
-              label="Insumo (opcional)"
-              fullWidth
-              value={insumoFase}
-              onChange={(ev) => setInsumoFase(ev.target.value === '' ? '' : Number(ev.target.value))}
-            >
-              <MenuItem value="">Ninguno</MenuItem>
-              {insumos.map((i) => (
-                <MenuItem key={i.id} value={i.id}>
-                  {i.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: -0.5 }}>
+              Referencia opcional del balanceado o insumo principal de la fase. Si la ración mezcla varios
+              insumos, registrá el detalle en los consumos del lote.
+            </Typography>
+            <Autocomplete<InsumoOpcionFeedlot>
+              label="Insumo de referencia (opcional)"
+              options={opcionesInsumoFase.map((i) => ({
+                value: i.id,
+                label: etiquetaInsumoOpcion(i),
+                data: i,
+              }))}
+              value={insumoFase === '' ? undefined : insumoFase}
+              onChange={(value) =>
+                setInsumoFase(value != null && value !== '' ? Number(value) : '')
+              }
+              placeholder="Buscar balanceado por nombre…"
+              emptyMessage={
+                insumos.length === 0
+                  ? 'No hay insumos de alimento en inventario. Cargá balanceados (tipo OTROS) en Insumos.'
+                  : 'No se encontraron insumos'
+              }
+              maxHeight={280}
+            />
+            {insumos.length === 0 && (
+              <Typography variant="caption" color="text.secondary">
+                No hay insumos de alimento en inventario. Cargá balanceados (tipo OTROS) en Insumos.
+              </Typography>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

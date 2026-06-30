@@ -22,10 +22,11 @@ public class JacksonConfig {
                 .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .build();
 
-        // Configurar módulo de Hibernate para manejar proxies lazy
+        // Sin FORCE_LAZY_LOADING: con open-in-view=false la sesión ya cerró al serializar
+        // y forzar lazy loading provoca 500 (p. ej. GET /api/insumos).
         Hibernate5JakartaModule hibernateModule = new Hibernate5JakartaModule();
         hibernateModule.disable(Hibernate5JakartaModule.Feature.USE_TRANSIENT_ANNOTATION);
-        hibernateModule.enable(Hibernate5JakartaModule.Feature.FORCE_LAZY_LOADING);
+        hibernateModule.disable(Hibernate5JakartaModule.Feature.FORCE_LAZY_LOADING);
         hibernateModule.enable(Hibernate5JakartaModule.Feature.REPLACE_PERSISTENT_COLLECTIONS);
         
         mapper.registerModule(hibernateModule);

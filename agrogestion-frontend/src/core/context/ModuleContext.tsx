@@ -91,13 +91,16 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
               idNormalizado = 'avicola-huevos';
             }
             if (idNormalizado === 'avicola_carne' || idNormalizado === 'AVICOLA_CARNE') {
-              idNormalizado = 'avicola-carne';
+              idNormalizado = 'avicola-crianza';
             }
             if (idNormalizado === 'avicola_ponedoras' || idNormalizado === 'AVICOLA_PONEDORAS') {
               idNormalizado = 'avicola-ponedoras';
             }
             if (idNormalizado === 'FEEDLOT' || idNormalizado === 'feedlot') {
               idNormalizado = 'feedlot';
+            }
+            if (idNormalizado === 'LECHERIA' || idNormalizado === 'lecheria') {
+              idNormalizado = 'lecheria';
             }
             const id = idNormalizado as ModuleId;
             const cfg = getModuleById(id);

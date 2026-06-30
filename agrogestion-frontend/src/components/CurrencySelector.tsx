@@ -2,7 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { currencyService } from '../services/CurrencyService';
 
-const CurrencySelector: React.FC = () => {
+interface CurrencySelectorProps {
+  /** Si true, se integra en la barra global sin posición fija. */
+  inline?: boolean;
+}
+
+const CurrencySelector: React.FC<CurrencySelectorProps> = ({ inline = false }) => {
   const { selectedCurrency, exchangeType, changeCurrency, changeExchangeType } = useCurrencyContext();
   const [rates, setRates] = useState<{ oficial: number; blue: number } | null>(null);
 
@@ -16,7 +21,7 @@ const CurrencySelector: React.FC = () => {
         console.error('❌ [CurrencySelector] Error cargando tasas:', error);
       }
     };
-    
+
     loadRates();
   }, []);
 
@@ -28,38 +33,30 @@ const CurrencySelector: React.FC = () => {
       changeCurrency('USD');
       changeExchangeType(value);
     }
-    
-    // Forzar actualización inmediata
+
     setTimeout(() => {
       window.dispatchEvent(new Event('currencyUpdate'));
     }, 100);
   };
 
-  const getDisplayText = () => {
-    if (selectedCurrency === 'ARS') {
-      return 'ARS (Pesos)';
-    }
-    
-    if (rates) {
-      const rate = exchangeType === 'oficial' ? rates.oficial : rates.blue;
-      return `USD ${exchangeType === 'oficial' ? 'Oficial' : 'Blue'} (${rate.toFixed(2)})`;
-    }
-    
-    return `USD ${exchangeType === 'oficial' ? 'Oficial' : 'Blue'}`;
-  };
-
   return (
-    <div style={{
-      position: 'fixed',
-      top: '2rem',
-      right: '12rem', // Ajustado para estar más a la izquierda del botón de cerrar sesión
-      zIndex: 1000,
-      backgroundColor: 'white',
-      borderRadius: '0.375rem',
-      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-      border: '1px solid #e5e7eb',
-      padding: '0.5rem'
-    }}>
+    <div
+      style={{
+        ...(inline
+          ? {}
+          : {
+              position: 'fixed',
+              top: '2rem',
+              right: '12rem',
+              zIndex: 1000,
+            }),
+        backgroundColor: 'white',
+        borderRadius: '0.375rem',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #e5e7eb',
+        padding: '0.5rem',
+      }}
+    >
       <select
         value={selectedCurrency === 'ARS' ? 'ARS' : exchangeType}
         onChange={handleCurrencyChange}
@@ -71,15 +68,15 @@ const CurrencySelector: React.FC = () => {
           color: '#374151',
           backgroundColor: 'transparent',
           cursor: 'pointer',
-          minWidth: '140px'
+          minWidth: inline ? '180px' : '140px',
         }}
       >
-        <option value="ARS">ARS (Pesos)</option>
+        <option value="ARS">💰 ARS (Pesos Argentinos)</option>
         <option value="oficial">
-          USD Oficial {rates ? `(${rates.oficial.toFixed(2)})` : ''}
+          💵 USD Oficial {rates ? `($${rates.oficial.toFixed(2)})` : ''}
         </option>
         <option value="blue">
-          USD Blue {rates ? `(${rates.blue.toFixed(2)})` : ''}
+          💙 USD Blue {rates ? `($${rates.blue.toFixed(2)})` : ''}
         </option>
       </select>
     </div>

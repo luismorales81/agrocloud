@@ -71,6 +71,8 @@ public class ServicioAvicolaCrianzaOperaciones {
         p.setPesoPromedio(solicitud.getPesoPromedio());
         p.setCantidadPesada(solicitud.getCantidadPesada());
         p.setObservaciones(solicitud.getObservaciones());
+        p.setTemperaturaAmbiente(solicitud.getTemperaturaAmbiente());
+        p.setHumedadAmbiente(solicitud.getHumedadAmbiente());
         return aPesadaRespuesta(pesadaRepository.save(p));
     }
 
@@ -89,16 +91,9 @@ public class ServicioAvicolaCrianzaOperaciones {
         if (q <= 0) {
             throw new IllegalArgumentException("La cantidad de muertes debe ser mayor a cero");
         }
-        if (q > l.getCantidadAnimales()) {
-            throw new IllegalArgumentException("Cantidad de muertes supera aves vivas en el lote (" + l.getCantidadAnimales() + ")");
+        if (solicitud.getFecha() == null) {
+            throw new IllegalArgumentException("La fecha de la muerte es obligatoria");
         }
-        l.setCantidadAnimales(l.getCantidadAnimales() - q);
-        if (l.getCantidadAnimales() <= 0) {
-            l.setCantidadAnimales(0);
-            l.setEstado(AvicolaLoteEstado.CERRADO);
-            l.setFechaSalida(LocalDate.now());
-        }
-        servicioLote.guardarLote(l);
 
         AvicolaMuerte m = new AvicolaMuerte();
         m.setLote(l);
@@ -121,16 +116,23 @@ public class ServicioAvicolaCrianzaOperaciones {
     @Transactional
     public AvicolaVentaRespuesta registrarVenta(Long empresaId, Long loteId, AvicolaVentaSolicitud solicitud) {
         AvicolaLote l = loteActivo(empresaId, loteId);
-        int disponible = l.getCantidadAnimales();
         if (solicitud.getCantidad() == null || solicitud.getCantidad() <= 0) {
             throw new IllegalArgumentException("La cantidad vendida debe ser mayor a cero");
         }
+        if (solicitud.getFecha() == null) {
+            throw new IllegalArgumentException("La fecha de la venta es obligatoria");
+        }
+        if (solicitud.getTipo() == null) {
+            throw new IllegalArgumentException("El tipo de venta es obligatorio");
+        }
+        int disponible = l.getCantidadAnimales() != null ? l.getCantidadAnimales() : 0;
         if (solicitud.getCantidad() > disponible) {
             throw new IllegalArgumentException("Cantidad de venta supera la disponible (" + disponible + ")");
         }
-        int nuevo = l.getCantidadAnimales() - solicitud.getCantidad();
+        int nuevo = disponible - solicitud.getCantidad();
         l.setCantidadAnimales(nuevo);
         if (nuevo <= 0) {
+            l.setCantidadAnimales(0);
             l.setEstado(AvicolaLoteEstado.CERRADO);
             l.setFechaSalida(LocalDate.now());
         }
@@ -147,6 +149,7 @@ public class ServicioAvicolaCrianzaOperaciones {
         v.setTotal(solicitud.getTotal());
         v.setComprador(solicitud.getComprador());
         v.setObservaciones(solicitud.getObservaciones());
+        v.setCampanaId(l.getCampanaId());
         return aVentaRespuesta(ventaRepository.save(v));
     }
 
@@ -174,6 +177,7 @@ public class ServicioAvicolaCrianzaOperaciones {
         c.setCantidad(solicitud.getCantidad());
         c.setTipo(solicitud.getTipo() != null ? solicitud.getTipo() : "MANUAL");
         c.setObservaciones(solicitud.getObservaciones());
+        c.setCampanaId(l.getCampanaId());
         c = consumoRepository.saveAndFlush(c);
 
         InventoryResult res = inventoryService.consumir(
@@ -188,6 +192,47 @@ public class ServicioAvicolaCrianzaOperaciones {
             throw new IllegalArgumentException(res.mensaje() != null ? res.mensaje() : "Error de inventario");
         }
         return aConsumoRespuesta(c);
+    }
+
+    @Transactional
+    public AvicolaConsumoRespuesta actualizarConsumo(
+            Long empresaId,
+            Long loteId,
+            Long consumoId,
+            AvicolaCrianzaConsumoActualizarSolicitud solicitud,
+            Long usuarioId) {
+        loteActivo(empresaId, loteId);
+        AvicolaConsumo c = consumoRepository.buscarPorIdYEmpresaId(consumoId, empresaId)
+                .orElseThrow(() -> new IllegalArgumentException("Consumo no encontrado"));
+        if (!c.getLote().getId().equals(loteId)) {
+            throw new IllegalArgumentException("El consumo no pertenece a este lote");
+        }
+        if (solicitud.getFecha() == null || solicitud.getCantidad() == null
+                || solicitud.getCantidad().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Fecha y cantidad válida son obligatorias");
+        }
+        Long insumoId = c.getInsumoId();
+        BigDecimal anterior = c.getCantidad();
+        BigDecimal delta = solicitud.getCantidad().subtract(anterior);
+        if (delta.compareTo(BigDecimal.ZERO) > 0) {
+            InventoryResult res = inventoryService.consumir(
+                    empresaId, insumoId, delta, InventoryOrigin.AVICOLA_CRIANZA, c.getId(), usuarioId);
+            if (!res.exito()) {
+                throw new IllegalArgumentException(res.mensaje() != null ? res.mensaje() : "Error de inventario");
+            }
+        } else if (delta.compareTo(BigDecimal.ZERO) < 0) {
+            InventoryResult res = inventoryService.reponer(
+                    empresaId, insumoId, delta.negate(), InventoryOrigin.AVICOLA_CRIANZA, c.getId(), usuarioId);
+            if (!res.exito()) {
+                throw new IllegalArgumentException(res.mensaje() != null ? res.mensaje() : "Error de inventario");
+            }
+        }
+        c.setFecha(solicitud.getFecha());
+        c.setCantidad(solicitud.getCantidad());
+        if (solicitud.getObservaciones() != null) {
+            c.setObservaciones(solicitud.getObservaciones());
+        }
+        return aConsumoRespuesta(consumoRepository.save(c));
     }
 
     @Transactional(readOnly = true)
@@ -218,28 +263,32 @@ public class ServicioAvicolaCrianzaOperaciones {
         AvicolaLote l = servicioLote.obtenerEntidadLote(empresaId, loteId);
         long sumaMuertes = muerteRepository.sumarCantidadMuertesPorLoteYEmpresa(loteId, empresaId);
         BigDecimal sumaConsumos = consumoRepository.sumarCantidadConsumidaPorLoteYEmpresa(loteId, empresaId);
-        int disponible = l.getCantidadAnimales();
+        if (sumaConsumos == null) {
+            sumaConsumos = BigDecimal.ZERO;
+        }
+        int cantidadAnimales = l.getCantidadAnimales() != null ? l.getCantidadAnimales() : 0;
+        int cantidadDisponible = cantidadAnimales - (int) sumaMuertes;
 
         AvicolaCrianzaResumenRespuesta r = new AvicolaCrianzaResumenRespuesta();
         r.setLoteId(loteId);
-        r.setCantidadAnimalesRegistrada(l.getCantidadAnimales());
+        r.setCantidadAnimalesRegistrada(cantidadAnimales);
         r.setSumaMuertes(sumaMuertes);
-        r.setCantidadDisponible(disponible);
+        r.setCantidadDisponible(cantidadDisponible);
         if (l.getCantidadInicial() != null && l.getCantidadInicial() > 0) {
             r.setMortalidadPorcentaje(
-                    BigDecimal.valueOf(sumaMuertes * 100.0 / l.getCantidadInicial()).setScale(2, RoundingMode.HALF_UP));
+                    BigDecimal.valueOf(sumaMuertes * 100.0 / l.getCantidadInicial()).setScale(4, RoundingMode.HALF_UP));
         } else {
             r.setMortalidadPorcentaje(BigDecimal.ZERO);
         }
         r.setSumaConsumos(sumaConsumos);
         BigDecimal pesoRef = l.getPesoPromedioIngreso();
         List<AvicolaPesada> pesadas = pesadaRepository.listarPorLoteIdYEmpresaId(loteId, empresaId);
-        if (!pesadas.isEmpty()) {
+        if (!pesadas.isEmpty() && pesadas.get(0).getPesoPromedio() != null) {
             pesoRef = pesadas.get(0).getPesoPromedio();
         }
         r.setPesoPromedioReferencia(pesoRef);
-        if (pesoRef != null && pesoRef.compareTo(BigDecimal.ZERO) > 0 && disponible > 0 && sumaConsumos != null) {
-            BigDecimal denom = pesoRef.multiply(BigDecimal.valueOf(disponible));
+        if (pesoRef != null && pesoRef.compareTo(BigDecimal.ZERO) > 0 && cantidadDisponible > 0) {
+            BigDecimal denom = pesoRef.multiply(BigDecimal.valueOf(cantidadDisponible));
             r.setConversionAlimenticia(sumaConsumos.divide(denom, 4, RoundingMode.HALF_UP));
         }
         r.setDiasEnProduccion(ChronoUnit.DAYS.between(l.getFechaIngreso(), LocalDate.now()));
@@ -255,6 +304,8 @@ public class ServicioAvicolaCrianzaOperaciones {
         dto.setPesoPromedio(p.getPesoPromedio());
         dto.setCantidadPesada(p.getCantidadPesada());
         dto.setObservaciones(p.getObservaciones());
+        dto.setTemperaturaAmbiente(p.getTemperaturaAmbiente());
+        dto.setHumedadAmbiente(p.getHumedadAmbiente());
         dto.setCreatedAt(p.getCreatedAt());
         return dto;
     }

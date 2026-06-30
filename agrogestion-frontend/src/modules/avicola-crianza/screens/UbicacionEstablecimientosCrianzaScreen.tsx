@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import EditorMapaUbicacionHuevos from '../../avicola-huevos/components/EditorMapaUbicacionHuevos';
+import EditorMapaUbicacion from '../../../components/EditorMapaUbicacion';
 import {
   listarEstablecimientosCrianza,
   actualizarEstablecimientoCrianza,
@@ -188,7 +188,7 @@ const UbicacionEstablecimientosCrianzaScreen: React.FC = () => {
                 helperText="Opcional. Complementa el dibujo en el mapa."
               />
 
-              <EditorMapaUbicacionHuevos
+              <EditorMapaUbicacion
                 key={seleccionId}
                 abierto
                 coordenadasJson={coordenadasJson}

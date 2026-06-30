@@ -8,10 +8,12 @@ import com.agrocloud.dto.CrearInsumoConDosisRequest;
 import com.agrocloud.dto.InsumoConDosisDTO;
 import com.agrocloud.dto.InsumoDTO;
 import com.agrocloud.cultivos.domain.DosisAplicacion;
+import com.agrocloud.cultivos.infrastructure.DosisAplicacionRepository;
 import com.agrocloud.core.inventory.domain.Insumo;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.model.enums.RolEmpresa;
-import com.agrocloud.cultivos.infrastructure.DosisAplicacionRepository;
+import com.agrocloud.core.security.ServicioSeguridadContexto;
+import com.agrocloud.cultivos.util.MapeadorInsumo;
 import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -38,6 +40,9 @@ public class InsumoService {
     @Autowired
     private DosisAplicacionRepository dosisAplicacionRepository;
 
+    @Autowired
+    private ServicioSeguridadContexto servicioSeguridadContexto;
+
 
     // Obtener todos los insumos (público)
     public List<Insumo> getAllInsumos() {
@@ -59,38 +64,63 @@ public class InsumoService {
     // Obtener todos los insumos accesibles por un usuario
     @Transactional(readOnly = true)
     public List<Insumo> getInsumosByUser(User user) {
-        List<Insumo> insumos;
-        
-        if (user.isAdmin() || 
-            user.tieneRolEnEmpresa(RolEmpresa.JEFE_CAMPO) || 
-            user.tieneRolEnEmpresa(RolEmpresa.OPERARIO) ||
-            user.tieneRolEnEmpresa(RolEmpresa.CONSULTOR_EXTERNO)) {
-            // Admin, JEFE_CAMPO, OPERARIO y CONSULTOR_EXTERNO ven todos los insumos de la empresa (solo lectura para OPERARIO y CONSULTOR_EXTERNO)
-            insumos = insumoRepository.findAll();
-        } else {
-            // Usuario ve sus insumos y los de sus sub-usuarios
-            insumos = insumoRepository.findAccessibleByUser(user);
-        }
-        
-        // Filtrar solo activos y inicializar relaciones lazy
+        List<Insumo> insumos = listarEntidadesAccesibles(user);
         if (insumos == null) {
             return java.util.Collections.emptyList();
         }
-
-        List<Insumo> activos = insumos.stream()
+        return insumos.stream()
                 .filter(i -> Boolean.TRUE.equals(i.getActivo()))
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
+    }
 
-        activos.forEach(insumo -> {
-            if (insumo.getEmpresa() != null) {
-                insumo.getEmpresa().getId();
-            }
-            if (insumo.getUser() != null) {
-                insumo.getUser().getId();
-            }
-        });
+    /**
+     * Listado seguro para API: DTO por empresa del contexto HTTP (X-Company-Id).
+     */
+    @Transactional(readOnly = true)
+    public List<InsumoDTO> listarDtoPorEmpresaActual() {
+        Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
+        return insumoRepository.findByEmpresaIdAndActivoTrue(empresaId).stream()
+                .map(MapeadorInsumo::aDtoListado)
+                .collect(Collectors.toList());
+    }
 
-        return activos;
+    /**
+     * Listado seguro para API: DTO sin relaciones lazy (evita 500 con open-in-view=false).
+     */
+    @Transactional(readOnly = true)
+    public List<InsumoDTO> listarDtoAccesibles(User user) {
+        return listarEntidadesAccesibles(user).stream()
+                .filter(i -> Boolean.TRUE.equals(i.getActivo()))
+                .map(MapeadorInsumo::aDtoListado)
+                .collect(Collectors.toList());
+    }
+
+    private List<Insumo> listarEntidadesAccesibles(User user) {
+        Long empresaId = resolverEmpresaId(user);
+        if (empresaId != null) {
+            return insumoRepository.findByEmpresaIdAndActivoTrue(empresaId);
+        }
+        if (user.isSuperAdmin()) {
+            return insumoRepository.findByActivoTrue();
+        }
+        return insumoRepository.findAccessibleByUser(user);
+    }
+
+    private Long resolverEmpresaId(User user) {
+        try {
+            return servicioSeguridadContexto.obtenerEmpresaIdActual();
+        } catch (RuntimeException ex) {
+            // Sin cabecera X-Company-Id o contexto HTTP: empresa del usuario cargado en esta transacción
+        }
+        if (user.getUsuarioEmpresas() != null && !user.getUsuarioEmpresas().isEmpty()) {
+            return user.getUsuarioEmpresas().stream()
+                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                    .map(ue -> ue.getEmpresa().getId())
+                    .findFirst()
+                    .orElse(null);
+        }
+        Empresa empresa = user.getEmpresa();
+        return empresa != null ? empresa.getId() : null;
     }
 
     // Obtener insumo por ID (con validación de acceso)

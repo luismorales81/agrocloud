@@ -1,11 +1,13 @@
 package com.agrocloud.avicola.crianza.application;
 
+import com.agrocloud.avicola.crianza.model.dto.AvicolaCrianzaCierreLoteSolicitud;
 import com.agrocloud.avicola.crianza.model.dto.AvicolaLoteRespuesta;
 import com.agrocloud.avicola.crianza.model.dto.AvicolaLoteSolicitud;
 import com.agrocloud.avicola.crianza.model.entity.AvicolaEstablecimiento;
 import com.agrocloud.avicola.crianza.model.entity.AvicolaLote;
 import com.agrocloud.avicola.crianza.model.entity.AvicolaRaza;
 import com.agrocloud.avicola.crianza.model.enums.AvicolaLoteEstado;
+import com.agrocloud.avicola.crianza.model.enums.AvicolaModuloOrigen;
 import com.agrocloud.avicola.crianza.repository.AvicolaEstablecimientoRepository;
 import com.agrocloud.avicola.crianza.repository.AvicolaLoteRepository;
 import com.agrocloud.avicola.crianza.repository.AvicolaRazaRepository;
@@ -16,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,19 +46,25 @@ public class ServicioAvicolaCrianzaLote {
 
     @Transactional(readOnly = true)
     public List<AvicolaLoteRespuesta> listarLotes(Long empresaId) {
-        return listarLotes(empresaId, null, null);
+        return listarLotes(empresaId, null, null, AvicolaModuloOrigen.AVICOLA_CRIANZA);
     }
 
     @Transactional(readOnly = true)
     public List<AvicolaLoteRespuesta> listarLotesPorEstado(Long empresaId, AvicolaLoteEstado estado) {
-        return listarLotes(empresaId, estado, null);
+        return listarLotes(empresaId, estado, null, AvicolaModuloOrigen.AVICOLA_CRIANZA);
     }
 
     @Transactional(readOnly = true)
     public List<AvicolaLoteRespuesta> listarLotes(Long empresaId, AvicolaLoteEstado estado, Boolean delPeriodoActivo) {
+        return listarLotes(empresaId, estado, delPeriodoActivo, AvicolaModuloOrigen.AVICOLA_CRIANZA);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvicolaLoteRespuesta> listarLotes(
+            Long empresaId, AvicolaLoteEstado estado, Boolean delPeriodoActivo, AvicolaModuloOrigen modulo) {
         List<AvicolaLote> lotes = estado != null
-                ? loteRepository.listarPorEmpresaIdYEstado(empresaId, estado)
-                : loteRepository.listarPorEmpresaId(empresaId);
+                ? loteRepository.listarPorEmpresaIdYEstadoYModulo(empresaId, estado, modulo)
+                : loteRepository.listarPorEmpresaIdYModulo(empresaId, modulo);
         return filtrarPorPeriodoActivo(empresaId, delPeriodoActivo, lotes).stream()
                 .map(this::aLoteRespuesta)
                 .collect(Collectors.toList());
@@ -71,21 +80,32 @@ public class ServicioAvicolaCrianzaLote {
 
     @Transactional(readOnly = true)
     public AvicolaLoteRespuesta obtenerLote(Long empresaId, Long loteId) {
-        AvicolaLote l = loteRepository.buscarPorIdYEmpresaId(loteId, empresaId)
+        return obtenerLote(empresaId, loteId, AvicolaModuloOrigen.AVICOLA_CRIANZA);
+    }
+
+    @Transactional(readOnly = true)
+    public AvicolaLoteRespuesta obtenerLote(Long empresaId, Long loteId, AvicolaModuloOrigen modulo) {
+        AvicolaLote l = loteRepository.buscarPorIdYEmpresaIdYModulo(loteId, empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado"));
         return aLoteRespuesta(l);
     }
 
     @Transactional
     public AvicolaLoteRespuesta crearLote(Long empresaId, AvicolaLoteSolicitud solicitud) {
+        return crearLote(empresaId, AvicolaModuloOrigen.AVICOLA_CRIANZA, solicitud);
+    }
+
+    @Transactional
+    public AvicolaLoteRespuesta crearLote(Long empresaId, AvicolaModuloOrigen modulo, AvicolaLoteSolicitud solicitud) {
         AvicolaEstablecimiento est = establecimientoRepository
-                .buscarPorIdYEmpresaId(solicitud.getEstablecimientoId(), empresaId)
+                .buscarPorIdYEmpresaIdYModulo(solicitud.getEstablecimientoId(), empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Establecimiento no encontrado"));
-        AvicolaRaza raza = razaRepository.buscarPorIdYEmpresaId(solicitud.getRazaId(), empresaId)
+        AvicolaRaza raza = razaRepository.buscarPorIdYEmpresaIdYModulo(solicitud.getRazaId(), empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Raza no encontrada"));
 
         AvicolaLote l = new AvicolaLote();
         l.setEmpresaId(empresaId);
+        l.setModuloOrigen(modulo);
         l.setEstablecimiento(est);
         l.setRaza(raza);
         l.setNombre(solicitud.getNombre());
@@ -104,19 +124,25 @@ public class ServicioAvicolaCrianzaLote {
 
     @Transactional
     public AvicolaLoteRespuesta actualizarLote(Long empresaId, Long loteId, AvicolaLoteSolicitud solicitud) {
-        AvicolaLote l = loteRepository.buscarPorIdYEmpresaId(loteId, empresaId)
+        return actualizarLote(empresaId, loteId, AvicolaModuloOrigen.AVICOLA_CRIANZA, solicitud);
+    }
+
+    @Transactional
+    public AvicolaLoteRespuesta actualizarLote(
+            Long empresaId, Long loteId, AvicolaModuloOrigen modulo, AvicolaLoteSolicitud solicitud) {
+        AvicolaLote l = loteRepository.buscarPorIdYEmpresaIdYModulo(loteId, empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado"));
         if (l.getEstado() == AvicolaLoteEstado.CERRADO) {
             throw new IllegalArgumentException("No se puede editar un lote cerrado");
         }
         if (solicitud.getEstablecimientoId() != null) {
             AvicolaEstablecimiento est = establecimientoRepository
-                    .buscarPorIdYEmpresaId(solicitud.getEstablecimientoId(), empresaId)
+                    .buscarPorIdYEmpresaIdYModulo(solicitud.getEstablecimientoId(), empresaId, modulo)
                     .orElseThrow(() -> new ResourceNotFoundException("Establecimiento no encontrado"));
             l.setEstablecimiento(est);
         }
         if (solicitud.getRazaId() != null) {
-            AvicolaRaza raza = razaRepository.buscarPorIdYEmpresaId(solicitud.getRazaId(), empresaId)
+            AvicolaRaza raza = razaRepository.buscarPorIdYEmpresaIdYModulo(solicitud.getRazaId(), empresaId, modulo)
                     .orElseThrow(() -> new ResourceNotFoundException("Raza no encontrada"));
             l.setRaza(raza);
         }
@@ -137,13 +163,41 @@ public class ServicioAvicolaCrianzaLote {
 
     @Transactional(readOnly = true)
     public AvicolaLote obtenerEntidadLote(Long empresaId, Long loteId) {
-        return loteRepository.buscarPorIdYEmpresaId(loteId, empresaId)
+        return obtenerEntidadLote(empresaId, loteId, AvicolaModuloOrigen.AVICOLA_CRIANZA);
+    }
+
+    @Transactional(readOnly = true)
+    public AvicolaLote obtenerEntidadLote(Long empresaId, Long loteId, AvicolaModuloOrigen modulo) {
+        return loteRepository.buscarPorIdYEmpresaIdYModulo(loteId, empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado"));
     }
 
     @Transactional
     public AvicolaLote guardarLote(AvicolaLote lote) {
         return loteRepository.save(lote);
+    }
+
+    /**
+     * Cierre manual de lote. Si quedan aves en plantel, exige confirmación explícita.
+     */
+    @Transactional
+    public AvicolaLoteRespuesta cerrarLote(Long empresaId, Long loteId, AvicolaCrianzaCierreLoteSolicitud solicitud) {
+        AvicolaLote lote = obtenerEntidadLote(empresaId, loteId);
+        if (lote.getEstado() == AvicolaLoteEstado.CERRADO) {
+            throw new IllegalStateException("El lote ya está cerrado");
+        }
+        int cantidad = lote.getCantidadAnimales() != null ? lote.getCantidadAnimales() : 0;
+        if (cantidad > 0) {
+            boolean confirmar = solicitud != null && Boolean.TRUE.equals(solicitud.getConfirmarConAvesPendientes());
+            if (!confirmar) {
+                throw new IllegalStateException(
+                        "Quedan " + cantidad + " aves en el lote. Confirmá el cierre o registrá faena/venta.");
+            }
+        }
+        lote.setEstado(AvicolaLoteEstado.CERRADO);
+        lote.setFechaSalida(LocalDate.now());
+        guardarLote(lote);
+        return obtenerLote(empresaId, loteId);
     }
 
     private AvicolaLoteRespuesta aLoteRespuesta(AvicolaLote l) {

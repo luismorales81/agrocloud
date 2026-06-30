@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "insumos")
+@Table(name = "cultivo_insumos")
 @EntityListeners(AuditingEntityListener.class)
 public class Insumo {
 
@@ -247,6 +247,7 @@ public class Insumo {
         this.fechaActualizacion = fechaActualizacion;
     }
 
+    @JsonIgnore
     public User getUser() {
         return user;
     }
@@ -255,6 +256,7 @@ public class Insumo {
         this.user = user;
     }
 
+    @JsonIgnore
     public Empresa getEmpresa() {
         return empresa;
     }
@@ -276,19 +278,26 @@ public class Insumo {
         this.user = usuario;
     }
     
+    @JsonIgnore
     public User getUsuario() {
         return this.user;
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean isStockBajo() {
+        if (stockActual == null || stockMinimo == null) {
+            return false;
+        }
         return stockActual.compareTo(stockMinimo) <= 0;
     }
 
+    @JsonIgnore
     public boolean isVencido() {
         return fechaVencimiento != null && fechaVencimiento.isBefore(LocalDate.now());
     }
 
+    @JsonIgnore
     public boolean estaPorVencer() {
         if (fechaVencimiento == null) return false;
         LocalDate hoy = LocalDate.now();
@@ -296,6 +305,7 @@ public class Insumo {
         return fechaVencimiento.isBefore(proximoMes) && !fechaVencimiento.isBefore(hoy);
     }
 
+    @JsonIgnore
     public java.util.List<DosisAgroquimico> getDosisInsumos() {
         return dosisInsumos;
     }
@@ -372,11 +382,13 @@ public class Insumo {
     // Métodos de dosis eliminados - simplificados
 
     // Métodos helper para agroquímicos
+    @JsonIgnore
     public boolean esAgroquimico() {
         return tipo == TipoInsumo.HERBICIDA || tipo == TipoInsumo.FUNGICIDA || 
                tipo == TipoInsumo.INSECTICIDA || tipo == TipoInsumo.FERTILIZANTE;
     }
 
+    @JsonIgnore
     public boolean tienePropiedadesAgroquimicas() {
         return principioActivo != null && !principioActivo.trim().isEmpty();
     }

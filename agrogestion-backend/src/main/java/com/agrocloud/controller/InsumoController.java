@@ -9,10 +9,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
 
+import org.springframework.web.bind.annotation.*;
+import com.agrocloud.dto.InsumoDTO;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
@@ -28,23 +31,31 @@ public class InsumoController {
     @Autowired
     private UserService userService;
 
+    private User requerirUsuarioAutenticado(UserDetails userDetails) {
+        String email = null;
+        if (userDetails != null) {
+            email = userDetails.getUsername();
+        } else {
+            Authentication autenticacion = SecurityContextHolder.getContext().getAuthentication();
+            if (autenticacion != null && autenticacion.isAuthenticated()) {
+                Object principal = autenticacion.getPrincipal();
+                if (principal instanceof UserDetails detalles) {
+                    email = detalles.getUsername();
+                } else if (principal instanceof String texto && texto.contains("@")) {
+                    email = texto;
+                }
+            }
+        }
+        if (email == null || email.isBlank()) {
+            throw new ResourceNotFoundException("Usuario no autenticado");
+        }
+        return userService.findByEmailWithAllRelations(email);
+    }
+
     // Obtener todos los insumos accesibles por el usuario
     @GetMapping
-    public ResponseEntity<List<Insumo>> getAllInsumos(@AuthenticationPrincipal UserDetails userDetails) {
-        User user;
-        if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-        }
-        
-        if (user == null) {
-            throw new ResourceNotFoundException("Usuario no encontrado");
-        }
-        
-        List<Insumo> insumos = insumoService.getInsumosByUser(user);
-        return ResponseEntity.ok(insumos);
+    public ResponseEntity<List<InsumoDTO>> getAllInsumos() {
+        return ResponseEntity.ok(insumoService.listarDtoPorEmpresaActual());
     }
 
     // Obtener insumo por ID

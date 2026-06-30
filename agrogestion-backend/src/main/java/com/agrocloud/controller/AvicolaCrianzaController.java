@@ -4,6 +4,7 @@ import com.agrocloud.annotation.RequiresModule;
 import com.agrocloud.avicola.crianza.application.ServicioAvicolaCrianzaCatalogo;
 import com.agrocloud.avicola.crianza.application.ServicioAvicolaCrianzaLote;
 import com.agrocloud.avicola.crianza.application.ServicioAvicolaCrianzaOperaciones;
+import com.agrocloud.avicola.crianza.application.ServicioAvicolaCrianzaReportes;
 import com.agrocloud.avicola.crianza.model.dto.*;
 import com.agrocloud.avicola.crianza.model.enums.AvicolaLoteEstado;
 import com.agrocloud.core.application.UserService;
@@ -26,16 +27,19 @@ public class AvicolaCrianzaController {
     private final ServicioAvicolaCrianzaCatalogo servicioCatalogo;
     private final ServicioAvicolaCrianzaLote servicioLote;
     private final ServicioAvicolaCrianzaOperaciones servicioOperaciones;
+    private final ServicioAvicolaCrianzaReportes servicioReportes;
     private final UserService userService;
 
     public AvicolaCrianzaController(
             ServicioAvicolaCrianzaCatalogo servicioCatalogo,
             ServicioAvicolaCrianzaLote servicioLote,
             ServicioAvicolaCrianzaOperaciones servicioOperaciones,
+            ServicioAvicolaCrianzaReportes servicioReportes,
             UserService userService) {
         this.servicioCatalogo = servicioCatalogo;
         this.servicioLote = servicioLote;
         this.servicioOperaciones = servicioOperaciones;
+        this.servicioReportes = servicioReportes;
         this.userService = userService;
     }
 
@@ -152,6 +156,17 @@ public class AvicolaCrianzaController {
         return ResponseEntity.ok(servicioLote.actualizarLote(empresaId, loteId, solicitud));
     }
 
+    @PostMapping("/lotes/{loteId}/cierre")
+    @RequiresModule(value = "AVICOLA_CRIANZA", permission = "write")
+    public ResponseEntity<AvicolaLoteRespuesta> cerrarLote(
+            @RequestHeader("X-Company-Id") Long empresaId,
+            @PathVariable Long loteId,
+            @RequestBody(required = false) AvicolaCrianzaCierreLoteSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioLote.cerrarLote(empresaId, loteId, solicitud));
+    }
+
     // --- Operaciones por lote ---
 
     @GetMapping("/lotes/{loteId}/pesadas")
@@ -234,6 +249,19 @@ public class AvicolaCrianzaController {
         return ResponseEntity.ok(servicioOperaciones.registrarConsumo(empresaId, loteId, solicitud, usuario.getId()));
     }
 
+    @PutMapping("/lotes/{loteId}/consumos/{consumoId}")
+    @RequiresModule(value = "AVICOLA_CRIANZA", permission = "write")
+    public ResponseEntity<AvicolaConsumoRespuesta> actualizarConsumo(
+            @RequestHeader("X-Company-Id") Long empresaId,
+            @PathVariable Long loteId,
+            @PathVariable Long consumoId,
+            @RequestBody AvicolaCrianzaConsumoActualizarSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        User usuario = requerirUsuario(detalles);
+        return ResponseEntity.ok(
+                servicioOperaciones.actualizarConsumo(empresaId, loteId, consumoId, solicitud, usuario.getId()));
+    }
+
     @GetMapping("/lotes/{loteId}/eventos-sanitarios")
     public ResponseEntity<List<AvicolaEventoSanitarioRespuesta>> listarEventosSanitarios(
             @RequestHeader("X-Company-Id") Long empresaId,
@@ -261,5 +289,32 @@ public class AvicolaCrianzaController {
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
         return ResponseEntity.ok(servicioOperaciones.resumenLote(empresaId, loteId));
+    }
+
+    // --- Reportes ---
+
+    @GetMapping("/reportes/resumen")
+    public ResponseEntity<AvicolaCrianzaReporteResumenRespuesta> reporteResumen(
+            @RequestHeader("X-Company-Id") Long empresaId,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioReportes.resumenEmpresa(empresaId));
+    }
+
+    @GetMapping("/reportes/analisis-lotes")
+    public ResponseEntity<AvicolaCrianzaReporteResumenRespuesta> reporteAnalisisLotes(
+            @RequestHeader("X-Company-Id") Long empresaId,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioReportes.analisisLotes(empresaId));
+    }
+
+    @GetMapping("/reportes/lote/{loteId}/curva-peso")
+    public ResponseEntity<AvicolaCrianzaCurvaPesoRespuesta> reporteCurvaPeso(
+            @RequestHeader("X-Company-Id") Long empresaId,
+            @PathVariable Long loteId,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioReportes.curvaPesoLote(empresaId, loteId));
     }
 }

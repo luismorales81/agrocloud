@@ -2,13 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
-import { useEmpresa } from '../contexts/EmpresaContext';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useCurrencyUpdate } from '../hooks/useCurrencyUpdate';
-import EmpresaSelector from './EmpresaSelector';
 import { laboresService } from '../services/apiServices';
 import { Icon } from './icons';
+import {
+  type ModoCalendario,
+  etiquetaTipoRecordatorio,
+  esCalendarioCultivos,
+  normalizarModoCalendario,
+  permiteRecordatoriosEnModo,
+  tiposRecordatorioDelModo,
+  tituloCalendario,
+} from './calendario/tiposRecordatorioPorModulo';
 
 interface EventoCalendario {
   id: string;
@@ -39,8 +45,8 @@ interface EventoCalendario {
 }
 
 interface CalendarioDashboardProps {
-  /** Calendario general (cultivos), avícola huevos o feedlot. */
-  modoCalendario?: 'general' | 'avicolaHuevos' | 'feedlot';
+  /** Calendario por módulo. `general` se mantiene por compatibilidad (= cultivos). */
+  modoCalendario?: ModoCalendario | 'general';
 }
 
 interface RecordatorioForm {
@@ -120,10 +126,11 @@ const BotonVerEnLabores: React.FC<BotonVerEnLaboresProps> = ({ laborId, onCerrar
 };
 
 const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendario = 'general' }) => {
-  const { user, logout } = useAuth();
-  const { empresaActiva, rolUsuario } = useEmpresa();
-  const { formatCurrency, selectedCurrency, exchangeType, realRates, changeCurrency, changeExchangeType } = useCurrencyContext();
-  useCurrencyUpdate(); // Forzar actualización cuando cambie la moneda
+  const modo = normalizarModoCalendario(modoCalendario);
+  const tiposRecordatorio = tiposRecordatorioDelModo(modo);
+  const tipoRecordatorioPorDefecto = tiposRecordatorio[0]?.valor ?? 'GENERAL';
+  const { formatCurrency } = useCurrencyContext();
+  useCurrencyUpdate();
 
   const [fechaActual, setFechaActual] = useState(new Date());
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
@@ -159,11 +166,6 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
     tipoRepeticion: 'SEMANAL',
   });
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
-  };
-
   // Obtener primer día del mes y último día del mes
   const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
   const ultimoDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0);
@@ -176,7 +178,7 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
   }, [fechaActual, modoCalendario]);
 
   useEffect(() => {
-    if (modoCalendario !== 'avicolaHuevos') {
+    if (modo !== 'avicolaHuevos') {
       setLotesHuevosOpciones([]);
       return;
     }
@@ -188,7 +190,7 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
         setLotesHuevosOpciones([]);
       }
     })();
-  }, [modoCalendario]);
+  }, [modo]);
 
   const cargarEventos = async () => {
     setLoading(true);
@@ -198,9 +200,11 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
       const fechaFin = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(diasEnMes).padStart(2, '0')}`;
 
       const ruta =
-        modoCalendario === 'avicolaHuevos'
+        modo === 'avicolaHuevos'
           ? `/calendario/avicola-huevos?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`
-          : modoCalendario === 'feedlot'
+          : modo === 'avicolaCrianza' || modo === 'avicolaCarne'
+          ? `/calendario/avicola-crianza?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`
+          : modo === 'feedlot'
           ? `/calendario/feedlot?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`
           : `/calendario/eventos?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
 
@@ -290,7 +294,7 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
       titulo: '',
       descripcion: '',
       fecha: fechaCompleta,
-      tipo: 'GENERAL',
+      tipo: tipoRecordatorioPorDefecto,
       loteAvicolaHuevoId: '',
     });
     setMostrarModalRecordatorio(true);
@@ -306,7 +310,7 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
         laborId: formRecordatorio.laborId || null,
         loteId: formRecordatorio.loteId || null,
       };
-      if (modoCalendario === 'avicolaHuevos') {
+      if (modo === 'avicolaHuevos') {
         if (formRecordatorio.loteAvicolaHuevoId === '') {
           alert('Seleccioná un lote de postura para este recordatorio');
           return;
@@ -336,9 +340,9 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
         fechaFin: null,
         tipoRepeticion: formTareaRecurrente.tipoRepeticion,
         ambitoCalendario:
-          modoCalendario === 'avicolaHuevos'
+          modo === 'avicolaHuevos'
             ? 'AVICOLA_HUEVOS'
-            : modoCalendario === 'feedlot'
+            : modo === 'feedlot'
             ? 'FEEDLOT'
             : 'GENERAL',
       });
@@ -550,17 +554,24 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
     return estados[estado] || estado;
   };
 
-  const obtenerNombreTipoRecordatorio = (tipo: string): string => {
-    const tipos: { [key: string]: string } = {
-      'GENERAL': 'General',
-      'LABOR': 'Labor',
-      'COSECHA': 'Cosecha',
-      'MANTENIMIENTO': 'Mantenimiento',
-      'INSUMO': 'Insumo',
-      'REUNION': 'Reunión',
-      'OTRO': 'Otro'
-    };
-    return tipos[tipo] || tipo;
+  const obtenerNombreTipoRecordatorio = (tipo: string): string =>
+    etiquetaTipoRecordatorio(tipo, modo);
+
+  const textoAyudaRecordatorio = (): string => {
+    switch (modo) {
+      case 'feedlot':
+        return 'Aviso puntual vinculado a la operación de engorde (alimentación, sanidad, corral, etc.).';
+      case 'avicolaHuevos':
+        return 'Recordatorio por lote de postura: sanidad, alimentación, mantenimiento u otras tareas del galpón.';
+      case 'avicolaCrianza':
+        return 'Recordatorio de crianza avícola: alimentación, sanidad, mantenimiento u otras tareas del galpón.';
+      case 'avicolaCarne':
+        return 'Recordatorio de engorde avícola: alimentación, sanidad, faena u otras tareas del lote.';
+      case 'avicolaPonedoras':
+        return 'Recordatorio de ponedoras: alimentación, sanidad, mantenimiento u otras tareas del galpón.';
+      default:
+        return 'Un recordatorio es una sola fecha en el calendario (avisos generales o vinculados a labores y lotes de cultivo).';
+    }
   };
 
   const nombresMeses = [
@@ -579,103 +590,16 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
 
   return (
     <div style={{ padding: '2rem' }}>
-      {/* Cabecera con controles */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '2rem'
-      }}>
+      {/* Cabecera */}
+      <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ 
           fontSize: '2rem', 
           fontWeight: 'bold', 
           color: '#1f2937'
         }}>
           <Icon name="CalendarDays" size={32} style={{ marginRight: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }} />{' '}
-          {modoCalendario === 'avicolaHuevos'
-            ? 'Calendario avícola huevos'
-            : modoCalendario === 'feedlot'
-            ? 'Calendario feedlot'
-            : 'Calendario de labores y tareas'}
+          {tituloCalendario(modo)}
         </h1>
-        
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem'
-        }}>
-          {/* Selector de Empresa */}
-          {empresaActiva && (
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '0.375rem',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e5e7eb',
-              padding: '0.5rem'
-            }}>
-              <EmpresaSelector />
-            </div>
-          )}
-          
-          {/* Selector de Moneda */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '0.375rem',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e5e7eb',
-            padding: '0.5rem'
-          }}>
-            <select
-              value={selectedCurrency === 'ARS' ? 'ARS' : exchangeType}
-              onChange={(event) => {
-                const value = event.target.value;
-                if (value === 'ARS') {
-                  changeCurrency('ARS');
-                } else if (value === 'oficial' || value === 'blue') {
-                  changeCurrency('USD');
-                  changeExchangeType(value);
-                }
-                // Forzar actualización inmediata
-                setTimeout(() => {
-                  window.dispatchEvent(new Event('currencyUpdate'));
-                }, 100);
-              }}
-              style={{
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                minWidth: '180px'
-              }}
-            >
-              <option value="ARS">💰 ARS (Pesos Argentinos)</option>
-              <option value="oficial">
-                💵 USD Oficial {realRates?.oficial ? `($${realRates.oficial.toFixed(2)})` : ''}
-              </option>
-              <option value="blue">
-                💙 USD Blue {realRates?.blue ? `($${realRates.blue.toFixed(2)})` : ''}
-              </option>
-            </select>
-          </div>
-          
-          {/* Botón Cerrar Sesión */}
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer'
-            }}
-          >
-            Cerrar sesión
-          </button>
-        </div>
       </div>
 
       {/* Encabezado del calendario con navegación */}
@@ -750,7 +674,8 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
                 titulo: '',
                 descripcion: '',
                 fecha: hoyIso,
-                tipo: 'GENERAL',
+                tipo: tipoRecordatorioPorDefecto,
+                loteAvicolaHuevoId: '',
               });
               setMostrarModalRecordatorio(true);
             }}
@@ -761,7 +686,8 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
               border: 'none',
               borderRadius: '0.375rem',
               cursor: 'pointer',
-              fontSize: '0.875rem'
+              fontSize: '0.875rem',
+              display: permiteRecordatoriosEnModo(modo) ? undefined : 'none',
             }}
           >
             Nuevo recordatorio
@@ -789,7 +715,7 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
         </div>
       </div>
 
-      {/* Leyenda: el calendario es vista derivada de labores (spec SDD). Las tareas son las labores. */}
+      {/* Leyenda */}
       <div style={{
         backgroundColor: 'white',
         padding: '1rem',
@@ -800,30 +726,47 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
         gap: '2rem',
         flexWrap: 'wrap'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ width: '20px', height: '20px', backgroundColor: '#3b82f6', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Labores / Tareas planificadas</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ width: '20px', height: '20px', backgroundColor: '#f59e0b', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>En progreso</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ width: '20px', height: '20px', backgroundColor: '#10b981', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Labores realizadas</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ width: '20px', height: '20px', backgroundColor: '#dc2626', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Vencidas (pendientes)</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ width: '20px', height: '20px', backgroundColor: '#8b5cf6', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Cosechas estimadas</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ width: '20px', height: '20px', backgroundColor: '#ec4899', borderRadius: '4px' }}></div>
-          <span style={{ fontSize: '0.875rem' }}>Recordatorios generales</span>
-        </div>
+        {esCalendarioCultivos(modo) ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '20px', height: '20px', backgroundColor: '#3b82f6', borderRadius: '4px' }}></div>
+              <span style={{ fontSize: '0.875rem' }}>Labores / Tareas planificadas</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '20px', height: '20px', backgroundColor: '#f59e0b', borderRadius: '4px' }}></div>
+              <span style={{ fontSize: '0.875rem' }}>En progreso</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '20px', height: '20px', backgroundColor: '#10b981', borderRadius: '4px' }}></div>
+              <span style={{ fontSize: '0.875rem' }}>Labores realizadas</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '20px', height: '20px', backgroundColor: '#dc2626', borderRadius: '4px' }}></div>
+              <span style={{ fontSize: '0.875rem' }}>Vencidas (pendientes)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '20px', height: '20px', backgroundColor: '#8b5cf6', borderRadius: '4px' }}></div>
+              <span style={{ fontSize: '0.875rem' }}>Cosechas estimadas</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '20px', height: '20px', backgroundColor: '#ec4899', borderRadius: '4px' }}></div>
+              <span style={{ fontSize: '0.875rem' }}>Recordatorios generales</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '20px', height: '20px', backgroundColor: '#d97706', borderRadius: '4px' }}></div>
+              <span style={{ fontSize: '0.875rem' }}>Tareas recurrentes del módulo</span>
+            </div>
+            {permiteRecordatoriosEnModo(modo) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '20px', height: '20px', backgroundColor: '#ec4899', borderRadius: '4px' }}></div>
+                <span style={{ fontSize: '0.875rem' }}>Recordatorios</span>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Calendario */}
@@ -901,7 +844,11 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
                     cursor: 'pointer',
                     position: 'relative'
                   }}
-                  onClick={() => abrirModalRecordatorio(dia)}
+                  onClick={() => {
+                    if (permiteRecordatoriosEnModo(modo)) {
+                      abrirModalRecordatorio(dia);
+                    }
+                  }}
                 >
                   <div style={{
                     fontWeight: esDiaHoy ? 'bold' : 'normal',
@@ -1267,11 +1214,17 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
           >
             <h2 style={{ marginTop: 0 }}>Nueva tarea recurrente</h2>
             <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-              {modoCalendario === 'avicolaHuevos'
-                ? 'Visible solo en el calendario de avícola huevos.'
-                : modoCalendario === 'feedlot'
+              {modo === 'feedlot'
                 ? 'Visible solo en el calendario de feedlot.'
-                : 'Visible en el calendario general.'}
+                : modo === 'avicolaHuevos'
+                ? 'Visible solo en el calendario de avícola huevos.'
+                : modo === 'avicolaCrianza'
+                ? 'Visible en el calendario de avícola crianza.'
+                : modo === 'avicolaCarne'
+                ? 'Visible en el calendario de avícola carne.'
+                : modo === 'avicolaPonedoras'
+                ? 'Visible en el calendario de avícola ponedoras.'
+                : 'Visible en el calendario general de cultivos.'}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <label style={{ fontWeight: 500 }}>
@@ -1359,7 +1312,7 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
           }}>
             <h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Agregar Recordatorio</h2>
             <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 0, marginBottom: '1rem' }}>
-              Un recordatorio es <strong>una sola fecha</strong> en el calendario (avisos generales o vinculados a labores y lotes).
+              {textoAyudaRecordatorio()}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
@@ -1413,16 +1366,14 @@ const CalendarioDashboard: React.FC<CalendarioDashboardProps> = ({ modoCalendari
                     fontSize: '0.875rem'
                   }}
                 >
-                  <option value="GENERAL">General</option>
-                  <option value="LABOR">Labor</option>
-                  <option value="COSECHA">Cosecha</option>
-                  <option value="MANTENIMIENTO">Mantenimiento</option>
-                  <option value="INSUMO">Insumo</option>
-                  <option value="REUNION">Reunión</option>
-                  <option value="OTRO">Otro</option>
+                  {tiposRecordatorio.map((opcion) => (
+                    <option key={opcion.valor} value={opcion.valor}>
+                      {opcion.etiqueta}
+                    </option>
+                  ))}
                 </select>
               </div>
-              {modoCalendario === 'avicolaHuevos' && (
+              {modo === 'avicolaHuevos' && (
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                     Lote de postura *

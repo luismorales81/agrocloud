@@ -13,5 +13,7 @@ public enum InventoryOrigin {
     /** Ponedoras / postura (consumo de alimento en galpón). */
     AVICOLA_PONEDORAS,
     /** Engorde bovino a corral (feedlot). */
-    FEEDLOT
+    FEEDLOT,
+    /** Explotación lechera multi-especie. */
+    LECHERIA
 }

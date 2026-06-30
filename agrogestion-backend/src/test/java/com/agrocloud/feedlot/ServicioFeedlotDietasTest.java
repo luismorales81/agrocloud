@@ -104,12 +104,15 @@ class ServicioFeedlotDietasTest {
     }
 
     @Test
-    void calcularConsumoTeorico_sinDieta_lanzaExcepcion() {
+    void calcularConsumoTeorico_sinDieta_devuelveRespuestaVacia() {
         lote.setDieta(null);
         when(servicioLotes.obtenerEntidadLote(EMPRESA_ID, LOTE_ID)).thenReturn(lote);
 
-        assertThrows(IllegalStateException.class, () ->
-                servicio.calcularConsumoTeorico(LOTE_ID, null, null));
+        FeedlotConsumoTeoricoRespuesta resp = servicio.calcularConsumoTeorico(LOTE_ID, null, null);
+
+        assertEquals(LOTE_ID, resp.getLoteId());
+        assertNull(resp.getDietaId());
+        assertTrue(resp.getDias().isEmpty());
     }
 
     @Test

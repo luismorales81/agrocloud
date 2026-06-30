@@ -9,6 +9,8 @@ import com.agrocloud.avicola.ponedoras.model.enums.AvicolaPonedorasGalponEstado;
 import com.agrocloud.avicola.ponedoras.repository.AvicolaPonedorasGalponRepository;
 import com.agrocloud.core.application.CampanaContextService;
 import com.agrocloud.core.security.ServicioSeguridadContexto;
+import com.agrocloud.cultivos.application.UtilCentroideCoordenadasCampo;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,16 +28,19 @@ public class ServicioAvicolaPonedorasGalpon {
     private final AvicolaPonedorasGalponRepository galponRepository;
     private final AvicolaEstablecimientoRepository establecimientoRepository;
     private final CampanaContextService campanaContextService;
+    private final ObjectMapper objectMapper;
 
     public ServicioAvicolaPonedorasGalpon(
             ServicioSeguridadContexto servicioSeguridadContexto,
             AvicolaPonedorasGalponRepository galponRepository,
             AvicolaEstablecimientoRepository establecimientoRepository,
-            @Qualifier("campanaContextServiceCore") CampanaContextService campanaContextService) {
+            @Qualifier("campanaContextServiceCore") CampanaContextService campanaContextService,
+            ObjectMapper objectMapper) {
         this.servicioSeguridadContexto = servicioSeguridadContexto;
         this.galponRepository = galponRepository;
         this.establecimientoRepository = establecimientoRepository;
         this.campanaContextService = campanaContextService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
@@ -54,7 +59,7 @@ public class ServicioAvicolaPonedorasGalpon {
             Long campanaId = campanaContextService.resolverCampanaIdActiva(empresaId);
             lista = lista.stream().filter(g -> campanaId.equals(g.getCampanaId())).toList();
         }
-        return lista.stream().map(ServicioAvicolaPonedorasGalpon::aGalponRespuesta).collect(Collectors.toList());
+        return lista.stream().map(this::aGalponRespuesta).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -146,11 +151,19 @@ public class ServicioAvicolaPonedorasGalpon {
         }
     }
 
-    private static AvicolaPonedorasGalponRespuesta aGalponRespuesta(AvicolaPonedorasGalpon g) {
+    private AvicolaPonedorasGalponRespuesta aGalponRespuesta(AvicolaPonedorasGalpon g) {
         AvicolaPonedorasGalponRespuesta dto = new AvicolaPonedorasGalponRespuesta();
         dto.setId(g.getId());
         dto.setEmpresaId(g.getEmpresaId());
         dto.setEstablecimientoId(g.getEstablecimiento() != null ? g.getEstablecimiento().getId() : null);
+        if (g.getEstablecimiento() != null) {
+            dto.setEstablecimientoNombre(g.getEstablecimiento().getNombre());
+            UtilCentroideCoordenadasCampo.calcularCentroide(g.getEstablecimiento().getCoordenadas(), objectMapper)
+                    .ifPresent(xy -> {
+                        dto.setClimaLatitud(xy[0]);
+                        dto.setClimaLongitud(xy[1]);
+                    });
+        }
         dto.setNombre(g.getNombre());
         dto.setRaza(g.getRaza());
         dto.setFechaIngreso(g.getFechaIngreso());

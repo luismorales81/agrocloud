@@ -38,6 +38,8 @@ import {
   registrarConsumoCrianza,
   listarEventosSanitariosCrianza,
   registrarEventoSanitarioCrianza,
+  cerrarLoteCrianza,
+  actualizarConsumoCrianza,
   AvicolaLoteRespuesta,
   AvicolaCrianzaResumenRespuesta,
   AvicolaPesadaRespuesta,
@@ -52,6 +54,8 @@ import {
   exportarOperacionesLoteCrianza,
   type FormatoExportacionAvicola,
 } from '../../../utilidades/exportacionAvicola';
+import PanelClimaEstablecimiento from '../../../components/PanelClimaEstablecimiento';
+import BotonRellenarClima from '../../../components/BotonRellenarClima';
 
 const TIPOS_VENTA: { valor: TipoVentaCrianza; etiqueta: string }[] = [
   { valor: 'FAENA', etiqueta: 'Faena' },
@@ -82,8 +86,9 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [dialogo, setDialogo] = useState<
-    'pesada' | 'muerte' | 'venta' | 'consumo' | 'sanidad' | null
+    'pesada' | 'muerte' | 'venta' | 'consumo' | 'editarConsumo' | 'sanidad' | null
   >(null);
+  const [consumoEditando, setConsumoEditando] = useState<AvicolaConsumoRespuesta | null>(null);
 
   const hoy = () => new Date().toISOString().slice(0, 10);
 
@@ -91,6 +96,8 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
   const [pesoProm, setPesoProm] = useState('');
   const [cantPesada, setCantPesada] = useState('');
   const [obsPesada, setObsPesada] = useState('');
+  const [tempAmbiente, setTempAmbiente] = useState('');
+  const [humAmbiente, setHumAmbiente] = useState('');
 
   const [fMuerte, setFMuerte] = useState(hoy());
   const [cantMuerte, setCantMuerte] = useState('');
@@ -169,7 +176,47 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
     cargarInicial();
   }, [cargarInicial]);
 
-  const cerrarDialogos = () => setDialogo(null);
+  const cerrarDialogos = () => {
+    setDialogo(null);
+    setConsumoEditando(null);
+  };
+
+  const ejecutarCierreLote = async () => {
+    if (Number.isNaN(loteId) || !lote) return;
+    const cab = lote.cantidadAnimales ?? 0;
+    const confirmar =
+      cab > 0
+        ? window.confirm(`Quedan ${cab} aves en plantel. ¿Cerrar el lote igualmente?`)
+        : true;
+    if (!confirmar) return;
+    try {
+      setError(null);
+      await cerrarLoteCrianza(loteId, cab > 0 ? { confirmarConAvesPendientes: true } : undefined);
+      await recargarListas();
+    } catch (err: unknown) {
+      setError(mensajeError(err));
+    }
+  };
+
+  const guardarEdicionConsumo = async () => {
+    if (!consumoEditando) return;
+    try {
+      const cant = parseFloat(cantConsumo.replace(',', '.'));
+      if (Number.isNaN(cant) || cant <= 0) {
+        setError('Cantidad inválida');
+        return;
+      }
+      await actualizarConsumoCrianza(loteId, consumoEditando.id, {
+        fecha: fConsumo,
+        cantidad: cant,
+        observaciones: obsConsumo.trim() || null,
+      });
+      cerrarDialogos();
+      await recargarListas();
+    } catch (err: unknown) {
+      setError(mensajeError(err));
+    }
+  };
 
   const exportarLote = async (formato: FormatoExportacionAvicola) => {
     if (!lote) return;
@@ -200,11 +247,18 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
         setError('Peso promedio inválido');
         return;
       }
+      const parseOptDec = (s: string) => {
+        if (!s.trim()) return null;
+        const v = parseFloat(s.replace(',', '.'));
+        return Number.isNaN(v) ? null : v;
+      };
       const cp = cantPesada.trim() === '' ? undefined : parseInt(cantPesada, 10);
       await registrarPesadaCrianza(loteId, {
         fecha: fPesada,
         pesoPromedio: pp,
         cantidadPesada: cp,
+        temperaturaAmbiente: parseOptDec(tempAmbiente),
+        humedadAmbiente: parseOptDec(humAmbiente),
         observaciones: obsPesada.trim() || null,
       });
       cerrarDialogos();
@@ -329,6 +383,11 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
             )}
           </Typography>
         )}
+        {lote && !loteCerrado && (
+          <Button variant="outlined" color="warning" onClick={() => void ejecutarCierreLote()}>
+            Cerrar lote
+          </Button>
+        )}
       </Box>
 
       {cargando && (
@@ -342,6 +401,19 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
+      )}
+
+      {!cargando && lote && (
+        <PanelClimaEstablecimiento
+          climaLatitud={lote.climaLatitud}
+          climaLongitud={lote.climaLongitud}
+          nombreEstablecimiento={lote.establecimientoNombre}
+          rutaMapa={
+            lote.establecimientoId != null
+              ? `/avicola-crianza/establecimientos-mapa?id=${lote.establecimientoId}`
+              : null
+          }
+        />
       )}
 
       {!cargando && lote && (
@@ -368,6 +440,10 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
 
           {pestana === 0 && resumen && (
             <Paper sx={{ p: 2 }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                La mortalidad es informativa: no descuenta el plantel. Solo faena y ventas reducen las aves
+                registradas. Disponibles = plantel − muertes.
+              </Alert>
               <Stack spacing={1}>
                 <Typography>
                   <strong>Aves registradas:</strong> {resumen.cantidadAnimalesRegistrada ?? '—'}
@@ -411,6 +487,8 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
                   setFPesada(hoy());
                   setPesoProm('');
                   setCantPesada('');
+                  setTempAmbiente('');
+                  setHumAmbiente('');
                   setObsPesada('');
                   setDialogo('pesada');
                 }}
@@ -554,6 +632,7 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
                       <TableCell align="right">Insumo ID</TableCell>
                       <TableCell align="right">Cantidad</TableCell>
                       <TableCell>Tipo</TableCell>
+                      {!loteCerrado && <TableCell align="right">Acciones</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -563,6 +642,22 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
                         <TableCell align="right">{c.insumoId}</TableCell>
                         <TableCell align="right">{String(c.cantidad)}</TableCell>
                         <TableCell>{c.tipo ?? '—'}</TableCell>
+                        {!loteCerrado && (
+                          <TableCell align="right">
+                            <Button
+                              size="small"
+                              onClick={() => {
+                                setConsumoEditando(c);
+                                setFConsumo(c.fecha?.slice(0, 10) ?? hoy());
+                                setCantConsumo(String(c.cantidad));
+                                setObsConsumo(c.observaciones ?? '');
+                                setDialogo('editarConsumo');
+                              }}
+                            >
+                              Editar
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -625,6 +720,19 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
             <TextField type="date" label="Fecha" InputLabelProps={{ shrink: true }} fullWidth value={fPesada} onChange={(ev) => setFPesada(ev.target.value)} />
             <TextField label="Peso promedio (kg)" fullWidth value={pesoProm} onChange={(ev) => setPesoProm(ev.target.value)} />
             <TextField label="Cantidad pesada (opcional)" type="number" fullWidth value={cantPesada} onChange={(ev) => setCantPesada(ev.target.value)} inputProps={{ min: 0 }} />
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <TextField label="Temperatura ambiente (°C)" fullWidth value={tempAmbiente} onChange={(ev) => setTempAmbiente(ev.target.value)} placeholder="Opcional" />
+              <TextField label="Humedad ambiente (%)" fullWidth value={humAmbiente} onChange={(ev) => setHumAmbiente(ev.target.value)} placeholder="Opcional" />
+            </Stack>
+            <BotonRellenarClima
+              climaLatitud={lote?.climaLatitud}
+              climaLongitud={lote?.climaLongitud}
+              deshabilitado={loteCerrado}
+              onValores={(v) => {
+                if (v.temperatura != null) setTempAmbiente(String(v.temperatura));
+                if (v.humedad != null) setHumAmbiente(String(v.humedad));
+              }}
+            />
             <TextField label="Observaciones" fullWidth multiline minRows={2} value={obsPesada} onChange={(ev) => setObsPesada(ev.target.value)} />
           </Stack>
         </DialogContent>
@@ -702,6 +810,37 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
         <DialogActions>
           <Button onClick={cerrarDialogos}>Cancelar</Button>
           <Button variant="contained" onClick={guardarConsumo}>
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={dialogo === 'editarConsumo'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+        <DialogTitle>Editar consumo</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              type="date"
+              label="Fecha"
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              value={fConsumo}
+              onChange={(ev) => setFConsumo(ev.target.value)}
+            />
+            <TextField label="Cantidad" fullWidth value={cantConsumo} onChange={(ev) => setCantConsumo(ev.target.value)} />
+            <TextField
+              label="Observaciones"
+              fullWidth
+              multiline
+              minRows={2}
+              value={obsConsumo}
+              onChange={(ev) => setObsConsumo(ev.target.value)}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cerrarDialogos}>Cancelar</Button>
+          <Button variant="contained" onClick={() => void guardarEdicionConsumo()}>
             Guardar
           </Button>
         </DialogActions>

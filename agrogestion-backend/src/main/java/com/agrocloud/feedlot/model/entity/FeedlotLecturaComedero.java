@@ -39,6 +39,12 @@ public class FeedlotLecturaComedero {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
+    @Column(name = "temperatura_dia", precision = 5, scale = 2)
+    private BigDecimal temperaturaDia;
+
+    @Column(name = "humedad_dia", precision = 6, scale = 2)
+    private BigDecimal humedadDia;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -101,6 +107,22 @@ public class FeedlotLecturaComedero {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public BigDecimal getTemperaturaDia() {
+        return temperaturaDia;
+    }
+
+    public void setTemperaturaDia(BigDecimal temperaturaDia) {
+        this.temperaturaDia = temperaturaDia;
+    }
+
+    public BigDecimal getHumedadDia() {
+        return humedadDia;
+    }
+
+    public void setHumedadDia(BigDecimal humedadDia) {
+        this.humedadDia = humedadDia;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -1,15 +1,16 @@
-# SPEC — Módulo Avícola Crianza (parrilleros)
+# SPEC — Módulo Avícola Crianza (pollos parrilleros)
 
-**Versión:** 1.0  
-**Fecha:** Mayo 2026  
+**Versión:** 2.0  
+**Fecha:** Junio 2026  
 **Metodología:** SDD  
-**Estado:** Implementación base en curso (entidades/repos bajo `com.agrocloud.avicola.crianza`)
+**Estado:** Aprobada  
+**Cambio v2.0:** Unificación con módulo `AVICOLA_CARNE` (deprecado). Un solo producto comercial.
 
 ---
 
 ## 1. Objetivo
 
-Gestionar **crianza** (pollos parrilleros y equivalentes): lotes, establecimientos y razas propios del módulo, pesadas, muertes, ventas/faena, consumo de insumos desde el inventario CORE y sanidad.
+Gestionar **crianza de pollos parrilleros** (engorde batch): galpones, razas, lotes, pesadas, mortalidad informativa, consumos (inventario CORE), sanidad, faena/venta, reportes zootécnicos y calendario.
 
 ---
 
@@ -17,20 +18,48 @@ Gestionar **crianza** (pollos parrilleros y equivalentes): lotes, establecimient
 
 | Concepto | Valor |
 |----------|--------|
-| Código en `modules.code` | `AVICOLA_CRIANZA` (migración `V1_137` renombra `AVICOLA` si existía) |
+| Código `modules.code` | `AVICOLA_CRIANZA` |
 | `@RequiresModule` | `"AVICOLA_CRIANZA"` |
-| `moduloOrigen` inventario | `ModuloOrigenInventarioAvicola.CRIANZA` (`"AVICOLA_CRIANZA"`) |
+| API | `/api/avicola-crianza` |
+| Frontend | `/avicola-crianza` |
+| Inventario CORE | `InventoryOrigin.AVICOLA_CRIANZA` |
+| `modulo_origen` datos | `AVICOLA_CRIANZA` |
+
+**Deprecado:** `AVICOLA_CARNE` — no ofertar a clientes nuevos; datos migrados a crianza (V1_157).
 
 ---
 
-## 3. Tablas y código
+## 3. Reglas de negocio (v2)
 
-- Prefijo tablas: `avicola_` (sin subprefijo): `avicola_establecimiento`, `avicola_raza`, `avicola_lote`, `avicola_pesada`, `avicola_muerte`, `avicola_venta`, `avicola_consumo`, `avicola_evento_sanitario`.
-- Flyway inicial: `V1_136__avicola_initial.sql`.
-- Paquetes Java: `com.agrocloud.avicola.crianza.model.entity|dto|enums`, `com.agrocloud.avicola.crianza.repository`.
+### Mortalidad
+- Registra en `avicola_muerte`.
+- **No** descuenta `cantidad_animales`.
+- KPI: `cantidadDisponible = plantel − suma(muertes)`; `mortalidadPct = suma(muertes) / cantidadInicial × 100`.
+
+### Venta / faena
+- Descuenta `cantidad_animales`.
+- Cierre automático si plantel = 0.
+- Hereda `campana_id` del lote.
+
+### Consumo
+- Egreso inventario `AVICOLA_CRIANZA`.
+- Edición con reversión de stock (`PUT /lotes/{id}/consumos/{consumoId}`).
+
+### Cierre manual
+- `POST /lotes/{id}/cierre` con confirmación si quedan aves en plantel.
+
+### Reportes
+- Resumen empresa, análisis por lote, curva de peso.
 
 ---
 
-## 4. Reglas heredadas
+## 4. Tablas
 
-Multiempresa (`empresaId` desde contexto), sin FK a entidades de huevos, consumos vía `MovimientoInventarioService`, ventas con ingreso CORE según SPEC original. Detalle funcional: ver `SPEC-MODULO-AVICOLA.md` (contenido histórico completo).
+`avicola_establecimiento`, `avicola_raza`, `avicola_lote`, `avicola_pesada`, `avicola_muerte`, `avicola_venta`, `avicola_consumo`, `avicola_evento_sanitario`.
+
+---
+
+## 5. Referencias
+
+- Diseño: `DISENO-TECNICO-UNIFICACION-AVICOLA-CRIANZA.md`
+- Obsoleto: `SPEC-MODULO-AVICOLA-CARNE.md`

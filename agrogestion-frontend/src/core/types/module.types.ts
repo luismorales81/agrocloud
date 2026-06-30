@@ -7,9 +7,9 @@ export type ModuleId =
   | 'porcinos'
   | 'avicola-crianza'
   | 'avicola-huevos'
-  | 'avicola-carne'
   | 'avicola-ponedoras'
-  | 'feedlot';
+  | 'feedlot'
+  | 'lecheria';
 
 export interface ModuleInfo {
   id: ModuleId;

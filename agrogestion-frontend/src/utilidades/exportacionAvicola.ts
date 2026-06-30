@@ -15,7 +15,6 @@ import type {
   AvicolaPesadaRespuesta,
   AvicolaVentaRespuesta,
 } from '../modules/avicola-crianza/services/avicolaCrianzaApi';
-import type { Consumo, EventoSanitario, Muerte, Pesada, Venta } from '../modules/avicola-carne/types';
 import type {
   Consumo as ConsumoPon,
   DescarteAves,
@@ -229,80 +228,6 @@ export async function exportarOperacionesLoteCrianza(
   };
   const ext = formato === 'excel' ? 'xlsx' : 'pdf';
   await exportarReporte(reporte, formato, `avicola_crianza_lote_${sufijoFecha()}.${ext}`);
-}
-
-export interface DatosExportacionLoteCarne {
-  nombreLote: string;
-  pesadas: Pesada[];
-  muertes: Muerte[];
-  ventas: Venta[];
-  consumos: Consumo[];
-  eventos: EventoSanitario[];
-  nombreInsumo?: (insumoId: number) => string;
-}
-
-export async function exportarOperacionesLoteCarne(
-  datos: DatosExportacionLoteCarne,
-  formato: FormatoExportacionAvicola
-): Promise<void> {
-  const ins = datos.nombreInsumo ?? ((id: number) => String(id));
-  const seccion = (nombre: string, filas: Record<string, unknown>[]) =>
-    filas.map((f) => ({ seccion: nombre, ...f }));
-  const filas = [
-    ...seccion(
-      'Pesadas',
-      datos.pesadas.map((p) => ({
-        fecha: p.fecha,
-        detalle: `Peso prom. ${p.pesoPromedio} kg; cant. ${p.cantidadPesada ?? '—'}`,
-        obs: p.observaciones ?? '',
-      }))
-    ),
-    ...seccion(
-      'Mortalidad',
-      datos.muertes.map((m) => ({
-        fecha: m.fecha,
-        detalle: `Cantidad ${m.cantidad}; causa ${m.causa ?? '—'}`,
-        obs: m.observaciones ?? '',
-      }))
-    ),
-    ...seccion(
-      'Ventas / faena',
-      datos.ventas.map((v) => ({
-        fecha: v.fecha,
-        detalle: `${v.tipo} — ${v.cantidad} — total ${v.total ?? '—'}`,
-        obs: v.comprador ?? '',
-      }))
-    ),
-    ...seccion(
-      'Consumos',
-      datos.consumos.map((c) => ({
-        fecha: c.fecha,
-        detalle: `${ins(c.insumoId)} — ${c.cantidad}`,
-        obs: c.observaciones ?? '',
-      }))
-    ),
-    ...seccion(
-      'Sanidad',
-      datos.eventos.map((e) => ({
-        fecha: e.fecha,
-        detalle: `${e.tipo} — insumo ${e.insumoId != null ? ins(e.insumoId) : '—'} — dosis ${e.dosis ?? '—'}`,
-        obs: (e.descripcion ?? '') + (e.observaciones ? ` | ${e.observaciones}` : ''),
-      }))
-    ),
-  ];
-  const reporte: ReportData = {
-    title: `Avícola carne — operaciones del lote — ${datos.nombreLote}`,
-    data: filas,
-    columns: [
-      { key: 'seccion', label: 'Sección', type: 'text' },
-      { key: 'fecha', label: 'Fecha', type: 'text' },
-      { key: 'detalle', label: 'Detalle', type: 'text' },
-      { key: 'obs', label: 'Observaciones / extra', type: 'text' },
-    ],
-    summary: { count: filas.length },
-  };
-  const ext = formato === 'excel' ? 'xlsx' : 'pdf';
-  await exportarReporte(reporte, formato, `avicola_carne_lote_${sufijoFecha()}.${ext}`);
 }
 
 export interface DatosExportacionGalponPonedoras {

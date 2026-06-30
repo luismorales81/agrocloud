@@ -2,6 +2,7 @@ package com.agrocloud.avicola.crianza.model.entity;
 
 import com.agrocloud.avicola.crianza.model.enums.AvicolaEspecie;
 import com.agrocloud.avicola.crianza.model.enums.AvicolaLoteEstado;
+import com.agrocloud.avicola.crianza.model.enums.AvicolaModuloOrigen;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -28,6 +29,10 @@ public class AvicolaLote {
 
     @Column(name = "campana_id")
     private Long campanaId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modulo_origen", nullable = false, length = 40)
+    private AvicolaModuloOrigen moduloOrigen = AvicolaModuloOrigen.AVICOLA_CRIANZA;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "establecimiento_id", nullable = false)
@@ -99,6 +104,14 @@ public class AvicolaLote {
 
     public void setCampanaId(Long campanaId) {
         this.campanaId = campanaId;
+    }
+
+    public AvicolaModuloOrigen getModuloOrigen() {
+        return moduloOrigen;
+    }
+
+    public void setModuloOrigen(AvicolaModuloOrigen moduloOrigen) {
+        this.moduloOrigen = moduloOrigen;
     }
 
     public AvicolaEstablecimiento getEstablecimiento() {

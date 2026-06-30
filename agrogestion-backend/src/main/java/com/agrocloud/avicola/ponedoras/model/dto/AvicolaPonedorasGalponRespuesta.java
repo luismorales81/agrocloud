@@ -20,6 +20,9 @@ public class AvicolaPonedorasGalponRespuesta {
     private String observaciones;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String establecimientoNombre;
+    private Double climaLatitud;
+    private Double climaLongitud;
 
     public Long getId() {
         return id;
@@ -123,5 +126,29 @@ public class AvicolaPonedorasGalponRespuesta {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getEstablecimientoNombre() {
+        return establecimientoNombre;
+    }
+
+    public void setEstablecimientoNombre(String establecimientoNombre) {
+        this.establecimientoNombre = establecimientoNombre;
+    }
+
+    public Double getClimaLatitud() {
+        return climaLatitud;
+    }
+
+    public void setClimaLatitud(Double climaLatitud) {
+        this.climaLatitud = climaLatitud;
+    }
+
+    public Double getClimaLongitud() {
+        return climaLongitud;
+    }
+
+    public void setClimaLongitud(Double climaLongitud) {
+        this.climaLongitud = climaLongitud;
     }
 }

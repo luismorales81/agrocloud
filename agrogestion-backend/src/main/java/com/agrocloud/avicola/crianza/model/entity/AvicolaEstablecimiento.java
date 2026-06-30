@@ -1,5 +1,6 @@
 package com.agrocloud.avicola.crianza.model.entity;
 
+import com.agrocloud.avicola.crianza.model.enums.AvicolaModuloOrigen;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -21,6 +22,10 @@ public class AvicolaEstablecimiento {
 
     @Column(name = "empresa_id", nullable = false)
     private Long empresaId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modulo_origen", nullable = false, length = 40)
+    private AvicolaModuloOrigen moduloOrigen = AvicolaModuloOrigen.AVICOLA_CRIANZA;
 
     @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;
@@ -59,6 +64,14 @@ public class AvicolaEstablecimiento {
 
     public void setEmpresaId(Long empresaId) {
         this.empresaId = empresaId;
+    }
+
+    public AvicolaModuloOrigen getModuloOrigen() {
+        return moduloOrigen;
+    }
+
+    public void setModuloOrigen(AvicolaModuloOrigen moduloOrigen) {
+        this.moduloOrigen = moduloOrigen;
     }
 
     public String getNombre() {
