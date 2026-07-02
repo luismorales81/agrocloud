@@ -78,7 +78,7 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] Usuario encontrado - ID: " + usuarioId + ", Email: " + user.getEmail());
             
             List<ReporteRendimientoDTO> reporte = reporteService.obtenerReporteRendimiento(
-                usuarioId, fechaInicio, fechaFin, cultivoId, loteId);
+                user, fechaInicio, fechaFin, cultivoId, loteId);
             
             System.out.println("[REPORTE_CONTROLLER] Reporte generado con " + reporte.size() + " registros");
             return ResponseEntity.ok(reporte);
@@ -127,7 +127,7 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] Usuario encontrado - ID: " + usuarioId + ", Email: " + user.getEmail());
             
             List<ReporteCosechasDTO> reporte = reporteService.obtenerReporteCosechas(
-                usuarioId, fechaInicio, fechaFin, cultivoId, loteId);
+                user, fechaInicio, fechaFin, cultivoId, loteId);
             
             System.out.println("[REPORTE_CONTROLLER] Reporte de cosechas generado con " + reporte.size() + " registros");
             if (reporte.size() > 0) {
@@ -177,7 +177,7 @@ public class ReporteController {
             Long usuarioId = user.getId();
             System.out.println("[REPORTE_CONTROLLER] Usuario encontrado - ID: " + usuarioId + ", Email: " + user.getEmail());
             
-            Object estadisticas = reporteService.obtenerEstadisticasProduccion(usuarioId, fechaInicio, fechaFin);
+            Object estadisticas = reporteService.obtenerEstadisticasProduccion(user, fechaInicio, fechaFin);
             
             System.out.println("[REPORTE_CONTROLLER] Estadísticas de producción generadas exitosamente");
             return ResponseEntity.ok(estadisticas);
@@ -224,7 +224,7 @@ public class ReporteController {
             System.out.println("[REPORTE_CONTROLLER] Usuario encontrado - ID: " + usuarioId + ", Email: " + user.getEmail());
             
             List<Object> reporte = reporteService.obtenerReporteRentabilidad(
-                usuarioId, fechaInicio, fechaFin, cultivoId);
+                user, fechaInicio, fechaFin, cultivoId);
             
             System.out.println("[REPORTE_CONTROLLER] Reporte de rentabilidad generado con " + reporte.size() + " registros");
             if (reporte.size() > 0) {

@@ -24,15 +24,21 @@ public class ConfiguracionPorcinoService {
     private EmpresaContextService empresaContextService;
 
     /**
-     * Obtener una configuración por clave
+     * Obtener una configuración por clave. Si es una clave con valor por defecto conocido,
+     * la crea de forma perezosa para la empresa del usuario.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<ConfiguracionPorcino> obtenerConfiguracion(String clave, User user) {
         Optional<Empresa> empresaActiva = empresaContextService.obtenerEmpresaPrincipalDelUsuario(user.getId());
         if (empresaActiva.isEmpty()) {
             return Optional.empty();
         }
-        return configuracionRepository.findByClaveAndEmpresaAndActivoTrue(clave, empresaActiva.get());
+        Empresa empresa = empresaActiva.get();
+        Optional<ConfiguracionPorcino> existente = configuracionRepository.findByClaveAndEmpresaAndActivoTrue(clave, empresa);
+        if (existente.isPresent()) {
+            return existente;
+        }
+        return asegurarConfiguracionPorDefecto(clave, empresa);
     }
 
     /**
@@ -124,30 +130,46 @@ public class ConfiguracionPorcinoService {
      */
     @Transactional
     public void inicializarConfiguracionesPorDefecto(Empresa empresa) {
-        Map<String, Object> configs = new HashMap<>();
-        // Solo mantener configuraciones que NO están en Parámetros Productivos
-        // DIAS_CACHORRA es la única que se usa exclusivamente en Configuraciones Generales (en MadreService)
-        // DIAS_GESTACION, DIAS_LACTANCIA, DIAS_ENTRE_CELOS, DIAS_CONTROL_CELO están duplicadas en Parámetros Productivos y deben eliminarse
-        configs.put("DIAS_CACHORRA", Map.of("valor", "160", "tipo", ConfiguracionPorcino.TipoConfig.NUMERO, "categoria", "ETAPAS", "descripcion", "Días que una cachorra permanece antes de ser adulta"));
-
-        for (Map.Entry<String, Object> entry : configs.entrySet()) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> configData = (Map<String, Object>) entry.getValue();
-            Optional<ConfiguracionPorcino> existente = configuracionRepository.findByClaveAndEmpresaAndActivoTrue(
-                entry.getKey(), empresa);
-            
-            if (existente.isEmpty()) {
-                ConfiguracionPorcino config = new ConfiguracionPorcino(
-                    entry.getKey(),
-                    (String) configData.get("valor"),
-                    (ConfiguracionPorcino.TipoConfig) configData.get("tipo"),
-                    (String) configData.get("categoria"),
-                    empresa
-                );
-                config.setDescripcion((String) configData.get("descripcion"));
-                configuracionRepository.save(config);
-            }
+        for (String clave : mapaConfiguracionesPorDefecto().keySet()) {
+            asegurarConfiguracionPorDefecto(clave, empresa);
         }
+    }
+
+    private Optional<ConfiguracionPorcino> asegurarConfiguracionPorDefecto(String clave, Empresa empresa) {
+        Map<String, Object> configData = mapaConfiguracionesPorDefecto().get(clave);
+        if (configData == null) {
+            return Optional.empty();
+        }
+        Optional<ConfiguracionPorcino> existente = configuracionRepository.findByClaveAndEmpresaAndActivoTrue(clave, empresa);
+        if (existente.isPresent()) {
+            return existente;
+        }
+        ConfiguracionPorcino config = new ConfiguracionPorcino(
+                clave,
+                (String) configData.get("valor"),
+                (ConfiguracionPorcino.TipoConfig) configData.get("tipo"),
+                (String) configData.get("categoria"),
+                empresa
+        );
+        config.setDescripcion((String) configData.get("descripcion"));
+        return Optional.of(configuracionRepository.save(config));
+    }
+
+    private Map<String, Map<String, Object>> mapaConfiguracionesPorDefecto() {
+        Map<String, Map<String, Object>> configs = new HashMap<>();
+        configs.put("DIAS_CACHORRA", Map.of(
+                "valor", "160",
+                "tipo", ConfiguracionPorcino.TipoConfig.NUMERO,
+                "categoria", "ETAPAS",
+                "descripcion", "Días que una cachorra permanece antes de ser adulta"
+        ));
+        configs.put(CalendarioAlimentacionService.CLAVE_CONFIRMACION_CALENDARIO_SOLO_CON_RACION_REAL, Map.of(
+                "valor", "false",
+                "tipo", ConfiguracionPorcino.TipoConfig.BOOLEAN,
+                "categoria", "ALIMENTACION",
+                "descripcion", "Si está activo, no se puede confirmar un día del calendario de alimentación mientras quede algún consumo en modo estimado (sin kg real de ración)."
+        ));
+        return configs;
     }
 }
 

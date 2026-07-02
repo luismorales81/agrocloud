@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
  * Permite rastrear los ciclos completos de siembra a cosecha
  */
 @Entity
-@Table(name = "historial_cosechas")
+@Table(name = "cultivo_historial_cosechas")
 @EntityListeners(AuditingEntityListener.class)
 public class HistorialCosecha {
 
@@ -316,7 +316,8 @@ public class HistorialCosecha {
     }
 
     public BigDecimal getPorcentajeCumplimiento() {
-        if (rendimientoEsperado != null && rendimientoEsperado.compareTo(BigDecimal.ZERO) > 0) {
+        if (rendimientoEsperado != null && rendimientoEsperado.compareTo(BigDecimal.ZERO) > 0
+                && rendimientoReal != null) {
             return rendimientoReal.divide(rendimientoEsperado, 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100"));
         }
