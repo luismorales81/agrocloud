@@ -1,5 +1,4 @@
 package com.agrocloud.core.domain;
-import com.agrocloud.core.domain.Empresa;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;

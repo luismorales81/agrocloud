@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Entidad que representa la muerte de animales en recría/engorde
  */
 @Entity
-@Table(name = "porcinos_muertes_recria")
+@Table(name = "porcinos_legacy_muertes_recria")
 @EntityListeners(AuditingEntityListener.class)
 public class MuerteRecria {
 

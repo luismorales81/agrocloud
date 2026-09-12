@@ -15,7 +15,7 @@ import java.util.List;
  * Plan reutilizable de recría (etapas, sugerencias de receta y recordatorios) por empresa.
  */
 @Entity
-@Table(name = "porcinos_plan_recria")
+@Table(name = "porcinos_legacy_plan_recria")
 public class PlanRecria {
 
     public enum PropositoPlan {

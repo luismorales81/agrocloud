@@ -1,48 +1,33 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
-// Configuración base de Axios - Vite
-// Priorizar VITE_API_BASE_URL si ya incluye /api, sino usar VITE_API_URL
-const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const VITE_API_URL = import.meta.env.VITE_API_URL;
-
-// Detectar si estamos en producción
-const isProduction = typeof window !== 'undefined' && (
-  window.location.hostname === 'www.agrocloud.com.ar' ||
-  window.location.hostname === 'agrocloud.com.ar' ||
-  window.location.hostname.includes('vercel.app') ||
-  window.location.hostname.includes('railway.app')
-);
-
-// URL del backend en producción (Railway)
-const PRODUCTION_API_URL = 'https://agrocloud-production.up.railway.app/api';
-
-let BASE_URL;
-if (VITE_API_BASE_URL && VITE_API_BASE_URL.includes('/api')) {
-  // VITE_API_BASE_URL ya incluye /api (como en Vercel)
-  BASE_URL = VITE_API_BASE_URL;
-} else if (VITE_API_URL) {
-  // VITE_API_URL no incluye /api, agregarlo
-  BASE_URL = VITE_API_URL.includes('/api') ? VITE_API_URL : `${VITE_API_URL}/api`;
-} else if (VITE_API_BASE_URL) {
-  // VITE_API_BASE_URL no incluye /api, agregarlo
-  BASE_URL = VITE_API_BASE_URL.includes('/api') ? VITE_API_BASE_URL : `${VITE_API_BASE_URL}/api`;
-} else if (isProduction) {
-  // Si estamos en producción y no hay variables configuradas, usar la URL de Railway
-  BASE_URL = PRODUCTION_API_URL;
-  console.warn('⚠️ [API] Variables de entorno no configuradas, usando URL de producción por defecto');
-} else {
-  // Fallback a localhost solo en desarrollo
-  BASE_URL = 'http://localhost:8080/api';
+function resolverUrlBaseApi(): string {
+  const viteBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  const viteUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+  const candidato = viteBase || viteUrl;
+  if (candidato) {
+    const sinBarra = candidato.replace(/\/$/, '');
+    return sinBarra.includes('/api') ? sinBarra : `${sinBarra}/api`;
+  }
+  if (import.meta.env.DEV) {
+    return 'http://localhost:8080/api';
+  }
+  return '/api';
 }
 
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+const BASE_URL = resolverUrlBaseApi();
+
+const esDesarrollo = import.meta.env.DEV;
+
+if (esDesarrollo) {
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
 console.log('%c🚀 API SERVICE INITIALIZED - VERSION 2.3 (timeout 30s, login 60s)', 'color: #00ff00; font-weight: bold; font-size: 16px');
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
 console.log('%c📡 VITE_API_URL:', 'color: #ffaa00; font-weight: bold', VITE_API_URL || 'NOT SET');
 console.log('%c📡 VITE_API_BASE_URL:', 'color: #ffaa00; font-weight: bold', VITE_API_BASE_URL || 'NOT SET');
 console.log('%c🌐 Hostname:', 'color: #ffaa00; font-weight: bold', typeof window !== 'undefined' ? window.location.hostname : 'N/A');
-console.log('%c🏭 Is Production:', 'color: #ffaa00; font-weight: bold', isProduction);
 console.log('%c📡 BASE_URL final:', 'color: #ffaa00; font-weight: bold', BASE_URL);
 console.log('%c✅ /api prefix included:', 'color: #00ff00; font-weight: bold', BASE_URL.includes('/api'));
 console.log('%c🔍 URL Analysis:', 'color: #00ff00; font-weight: bold');
@@ -51,10 +36,8 @@ console.log('  - VITE_API_BASE_URL includes /api:', VITE_API_BASE_URL?.includes(
 console.log('  - BASE_URL final:', BASE_URL);
 console.log('%c🔧 MODE:', 'color: #ffaa00', import.meta.env.MODE);
 console.log('%c🌍 ENV:', 'color: #ffaa00', import.meta.env.VITE_ENVIRONMENT || 'development');
-if (isProduction && !VITE_API_BASE_URL && !VITE_API_URL) {
-  console.warn('%c⚠️ ADVERTENCIA: Variables de entorno no configuradas en Vercel. Usando URL de producción por defecto.', 'color: #ff9900; font-weight: bold');
-}
 console.log('%c════════════════════════════════════════════════════════', 'color: #00ff00; font-weight: bold');
+}
 
 /** URL base usada por Axios (útil para mensajes de error en login). */
 export const URL_BASE_API = BASE_URL;
@@ -68,10 +51,16 @@ export function mensajeErrorConexionApi(error: AxiosError): string {
   return `No se pudo conectar con el servidor (${destino}). En local: ejecutá el backend en el puerto 8080 y el frontend con "npm run dev".`;
 }
 
+/** Sesión válida: usuario en localStorage (JWT en cookie httpOnly vía withCredentials). */
+export function haySesionActiva(): boolean {
+  return !!localStorage.getItem('user');
+}
+
 // Crear instancia de Axios
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -83,8 +72,10 @@ const api = axios.create({
     if (typeof config.url === 'string') {
       let url = config.url;
       
+      if (esDesarrollo) {
       console.log('🔍 [API Interceptor] URL original:', url);
       console.log('🔍 [API Interceptor] BASE_URL:', BASE_URL);
+      }
       
       // CORRECCIÓN AGRESIVA: Eliminar TODAS las duplicaciones de /api
       // Patrón 1: /api/api/ -> /api/
@@ -112,7 +103,9 @@ const api = axios.create({
       }
       
       config.url = url;
+      if (esDesarrollo) {
       console.log('✅ [API Interceptor] URL final:', url);
+      }
     }
     return config;
   },
@@ -130,10 +123,7 @@ const api = axios.create({
     const esRutaAuth = url.includes('/auth/') || url.includes('/eula/');
 
     if (token) {
-      console.log('🔧 [API] Agregando token a petición:', config.url);
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      console.log('⚠️ [API] No hay token disponible para:', config.url);
     }
 
     // Sin sesión no enviar contexto de empresa/campaña (evita ruido en login y estados stale)
@@ -141,24 +131,22 @@ const api = axios.create({
       return config;
     }
 
-    // Enviar empresa activa para comprobación módulo/empresa/usuario en el backend
-    const rawEmpresa = localStorage.getItem('empresaActiva');
-    if (rawEmpresa) {
-      try {
-        const empresa = JSON.parse(rawEmpresa);
-        if (empresa?.id != null) {
-          config.headers['X-Company-Id'] = String(empresa.id);
-        }
-      } catch {
-        // ignorar si no es JSON válido
-      }
+    const haySesion = token || localStorage.getItem('user');
+    if (!haySesion && !esRutaAuth) {
+      return config;
+    }
+
+    // Solo enviar empresa validada contra mis-empresas (evita 500 por X-Company-Id obsoleto)
+    const empresaIdValidada = localStorage.getItem('empresaIdValidada');
+    if (empresaIdValidada && /^\d+$/.test(empresaIdValidada)) {
+      config.headers['X-Company-Id'] = empresaIdValidada;
     }
     const rawCampana = localStorage.getItem('campanaActiva');
     const esRutaCampanas = url.includes('/v1/campanas');
     if (rawCampana && !esRutaCampanas) {
       try {
         const campana = JSON.parse(rawCampana);
-        if (campana?.id != null) {
+        if (campana?.id != null && campana.estado !== 'CERRADA') {
           config.headers['X-Campaign-Id'] = String(campana.id);
         }
       } catch {
@@ -177,7 +165,7 @@ const api = axios.create({
   api.interceptors.response.use(
   (response) => {
     // Solo loggear respuestas exitosas si no son de EULA (para reducir ruido)
-    if (!response.config.url?.includes('/eula/')) {
+    if (!response.config.url?.includes('/eula/') && esDesarrollo) {
       console.log('✅ [API] Respuesta exitosa:', response.config.url, response.status);
     }
     return response;
@@ -209,17 +197,35 @@ const api = axios.create({
     
     if (error.response?.status === 401) {
       const isEulaEndpoint = error.config?.url?.includes('/eula/');
-      const teniaToken = Boolean(error.config?.headers?.Authorization);
+      const teniaSesion = Boolean(localStorage.getItem('user'));
       const enLogin = window.location.pathname === '/login' || window.location.pathname === '/';
-      if (!isEulaEndpoint && teniaToken && !enLogin) {
-        console.log('🔧 [API] Token expirado o inválido, limpiando localStorage');
+      if (!isEulaEndpoint && teniaSesion && !enLogin) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('empresaActiva');
+        localStorage.removeItem('empresaIdValidada');
+        localStorage.removeItem('campanaActiva');
         window.location.href = '/login';
-      } else if (!isEulaEndpoint && !teniaToken) {
-        console.log('ℹ️ [API] 401 sin token enviado, no se limpia sesión');
-      } else {
-        console.log('📄 [API] Error 401 en endpoint EULA, no limpiando localStorage (usuario aún no autenticado)');
+      }
+    } else if (
+      error.response?.status === 403 &&
+      !isEulaError &&
+      Boolean(localStorage.getItem('user')) &&
+      (error.config?.url ?? '').includes('/mis-empresas')
+    ) {
+      // Sesión fantasma: user en localStorage sin cookie JWT válida → Spring responde 403
+      console.warn('⚠️ [API] Sesión inválida al cargar empresas; redirigiendo a login');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('rememberMe');
+      localStorage.removeItem('loginTimestamp');
+      localStorage.removeItem('empresaActiva');
+      localStorage.removeItem('empresaIdValidada');
+      localStorage.removeItem('rolUsuario');
+      localStorage.removeItem('campanaActiva');
+      localStorage.removeItem('currentModule');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
       }
     } else if (error.response?.status === 500) {
       console.error('🚨 [API] Error interno del servidor:', error.response?.data);
@@ -307,17 +313,30 @@ export const authService = {
   },
 
   logout() {
-    console.log('🔧 [AuthService] Cerrando sesión...');
+    api.post('/auth/logout').catch(() => undefined);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    console.log('✅ [AuthService] Sesión cerrada');
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('loginTimestamp');
+    localStorage.removeItem('empresaActiva');
+    localStorage.removeItem('empresaIdValidada');
+    localStorage.removeItem('rolUsuario');
+    localStorage.removeItem('campanaActiva');
+    localStorage.removeItem('currentModule');
   },
 
   isAuthenticated() {
-    const token = localStorage.getItem('token');
-    const isAuth = !!token;
-    console.log('🔧 [AuthService] Verificando autenticación:', isAuth);
-    return isAuth;
+    return !!localStorage.getItem('user');
+  },
+
+  /** Comprueba que la cookie JWT siga válida (no basta con user en localStorage). */
+  async validarSesion(): Promise<boolean> {
+    try {
+      await api.get('/v1/empresas/mis-empresas', { timeout: 15000 });
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   getCurrentUser() {

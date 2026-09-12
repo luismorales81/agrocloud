@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Entidad que representa un movimiento entre etapas de recría
  */
 @Entity
-@Table(name = "porcinos_movimientos_etapas")
+@Table(name = "porcinos_legacy_movimientos_etapas")
 @EntityListeners(AuditingEntityListener.class)
 public class MovimientoEtapa {
 

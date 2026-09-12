@@ -1,0 +1,67 @@
+---
+description: Orquesta el equipo Agency para auditar y analizar AgroGestion (sin implementar sin SPEC aprobada).
+alwaysApply: false
+---
+
+# Equipo de análisis — AgroGestion / AgroCloud
+
+Usa los agentes en `.cursor/rules/agency/` como **roles especializados**. Invócalos con `@nombre-del-archivo` (sin `.mdc`) o pidiendo explícitamente el rol.
+
+## Contexto del proyecto (siempre tener presente)
+
+- **Backend:** Spring Boot 3, Java 17+, JPA, Flyway, JWT, multiempresa.
+- **Frontend:** React 19, TypeScript, Vite, Tailwind, módulos dinámicos.
+- **Dominio:** SaaS agropecuario — módulos **Cultivos**, **Porcinos**, **Avícola** (crianza, huevos, carne, ponedoras).
+- **Arquitectura:** monolito modular; CORE transversal; ver `docs/CORE-Y-MODULOS.md`.
+- **Desarrollo:** Spec Driven Development — **no proponer código nuevo** sin SPEC aprobada en `docs/specs/`.
+
+## Cuándo usar cada agente
+
+| Agente (regla) | Uso en AgroGestion |
+|----------------|-------------------|
+| `codebase-onboarding-engineer` | Mapa del repo, flujos, onboarding técnico |
+| `software-architect` | Límites CORE/módulos, deuda arquitectónica |
+| `backend-architect` | APIs REST, dominio Java, transacciones |
+| `frontend-developer` | React, módulos UI, rendimiento |
+| `database-optimizer` | MySQL, Flyway, consultas N+1 |
+| `security-engineer` | JWT, permisos por módulo, datos sensibles |
+| `devops-automator` | Docker, Railway/Render/Vercel, CI |
+| `code-reviewer` | Calidad y riesgos en cambios propuestos |
+| `api-tester` | Contratos API backend ↔ frontend |
+| `reality-checker` | ¿Listo para producción? evidencia |
+| `performance-benchmarker` | Carga, tiempos, cuellos de botella |
+| `product-manager` | Priorización, encaje negocio, roadmap |
+
+## Plantilla de solicitud de análisis
+
+Copia y adapta:
+
+```
+Actúa como @[agente]. Analiza AgroGestion en modo solo lectura.
+
+Alcance: [módulo o carpeta]
+Pregunta: [qué necesito entender]
+Entregable: informe con hallazgos, riesgos y recomendaciones (sin código salvo SPEC aprobada).
+Referencias: docs/CORE-Y-MODULOS.md, docs/specs/
+```
+
+## Auditoría completa (multi-agente)
+
+Orden sugerido:
+
+1. `@codebase-onboarding-engineer` — mapa y flujos críticos  
+2. `@software-architect` + `@backend-architect` + `@frontend-developer` — arquitectura  
+3. `@database-optimizer` + `@security-engineer` — datos y seguridad  
+4. `@api-tester` + `@reality-checker` — calidad y release  
+5. `@product-manager` — síntesis para negocio  
+
+## Actualizar agentes desde upstream
+
+```powershell
+cd vendor/agency-agents
+git pull
+cd ../..
+node scripts/convertir-agentes-cursor.mjs
+```
+
+Fuente: [agency-agents](https://github.com/msitarzewski/agency-agents) (MIT).

@@ -18,7 +18,7 @@ const Login: React.FC = () => {
   const [mostrarEulaModal, setMostrarEulaModal] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Por defecto activado
   const { login } = useAuth();
-  const { empresasUsuario, cargarEmpresasUsuario } = useEmpresa();
+  const { empresasUsuario, cargarEmpresasUsuario, cambiarEmpresa } = useEmpresa();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,9 +115,14 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleEmpresaSeleccionada = (empresaId: number) => {
-    setMostrarSelectorEmpresa(false);
-    navigate('/dashboard');
+  const handleEmpresaSeleccionada = async (empresaIdDestino: number) => {
+    try {
+      await cambiarEmpresa(empresaIdDestino);
+      setMostrarSelectorEmpresa(false);
+      navigate('/select-module');
+    } catch {
+      setError('No se pudo seleccionar la empresa. Intentá de nuevo.');
+    }
   };
 
   return (
@@ -225,7 +230,7 @@ const Login: React.FC = () => {
                 {empresasUsuario.map((usuarioEmpresa) => (
                   <button
                     key={usuarioEmpresa.id}
-                    onClick={() => handleEmpresaSeleccionada(usuarioEmpresa.id)}
+                    onClick={() => handleEmpresaSeleccionada(usuarioEmpresa.empresaId)}
                     className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <div className="flex items-center space-x-3">

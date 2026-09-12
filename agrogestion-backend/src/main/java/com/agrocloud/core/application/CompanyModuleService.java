@@ -63,7 +63,9 @@ public class CompanyModuleService {
             companyModule = companyModuleRepository.save(companyModule);
         }
 
-        if (esPrimeraVez && "pigs".equalsIgnoreCase(module.getCode()) && inicializacionPorcinoService != null) {
+        if (esPrimeraVez
+                && ("pigs".equalsIgnoreCase(module.getCode()) || "PORCINOS".equalsIgnoreCase(module.getCode()))
+                && inicializacionPorcinoService != null) {
             try {
                 logger.info("Inicializando datos por defecto del módulo Porcinos para empresa {}", companyId);
                 inicializacionPorcinoService.inicializarDatosPorDefecto(empresa);

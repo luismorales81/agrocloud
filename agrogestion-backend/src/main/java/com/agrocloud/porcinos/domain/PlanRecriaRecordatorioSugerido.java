@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 @Entity
-@Table(name = "porcinos_plan_recria_recordatorio")
+@Table(name = "porcinos_legacy_plan_recria_recordatorio")
 public class PlanRecriaRecordatorioSugerido {
 
     @Id

@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * Entidad que representa un esquema sanitario configurable
  */
 @Entity
-@Table(name = "porcinos_esquemas_sanitarios_porcinos")
+@Table(name = "porcinos_legacy_esquemas_sanitarios_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class EsquemaSanitarioPorcino {
 

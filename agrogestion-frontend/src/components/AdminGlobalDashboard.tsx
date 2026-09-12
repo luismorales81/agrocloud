@@ -97,12 +97,7 @@ const AdminGlobalDashboard: React.FC = () => {
       setError(null);
       
       // Verificar autenticación
-      const token = localStorage.getItem('token');
       const user = localStorage.getItem('user');
-      console.log('🔍 [AdminGlobalDashboard] Token disponible:', token ? 'SÍ' : 'NO');
-      console.log('🔍 [AdminGlobalDashboard] Token value:', token);
-      console.log('🔍 [AdminGlobalDashboard] User disponible:', user ? 'SÍ' : 'NO');
-      console.log('🔍 [AdminGlobalDashboard] User value:', user);
       
       // Cargar estadísticas globales usando endpoint simplificado
       try {

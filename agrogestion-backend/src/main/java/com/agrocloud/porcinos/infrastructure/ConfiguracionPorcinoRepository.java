@@ -13,6 +13,8 @@ public interface ConfiguracionPorcinoRepository extends JpaRepository<Configurac
 
     Optional<ConfiguracionPorcino> findByClaveAndEmpresaAndActivoTrue(String clave, Empresa empresa);
 
+    boolean existsByClaveAndActivoTrue(String clave);
+
     List<ConfiguracionPorcino> findByEmpresaAndActivoTrue(Empresa empresa);
 
     List<ConfiguracionPorcino> findByEmpresaAndCategoriaAndActivoTrue(Empresa empresa, String categoria);

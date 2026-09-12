@@ -14,7 +14,7 @@ import java.math.BigDecimal;
  * Compartido entre módulos: InsumoCompuesto en model.entity.
  */
 @Entity
-@Table(name = "porcinos_recetas_alimentacion_etapa",
+@Table(name = "porcinos_legacy_recetas_alimentacion_etapa",
        uniqueConstraints = @UniqueConstraint(columnNames = {"empresa_id", "etapa", "insumo_compuesto_id"}))
 public class RecetaAlimentacionPorEtapa {
 

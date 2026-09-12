@@ -1,7 +1,9 @@
-// Configuración de Google Maps para AgroCloud
+// Configuración de Google Maps para AgroCloud.
+// La clave se lee de VITE_GOOGLE_MAPS_API_KEY (.env.local / Vercel). Nunca hardcodear.
+const claveApiMaps = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? '';
+
 export const GOOGLE_MAPS_CONFIG = {
-  // API Key para desarrollo local
-  API_KEY: 'AIzaSyCWz9FKCHBdLqbjhHCPcECww5hs2ugiWA0',
+  API_KEY: claveApiMaps,
   
   // Configuración por defecto del mapa
   DEFAULT_CENTER: { lat: -34.6118, lng: -58.3960 }, // Buenos Aires
@@ -68,6 +70,12 @@ export const loadGoogleMaps = (callback?: () => void): Promise<void> => {
         }
       };
       esperarCarga();
+      return;
+    }
+
+    if (!GOOGLE_MAPS_CONFIG.API_KEY) {
+      console.warn('VITE_GOOGLE_MAPS_API_KEY no configurada. Los mapas no estarán disponibles.');
+      alFallo();
       return;
     }
 

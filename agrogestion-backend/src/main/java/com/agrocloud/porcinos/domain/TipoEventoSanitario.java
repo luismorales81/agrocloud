@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Ejemplos: Vacunación, Desparasitación, Tratamiento, Antibiótico, etc.
  */
 @Entity
-@Table(name = "porcinos_tipos_evento_sanitario")
+@Table(name = "porcinos_legacy_tipos_evento_sanitario")
 @EntityListeners(AuditingEntityListener.class)
 public class TipoEventoSanitario {
 

@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "porcinos_recria")
+@Table(name = "porcinos_legacy_recria")
 @EntityListeners(AuditingEntityListener.class)
 public class Recria {
 

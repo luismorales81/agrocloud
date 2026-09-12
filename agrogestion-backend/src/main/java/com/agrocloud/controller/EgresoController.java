@@ -2,6 +2,7 @@ package com.agrocloud.controller;
 
 import com.agrocloud.config.CampanaRequestContext;
 import com.agrocloud.core.application.CampanaContextService;
+import com.agrocloud.core.application.UserService;
 import com.agrocloud.core.domain.Campana;
 import com.agrocloud.core.domain.Egreso;
 import com.agrocloud.core.security.ServicioSeguridadContexto;
@@ -11,7 +12,6 @@ import com.agrocloud.core.domain.User;
 import com.agrocloud.core.infrastructure.EgresoRepository;
 import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
 import com.agrocloud.cultivos.infrastructure.PlotRepository;
-import com.agrocloud.core.infrastructure.UserRepository;
 import com.agrocloud.cultivos.application.EgresoService;
 import com.agrocloud.dto.CrearEgresoRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +19,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -43,8 +44,8 @@ public class EgresoController {
         private EgresoRepository egresoRepository;
 
     @Autowired
-    @Qualifier("userRepositoryCore")
-    private UserRepository userRepository;
+    @Qualifier("userServiceCore")
+    private UserService userService;
 
     @Autowired
     @Qualifier("plotRepositoryCultivos")
@@ -65,12 +66,27 @@ public class EgresoController {
     @Qualifier("campanaContextServiceCore")
     private CampanaContextService campanaContextService;
 
+    private Optional<User> obtenerUsuario(UserDetails userDetails) {
+        if (userDetails == null || userDetails.getUsername() == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(userService.findByEmailWithAllRelations(userDetails.getUsername()));
+        } catch (RuntimeException e) {
+            return Optional.empty();
+        }
+    }
+
     /**
      * Obtiene todos los egresos del usuario autenticado.
      */
     @GetMapping
-    public ResponseEntity<List<Egreso>> obtenerEgresos(Authentication authentication) {
+    public ResponseEntity<List<Egreso>> obtenerEgresos(@AuthenticationPrincipal UserDetails userDetails) {
         try {
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
             Long campanaId = CampanaRequestContext.getCampanaId();
             if (campanaId != null) {
                 try {
@@ -82,9 +98,8 @@ public class EgresoController {
                     // fallback por usuario
                 }
             }
-            Long usuarioId = Long.parseLong(authentication.getName());
             List<Egreso> egresos = egresoRepository.findByUserIdAndFechaBetweenOrderByFechaDesc(
-                    usuarioId, LocalDate.now().minusYears(1), LocalDate.now());
+                    usuario.get().getId(), LocalDate.now().minusYears(1), LocalDate.now());
             return ResponseEntity.ok(egresos);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -95,16 +110,18 @@ public class EgresoController {
      * Obtiene un egreso por ID.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Egreso> obtenerEgresoPorId(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Egreso> obtenerEgresoPorId(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
             Optional<Egreso> egreso = egresoRepository.findById(id);
             
-            if (egreso.isPresent() && egreso.get().getUser().getId().equals(usuarioId)) {
+            if (egreso.isPresent() && egreso.get().getUser().getId().equals(usuario.get().getId())) {
                 return ResponseEntity.ok(egreso.get());
-            } else {
-                return ResponseEntity.notFound().build();
             }
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
@@ -114,12 +131,10 @@ public class EgresoController {
      * Crea un nuevo egreso.
      */
     @PostMapping
-    public ResponseEntity<Egreso> crearEgreso(@Valid @RequestBody Egreso egreso, Authentication authentication) {
+    public ResponseEntity<Egreso> crearEgreso(@Valid @RequestBody Egreso egreso, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
-            Optional<User> usuario = userRepository.findById(usuarioId);
-            
-            if (!usuario.isPresent()) {
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
                 return ResponseEntity.badRequest().build();
             }
 
@@ -169,10 +184,13 @@ public class EgresoController {
      * Crea un nuevo egreso con integración automática.
      */
     @PostMapping("/integrado")
-    public ResponseEntity<Egreso> crearEgresoIntegrado(@Valid @RequestBody CrearEgresoRequest request, Authentication authentication) {
+    public ResponseEntity<Egreso> crearEgresoIntegrado(@Valid @RequestBody CrearEgresoRequest request, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
-            request.setUserId(usuarioId);
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            request.setUserId(usuario.get().getId());
             
             Egreso egreso = egresoService.crearEgreso(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(egreso);
@@ -185,18 +203,21 @@ public class EgresoController {
      * Actualiza un egreso existente.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Egreso> actualizarEgreso(@PathVariable Long id, @Valid @RequestBody Egreso egresoActualizado, Authentication authentication) {
+    public ResponseEntity<Egreso> actualizarEgreso(@PathVariable Long id, @Valid @RequestBody Egreso egresoActualizado, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
             Optional<Egreso> egresoExistente = egresoRepository.findById(id);
             
-            if (!egresoExistente.isPresent() || !egresoExistente.get().getUser().getId().equals(usuarioId)) {
+            if (!egresoExistente.isPresent() || !egresoExistente.get().getUser().getId().equals(usuario.get().getId())) {
                 return ResponseEntity.notFound().build();
             }
 
             Egreso egreso = egresoExistente.get();
             
-            // Actualizar campos
+            egreso.setConcepto(egresoActualizado.getConcepto());
             egreso.setTipo(egresoActualizado.getTipo());
             egreso.setReferenciaId(egresoActualizado.getReferenciaId());
 
@@ -233,12 +254,15 @@ public class EgresoController {
      * Elimina un egreso.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarEgreso(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Void> eliminarEgreso(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
             Optional<Egreso> egreso = egresoRepository.findById(id);
             
-            if (!egreso.isPresent() || !egreso.get().getUser().getId().equals(usuarioId)) {
+            if (!egreso.isPresent() || !egreso.get().getUser().getId().equals(usuario.get().getId())) {
                 return ResponseEntity.notFound().build();
             }
 
@@ -257,11 +281,14 @@ public class EgresoController {
     public ResponseEntity<List<Egreso>> obtenerEgresosPorFechas(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
-            Authentication authentication) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
             List<Egreso> egresos = egresoRepository.findByUserIdAndFechaBetweenOrderByFechaDesc(
-                    usuarioId, fechaInicio, fechaFin);
+                    usuario.get().getId(), fechaInicio, fechaFin);
             return ResponseEntity.ok(egresos);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -274,11 +301,14 @@ public class EgresoController {
     @GetMapping("/por-tipo/{tipoEgreso}")
     public ResponseEntity<List<Egreso>> obtenerEgresosPorTipo(
             @PathVariable Egreso.TipoEgreso tipoEgreso,
-            Authentication authentication) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
             List<Egreso> egresos = egresoRepository.findByTipoAndUserIdOrderByFechaDesc(
-                    tipoEgreso, usuarioId);
+                    tipoEgreso, usuario.get().getId());
             return ResponseEntity.ok(egresos);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -309,10 +339,14 @@ public class EgresoController {
     public ResponseEntity<BigDecimal> obtenerTotalEgresos(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
-            Authentication authentication) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
-            BigDecimal total = egresoRepository.calcularTotalEgresosPorUsuarioYFecha(usuarioId, fechaInicio, fechaFin);
+            Optional<User> usuario = obtenerUsuario(userDetails);
+            if (usuario.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            BigDecimal total = egresoRepository.calcularTotalEgresosPorUsuarioYFecha(
+                    usuario.get().getId(), fechaInicio, fechaFin);
             return ResponseEntity.ok(total);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();

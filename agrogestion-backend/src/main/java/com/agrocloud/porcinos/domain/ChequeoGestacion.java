@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "porcinos_chequeos_gestacion")
+@Table(name = "porcinos_legacy_chequeos_gestacion")
 @EntityListeners(AuditingEntityListener.class)
 public class ChequeoGestacion {
 

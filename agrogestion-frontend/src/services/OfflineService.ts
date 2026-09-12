@@ -1,4 +1,4 @@
-import { showNotification } from './api';
+import { showNotification, URL_BASE_API } from './api';
 import api from './api';
 import type { LaborDetalladoDTO } from '../types/labor.types';
 
@@ -192,17 +192,17 @@ class OfflineService {
     
     // Importar dinámicamente para evitar dependencias circulares
     const { default: axios } = await import('axios');
-    const token = localStorage.getItem('token');
     
     const config = {
+      withCredentials: true,
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     };
 
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-    const fullURL = `${baseURL}/api${endpoint}`;
+    const base = URL_BASE_API.replace(/\/$/, '');
+    const ruta = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const fullURL = `${base}${ruta}`;
 
     switch (type) {
       case 'CREATE':

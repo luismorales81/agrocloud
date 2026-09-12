@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Entidad que representa la muerte de una madre (cerda reproductora)
  */
 @Entity
-@Table(name = "porcinos_muertes_madres")
+@Table(name = "porcinos_legacy_muertes_madres")
 @EntityListeners(AuditingEntityListener.class)
 public class MadreMuerte {
 

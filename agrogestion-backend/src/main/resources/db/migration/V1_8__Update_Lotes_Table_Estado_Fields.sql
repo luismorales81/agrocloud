@@ -1,69 +1,54 @@
--- Actualizar tabla lotes para incluir campos de estado y fechas de cultivo
--- Migración V1.8 - Actualización de campos de estado de lotes
+-- Migración V1.8: Actualizar tabla lotes con campos de estado (defensiva)
+-- Solo aplica si existe la tabla legacy `lotes` o `cultivo_lotes`.
 
--- 1. Agregar nuevas columnas para gestión de estados
-ALTER TABLE lotes 
-ADD COLUMN fecha_ultimo_cambio_estado TIMESTAMP NULL,
-ADD COLUMN motivo_cambio_estado VARCHAR(255) NULL,
-ADD COLUMN fecha_cosecha_real DATE NULL,
-ADD COLUMN rendimiento_esperado DECIMAL(10,2) NULL,
-ADD COLUMN rendimiento_real DECIMAL(10,2) NULL;
+SET @esquema = DATABASE();
 
--- 2. Actualizar el campo estado para usar enum
--- Primero, cambiar el tipo de columna a VARCHAR más largo para el enum
-ALTER TABLE lotes 
-MODIFY COLUMN estado VARCHAR(50) NOT NULL DEFAULT 'DISPONIBLE';
+SET @tabla_lotes = (
+    SELECT CASE
+        WHEN EXISTS (SELECT 1 FROM information_schema.tables t WHERE t.table_schema = @esquema AND t.table_name = 'cultivo_lotes')
+            THEN 'cultivo_lotes'
+        WHEN EXISTS (SELECT 1 FROM information_schema.tables t WHERE t.table_schema = @esquema AND t.table_name = 'lotes')
+            THEN 'lotes'
+        ELSE NULL
+    END
+);
 
--- 3. Actualizar registros existentes para usar los nuevos valores de enum
-UPDATE lotes 
-SET estado = CASE 
-    WHEN estado = 'DISPONIBLE' THEN 'DISPONIBLE'
-    WHEN estado = 'OCUPADO' THEN 'SEMBRADO'
-    WHEN estado = 'EN_DESCANSO' THEN 'EN_DESCANSO'
-    ELSE 'DISPONIBLE'
-END;
+-- 1. Agregar columnas nuevas si no existen
+SET @sql = IF(@tabla_lotes IS NULL, 'SELECT 1',
+    IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @esquema AND TABLE_NAME = @tabla_lotes AND COLUMN_NAME = 'fecha_ultimo_cambio_estado') > 0,
+        'SELECT 1',
+        CONCAT('ALTER TABLE ', @tabla_lotes, ' ADD COLUMN fecha_ultimo_cambio_estado TIMESTAMP NULL, ADD COLUMN motivo_cambio_estado VARCHAR(255) NULL, ADD COLUMN fecha_cosecha_real DATE NULL, ADD COLUMN rendimiento_esperado DECIMAL(10,2) NULL, ADD COLUMN rendimiento_real DECIMAL(10,2) NULL')
+    )
+);
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
--- 4. Agregar índices para mejorar el rendimiento de consultas por estado
-CREATE INDEX idx_lotes_estado ON lotes(estado);
-CREATE INDEX idx_lotes_fecha_cambio_estado ON lotes(fecha_ultimo_cambio_estado);
-CREATE INDEX idx_lotes_fecha_siembra ON lotes(fecha_siembra);
-CREATE INDEX idx_lotes_fecha_cosecha_esperada ON lotes(fecha_cosecha_esperada);
+-- 2. Ampliar columna estado
+SET @sql = IF(@tabla_lotes IS NULL, 'SELECT 1',
+    CONCAT('ALTER TABLE ', @tabla_lotes, ' MODIFY COLUMN estado VARCHAR(50) NOT NULL DEFAULT ''DISPONIBLE''')
+);
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
--- 5. Agregar comentarios para documentar las nuevas columnas
-ALTER TABLE lotes 
-MODIFY COLUMN estado VARCHAR(50) NOT NULL DEFAULT 'DISPONIBLE' 
-COMMENT 'Estado actual del lote en el ciclo de cultivo';
+-- 3. Actualizar valores legacy
+SET @sql = IF(@tabla_lotes IS NULL, 'SELECT 1',
+    CONCAT('UPDATE ', @tabla_lotes, ' SET estado = CASE WHEN estado = ''DISPONIBLE'' THEN ''DISPONIBLE'' WHEN estado = ''OCUPADO'' THEN ''SEMBRADO'' WHEN estado = ''EN_DESCANSO'' THEN ''EN_DESCANSO'' ELSE ''DISPONIBLE'' END')
+);
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
-ALTER TABLE lotes 
-MODIFY COLUMN fecha_ultimo_cambio_estado TIMESTAMP NULL 
-COMMENT 'Fecha y hora del último cambio de estado';
+-- 4. Índices (solo si no existen)
+SET @sql = IF(@tabla_lotes IS NULL OR (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @esquema AND table_name = @tabla_lotes AND index_name = 'idx_lotes_estado') > 0,
+    'SELECT 1', CONCAT('CREATE INDEX idx_lotes_estado ON ', @tabla_lotes, '(estado)'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
-ALTER TABLE lotes 
-MODIFY COLUMN motivo_cambio_estado VARCHAR(255) NULL 
-COMMENT 'Motivo del último cambio de estado';
+SET @sql = IF(@tabla_lotes IS NULL OR (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @esquema AND table_name = @tabla_lotes AND index_name = 'idx_lotes_fecha_cambio_estado') > 0,
+    'SELECT 1', CONCAT('CREATE INDEX idx_lotes_fecha_cambio_estado ON ', @tabla_lotes, '(fecha_ultimo_cambio_estado)'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
-ALTER TABLE lotes 
-MODIFY COLUMN fecha_cosecha_real DATE NULL 
-COMMENT 'Fecha real de cosecha (cuando se completó)';
+SET @sql = IF(@tabla_lotes IS NULL OR (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @esquema AND table_name = @tabla_lotes AND index_name = 'idx_lotes_fecha_siembra') > 0,
+    'SELECT 1', CONCAT('CREATE INDEX idx_lotes_fecha_siembra ON ', @tabla_lotes, '(fecha_siembra)'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
-ALTER TABLE lotes 
-MODIFY COLUMN rendimiento_esperado DECIMAL(10,2) NULL 
-COMMENT 'Rendimiento esperado en toneladas por hectárea';
+SET @sql = IF(@tabla_lotes IS NULL OR (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @esquema AND table_name = @tabla_lotes AND index_name = 'idx_lotes_fecha_cosecha_esperada') > 0,
+    'SELECT 1', CONCAT('CREATE INDEX idx_lotes_fecha_cosecha_esperada ON ', @tabla_lotes, '(fecha_cosecha_esperada)'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
-ALTER TABLE lotes 
-MODIFY COLUMN rendimiento_real DECIMAL(10,2) NULL 
-COMMENT 'Rendimiento real obtenido en toneladas por hectárea';
-
--- 6. Verificar que la migración se aplicó correctamente
-SELECT 
-    COLUMN_NAME,
-    DATA_TYPE,
-    IS_NULLABLE,
-    COLUMN_DEFAULT,
-    COLUMN_COMMENT
-FROM INFORMATION_SCHEMA.COLUMNS 
-WHERE TABLE_NAME = 'lotes' 
-AND TABLE_SCHEMA = DATABASE()
-AND COLUMN_NAME IN ('estado', 'fecha_ultimo_cambio_estado', 'motivo_cambio_estado', 
-                   'fecha_cosecha_real', 'rendimiento_esperado', 'rendimiento_real')
-ORDER BY ORDINAL_POSITION;
+SELECT 'Migración V1_8 lotes aplicada (modo defensivo)' AS mensaje;

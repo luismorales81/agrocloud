@@ -1,35 +1,46 @@
 # ============================================================
-# DOCKERFILE PRODUCCIÓN - AgroGestion Backend (Render/Railway/Fly.io)
+# Imagen de producción — AgroGestion Backend (Spring Boot)
+# Multi-stage. Sin secretos, perfiles ni URLs fijas en la imagen.
+# Contexto de build: agrogestion-backend/
 # ============================================================
-# Perfil activo: definir SPRING_PROFILES_ACTIVE en el entorno (ej: prod, railway-mysql).
-# No se fija perfil ni credenciales en la imagen.
 
-# ETAPA 1: Build
-FROM maven:3.9.5-eclipse-temurin-17 AS build
+# --- Etapa 1: compilación ---
+FROM maven:3.9.9-eclipse-temurin-17 AS compilacion
 
 WORKDIR /app
 
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+RUN mvn -B dependency:go-offline -DskipTests
 
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN mvn -B -DskipTests package \
+    && find target -maxdepth 1 -type f -name '*.jar' ! -name '*original*' -exec cp {} /app/aplicacion.jar \;
 
-# ETAPA 2: Runtime
-FROM eclipse-temurin:17-jre-alpine AS runtime
+# --- Etapa 2: ejecución ---
+FROM eclipse-temurin:17-jre-alpine AS ejecucion
 
-RUN apk add --no-cache wget
+RUN apk add --no-cache wget tzdata \
+    && addgroup -S agrocloud \
+    && adduser -S agrocloud -G agrocloud \
+    && mkdir -p /app/eula-pdfs /app/logs \
+    && chown -R agrocloud:agrocloud /app
 
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
 
-# Puerto (cloud inyecta PORT; Spring lee server.port=${PORT:8080})
+COPY --from=compilacion --chown=agrocloud:agrocloud /app/aplicacion.jar app.jar
+
+USER agrocloud
+
+# Perfil, datasource, JWT y CORS se inyectan en tiempo de ejecución.
+ENV TZ=UTC
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
+ENV SERVER_PORT=8080
+
 EXPOSE 8080
 
-# Perfil y opciones por variable de entorno, no hardcodeados
-ENV JAVA_OPTS="-Xmx512m -Xms256m"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=8 \
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:${SERVER_PORT:-8080}/api/health || exit 1
 
-HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+STOPSIGNAL SIGTERM
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Duser.timezone=${TZ} -jar app.jar"]

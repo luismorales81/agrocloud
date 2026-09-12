@@ -133,16 +133,11 @@ public class FieldController {
         // Para tests, usar usuario mock si no hay autenticación
         User user;
         if (userDetails == null) {
-            // Usuario mock para tests
-            user = userService.findByEmailWithAllRelations("test@test.com");
-            if (user == null) {
-                throw new IllegalArgumentException("Usuario no autenticado");
-            }
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-            if (user == null) {
-                throw new ResourceNotFoundException("Usuario no encontrado");
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
         
         List<Field> fields = fieldService.getFieldsByUser(user);
@@ -161,16 +156,11 @@ public class FieldController {
         // Para tests, usar usuario mock si no hay autenticación
         User user;
         if (userDetails == null) {
-            // Usuario mock para tests
-            user = userService.findByEmailWithAllRelations("test@test.com");
-            if (user == null) {
-                throw new IllegalArgumentException("Usuario no autenticado");
-            }
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-            if (user == null) {
-                throw new ResourceNotFoundException("Usuario no encontrado");
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
         
         Optional<Field> field = fieldService.getFieldById(id, user);
@@ -187,16 +177,11 @@ public class FieldController {
         // Para tests, usar usuario mock si no hay autenticación
         User user;
         if (userDetails == null) {
-            // Usuario mock para tests
-            user = userService.findByEmailWithAllRelations("test@test.com");
-            if (user == null) {
-                throw new IllegalArgumentException("Usuario no autenticado");
-            }
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-            if (user == null) {
-                throw new ResourceNotFoundException("Usuario no encontrado");
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
         
         if (fieldDTO == null) {
@@ -215,16 +200,11 @@ public class FieldController {
         // Para tests, usar usuario mock si no hay autenticación
         User user;
         if (userDetails == null) {
-            // Usuario mock para tests
-            user = userService.findByEmailWithAllRelations("test@test.com");
-            if (user == null) {
-                throw new IllegalArgumentException("Usuario no autenticado");
-            }
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-            if (user == null) {
-                throw new ResourceNotFoundException("Usuario no encontrado");
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
         
         if (fieldDTO == null) {
@@ -247,16 +227,11 @@ public class FieldController {
         // Para tests, usar usuario mock si no hay autenticación
         User user;
         if (userDetails == null) {
-            // Usuario mock para tests
-            user = userService.findByEmailWithAllRelations("test@test.com");
-            if (user == null) {
-                throw new IllegalArgumentException("Usuario no autenticado");
-            }
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-            if (user == null) {
-                throw new ResourceNotFoundException("Usuario no encontrado");
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
         
         boolean deleted = fieldService.deleteField(id, user);
@@ -273,16 +248,11 @@ public class FieldController {
         // Para tests, usar usuario mock si no hay autenticación
         User user;
         if (userDetails == null) {
-            // Usuario mock para tests
-            user = userService.findByEmailWithAllRelations("test@test.com");
-            if (user == null) {
-                throw new IllegalArgumentException("Usuario no autenticado");
-            }
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-            if (user == null) {
-                throw new ResourceNotFoundException("Usuario no encontrado");
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
         
         if (nombre == null || nombre.trim().isEmpty()) {
@@ -300,16 +270,11 @@ public class FieldController {
         // Para tests, usar usuario mock si no hay autenticación
         User user;
         if (userDetails == null) {
-            // Usuario mock para tests
-            user = userService.findByEmailWithAllRelations("test@test.com");
-            if (user == null) {
-                throw new IllegalArgumentException("Usuario no autenticado");
-            }
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-            if (user == null) {
-                throw new ResourceNotFoundException("Usuario no encontrado");
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
         
         FieldService.FieldStats stats = fieldService.getFieldStats(user);
@@ -322,16 +287,11 @@ public class FieldController {
         // Para tests, usar usuario mock si no hay autenticación
         User user;
         if (userDetails == null) {
-            // Usuario mock para tests
-            user = userService.findByEmailWithAllRelations("test@test.com");
-            if (user == null) {
-                throw new IllegalArgumentException("Usuario no autenticado");
-            }
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
-            if (user == null) {
-                throw new ResourceNotFoundException("Usuario no encontrado");
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
         }
         
         if (estado == null || estado.trim().isEmpty()) {

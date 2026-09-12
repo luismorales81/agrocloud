@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Entidad que representa un Padrillo (macho reproductor)
  */
 @Entity
-@Table(name = "porcinos_padrillos")
+@Table(name = "porcinos_legacy_padrillos")
 @EntityListeners(AuditingEntityListener.class)
 public class Padrillo {
 

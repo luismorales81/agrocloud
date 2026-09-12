@@ -14,7 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "porcinos_servicios")
+@Table(name = "porcinos_legacy_servicios")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"madre", "empresa", "usuario"})
 public class Servicio {

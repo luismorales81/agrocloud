@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * Ejemplos: Normal, Asistido, Distocia, Cesárea, etc.
  */
 @Entity
-@Table(name = "porcinos_tipos_parto")
+@Table(name = "porcinos_legacy_tipos_parto")
 @EntityListeners(AuditingEntityListener.class)
 public class TipoParto {
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { climaService } from '../services/climaService';
 
 interface WeatherData {
   location: string;
@@ -44,11 +45,6 @@ const WeatherWidget: React.FC = () => {
   const [coordinates, setCoordinates] = useState<{lat: number, lon: number} | null>(null);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
 
-  // API Key de OpenWeatherMap - Usar datos simulados si no hay API key válida
-  const API_KEY: string = '9dee7c2c4e36ce49c32fab5a51d6e25b';
-  const USE_MOCK_DATA = API_KEY === 'demo-key' || API_KEY === '1234567890abcdef';
-  const BASE_URL = 'https://api.openweathermap.org/data/2.5';
-
   useEffect(() => {
     getCurrentLocation();
   }, []);
@@ -77,7 +73,6 @@ const WeatherWidget: React.FC = () => {
         const { latitude, longitude } = position.coords;
         setCoordinates({ lat: latitude, lon: longitude });
         setLocationPermission('granted');
-        getLocationName(latitude, longitude);
       },
       (error) => {
         console.error('❌ [WeatherWidget] Error obteniendo ubicación:', error);
@@ -96,25 +91,42 @@ const WeatherWidget: React.FC = () => {
     );
   };
 
-  const getLocationName = async (lat: number, lon: number) => {
-    try {
-      console.log('🔧 [WeatherWidget] Obteniendo nombre de ubicación...');
-      const response = await fetch(
-        `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${API_KEY}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data[0]) {
-          const locationName = `${data[0].name}, ${data[0].country}`;
-          console.log('✅ [WeatherWidget] Nombre de ubicación:', locationName);
-          setLocation(locationName);
-        }
-      }
-    } catch (error) {
-      console.error('❌ [WeatherWidget] Error obteniendo nombre de ubicación:', error);
-      setLocation('Ubicación actual');
+  const mapearRespuestaClima = (
+    datos: Awaited<ReturnType<typeof climaService.obtenerPorCoordenadas>>,
+    coords: { lat: number; lon: number }
+  ): WeatherData => {
+    const actual = datos.current;
+    const pronostico: ForecastDay[] = (datos.forecast ?? []).slice(0, 5).map((dia) => ({
+      date: typeof dia.date === 'string' ? dia.date : String(dia.date),
+      temp: { min: Math.round(dia.minTemperature), max: Math.round(dia.maxTemperature) },
+      description: dia.weatherDescription,
+      icon: dia.icon,
+      humidity: actual.humidity,
+      windSpeed: Math.round(actual.windSpeed * 3.6),
+    }));
+    const resultado: WeatherData = {
+      location: datos.location || 'Ubicación actual',
+      temperature: Math.round(actual.temperature),
+      description: actual.weatherDescription,
+      humidity: actual.humidity,
+      windSpeed: Math.round(actual.windSpeed * 3.6),
+      pressure: 1013,
+      icon: actual.icon,
+      coordinates: coords,
+      forecast: pronostico,
+      alerts: [],
+    };
+    if (resultado.temperature > 30 || resultado.windSpeed > 20) {
+      resultado.alerts.push({
+        event: 'Condiciones Adversas',
+        description:
+          resultado.temperature > 30
+            ? 'Temperatura alta - Evitar labores en horas pico'
+            : 'Viento fuerte - No recomendable para pulverizaciones',
+        severity: 'advisory',
+      });
     }
+    return resultado;
   };
 
   const fetchWeatherData = async () => {
@@ -125,141 +137,10 @@ const WeatherWidget: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      let weatherData: WeatherData;
+      const datos = await climaService.obtenerPorCoordenadas(coordinates.lat, coordinates.lon);
+      const weatherData = mapearRespuestaClima(datos, coordinates);
+      setLocation(weatherData.location);
 
-      if (USE_MOCK_DATA) {
-        // Usar datos simulados para demostración
-        console.log('🔧 [WeatherWidget] Usando datos simulados para demostración');
-        
-        weatherData = {
-          location: location,
-          temperature: 24,
-          description: 'Parcialmente nublado',
-          humidity: 68,
-          windSpeed: 15,
-          pressure: 1012,
-          icon: '02d',
-          coordinates: coordinates,
-          forecast: [
-            {
-              date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              temp: { min: 18, max: 26 },
-              description: 'Soleado',
-              icon: '01d',
-              humidity: 60,
-              windSpeed: 12
-            },
-            {
-              date: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString().split('T')[0],
-              temp: { min: 16, max: 23 },
-              description: 'Nublado',
-              icon: '03d',
-              humidity: 75,
-              windSpeed: 18
-            },
-            {
-              date: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString().split('T')[0],
-              temp: { min: 14, max: 20 },
-              description: 'Lluvia ligera',
-              icon: '10d',
-              humidity: 85,
-              windSpeed: 20
-            },
-            {
-              date: new Date(Date.now() + 96 * 60 * 60 * 1000).toISOString().split('T')[0],
-              temp: { min: 12, max: 18 },
-              description: 'Lluvia',
-              icon: '09d',
-              humidity: 90,
-              windSpeed: 22
-            },
-            {
-              date: new Date(Date.now() + 120 * 60 * 60 * 1000).toISOString().split('T')[0],
-              temp: { min: 15, max: 22 },
-              description: 'Parcialmente nublado',
-              icon: '02d',
-              humidity: 70,
-              windSpeed: 14
-            }
-          ],
-          alerts: []
-        };
-
-        // Generar alertas basadas en condiciones simuladas
-        if (weatherData.temperature > 25) {
-          weatherData.alerts.push({
-            event: 'Temperatura Elevada',
-            description: 'Temperatura alta - Considerar riego adicional',
-            severity: 'advisory'
-          });
-        }
-      } else {
-        // Obtener datos reales de la API
-        console.log('🔧 [WeatherWidget] Obteniendo datos reales de OpenWeatherMap...');
-        
-        // Obtener clima actual
-        const currentWeatherResponse = await fetch(
-          `${BASE_URL}/weather?lat=${coordinates.lat}&lon=${coordinates.lon}&appid=${API_KEY}&units=metric&lang=es`
-        );
-
-        if (!currentWeatherResponse.ok) {
-          throw new Error('Error obteniendo clima actual');
-        }
-
-        const currentWeather = await currentWeatherResponse.json();
-
-        // Obtener pronóstico de 5 días
-        const forecastResponse = await fetch(
-          `${BASE_URL}/forecast?lat=${coordinates.lat}&lon=${coordinates.lon}&appid=${API_KEY}&units=metric&lang=es`
-        );
-
-        if (!forecastResponse.ok) {
-          throw new Error('Error obteniendo pronóstico');
-        }
-
-        const forecastData = await forecastResponse.json();
-
-        // Procesar datos del clima actual
-        weatherData = {
-          location: location,
-          temperature: Math.round(currentWeather.main.temp),
-          description: currentWeather.weather[0].description,
-          humidity: currentWeather.main.humidity,
-          windSpeed: Math.round(currentWeather.wind.speed * 3.6), // Convertir m/s a km/h
-          pressure: currentWeather.main.pressure,
-          icon: currentWeather.weather[0].icon,
-          coordinates: coordinates,
-          forecast: [],
-          alerts: []
-        };
-
-        // Procesar pronóstico (tomar un día por cada 24 horas)
-        const dailyForecast = forecastData.list.filter((_: any, index: number) => index % 8 === 0);
-        weatherData.forecast = dailyForecast.slice(1, 6).map((day: any) => ({
-          date: day.dt_txt.split(' ')[0],
-          temp: {
-            min: Math.round(day.main.temp_min),
-            max: Math.round(day.main.temp_max)
-          },
-          description: day.weather[0].description,
-          icon: day.weather[0].icon,
-          humidity: day.main.humidity,
-          windSpeed: Math.round(day.wind.speed * 3.6)
-        }));
-
-        // Generar consejos agrícolas basados en alertas
-        if (weatherData.temperature > 30 || weatherData.windSpeed > 20) {
-          weatherData.alerts.push({
-            event: 'Condiciones Adversas',
-            description: weatherData.temperature > 30 
-              ? 'Temperatura alta - Evitar labores en horas pico'
-              : 'Viento fuerte - No recomendable para pulverizaciones',
-            severity: 'advisory'
-          });
-        }
-      }
-
-      console.log('✅ [WeatherWidget] Datos del clima obtenidos:', weatherData);
       setWeatherData(weatherData);
     } catch (err) {
       console.error('❌ [WeatherWidget] Error obteniendo datos del clima:', err);

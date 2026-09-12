@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -24,17 +25,25 @@ public class WeatherService {
     
     private static final Logger logger = LoggerFactory.getLogger(WeatherService.class);
     private static final String OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5";
-    private static final String API_KEY = "8ee79cbd9f27221c0668a98dca8bd466";
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final String claveApi;
     
     @Autowired
     @org.springframework.beans.factory.annotation.Qualifier("weatherApiUsageServiceCore")
     private WeatherApiUsageService weatherApiUsageService;
     
-    public WeatherService() {
+    public WeatherService(@Value("${weather.openweather.api-key:}") String claveApi) {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
+        this.claveApi = claveApi != null ? claveApi.trim() : "";
+    }
+
+    private String obtenerClaveApi() {
+        if (claveApi == null || claveApi.isBlank()) {
+            throw new IllegalStateException("OPENWEATHER_API_KEY no está configurada. Definila en .env.");
+        }
+        return claveApi;
     }
     
     /**
@@ -87,9 +96,9 @@ public class WeatherService {
      */
     private WeatherCurrentDTO getCurrentWeather(double latitude, double longitude) {
         String url = String.format("%s/weather?lat=%.4f&lon=%.4f&appid=%s&units=metric&lang=es",
-                                 OPENWEATHER_BASE_URL, latitude, longitude, API_KEY);
+                                 OPENWEATHER_BASE_URL, latitude, longitude, obtenerClaveApi());
         
-        logger.debug("URL de OpenWeatherMap (current): {}", url);
+        logger.debug("Consultando OpenWeatherMap (current) lat={} lon={}", latitude, longitude);
         
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
         
@@ -126,9 +135,9 @@ public class WeatherService {
      */
     private List<WeatherForecastDTO> getForecast(double latitude, double longitude) {
         String url = String.format("%s/forecast?lat=%.4f&lon=%.4f&appid=%s&units=metric&lang=es&cnt=7",
-                                 OPENWEATHER_BASE_URL, latitude, longitude, API_KEY);
+                                 OPENWEATHER_BASE_URL, latitude, longitude, obtenerClaveApi());
         
-        logger.debug("URL de OpenWeatherMap (forecast): {}", url);
+        logger.debug("Consultando OpenWeatherMap (forecast) lat={} lon={}", latitude, longitude);
         
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
         

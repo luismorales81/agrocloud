@@ -43,5 +43,7 @@ export interface ModuleConfig {
   color: string;
   menu: MenuItem[];
   routes: ModuleRoute[];
+  /** Si es false, el módulo sigue enrutable pero no aparece en el selector principal. */
+  visibleEnSelector?: boolean;
 }
 

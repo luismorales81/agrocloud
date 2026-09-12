@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa los parámetros generales del establecimiento porcino
  */
 @Entity
-@Table(name = "porcinos_parametros_establecimiento_porcinos")
+@Table(name = "porcinos_legacy_parametros_establecimiento_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class ParametrosEstablecimientoPorcino {
 

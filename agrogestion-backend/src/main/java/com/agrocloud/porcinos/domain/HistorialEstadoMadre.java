@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "porcinos_historial_estados_madres")
+@Table(name = "porcinos_legacy_historial_estados_madres")
 @EntityListeners(AuditingEntityListener.class)
 public class HistorialEstadoMadre {
 

@@ -2,6 +2,7 @@ package com.agrocloud.controller;
 
 import com.agrocloud.annotation.RequiresModule;
 import com.agrocloud.core.application.UserService;
+import com.agrocloud.core.security.ServicioSeguridadContexto;
 import com.agrocloud.dto.porcinos.PlanRecriaEdicionRespuestaDto;
 import com.agrocloud.dto.porcinos.PlanRecriaResumenDto;
 import com.agrocloud.dto.wizard.WizardPlanRecriaPropuestaDto;
@@ -25,39 +26,39 @@ public class GestionPlanRecriaController {
 
     private final ServicioWizardPlanRecriaPersistencia servicioWizardPlanRecriaPersistencia;
     private final UserService userService;
+    private final ServicioSeguridadContexto servicioSeguridadContexto;
 
     public GestionPlanRecriaController(ServicioWizardPlanRecriaPersistencia servicioWizardPlanRecriaPersistencia,
-                                       UserService userService) {
+                                       UserService userService,
+                                       ServicioSeguridadContexto servicioSeguridadContexto) {
         this.servicioWizardPlanRecriaPersistencia = servicioWizardPlanRecriaPersistencia;
         this.userService = userService;
+        this.servicioSeguridadContexto = servicioSeguridadContexto;
     }
 
     @GetMapping
     public ResponseEntity<List<PlanRecriaResumenDto>> listar(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @AuthenticationPrincipal UserDetails userDetails) {
         validarUsuario(userDetails);
-        return ResponseEntity.ok(servicioWizardPlanRecriaPersistencia.listarResumenes(empresaId));
+        return ResponseEntity.ok(servicioWizardPlanRecriaPersistencia.listarResumenes(servicioSeguridadContexto.obtenerEmpresaIdActual()));
     }
 
     @GetMapping("/{planId}")
     public ResponseEntity<PlanRecriaEdicionRespuestaDto> obtener(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable long planId,
             @AuthenticationPrincipal UserDetails userDetails) {
         validarUsuario(userDetails);
-        return ResponseEntity.ok(servicioWizardPlanRecriaPersistencia.obtenerParaEdicion(planId, empresaId));
+        return ResponseEntity.ok(servicioWizardPlanRecriaPersistencia.obtenerParaEdicion(planId, servicioSeguridadContexto.obtenerEmpresaIdActual()));
     }
 
     @PutMapping("/{planId}")
     @RequiresModule(value = "pigs", permission = "write")
     public ResponseEntity<Map<String, Object>> actualizar(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable long planId,
             @RequestBody WizardPlanRecriaPropuestaDto propuesta,
             @AuthenticationPrincipal UserDetails userDetails) {
         validarUsuario(userDetails);
-        servicioWizardPlanRecriaPersistencia.actualizarPlan(planId, empresaId, propuesta);
+        servicioWizardPlanRecriaPersistencia.actualizarPlan(planId, servicioSeguridadContexto.obtenerEmpresaIdActual(), propuesta);
         Map<String, Object> body = new HashMap<>();
         body.put("planRecriaId", planId);
         body.put("mensaje", "Plan actualizado");
@@ -67,11 +68,10 @@ public class GestionPlanRecriaController {
     @DeleteMapping("/{planId}")
     @RequiresModule(value = "pigs", permission = "write")
     public ResponseEntity<Map<String, String>> desactivar(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable long planId,
             @AuthenticationPrincipal UserDetails userDetails) {
         validarUsuario(userDetails);
-        servicioWizardPlanRecriaPersistencia.desactivarPlan(planId, empresaId);
+        servicioWizardPlanRecriaPersistencia.desactivarPlan(planId, servicioSeguridadContexto.obtenerEmpresaIdActual());
         return ResponseEntity.ok(Map.of("mensaje", "Plan desactivado"));
     }
 

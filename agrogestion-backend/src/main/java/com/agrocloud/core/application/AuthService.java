@@ -282,7 +282,7 @@ public class AuthService implements UserDetailsService {
     }
 
     public void resetPassword(String token, String newPassword) {
-        logger.info("Reseteando contraseña con token: {}", token);
+        logger.info("Reseteando contraseña con token de un solo uso");
 
         User user = userRepository.findByResetPasswordToken(token)
                 .orElseThrow(() -> new RuntimeException("Token de reset inválido"));

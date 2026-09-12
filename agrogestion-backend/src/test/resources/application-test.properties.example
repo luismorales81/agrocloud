@@ -1,0 +1,35 @@
+# ============================================================
+# Configuración de tests de integración — AgroGestion Backend
+# ============================================================
+# Copiar a application-test.properties (gitignored) y ajustar credenciales.
+#
+# IMPORTANTE: Los tests de integración CRUD requieren MySQL con esquema Flyway aplicado.
+# Local: usar BD `agrocloud` ya migrada, o aplicar migrate sobre BD vacía (ver docs/FLYWAY-BD-VACIA.md).
+# CI: el workflow aplica flyway:migrate sobre `agrocloud_test_integration` antes de los tests.
+
+# BD con esquema existente (recomendado local)
+spring.datasource.url=${DATABASE_URL:jdbc:mysql://localhost:3306/agrocloud?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8}
+spring.datasource.username=${DATABASE_USERNAME:${DB_USER:root}}
+spring.datasource.password=${DATABASE_PASSWORD:${DB_PASS:123456}}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+spring.jpa.open-in-view=false
+
+# Deshabilitado en tests: el esquema debe existir previamente
+spring.flyway.enabled=false
+spring.sql.init.mode=never
+
+jwt.secret=${JWT_SECRET:clave-jwt-test-agrogestion-minimo-32-caracteres}
+jwt.expiration=86400000
+chat.ia.encryption-key=${CHAT_IA_ENCRYPTION_KEY:AgroGestionChatIaClaveDesarrollo32}
+
+logging.level.com.agrocloud=WARN
+logging.level.org.springframework=WARN
+logging.level.org.hibernate=WARN
+
+# --- Alternativa CI / BD vacía con Flyway previo ---
+# spring.datasource.url=jdbc:mysql://127.0.0.1:3306/agrocloud_test_integration?createDatabaseIfNotExist=true&...
+# Ejecutar antes: mvn flyway:migrate -Dflyway.url=... -Dflyway.outOfOrder=true

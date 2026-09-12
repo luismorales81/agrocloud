@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,24 +45,6 @@ public class EmpresaController {
     @Autowired
     @Qualifier("empresaUsuarioServiceCore")
     private EmpresaUsuarioService empresaUsuarioService;
-    
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    /**
-     * Endpoint de prueba para verificar autenticación
-     */
-    @GetMapping("/test")
-    public ResponseEntity<String> testEndpoint(Authentication authentication) {
-        logger.info("🔧 [EmpresaController] Test endpoint llamado");
-        if (authentication != null) {
-            logger.info("🔧 [EmpresaController] Usuario autenticado: {}", authentication.getName());
-            return ResponseEntity.ok("Usuario autenticado: " + authentication.getName());
-        } else {
-            logger.warn("🔧 [EmpresaController] Usuario no autenticado");
-            return ResponseEntity.status(401).body("Usuario no autenticado");
-        }
-    }
 
     /**
      * Obtiene las empresas del usuario autenticado con su rol en cada empresa
@@ -84,65 +65,30 @@ public class EmpresaController {
 
             logger.info("Usuario encontrado: {} (ID: {})", usuario.getEmail(), usuario.getId());
             
-            // Verificar si es SUPERADMIN usando consulta directa a la base de datos
-            boolean esSuperAdmin = false;
-            try {
-                String sql = "SELECT rol FROM usuario_empresas WHERE usuario_id = ? AND estado = 'ACTIVO' AND rol = 'SUPERADMIN' LIMIT 1";
-                List<String> roles = jdbcTemplate.queryForList(sql, String.class, usuario.getId());
-                esSuperAdmin = !roles.isEmpty();
-                logger.info("Usuario es SUPERADMIN: {}", esSuperAdmin);
-            } catch (Exception e) {
-                logger.warn("Error verificando rol SUPERADMIN: {}", e.getMessage());
-            }
-            
-            List<UsuarioEmpresaDTO> empresasDTO;
-            
-            if (esSuperAdmin) {
-                // Si es SUPERADMIN, devolver todas las empresas del sistema
-                logger.info("Usuario es SUPERADMIN, obteniendo todas las empresas");
-                List<Empresa> todasLasEmpresas = empresaService.obtenerTodasLasEmpresas();
-                empresasDTO = todasLasEmpresas.stream()
-                        .map(empresa -> {
-                            UsuarioEmpresaDTO dto = new UsuarioEmpresaDTO();
-                            dto.setId(0L); // ID temporal para SUPERADMIN
-                            dto.setUsuarioId(usuario.getId());
-                            dto.setUsuarioEmail(usuario.getEmail());
-                            dto.setUsuarioNombre(usuario.getFirstName() + " " + usuario.getLastName());
-                            dto.setEmpresaId(empresa.getId());
-                            dto.setEmpresaNombre(empresa.getNombre());
-                            dto.setEmpresaCuit(empresa.getCuit());
-                            dto.setEmpresaEmail(empresa.getEmailContacto());
-                            dto.setRol(RolEmpresa.SUPERADMIN);
-                            dto.setEstado(com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO);
-                            return dto;
-                        })
-                        .collect(Collectors.toList());
-            } else {
-                // Si no es SUPERADMIN, usar la lógica normal
-                List<UsuarioEmpresa> relaciones = empresaUsuarioService.obtenerEmpresasActivasDeUsuario(usuario.getId());
-                logger.info("Relaciones encontradas: {}", relaciones.size());
-                
-                empresasDTO = relaciones.stream()
-                        .map(relacion -> {
-                            UsuarioEmpresaDTO dto = new UsuarioEmpresaDTO();
-                            dto.setId(relacion.getId());
-                            // Usar datos del usuario autenticado en lugar de la relación lazy
-                            dto.setUsuarioId(usuario.getId());
-                            dto.setUsuarioEmail(usuario.getEmail());
-                            dto.setUsuarioNombre(usuario.getFirstName() + " " + usuario.getLastName());
-                            dto.setEmpresaId(relacion.getEmpresa().getId());
-                            dto.setEmpresaNombre(relacion.getEmpresa().getNombre());
-                            dto.setEmpresaCuit(relacion.getEmpresa().getCuit());
-                            dto.setEmpresaEmail(relacion.getEmpresa().getEmailContacto());
-                            // Mapear rol antiguo a rol actualizado
-                            RolEmpresa rolOriginal = relacion.getRol();
-                            RolEmpresa rolActualizado = rolOriginal != null ? rolOriginal.getRolActualizado() : rolOriginal;
-                            dto.setRol(rolActualizado);
-                            dto.setEstado(relacion.getEstado());
-                            return dto;
-                        })
-                        .collect(Collectors.toList());
-            }
+            // Siempre devolver solo las empresas asignadas al usuario.
+            // Antes, SUPERADMIN recibía todas las empresas del sistema (cientos),
+            // lo que hacía timeout en el frontend y dejaba el selector sin módulos.
+            List<UsuarioEmpresa> relaciones = empresaUsuarioService.obtenerEmpresasActivasDeUsuario(usuario.getId());
+            logger.info("Relaciones encontradas: {}", relaciones.size());
+
+            List<UsuarioEmpresaDTO> empresasDTO = relaciones.stream()
+                    .map(relacion -> {
+                        UsuarioEmpresaDTO dto = new UsuarioEmpresaDTO();
+                        dto.setId(relacion.getId());
+                        dto.setUsuarioId(usuario.getId());
+                        dto.setUsuarioEmail(usuario.getEmail());
+                        dto.setUsuarioNombre(usuario.getFirstName() + " " + usuario.getLastName());
+                        dto.setEmpresaId(relacion.getEmpresa().getId());
+                        dto.setEmpresaNombre(relacion.getEmpresa().getNombre());
+                        dto.setEmpresaCuit(relacion.getEmpresa().getCuit());
+                        dto.setEmpresaEmail(relacion.getEmpresa().getEmailContacto());
+                        RolEmpresa rolOriginal = relacion.getRol();
+                        RolEmpresa rolActualizado = rolOriginal != null ? rolOriginal.getRolActualizado() : rolOriginal;
+                        dto.setRol(rolActualizado);
+                        dto.setEstado(relacion.getEstado());
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
             
             logger.info("Empresas obtenidas: {}", empresasDTO.size());
             return ResponseEntity.ok(empresasDTO);

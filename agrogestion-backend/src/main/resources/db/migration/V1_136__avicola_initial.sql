@@ -167,6 +167,18 @@ COMMENT='Eventos sanitarios del lote';
 -- -----------------------------------------------------------------------------
 -- Catálogo de módulos: código heredado AVICOLA (V1_137 renombra a AVICOLA_CRIANZA y agrega AVICOLA_HUEVOS)
 -- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS modules (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_modules_code (code),
+    INDEX idx_modules_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO modules (name, code, description, active)
 VALUES (
     'Avícola',

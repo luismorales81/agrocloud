@@ -747,12 +747,6 @@ const LaboresManagement: React.FC = () => {
 
     try {
       setLoading(true);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
-        return;
-      }
 
       // Crear labor con insumos, maquinaria y mano de obra
       console.log('Tipo original:', formData.tipo);
@@ -830,12 +824,6 @@ const LaboresManagement: React.FC = () => {
     if (window.confirm('¿Está seguro de que desea eliminar esta labor?')) {
       try {
         setLoading(true);
-        
-        const token = localStorage.getItem('token');
-        if (!token) {
-          alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
-          return;
-        }
 
         await laboresService.eliminar(id);
         

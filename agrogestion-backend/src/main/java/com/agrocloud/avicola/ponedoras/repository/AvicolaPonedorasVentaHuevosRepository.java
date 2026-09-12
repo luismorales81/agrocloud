@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Ventas de huevos. Solo consultas con {@code empresaId}.
@@ -17,6 +18,9 @@ public interface AvicolaPonedorasVentaHuevosRepository extends JpaRepository<Avi
     List<AvicolaPonedorasVentaHuevos> buscarPorGalponIdYEmpresaId(
             @Param("galponId") Long galponId,
             @Param("empresaId") Long empresaId);
+
+    @Query("SELECT v FROM AvicolaPonedorasVentaHuevos v WHERE v.id = :id AND v.empresaId = :empresaId")
+    Optional<AvicolaPonedorasVentaHuevos> buscarPorIdYEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
 
     @Query("""
             SELECT COALESCE(SUM(v.total), 0)

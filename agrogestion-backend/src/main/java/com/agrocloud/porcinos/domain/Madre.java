@@ -22,7 +22,7 @@ import java.util.List;
  * Entidad que representa una Madre / Unidad productiva en el módulo de Porcinos
  */
 @Entity
-@Table(name = "porcinos_madres")
+@Table(name = "porcinos_legacy_madres")
 @EntityListeners(AuditingEntityListener.class)
 public class Madre {
 

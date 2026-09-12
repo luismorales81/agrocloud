@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useModule } from '../core/hooks/useModule';
 import { ModuleId } from '../core/types/module.types';
+import { availableModules as catalogoModulos } from '../modules';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
 import ModularSidebar from './ModularSidebar';
@@ -9,6 +10,7 @@ import AppNavigator from '../navigation/AppNavigator';
 import ChangePasswordModal from './ChangePasswordModal';
 import BarraContextoGlobal from './BarraContextoGlobal';
 import ModuleSelectorScreen from '../screens/ModuleSelectorScreen';
+import ChatIaWidget from './chatia/ChatIaWidget';
 
 /**
  * Dashboard modular que cambia según el módulo activo
@@ -27,15 +29,7 @@ const ModularDashboard: React.FC = () => {
   useEffect(() => {
     if (!loading) {
       const pathParts = location.pathname.split('/').filter(Boolean);
-      const modulosPorUrl: ModuleId[] = [
-        'cultivos',
-        'porcinos',
-        'avicola-crianza',
-        'avicola-huevos',
-        'avicola-ponedoras',
-        'feedlot',
-        'lecheria',
-      ];
+      const modulosPorUrl = catalogoModulos.map((m) => m.id);
       const moduleFromUrl =
         pathParts.length > 0 && modulosPorUrl.includes(pathParts[0] as ModuleId)
           ? (pathParts[0] as ModuleId)
@@ -84,15 +78,7 @@ const ModularDashboard: React.FC = () => {
   // Si no hay módulo seleccionado y no está cargando, mostrar selector o esperar
   if (!loading && !currentModule) {
     const pathParts = location.pathname.split('/').filter(Boolean);
-    const modulosPorUrl: ModuleId[] = [
-      'cultivos',
-      'porcinos',
-      'avicola-crianza',
-      'avicola-huevos',
-      'avicola-ponedoras',
-      'feedlot',
-      'lecheria',
-    ];
+    const modulosPorUrl = catalogoModulos.map((m) => m.id);
     const isModuleRoute = pathParts.length > 0 && modulosPorUrl.includes(pathParts[0] as ModuleId);
     
     if (!isModuleRoute && !location.pathname.startsWith('/select-module')) {
@@ -229,6 +215,8 @@ const ModularDashboard: React.FC = () => {
           onClose={() => setShowChangePassword(false)}
         />
       </div>
+
+      <ChatIaWidget />
 
       {/* Banner de estado offline */}
       {!isOnline && (

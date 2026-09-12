@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * Entidad que representa los parámetros productivos del módulo porcino
  */
 @Entity
-@Table(name = "porcinos_parametros_productivos_porcinos")
+@Table(name = "porcinos_legacy_parametros_productivos_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class ParametrosProductivosPorcino {
 

@@ -48,6 +48,7 @@ public class SecurityConfig {
                     "/api/auth/register",
                     "/api/auth/request-password-reset",
                     "/api/auth/reset-password",
+                    "/api/auth/logout",
                     "/api/health",
                     "/api/version",
                     "/api/eula/**"
@@ -59,6 +60,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/roles/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMINISTRADOR")
                 .requestMatchers("/api/empresas/**").hasAuthority("ROLE_SUPERADMIN")
                 .requestMatchers("/api/empresa-usuario/**").hasAuthority("ROLE_SUPERADMIN")
+                .requestMatchers("/api/test/**").denyAll()
                 .requestMatchers("/api/dashboard/**").authenticated()
                 .requestMatchers(
                     "/api/fields/**", "/api/campos/**", "/api/plots/**", "/api/cultivos/**",

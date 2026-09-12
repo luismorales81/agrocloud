@@ -48,38 +48,18 @@ export default defineConfig({
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
+        // No partir lucide/axios/vendor a mano: genera ciclos
+        // ("Cannot access 'X' before initialization") en el JS minificado.
         manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // React, React-DOM y React-Router en un chunk (carga crítica)
-            if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) {
-              return 'react-vendor';
-            }
-            // MUI y Emotion (gran librería)
-            if (id.includes('@mui') || id.includes('@emotion')) {
-              return 'mui';
-            }
-            // Axios (muy usada)
-            if (id.includes('axios')) {
-              return 'axios';
-            }
-            // Recharts (gráficos, solo en algunas vistas)
-            if (id.includes('recharts')) {
-              return 'recharts';
-            }
-            // Lucide icons
-            if (id.includes('lucide-react')) {
-              return 'lucide';
-            }
-            // Headless UI y Heroicons
-            if (id.includes('@headlessui') || id.includes('@heroicons')) {
-              return 'ui-icons';
-            }
-            // Google Maps (solo en vistas que usan mapa)
-            if (id.includes('@googlemaps') || id.includes('google.maps')) {
-              return 'maps';
-            }
-            // Resto de dependencias
-            return 'vendor';
+          if (!id.includes('node_modules')) {
+            return
+          }
+          if (
+            /[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/.test(
+              id
+            )
+          ) {
+            return 'react-vendor'
           }
         },
         chunkFileNames: 'assets/[name]-[hash].js',

@@ -112,13 +112,20 @@ const AdminUsuarios: React.FC = () => {
 
   useEffect(() => {
     try {
+      localStorage.removeItem('adminUsuarios.nuevoUsuario');
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('adminUsuarios.dialogCrear', dialogCrear ? '1' : '0');
     } catch {}
   }, [dialogCrear]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('adminUsuarios.nuevoUsuario', JSON.stringify(nuevoUsuario));
+      const { password: _omitir, ...datosSinPassword } = nuevoUsuario;
+      localStorage.setItem('adminUsuarios.nuevoUsuario', JSON.stringify(datosSinPassword));
     } catch {}
   }, [nuevoUsuario]);
 

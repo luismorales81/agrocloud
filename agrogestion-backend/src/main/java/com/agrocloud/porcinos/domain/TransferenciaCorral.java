@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Entidad que representa una transferencia de animales entre corrales/ubicaciones
  */
 @Entity
-@Table(name = "porcinos_transferencias_corral")
+@Table(name = "porcinos_legacy_transferencias_corral")
 @EntityListeners(AuditingEntityListener.class)
 public class TransferenciaCorral {
 

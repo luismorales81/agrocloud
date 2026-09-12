@@ -17,7 +17,7 @@ import java.util.List;
  * Usa loteId (Long) para no depender del módulo Cultivos.
  */
 @Entity
-@Table(name = "porcinos_consumos_diarios_automaticos")
+@Table(name = "porcinos_legacy_consumos_diarios_automaticos")
 @EntityListeners(AuditingEntityListener.class)
 public class ConsumoDiarioAutomatico {
 

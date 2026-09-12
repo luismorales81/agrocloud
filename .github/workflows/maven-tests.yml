@@ -10,6 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    needs: flyway-migrate
     
     services:
       mysql:
@@ -56,26 +57,98 @@ jobs:
     - name: Create test database
       run: |
         echo "Creando base de datos de pruebas..."
-        mysql -h 127.0.0.1 -P 3306 -u root -p"123456" -e "CREATE DATABASE IF NOT EXISTS agrocloud_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+        mysql -h 127.0.0.1 -P 3306 -u root -p"123456" -e "DROP DATABASE IF EXISTS agrocloud_test_integration; CREATE DATABASE agrocloud_test_integration CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+    - name: Aplicar migraciones Flyway (BD vacía)
+      working-directory: ./agrogestion-backend
+      run: |
+        mvn -q flyway:migrate \
+          -Dflyway.url="jdbc:mysql://127.0.0.1:3306/agrocloud_test_integration?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
+          -Dflyway.user=root \
+          -Dflyway.password=123456 \
+          -Dflyway.outOfOrder=true
+
+    - name: Preparar configuración de tests
+      run: |
+        cp src/test/resources/application-test.properties.example src/test/resources/application-test.properties
+      working-directory: ./agrogestion-backend
         
     - name: Run tests
       run: mvn test -Dspring.profiles.active=test
       working-directory: ./agrogestion-backend
       env:
+        DATABASE_URL: jdbc:mysql://127.0.0.1:3306/agrocloud_test_integration?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
+        DATABASE_USERNAME: root
+        DATABASE_PASSWORD: 123456
         DB_USER: root
         DB_PASS: 123456
+        JWT_SECRET: clave-jwt-test-agrogestion-minimo-32-caracteres
+        CHAT_IA_ENCRYPTION_KEY: AgroGestionChatIaClaveDesarrollo32
+        SPRING_FLYWAY_ENABLED: "false"
         
-    - name: Generate test reports
-      run: mvn jacoco:report
-      working-directory: ./agrogestion-backend
-      if: always()
-      
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
-        path: |
-          agrogestion-backend/target/surefire-reports/
-          agrogestion-backend/target/site/jacoco/
+        path: agrogestion-backend/target/surefire-reports/
         retention-days: 30
+
+  flyway-migrate:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: 123456
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -p123456"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Wait for MySQL
+      run: |
+        for i in {1..30}; do
+          if mysqladmin ping -h"127.0.0.1" -P3306 -u"root" -p"123456" --silent; then
+            break
+          fi
+          sleep 2
+        done
+
+    - name: Crear BD vacía para Flyway
+      run: |
+        mysql -h 127.0.0.1 -P 3306 -u root -p"123456" -e "DROP DATABASE IF EXISTS agrocloud_flyway_ci_test; CREATE DATABASE agrocloud_flyway_ci_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+    - name: Ejecutar Flyway migrate (BD vacía)
+      working-directory: ./agrogestion-backend
+      run: |
+        mvn -q flyway:migrate \
+          -Dflyway.url="jdbc:mysql://127.0.0.1:3306/agrocloud_flyway_ci_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
+          -Dflyway.user=root \
+          -Dflyway.password=123456 \
+          -Dflyway.outOfOrder=true
+
+    - name: Resumen Flyway
+      if: always()
+      working-directory: ./agrogestion-backend
+      run: |
+        mvn -q flyway:info \
+          -Dflyway.url="jdbc:mysql://127.0.0.1:3306/agrocloud_flyway_ci_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
+          -Dflyway.user=root \
+          -Dflyway.password=123456 \
+          -Dflyway.outOfOrder=true | tail -20

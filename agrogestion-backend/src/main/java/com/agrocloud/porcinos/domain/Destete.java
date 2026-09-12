@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * Entidad que representa el destete de lechones
  */
 @Entity
-@Table(name = "porcinos_destetes")
+@Table(name = "porcinos_legacy_destetes")
 @EntityListeners(AuditingEntityListener.class)
 public class Destete {
 

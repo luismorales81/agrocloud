@@ -244,6 +244,11 @@ SET @sql = (SELECT IF(
   (SELECT COUNT(*) FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA = @esquema AND TABLE_NAME = 'cultivo_insumos' AND COLUMN_NAME = 'permite_stock_negativo') > 0,
   'SELECT 1',
-  'ALTER TABLE cultivo_insumos ADD COLUMN permite_stock_negativo BOOLEAN DEFAULT FALSE COMMENT ''Permite stock negativo solo para consumo automático'' AFTER stock_actual'
+  IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = @esquema AND TABLE_NAME = 'cultivo_insumos' AND COLUMN_NAME = 'stock_actual') > 0,
+    'ALTER TABLE cultivo_insumos ADD COLUMN permite_stock_negativo BOOLEAN DEFAULT FALSE COMMENT ''Permite stock negativo solo para consumo automático'' AFTER stock_actual',
+    'ALTER TABLE cultivo_insumos ADD COLUMN permite_stock_negativo BOOLEAN DEFAULT FALSE COMMENT ''Permite stock negativo solo para consumo automático'''
+  )
 ));
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;

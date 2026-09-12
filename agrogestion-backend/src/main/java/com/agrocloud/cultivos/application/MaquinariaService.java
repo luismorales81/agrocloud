@@ -47,6 +47,11 @@ public class MaquinariaService {
                 maquinarias = maquinariaRepository.findAccessibleByUser(user);
                 System.out.println("[MAQUINARIA_SERVICE] Maquinarias accesibles encontradas: " + maquinarias.size());
             }
+
+            // Excluir registros dados de baja (activo = false)
+            maquinarias = maquinarias.stream()
+                    .filter(m -> Boolean.TRUE.equals(m.getActivo()))
+                    .toList();
             
             // Inicializar relaciones lazy para evitar LazyInitializationException en serialización JSON
             if (maquinarias != null) {

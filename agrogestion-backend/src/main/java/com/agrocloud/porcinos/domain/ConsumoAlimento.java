@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Consumo de alimento en el módulo Porcinos. Usa loteId y cultivoRelacionadoId para no depender de Cultivos.
  */
 @Entity
-@Table(name = "porcinos_consumos_alimento")
+@Table(name = "porcinos_legacy_consumos_alimento")
 @EntityListeners(AuditingEntityListener.class)
 public class ConsumoAlimento {
 

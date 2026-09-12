@@ -41,7 +41,7 @@ export const authService = {
   },
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
+    return !!localStorage.getItem('user');
   },
 
   getCurrentUser() {

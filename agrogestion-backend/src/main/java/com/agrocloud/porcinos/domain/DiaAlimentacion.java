@@ -19,7 +19,7 @@ import java.util.List;
  * Registra el estado de confirmación y resumen del consumo diario
  */
 @Entity
-@Table(name = "porcinos_dias_alimentacion",
+@Table(name = "porcinos_legacy_dias_alimentacion",
        uniqueConstraints = @UniqueConstraint(columnNames = {"empresa_id", "fecha"}))
 @EntityListeners(AuditingEntityListener.class)
 public class DiaAlimentacion {

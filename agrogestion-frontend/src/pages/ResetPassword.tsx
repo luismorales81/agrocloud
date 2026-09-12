@@ -15,25 +15,16 @@ const ResetPassword: React.FC = () => {
   const [token, setToken] = useState('');
 
   useEffect(() => {
-    // Obtener todos los parámetros de la URL para debug
-    const allParams = Object.fromEntries(searchParams.entries());
-    console.log('🔍 [ResetPassword] Parámetros de URL:', allParams);
-    console.log('🔍 [ResetPassword] URL completa:', window.location.href);
-    
     const tokenParam = searchParams.get('token');
-    console.log('🔍 [ResetPassword] Token obtenido:', tokenParam);
     
     if (!tokenParam) {
-      console.error('❌ [ResetPassword] No se encontró token en la URL');
       showNotification('Token de recuperación no válido. Por favor, solicita un nuevo enlace de recuperación.', 'error');
-      // Redirigir después de un pequeño delay para que el usuario vea el mensaje
       setTimeout(() => {
         navigate('/forgot-password');
       }, 2000);
       return;
     }
     
-    console.log('✅ [ResetPassword] Token válido encontrado');
     setToken(tokenParam);
   }, [searchParams, navigate]);
 

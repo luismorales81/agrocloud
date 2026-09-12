@@ -7,6 +7,8 @@ import com.agrocloud.core.infrastructure.EmpresaRepository;
 import com.agrocloud.core.infrastructure.UserRepository;
 import com.agrocloud.core.application.CompanyModuleService;
 import com.agrocloud.core.application.EmpresaContextService;
+import com.agrocloud.core.application.ModuleService;
+import com.agrocloud.dto.ModuleDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Controlador REST para obtener mÃ³dulos disponibles para el usuario actual
@@ -39,6 +42,15 @@ public class ModuleUserController {
 
     @Autowired
     private EmpresaContextService empresaContextService;
+
+    @Autowired
+    private ModuleService moduleService;
+
+    private static final Set<String> CODIGOS_PLATAFORMA = Set.of(
+            "CULTIVOS", "CROPS", "PORCINOS", "PIGS",
+            "AVICOLA_CRIANZA", "AVICOLA_CARNE", "AVICOLA_HUEVOS",
+            "FEEDLOT", "LECHERIA"
+    );
 
     /**
      * Obtiene los mÃ³dulos disponibles para el usuario autenticado
@@ -100,48 +112,57 @@ public class ModuleUserController {
             
             logger.debug("Obteniendo mÃ³dulos para empresa: {}", empresaActiva.getId());
             
-            // Obtener mÃ³dulos habilitados para la empresa
-            List<CompanyModuleDTO> companyModules;
+            // Catálogo activo + estado habilitado por empresa (incluye filas faltantes como habilitadas)
+            Map<String, Boolean> habilitadoPorCodigo = new HashMap<>();
             try {
-                companyModules = companyModuleService.getEnabledModulesForCompany(empresaActiva.getId());
-                logger.debug("MÃ³dulos obtenidos del servicio: {}", companyModules != null ? companyModules.size() : "null");
+                for (CompanyModuleDTO cm : companyModuleService.getAllModulesForCompany(empresaActiva.getId())) {
+                    if (cm.getModuleCode() != null) {
+                        habilitadoPorCodigo.put(cm.getModuleCode().toUpperCase(),
+                                Boolean.TRUE.equals(cm.getEnabled()));
+                    }
+                }
             } catch (Exception e) {
-                logger.error("Error al obtener mÃ³dulos del servicio para empresa {}: {}", 
-                    empresaActiva.getId(), e.getMessage(), e);
-                return ResponseEntity.ok(List.of());
+                logger.error("Error al obtener módulos de empresa {}: {}", empresaActiva.getId(), e.getMessage(), e);
             }
 
-            if (companyModules == null) {
-                logger.warn("El servicio retornÃ³ null para mÃ³dulos de empresa {}", empresaActiva.getId());
-                return ResponseEntity.ok(List.of());
-            }
-
-            // Convertir a formato esperado por el frontend
             Map<String, Map<String, Object>> modulesMap = new HashMap<>();
-            for (CompanyModuleDTO cm : companyModules) {
+            List<ModuleDTO> catalogoActivo;
+            try {
+                catalogoActivo = moduleService.getActiveModules();
+            } catch (Exception e) {
+                logger.error("Error al obtener catálogo de módulos: {}", e.getMessage(), e);
+                return ResponseEntity.ok(List.of());
+            }
+
+            for (ModuleDTO modulo : catalogoActivo) {
+                String moduleCode = modulo.getCode() != null ? modulo.getCode() : "";
+                if (!CODIGOS_PLATAFORMA.contains(moduleCode.toUpperCase())) {
+                    continue;
+                }
                 try {
-                    String moduleCode = cm.getModuleCode() != null ? cm.getModuleCode() : "";
-                    // Mapear cÃ³digos en inglÃ©s a espaÃ±ol
                     String moduleId = mapModuleCodeToId(moduleCode);
-                    
-                    // Si ya existe un mÃ³dulo con este ID, mantener el primero
+                    boolean habilitado = habilitadoPorCodigo.getOrDefault(moduleCode.toUpperCase(), true);
                     if (modulesMap.containsKey(moduleId)) {
+                        Map<String, Object> existente = modulesMap.get(moduleId);
+                        boolean yaHabilitado = Boolean.TRUE.equals(existente.get("habilitado"));
+                        if (habilitado && !yaHabilitado) {
+                            existente.put("habilitado", true);
+                        }
                         continue;
                     }
-                    
                     Map<String, Object> moduleMap = new HashMap<>();
-                    moduleMap.put("id", moduleId); // "cultivos", "porcinos", etc.
-                    moduleMap.put("nombre", getModuleName(moduleCode)); // Usar nombre en espaÃ±ol
+                    moduleMap.put("id", moduleId);
+                    moduleMap.put("nombre", getModuleName(moduleCode));
                     moduleMap.put("descripcion", getModuleDescription(moduleCode));
                     moduleMap.put("icono", getModuleIcon(moduleCode));
                     moduleMap.put("color", getModuleColor(moduleCode));
-                    moduleMap.put("habilitado", cm.getEnabled() != null ? cm.getEnabled() : false);
+                    moduleMap.put("habilitado", habilitado);
                     modulesMap.put(moduleId, moduleMap);
                 } catch (Exception e) {
-                    logger.error("Error al convertir mÃ³dulo {}: {}", cm.getModuleCode(), e.getMessage(), e);
+                    logger.error("Error al convertir módulo {}: {}", moduleCode, e.getMessage(), e);
                 }
             }
-            
+
             List<Map<String, Object>> modules = new java.util.ArrayList<>(modulesMap.values());
 
             logger.info("Retornando {} mÃ³dulos para usuario {}", modules.size(), email);
@@ -197,7 +218,7 @@ public class ModuleUserController {
             case "AVICOLA_CARNE":
                 return "Avicola crianza";
             case "AVICOLA_HUEVOS":
-                return "Avicola huevos";
+                return "Avícola postura";
             case "AVICOLA_PONEDORAS":
                 return "Avicola ponedoras";
             case "FEEDLOT":

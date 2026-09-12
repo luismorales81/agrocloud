@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * Entidad para gestionar los ingresos del sistema agropecuario
  */
 @Entity
-@Table(name = "ingresos")
+@Table(name = "cultivo_ingresos")
 public class Ingreso {
     
     @Id

@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa un tipo de servicio reproductivo configurable
  */
 @Entity
-@Table(name = "porcinos_tipos_servicio_porcinos")
+@Table(name = "porcinos_legacy_tipos_servicio_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class TipoServicioPorcino {
 

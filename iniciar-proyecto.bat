@@ -1,41 +1,50 @@
 @echo off
+setlocal EnableExtensions
+cd /d "%~dp0"
+
 echo ========================================
-echo    AgroCloud - Iniciando Proyecto
+echo    AgroCloud - Contenedores locales
 echo ========================================
 echo.
 
-echo 1. Verificando Java...
-java -version
-if %errorlevel% neq 0 (
-    echo ERROR: Java no esta instalado
+where docker >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Docker no esta en el PATH. Instala Docker Desktop y reinicia la terminal.
     pause
     exit /b 1
 )
-echo Java OK
+
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Docker Desktop no esta en ejecucion. Abri Docker Desktop y espera a que este listo.
+    pause
+    exit /b 1
+)
+
+echo Levantando MySQL, backend y frontend con Docker Compose...
+echo La primera vez puede tardar varios minutos (build + Flyway).
+echo.
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0deploy\levantar-local.ps1"
+if errorlevel 1 (
+    echo.
+    echo ERROR: No se pudo levantar el stack. Mira el mensaje de PowerShell arriba.
+    pause
+    exit /b 1
+)
 
 echo.
-echo 2. Iniciando Backend...
-cd agrogestion-backend
-start "Backend AgroCloud" cmd /k "mvnw.cmd spring-boot:run"
-cd ..
+echo Abriendo http://localhost:3001
+start "" "http://localhost:3001"
 
 echo.
-echo 3. Esperando 15 segundos...
-timeout /t 15 /nobreak > nul
+echo Mostrando logs del backend (contenedor). Cerra esa ventana no detiene Docker.
+start "Backend AgroCloud (Docker)" /D "%~dp0" cmd /k "docker compose logs -f --tail 80 backend"
 
 echo.
-echo 4. Iniciando Frontend...
-cd agrogestion-frontend
-start "Frontend AgroCloud" cmd /k "npm run dev"
-cd ..
-
+echo Login local: admin@localhost / AgrocloudLocal1
+echo Frontend: http://localhost:3001
+echo API:      http://localhost:3001/api/health
+echo Para detener: docker compose down
 echo.
-echo ========================================
-echo Servicios iniciados:
-echo ========================================
-echo Frontend: http://localhost:3000
-echo Backend:  http://localhost:8080
-echo.
-echo Presiona cualquier tecla para cerrar...
 pause
-

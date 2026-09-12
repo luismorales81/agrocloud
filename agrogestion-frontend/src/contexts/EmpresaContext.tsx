@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import api from '../services/api';
+import { useAuth } from './AuthContext';
 
 interface Empresa {
   id: number;
@@ -40,6 +41,8 @@ interface EmpresaContextType {
   empresaId: number | null;
   empresasUsuario: UsuarioEmpresa[];
   rolUsuario: string | null;
+  /** True cuando mis-empresas validó y fijó la empresa activa (listo para X-Company-Id). */
+  empresaContextoListo: boolean;
   cambiarEmpresa: (empresaId: number) => Promise<void>;
   cargarEmpresasUsuario: () => Promise<UsuarioEmpresa[]>;
   // Nuevos roles
@@ -69,26 +72,23 @@ interface EmpresaProviderProps {
 }
 
 export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) => {
-  
+  const { user, loading: authCargando } = useAuth();
+
   const [empresaActiva, setEmpresaActiva] = useState<Empresa | null>(null);
   const [empresasUsuario, setEmpresasUsuario] = useState<UsuarioEmpresa[]>([]);
   const [rolUsuario, setRolUsuario] = useState<string | null>(null);
+  const [empresaContextoListo, setEmpresaContextoListo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar empresas del usuario al inicializar
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      cargarEmpresasUsuario();
-    }
-  }, []);
-
-  const cargarEmpresasUsuario = async () => {
+  const cargarEmpresasUsuario = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+      setEmpresaContextoListo(false);
+      // Evitar que el interceptor envíe X-Company-Id obsoleto hasta validar mis-empresas
+      localStorage.removeItem('empresaIdValidada');
+
       const response = await api.get('/v1/empresas/mis-empresas');
       const empresas = response.data;
       
@@ -99,8 +99,11 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
       if (empresas.length === 0) {
         setEmpresaActiva(null);
         setRolUsuario(null);
+        setEmpresaContextoListo(false);
         localStorage.removeItem('empresaActiva');
+        localStorage.removeItem('empresaIdValidada');
         localStorage.removeItem('rolUsuario');
+        localStorage.removeItem('campanaActiva');
         return empresas;
       }
 
@@ -131,7 +134,22 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Restaurar empresa al volver a entrar (sesión por cookie + user en localStorage, sin token)
+  useEffect(() => {
+    if (authCargando) {
+      return;
+    }
+    if (user) {
+      cargarEmpresasUsuario();
+    } else {
+      setEmpresaActiva(null);
+      setEmpresasUsuario([]);
+      setRolUsuario(null);
+      setEmpresaContextoListo(false);
+    }
+  }, [user?.id, authCargando, cargarEmpresasUsuario]);
 
   const cambiarEmpresaConDatos = async (empresaData: UsuarioEmpresa) => {
     try {
@@ -154,7 +172,9 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
       
       // Guardar en localStorage para persistencia
       localStorage.setItem('empresaActiva', JSON.stringify(empresa));
+      localStorage.setItem('empresaIdValidada', String(empresaData.empresaId));
       localStorage.setItem('rolUsuario', empresaData.rol);
+      setEmpresaContextoListo(true);
       
       // Actualizar el token con el contexto de empresa
       // TODO: Implementar endpoint en backend si es necesario
@@ -169,18 +189,17 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
     }
   };
 
-  const cambiarEmpresa = async (empresaId: number) => {
+  const cambiarEmpresa = async (empresaIdDestino: number) => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Buscar la empresa en las empresas del usuario
-      const usuarioEmpresa = empresasUsuario.find(ue => ue.id === empresaId);
-      
+
+      const usuarioEmpresa = empresasUsuario.find((ue) => ue.empresaId === empresaIdDestino);
+
       if (!usuarioEmpresa) {
         throw new Error('No tienes acceso a esta empresa');
       }
-      
+
       await cambiarEmpresaConDatos(usuarioEmpresa);
       
     } catch (error) {
@@ -226,26 +245,14 @@ export const EmpresaProvider: React.FC<EmpresaProviderProps> = ({ children }) =>
     return esAdministrador() || esJefeFinanciero();
   };
 
-  // Cargar empresa activa desde localStorage al inicializar
-  useEffect(() => {
-    const empresaGuardada = localStorage.getItem('empresaActiva');
-    const rolGuardado = localStorage.getItem('rolUsuario');
-    
-    if (empresaGuardada && rolGuardado) {
-      try {
-        setEmpresaActiva(JSON.parse(empresaGuardada));
-        setRolUsuario(rolGuardado);
-      } catch (error) {
-        console.error('Error cargando empresa desde localStorage:', error);
-      }
-    }
-  }, []);
+  // No hidratar empresa desde localStorage: evita X-Company-Id obsoleto antes de mis-empresas.
 
   const value: EmpresaContextType = {
     empresaActiva,
     empresaId: empresaActiva?.id ?? null,
     empresasUsuario,
     rolUsuario,
+    empresaContextoListo,
     cambiarEmpresa,
     cargarEmpresasUsuario,
     // Nuevos roles

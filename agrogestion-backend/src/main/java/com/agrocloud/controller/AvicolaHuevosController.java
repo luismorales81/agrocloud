@@ -9,6 +9,7 @@ import com.agrocloud.avicola.huevos.model.dto.*;
 import com.agrocloud.avicola.huevos.model.enums.AvicolaHuevoLoteEstado;
 import com.agrocloud.core.application.UserService;
 import com.agrocloud.core.domain.User;
+import com.agrocloud.core.security.ServicioSeguridadContexto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,18 +31,21 @@ public class AvicolaHuevosController {
     private final ServicioAvicolaHuevosOperaciones servicioOperaciones;
     private final ServicioAvicolaHuevosReportes servicioReportes;
     private final UserService userService;
+    private final ServicioSeguridadContexto servicioSeguridadContexto;
 
     public AvicolaHuevosController(
             ServicioAvicolaHuevosCatalogo servicioCatalogo,
             ServicioAvicolaHuevosLote servicioLote,
             ServicioAvicolaHuevosOperaciones servicioOperaciones,
             ServicioAvicolaHuevosReportes servicioReportes,
-            UserService userService) {
+            UserService userService,
+            ServicioSeguridadContexto servicioSeguridadContexto) {
         this.servicioCatalogo = servicioCatalogo;
         this.servicioLote = servicioLote;
         this.servicioOperaciones = servicioOperaciones;
         this.servicioReportes = servicioReportes;
         this.userService = userService;
+        this.servicioSeguridadContexto = servicioSeguridadContexto;
     }
 
     private User requerirUsuario(UserDetails detalles) {
@@ -57,194 +61,175 @@ public class AvicolaHuevosController {
 
     @GetMapping("/establecimientos")
     public ResponseEntity<List<AvicolaHuevoEstablecimientoRespuesta>> listarEstablecimientos(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioCatalogo.listarEstablecimientos(empresaId));
+        return ResponseEntity.ok(servicioCatalogo.listarEstablecimientos(servicioSeguridadContexto.obtenerEmpresaIdActual()));
     }
 
     @PostMapping("/establecimientos")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoEstablecimientoRespuesta> crearEstablecimiento(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @RequestBody AvicolaHuevoEstablecimientoSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioCatalogo.crearEstablecimiento(empresaId, solicitud));
+        return ResponseEntity.ok(servicioCatalogo.crearEstablecimiento(servicioSeguridadContexto.obtenerEmpresaIdActual(), solicitud));
     }
 
     @PutMapping("/establecimientos/{id}")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoEstablecimientoRespuesta> actualizarEstablecimiento(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long id,
             @RequestBody AvicolaHuevoEstablecimientoSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioCatalogo.actualizarEstablecimiento(empresaId, id, solicitud));
+        return ResponseEntity.ok(servicioCatalogo.actualizarEstablecimiento(servicioSeguridadContexto.obtenerEmpresaIdActual(), id, solicitud));
     }
 
     @GetMapping("/razas")
     public ResponseEntity<List<AvicolaHuevoRazaRespuesta>> listarRazas(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioCatalogo.listarRazas(empresaId));
+        return ResponseEntity.ok(servicioCatalogo.listarRazas(servicioSeguridadContexto.obtenerEmpresaIdActual()));
     }
 
     @PostMapping("/razas")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoRazaRespuesta> crearRaza(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @RequestBody AvicolaHuevoRazaSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioCatalogo.crearRaza(empresaId, solicitud));
+        return ResponseEntity.ok(servicioCatalogo.crearRaza(servicioSeguridadContexto.obtenerEmpresaIdActual(), solicitud));
     }
 
     @PutMapping("/razas/{id}")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoRazaRespuesta> actualizarRaza(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long id,
             @RequestBody AvicolaHuevoRazaSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioCatalogo.actualizarRaza(empresaId, id, solicitud));
+        return ResponseEntity.ok(servicioCatalogo.actualizarRaza(servicioSeguridadContexto.obtenerEmpresaIdActual(), id, solicitud));
     }
 
     @GetMapping("/lotes")
     public ResponseEntity<List<AvicolaHuevoLoteRespuesta>> listarLotes(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @RequestParam(required = false) AvicolaHuevoLoteEstado estado,
             @RequestParam(required = false) Boolean delPeriodoActivo,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioLote.listarLotes(empresaId, estado, delPeriodoActivo));
+        return ResponseEntity.ok(servicioLote.listarLotes(servicioSeguridadContexto.obtenerEmpresaIdActual(), estado, delPeriodoActivo));
     }
 
     @GetMapping("/lotes/{loteId}")
     public ResponseEntity<AvicolaHuevoLoteRespuesta> obtenerLote(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioLote.obtenerLote(empresaId, loteId));
+        return ResponseEntity.ok(servicioLote.obtenerLote(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId));
     }
 
     @PostMapping("/lotes")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoLoteRespuesta> crearLote(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @RequestBody AvicolaHuevoLoteSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioLote.crearLote(empresaId, solicitud));
+        return ResponseEntity.ok(servicioLote.crearLote(servicioSeguridadContexto.obtenerEmpresaIdActual(), solicitud));
     }
 
     @PutMapping("/lotes/{loteId}")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoLoteRespuesta> actualizarLote(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @RequestBody AvicolaHuevoLoteSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioLote.actualizarLote(empresaId, loteId, solicitud));
+        return ResponseEntity.ok(servicioLote.actualizarLote(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, solicitud));
     }
 
     @PostMapping("/lotes/{loteId}/cierre")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoLoteRespuesta> cerrarLote(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioLote.cerrarLote(empresaId, loteId));
+        return ResponseEntity.ok(servicioLote.cerrarLote(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId));
     }
 
     @GetMapping("/lotes/{loteId}/produccion-diaria")
     public ResponseEntity<List<AvicolaHuevoProduccionDiariaRespuesta>> listarProduccionDiaria(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioOperaciones.listarProduccionDiaria(empresaId, loteId));
+        return ResponseEntity.ok(servicioOperaciones.listarProduccionDiaria(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId));
     }
 
     @PostMapping("/lotes/{loteId}/produccion-diaria")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoProduccionDiariaRespuesta> registrarProduccionDiaria(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @RequestBody AvicolaHuevoProduccionDiariaSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioOperaciones.registrarProduccionDiaria(empresaId, loteId, solicitud));
+        return ResponseEntity.ok(servicioOperaciones.registrarProduccionDiaria(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, solicitud));
     }
 
     @GetMapping("/lotes/{loteId}/consumos")
     public ResponseEntity<List<AvicolaHuevoConsumoRespuesta>> listarConsumos(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioOperaciones.listarConsumos(empresaId, loteId));
+        return ResponseEntity.ok(servicioOperaciones.listarConsumos(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId));
     }
 
     @PostMapping("/lotes/{loteId}/consumos")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoConsumoRespuesta> registrarConsumo(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @RequestBody AvicolaHuevoConsumoSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         User usuario = requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioOperaciones.registrarConsumo(empresaId, loteId, solicitud, usuario.getId()));
+        return ResponseEntity.ok(servicioOperaciones.registrarConsumo(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, solicitud, usuario.getId()));
     }
 
     @PutMapping("/lotes/{loteId}/consumos/{consumoId}")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoConsumoRespuesta> actualizarConsumo(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @PathVariable Long consumoId,
             @RequestBody AvicolaHuevoConsumoActualizarSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         User usuario = requerirUsuario(detalles);
         return ResponseEntity.ok(
-                servicioOperaciones.actualizarConsumo(empresaId, loteId, consumoId, solicitud, usuario.getId()));
+                servicioOperaciones.actualizarConsumo(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, consumoId, solicitud, usuario.getId()));
     }
 
     @PostMapping("/lotes/{loteId}/ajuste-plantel")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoLoteRespuesta> registrarAjustePlantel(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @RequestBody AvicolaHuevoAjustePlantelSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         User usuario = requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioLote.registrarAjustePlantel(empresaId, loteId, solicitud, usuario));
+        return ResponseEntity.ok(servicioLote.registrarAjustePlantel(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, solicitud, usuario));
     }
 
     @GetMapping("/lotes/{loteId}/ajustes-plantel")
     public ResponseEntity<List<AvicolaHuevoAjustePlantelRespuesta>> listarAjustesPlantel(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioLote.listarAjustesPlantel(empresaId, loteId));
+        return ResponseEntity.ok(servicioLote.listarAjustesPlantel(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId));
     }
 
     @GetMapping("/reportes/resumen")
     public ResponseEntity<AvicolaHuevosReporteResumenRespuesta> reporteResumenEmpresa(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @RequestParam LocalDate desde,
             @RequestParam LocalDate hasta,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
         try {
-            return ResponseEntity.ok(servicioReportes.resumenEmpresaEnRango(empresaId, desde, hasta));
+            return ResponseEntity.ok(servicioReportes.resumenEmpresaEnRango(servicioSeguridadContexto.obtenerEmpresaIdActual(), desde, hasta));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -252,14 +237,13 @@ public class AvicolaHuevosController {
 
     @GetMapping("/reportes/analisis-postura")
     public ResponseEntity<AvicolaHuevosReporteAnalisisRespuesta> reporteAnalisisPostura(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @RequestParam Long loteId,
             @RequestParam LocalDate desde,
             @RequestParam LocalDate hasta,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
         try {
-            return ResponseEntity.ok(servicioReportes.analisisPosturaLote(empresaId, loteId, desde, hasta));
+            return ResponseEntity.ok(servicioReportes.analisisPosturaLote(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, desde, hasta));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -267,30 +251,27 @@ public class AvicolaHuevosController {
 
     @GetMapping("/lotes/{loteId}/eventos-sanitarios")
     public ResponseEntity<List<AvicolaHuevoEventoSanitarioRespuesta>> listarEventosSanitarios(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioOperaciones.listarEventosSanitarios(empresaId, loteId));
+        return ResponseEntity.ok(servicioOperaciones.listarEventosSanitarios(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId));
     }
 
     @PostMapping("/lotes/{loteId}/eventos-sanitarios")
     @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
     public ResponseEntity<AvicolaHuevoEventoSanitarioRespuesta> registrarEventoSanitario(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @RequestBody AvicolaHuevoEventoSanitarioSolicitud solicitud,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioOperaciones.registrarEventoSanitario(empresaId, loteId, solicitud));
+        return ResponseEntity.ok(servicioOperaciones.registrarEventoSanitario(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, solicitud));
     }
 
     @GetMapping("/lotes/{loteId}/resumen")
     public ResponseEntity<AvicolaHuevosResumenRespuesta> resumenLote(
-            @RequestHeader("X-Company-Id") Long empresaId,
             @PathVariable Long loteId,
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
-        return ResponseEntity.ok(servicioOperaciones.resumenLote(empresaId, loteId));
+        return ResponseEntity.ok(servicioOperaciones.resumenLote(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId));
     }
 }

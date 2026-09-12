@@ -185,8 +185,7 @@ function isStaticFile(pathname) {
 
 // Verificar si es una petición de API
 function isApiRequest(pathname) {
-  return API_ROUTES.some(route => pathname.startsWith(route)) ||
-         pathname.startsWith('/api/');
+  return API_ROUTES.some(route => pathname.startsWith(route));
 }
 
 // Background Sync para sincronización offline

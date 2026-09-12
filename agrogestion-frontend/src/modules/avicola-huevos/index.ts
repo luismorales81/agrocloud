@@ -4,8 +4,8 @@ import { avicolaHuevosRoutes } from './routes';
 
 export const avicolaHuevosModule: ModuleConfig = {
   id: 'avicola-huevos',
-  nombre: 'Avícola huevos',
-  descripcion: 'Postura: calendario, lotes, producción diaria, consumos, insumos y sanidad.',
+  nombre: 'Avícola postura',
+  descripcion: 'Ponedoras y postura: calendario, lotes, galpones, producción diaria, consumos, insumos y sanidad.',
   icono: 'Egg',
   color: '#eab308',
   menu: avicolaHuevosMenu,

@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * Entidad que representa los datos económicos configurables del módulo porcino
  */
 @Entity
-@Table(name = "porcinos_datos_economicos_porcinos")
+@Table(name = "porcinos_legacy_datos_economicos_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class DatosEconomicosPorcino {
 

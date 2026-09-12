@@ -7,7 +7,13 @@ import com.agrocloud.dto.UserDto;
 import com.agrocloud.exception.EulaNoAceptadoException;
 import com.agrocloud.core.application.AuthService;
 import com.agrocloud.core.application.EmailService;
+import com.agrocloud.core.security.ServicioLimiteTasaAuth;
+import com.agrocloud.config.ConfiguracionCookieJwt;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,11 +42,33 @@ public class AuthController {
     @Qualifier("emailServiceCore")
     private EmailService emailService;
 
+    @Autowired
+    private ServicioLimiteTasaAuth servicioLimiteTasaAuth;
+
+    @Value("${jwt.expiration:86400000}")
+    private long jwtExpirationMs;
+
+    @Value("${jwt.cookie.secure:false}")
+    private boolean cookieSegura;
+
+    @Value("${jwt.cookie.same-site:Strict}")
+    private String cookieSameSite;
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest solicitud) {
         try {
+            servicioLimiteTasaAuth.verificarLogin(obtenerIpCliente(solicitud));
             LoginResponse response = authService.login(loginRequest);
-            return ResponseEntity.ok(response);
+            ResponseCookie cookie = ResponseCookie.from(ConfiguracionCookieJwt.NOMBRE_COOKIE, response.getToken())
+                    .httpOnly(true)
+                    .secure(cookieSegura)
+                    .path("/")
+                    .sameSite(cookieSameSite)
+                    .maxAge(jwtExpirationMs / 1000)
+                    .build();
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(response);
         } catch (EulaNoAceptadoException e) {
             throw e;
         } catch (BadCredentialsException | UsernameNotFoundException e) {
@@ -58,13 +86,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegistroPublicoSolicitud solicitud) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegistroPublicoSolicitud solicitud, HttpServletRequest request) {
         try {
+            servicioLimiteTasaAuth.verificarRegistro(obtenerIpCliente(request));
             UserDto userDto = authService.registrarUsuarioPublico(solicitud);
             return ResponseEntity.ok(userDto);
         } catch (Exception e) {
             logger.error("Error en registro: {}", e.getMessage());
-            return ResponseEntity.badRequest().body("Error al registrar usuario: " + e.getMessage());
+            return ResponseEntity.badRequest().body("No se pudo completar el registro. Verificá los datos e intentá de nuevo.");
         }
     }
 
@@ -115,11 +144,33 @@ public class AuthController {
             authService.resetPassword(request.getToken(), request.getNewPassword());
             return ResponseEntity.ok().body("Contraseña restablecida exitosamente");
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body("No se pudo restablecer la contraseña. El enlace puede haber expirado.");
         } catch (Exception e) {
             logger.error("Error inesperado en reset de contraseña: {}", e.getMessage());
             return ResponseEntity.badRequest().body("Error al restablecer la contraseña");
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        ResponseCookie cookie = ResponseCookie.from(ConfiguracionCookieJwt.NOMBRE_COOKIE, "")
+                .httpOnly(true)
+                .secure(cookieSegura)
+                .path("/")
+                .sameSite(cookieSameSite)
+                .maxAge(0)
+                .build();
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .build();
+    }
+
+    private String obtenerIpCliente(HttpServletRequest solicitud) {
+        String reenviada = solicitud.getHeader("X-Forwarded-For");
+        if (reenviada != null && !reenviada.isBlank()) {
+            return reenviada.split(",")[0].trim();
+        }
+        return solicitud.getRemoteAddr();
     }
 
     @PostMapping("/test-email")

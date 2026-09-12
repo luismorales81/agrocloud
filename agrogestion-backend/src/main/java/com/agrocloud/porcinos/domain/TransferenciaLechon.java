@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa una transferencia de lechones entre madres
  */
 @Entity
-@Table(name = "porcinos_transferencias_lechones")
+@Table(name = "porcinos_legacy_transferencias_lechones")
 @EntityListeners(AuditingEntityListener.class)
 public class TransferenciaLechon {
 

@@ -58,17 +58,7 @@ CREATE TABLE IF NOT EXISTS componentes_insumo_compuesto (
     CONSTRAINT fk_componente_insumo_compuesto_padre FOREIGN KEY (insumo_compuesto_padre_id) 
         REFERENCES insumos_compuestos(id) ON DELETE SET NULL,
     
-    -- Validación: debe tener exactamente uno de los tres tipos de origen
-    CONSTRAINT chk_componente_origen CHECK (
-        (insumo_id IS NOT NULL AND cultivo_id IS NULL AND insumo_compuesto_padre_id IS NULL) OR
-        (insumo_id IS NULL AND cultivo_id IS NOT NULL AND insumo_compuesto_padre_id IS NULL) OR
-        (insumo_id IS NULL AND cultivo_id IS NULL AND insumo_compuesto_padre_id IS NOT NULL)
-    ),
-    
-    -- Validación: debe tener porcentaje o cantidad fija
-    CONSTRAINT chk_componente_cantidad CHECK (
-        (porcentaje IS NOT NULL) OR (cantidad_fija IS NOT NULL)
-    ),
+    -- Validación de origen/cantidad: nivel aplicación (MySQL 8 no permite CHECK en columnas con FK SET NULL)
     
     INDEX idx_componente_insumo_compuesto (insumo_compuesto_id),
     INDEX idx_componente_insumo (insumo_id),

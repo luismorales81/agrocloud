@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
  * Puede estar asociado a una Madre, Padrillo o Lote (Recria)
  */
 @Entity
-@Table(name = "porcinos_eventos_sanitarios")
+@Table(name = "porcinos_legacy_eventos_sanitarios")
 @EntityListeners(AuditingEntityListener.class)
 public class EventoSanitario {
 

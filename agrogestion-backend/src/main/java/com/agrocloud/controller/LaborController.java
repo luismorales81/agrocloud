@@ -18,9 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,11 +46,13 @@ public class LaborController {
      */
     private User obtenerUsuario(UserDetails userDetails) {
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            return userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            return userService.findByEmailWithAllRelations(userDetails.getUsername());
+            throw new AuthenticationCredentialsNotFoundException("Usuario no autenticado");
         }
+        User usuario = userService.findByEmailWithAllRelationsCombined(userDetails.getUsername());
+        if (usuario == null) {
+            throw new UsernameNotFoundException("Usuario no encontrado");
+        }
+        return usuario;
     }
 
     /**

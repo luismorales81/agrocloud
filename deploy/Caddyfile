@@ -1,0 +1,104 @@
+{
+
+	email {$CADDY_EMAIL}
+
+}
+
+
+
+www.{$DOMINIO} {
+
+	redir https://{$DOMINIO}{uri} permanent
+
+}
+
+
+
+{$DOMINIO} {
+
+	encode gzip
+
+
+
+	header {
+
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+		X-Content-Type-Options nosniff
+
+		X-Frame-Options DENY
+
+		Referrer-Policy strict-origin-when-cross-origin
+
+		-Server
+
+	}
+
+
+
+	handle /actuator* {
+
+		respond 404
+
+	}
+
+	handle /swagger-ui* {
+
+		respond 404
+
+	}
+
+	handle /swagger-ui.html {
+
+		respond 404
+
+	}
+
+	handle /v3/api-docs* {
+
+		respond 404
+
+	}
+
+	handle /api/actuator* {
+
+		respond 404
+
+	}
+
+	handle /api/swagger-ui* {
+
+		respond 404
+
+	}
+
+	handle /api/swagger-ui.html {
+
+		respond 404
+
+	}
+
+	handle /api/v3/api-docs* {
+
+		respond 404
+
+	}
+
+
+
+	handle /api* {
+
+		reverse_proxy backend:8080
+
+	}
+
+
+
+	handle {
+
+		reverse_proxy frontend:80
+
+	}
+
+}
+

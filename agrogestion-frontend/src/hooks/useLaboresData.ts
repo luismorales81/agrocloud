@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { offlineService } from '../services/OfflineService';
+import { haySesionActiva } from '../services/api';
 import { lotesService, insumosService, maquinariaService, cultivosService } from '../services/apiServices';
 import type { LaborDetalladoDTO } from '../types/labor.types';
 import type {
@@ -122,10 +123,9 @@ export function useLaboresData(): UseLaboresDataResult {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No hay token de autenticación');
-        alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+      if (!haySesionActiva()) {
+        console.error('No hay sesión activa');
+        alert('La sesión expiró. Por favor, inicia sesión nuevamente.');
         return;
       }
 

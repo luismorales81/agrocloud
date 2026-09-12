@@ -1,7 +1,10 @@
-# ========== LEGACY - NO USAR PARA PRODUCCIÓN ==========
-# Para producción usar: agrogestion-backend/Dockerfile
-# Este archivo fija perfil railway-h2; el perfil debe definirse por variable de entorno.
-# Dockerfile para AgroCloud Backend (solo referencia/legacy)
+# ========== LEGACY — no usar para producción ==========
+# Imágenes de producción:
+#   Backend:  agrogestion-backend/Dockerfile
+#   Frontend: agrogestion-frontend/Dockerfile
+# Orquestación local: docker-compose.yml en la raíz del repositorio.
+#
+# Este archivo queda solo como referencia de builds antiguos (Railway/H2).
 FROM maven:3.9.5-eclipse-temurin-17 AS build
 
 # Establecer directorio de trabajo

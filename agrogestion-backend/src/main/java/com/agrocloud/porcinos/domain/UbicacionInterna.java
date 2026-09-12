@@ -18,7 +18,7 @@ import java.util.List;
  * Estructura: Galpón → Sala → Corral
  */
 @Entity
-@Table(name = "porcinos_ubicaciones_internas")
+@Table(name = "porcinos_legacy_ubicaciones_internas")
 @EntityListeners(AuditingEntityListener.class)
 public class UbicacionInterna {
 

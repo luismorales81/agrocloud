@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Entidad que representa una venta de cerdos (terminados o reproductores)
  */
 @Entity
-@Table(name = "porcinos_ventas_porcinos")
+@Table(name = "porcinos_legacy_ventas_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class VentaPorcino {
 

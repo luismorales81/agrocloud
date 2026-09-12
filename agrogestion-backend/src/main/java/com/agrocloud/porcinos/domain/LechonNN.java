@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Usa loteId para no depender del módulo Cultivos.
  */
 @Entity
-@Table(name = "porcinos_lechones_nn")
+@Table(name = "porcinos_legacy_lechones_nn")
 @EntityListeners(AuditingEntityListener.class)
 public class LechonNN {
 

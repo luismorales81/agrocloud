@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * Puede ser para madres, padrillos o híbridos
  */
 @Entity
-@Table(name = "porcinos_razas_porcinos")
+@Table(name = "porcinos_legacy_razas_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class RazaPorcino {
 

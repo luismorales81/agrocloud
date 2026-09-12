@@ -30,7 +30,7 @@ public class Role {
 
     @NotBlank(message = "El nombre del rol es obligatorio")
     @Size(min = 2, max = 50, message = "El nombre del rol debe tener entre 2 y 50 caracteres")
-    @Column(name = "name", nullable = false, unique = true, length = 50)
+    @Column(name = "nombre", nullable = false, unique = true, length = 50)
     private String nombre;
 
     @Size(max = 255, message = "La descripción no puede exceder 255 caracteres")
@@ -73,6 +73,7 @@ public class Role {
         this.activo = true;
     }
 
+    @JsonIgnore
     public List<Permission> getPermissions() {
         return rolePermissions.stream()
                 .map(RolePermission::getPermiso)
@@ -89,6 +90,7 @@ public class Role {
                 .anyMatch(rp -> rp.getPermiso().getId().equals(permissionId));
     }
 
+    @JsonIgnore
     public List<User> getUsers() {
         return userCompanyRoles.stream()
                 .map(UserCompanyRole::getUsuario)
@@ -96,6 +98,7 @@ public class Role {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    @JsonIgnore
     public List<Empresa> getCompanies() {
         return userCompanyRoles.stream()
                 .map(UserCompanyRole::getEmpresa)
@@ -113,6 +116,7 @@ public class Role {
     public void setActivo(Boolean activo) { this.activo = activo; }
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+    @JsonIgnore
     public List<RolePermission> getRolePermissions() { return rolePermissions; }
     public void setRolePermissions(List<RolePermission> rolePermissions) { this.rolePermissions = rolePermissions; }
     public List<UserCompanyRole> getUserCompanyRoles() { return userCompanyRoles; }

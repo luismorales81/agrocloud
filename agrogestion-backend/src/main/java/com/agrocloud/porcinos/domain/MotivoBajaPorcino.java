@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa un motivo de baja de animales configurable
  */
 @Entity
-@Table(name = "porcinos_motivos_baja_porcinos")
+@Table(name = "porcinos_legacy_motivos_baja_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class MotivoBajaPorcino {
 

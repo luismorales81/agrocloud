@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa una configuración del módulo Porcinos
  */
 @Entity
-@Table(name = "porcinos_configuraciones_porcinos")
+@Table(name = "porcinos_legacy_configuraciones_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class ConfiguracionPorcino {
 

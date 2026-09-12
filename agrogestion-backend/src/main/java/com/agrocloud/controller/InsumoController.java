@@ -61,13 +61,10 @@ public class InsumoController {
     // Obtener insumo por ID
     @GetMapping("/{id}")
     public ResponseEntity<Insumo> getInsumoById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -84,13 +81,10 @@ public class InsumoController {
     // Crear nuevo insumo
     @PostMapping
     public ResponseEntity<Insumo> createInsumo(@Valid @RequestBody Insumo insumo, @AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -107,13 +101,10 @@ public class InsumoController {
     // Actualizar insumo
     @PutMapping("/{id}")
     public ResponseEntity<Insumo> updateInsumo(@PathVariable Long id, @Valid @RequestBody Insumo insumo, @AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -134,13 +125,10 @@ public class InsumoController {
     // Eliminar insumo
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteInsumo(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -157,13 +145,10 @@ public class InsumoController {
     // Buscar insumo por nombre
     @GetMapping("/search")
     public ResponseEntity<List<Insumo>> searchInsumo(@RequestParam String nombre, @AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -180,13 +165,10 @@ public class InsumoController {
     // Obtener estadísticas de insumos
     @GetMapping("/stats")
     public ResponseEntity<InsumoService.InsumoStats> getInsumoStats(@AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -199,13 +181,10 @@ public class InsumoController {
     // Obtener insumos con stock bajo
     @GetMapping("/stock-bajo")
     public ResponseEntity<List<Insumo>> getInsumosStockBajo(@AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -218,13 +197,10 @@ public class InsumoController {
     // Obtener insumos próximos a vencer
     @GetMapping("/proximos-vencer")
     public ResponseEntity<List<Insumo>> getInsumosProximosAVencer(@AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -237,13 +213,10 @@ public class InsumoController {
     // Obtener insumos por tipo
     @GetMapping("/tipo/{tipo}")
     public ResponseEntity<List<Insumo>> getInsumosByTipo(@PathVariable Insumo.TipoInsumo tipo, @AuthenticationPrincipal UserDetails userDetails) {
-        User user;
         if (userDetails == null) {
-            // En contexto de test, usar usuario mock
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -266,12 +239,10 @@ public class InsumoController {
             @RequestBody java.util.Map<String, Object> request,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        User user;
         if (userDetails == null) {
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");
@@ -303,12 +274,10 @@ public class InsumoController {
             @RequestBody(required = false) java.util.Map<String, Object> request,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        User user;
         if (userDetails == null) {
-            user = userService.findByEmailWithAllRelations("test@test.com");
-        } else {
-            user = userService.findByEmailWithAllRelations(userDetails.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
         
         if (user == null) {
             throw new ResourceNotFoundException("Usuario no encontrado");

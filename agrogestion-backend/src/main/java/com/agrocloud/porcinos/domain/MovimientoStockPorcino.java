@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * Trazabilidad de movimientos de stock porcinos. Usa cultivoId para no depender de Cultivos.
  */
 @Entity
-@Table(name = "porcinos_movimientos_stock")
+@Table(name = "porcinos_legacy_movimientos_stock")
 @EntityListeners(AuditingEntityListener.class)
 public class MovimientoStockPorcino {
 

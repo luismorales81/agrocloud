@@ -804,22 +804,25 @@ public class User implements UserDetails {
     }
 
     public boolean perteneceAEmpresa(Long empresaId) {
+        if (empresaId == null) {
+            return false;
+        }
         // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas)
         if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
             boolean encontradoEnNuevo = usuarioEmpresas.stream()
                     .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
-                    .anyMatch(ue -> ue.getEmpresa().getId().equals(empresaId));
+                    .anyMatch(ue -> ue.getEmpresa() != null && empresaId.equals(ue.getEmpresa().getId()));
             if (encontradoEnNuevo) {
                 return true;
             }
         }
-        
+
         // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles)
         if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
             return userCompanyRoles.stream()
-                    .anyMatch(ucr -> ucr.getEmpresa().getId().equals(empresaId));
+                    .anyMatch(ucr -> ucr.getEmpresa() != null && empresaId.equals(ucr.getEmpresa().getId()));
         }
-        
+
         return false;
     }
 
@@ -860,57 +863,54 @@ public class User implements UserDetails {
      */
     public boolean tieneRolEnEmpresa(com.agrocloud.model.enums.RolEmpresa rolBuscado) {
         String nombreRolBuscado = rolBuscado.name();
-        
+
         // PRIMERO: Buscar en el sistema nuevo (tabla usuario_empresas con enum RolEmpresa)
-        if (usuarioEmpresas != null && !usuarioEmpresas.isEmpty()) {
-            boolean encontradoEnNuevo = usuarioEmpresas.stream()
-                    .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
-                    .anyMatch(ue -> {
-                        com.agrocloud.model.enums.RolEmpresa rolActual = ue.getRol();
-                        if (rolActual == null) {
-                            return false;
-                        }
-                        
-                        // Aplicar mapeo de roles antiguos a nuevos
-                        com.agrocloud.model.enums.RolEmpresa rolActualizado = rolActual.getRolActualizado();
-                        
-                        // Comparar con el rol buscado
-                        return rolActualizado == rolBuscado || rolActualizado.name().equals(nombreRolBuscado);
-                    });
-            
-            if (encontradoEnNuevo) {
-                return true;
+        if (usuarioEmpresas != null) {
+            try {
+                boolean encontradoEnNuevo = usuarioEmpresas.stream()
+                        .filter(ue -> ue.getEstado() == com.agrocloud.model.enums.EstadoUsuarioEmpresa.ACTIVO)
+                        .anyMatch(ue -> {
+                            com.agrocloud.model.enums.RolEmpresa rolActual = ue.getRol();
+                            if (rolActual == null) {
+                                return false;
+                            }
+                            com.agrocloud.model.enums.RolEmpresa rolActualizado = rolActual.getRolActualizado();
+                            return rolActualizado == rolBuscado || rolActualizado.name().equals(nombreRolBuscado);
+                        });
+                if (encontradoEnNuevo) {
+                    return true;
+                }
+            } catch (org.hibernate.LazyInitializationException e) {
+                // Usuario detached: no se puede evaluar usuarioEmpresas fuera de sesión
             }
         }
-        
+
         // SEGUNDO: Buscar en el sistema antiguo (tabla usuarios_empresas_roles con tabla roles)
-        if (userCompanyRoles != null && !userCompanyRoles.isEmpty()) {
-            return userCompanyRoles.stream()
-                    .anyMatch(ucr -> {
-                        Role role = ucr.getRol();
-                        if (role == null || role.getNombre() == null) {
-                            return false;
-                        }
-                        
-                        String nombreRolActual = role.getNombre();
-                        
-                        // Mapeo de roles antiguos a nuevos
-                        if ("PRODUCTOR".equals(nombreRolActual) || 
-                            "ASESOR".equals(nombreRolActual) || 
-                            "TECNICO".equals(nombreRolActual)) {
-                            return "JEFE_CAMPO".equals(nombreRolBuscado);
-                        } else if ("CONTADOR".equals(nombreRolActual)) {
-                            return "JEFE_FINANCIERO".equals(nombreRolBuscado);
-                        } else if ("LECTURA".equals(nombreRolActual)) {
-                            return "CONSULTOR_EXTERNO".equals(nombreRolBuscado);
-                        }
-                        
-                        // Comparación directa para roles nuevos
-                        return nombreRolActual.equals(nombreRolBuscado);
-                    });
+        if (userCompanyRoles != null) {
+            try {
+                return userCompanyRoles.stream()
+                        .anyMatch(ucr -> {
+                            Role role = ucr.getRol();
+                            if (role == null || role.getNombre() == null) {
+                                return false;
+                            }
+                            String nombreRolActual = role.getNombre();
+                            if ("PRODUCTOR".equals(nombreRolActual) ||
+                                    "ASESOR".equals(nombreRolActual) ||
+                                    "TECNICO".equals(nombreRolActual)) {
+                                return "JEFE_CAMPO".equals(nombreRolBuscado);
+                            } else if ("CONTADOR".equals(nombreRolActual)) {
+                                return "JEFE_FINANCIERO".equals(nombreRolBuscado);
+                            } else if ("LECTURA".equals(nombreRolActual)) {
+                                return "CONSULTOR_EXTERNO".equals(nombreRolBuscado);
+                            }
+                            return nombreRolActual.equals(nombreRolBuscado);
+                        });
+            } catch (org.hibernate.LazyInitializationException e) {
+                // Usuario detached: no se puede evaluar userCompanyRoles fuera de sesión
+            }
         }
-        
-        // No se encontró el rol en ningún sistema
+
         return false;
     }
 

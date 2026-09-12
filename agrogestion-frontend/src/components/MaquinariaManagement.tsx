@@ -171,9 +171,16 @@ const MaquinariaManagement: React.FC = () => {
     showFormWithScroll();
   };
 
-  const deleteMaquinaria = (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar esta maquinaria?')) {
-      setMaquinaria(prev => prev.filter(m => m.id !== id));
+  const deleteMaquinaria = async (id: number) => {
+    if (!window.confirm('¿Está seguro de dar de baja esta maquinaria?')) {
+      return;
+    }
+    try {
+      await maquinariaService.eliminar(id);
+      await loadMaquinaria();
+    } catch (error) {
+      console.error('Error dando de baja maquinaria:', error);
+      alert('No se pudo dar de baja la maquinaria. Por favor, intente nuevamente.');
     }
   };
 

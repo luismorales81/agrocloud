@@ -5,6 +5,8 @@ import com.agrocloud.core.security.ServicioSeguridadContexto;
 import com.agrocloud.dto.CampanaDTO;
 import com.agrocloud.dto.CrearCampanaRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,8 @@ import java.util.List;
 @RequestMapping("/api/v1/campanas")
 public class CampanaController {
 
+    private static final Logger logger = LoggerFactory.getLogger(CampanaController.class);
+
     @Autowired
     @Qualifier("campanaServiceCore")
     private CampanaService campanaService;
@@ -26,8 +30,16 @@ public class CampanaController {
 
     @GetMapping
     public ResponseEntity<List<CampanaDTO>> listar(Authentication authentication) {
-        Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
-        return ResponseEntity.ok(campanaService.listarPorEmpresa(empresaId));
+        try {
+            Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
+            return ResponseEntity.ok(campanaService.listarPorEmpresa(empresaId));
+        } catch (IllegalStateException e) {
+            logger.warn("Listar campañas — contexto inválido: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error listando campañas: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @GetMapping("/activa")

@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa una causa de momificado configurable
  */
 @Entity
-@Table(name = "porcinos_causas_momificados")
+@Table(name = "porcinos_legacy_causas_momificados")
 @EntityListeners(AuditingEntityListener.class)
 public class CausaMomificado {
 

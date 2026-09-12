@@ -210,6 +210,14 @@ public class Plot {
     public void setCampo(Field campo) { this.campo = campo; }
     @com.fasterxml.jackson.annotation.JsonProperty("campoId")
     public Long getCampoId() { return campo != null ? campo.getId() : null; }
+    @com.fasterxml.jackson.annotation.JsonProperty("campoId")
+    public void setCampoId(Long campoId) {
+        if (campoId != null) {
+            Field referencia = new Field();
+            referencia.setId(campoId);
+            this.campo = referencia;
+        }
+    }
     public List<Labor> getLabores() { return labores; }
     public void setLabores(List<Labor> labores) { this.labores = labores; }
     public User getUser() { return user; }

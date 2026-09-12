@@ -4,6 +4,7 @@ import com.agrocloud.core.application.EmpresaContextService;
 import com.agrocloud.core.application.UserService;
 import com.agrocloud.core.domain.Empresa;
 import com.agrocloud.core.domain.User;
+import com.agrocloud.core.infrastructure.EmpresaRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,15 +21,19 @@ public class ServicioSeguridadContexto {
 
     private final UserService userService;
     private final EmpresaContextService empresaContextService;
+    private final EmpresaRepository empresaRepository;
 
-    public ServicioSeguridadContexto(UserService userService, EmpresaContextService empresaContextService) {
+    public ServicioSeguridadContexto(UserService userService,
+                                     EmpresaContextService empresaContextService,
+                                     EmpresaRepository empresaRepository) {
         this.userService = userService;
         this.empresaContextService = empresaContextService;
+        this.empresaRepository = empresaRepository;
     }
 
     /**
-     * Empresa del contexto HTTP: si existe la cabecera {@code X-Company-Id} y el usuario pertenece a esa empresa,
-     * se usa; si no, la primera empresa activa del usuario.
+     * Empresa del contexto HTTP: si existe la cabecera {@code X-Company-Id} y el usuario puede acceder
+     * (o es superadmin), se usa; si no, la primera empresa activa del usuario.
      */
     @Transactional(readOnly = true)
     public Long obtenerEmpresaIdActual() {
@@ -40,7 +45,13 @@ public class ServicioSeguridadContexto {
             if (cabeceraEmpresa != null && !cabeceraEmpresa.isBlank()) {
                 try {
                     long empresaCabecera = Long.parseLong(cabeceraEmpresa.trim());
-                    if (!usuario.perteneceAEmpresa(empresaCabecera)) {
+                    if (usuario.isSuperAdmin()) {
+                        if (!empresaRepository.existsById(empresaCabecera)) {
+                            throw new IllegalStateException("La empresa del contexto no existe");
+                        }
+                        return empresaCabecera;
+                    }
+                    if (!empresaContextService.usuarioPuedeAccederAEmpresa(usuario.getId(), empresaCabecera)) {
                         throw new IllegalStateException("El usuario no pertenece a la empresa del contexto");
                     }
                     return empresaCabecera;
@@ -69,10 +80,14 @@ public class ServicioSeguridadContexto {
         if (email == null || email.isBlank()) {
             throw new IllegalStateException("No hay un usuario autenticado");
         }
-        User usuario = userService.findByEmailWithAllRelations(email);
-        if (usuario == null) {
-            throw new IllegalStateException("Usuario no encontrado");
+        try {
+            User usuario = userService.findByEmailWithAllRelations(email);
+            if (usuario == null) {
+                throw new IllegalStateException("Usuario no encontrado");
+            }
+            return usuario;
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("Usuario no encontrado o sesión inválida");
         }
-        return usuario;
     }
 }

@@ -75,6 +75,12 @@ export const cultivosMenu: MenuItem[] = [
     permisos: ['canViewInventario'],
   },
   {
+    id: 'periodos-gestion',
+    nombre: 'Períodos de gestión',
+    icono: 'CalendarDays',
+    ruta: '/cultivos/configuracion/campanas',
+  },
+  {
     id: 'configuracion',
     nombre: 'Configuración',
     icono: 'Settings',

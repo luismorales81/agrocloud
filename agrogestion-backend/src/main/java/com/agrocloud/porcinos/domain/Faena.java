@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  */
 @Deprecated
 @Entity
-@Table(name = "porcinos_faena")
+@Table(name = "porcinos_legacy_faena")
 @EntityListeners(AuditingEntityListener.class)
 public class Faena {
 

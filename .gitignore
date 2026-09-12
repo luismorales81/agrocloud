@@ -1,7 +1,10 @@
 # Archivos sensibles - NO subir a Git
 CREDENCIALES-SISTEMAS.md
+CREDENCIALES-*.txt
+DATOS-SUPERMAN-*.txt
 .env
 .env.local
+.env.development
 .env.testing
 .env.production
 
@@ -30,3 +33,28 @@ docs/node_modules/
 
 # Clon upstream de agency-agents (reglas generadas en .cursor/rules/agency/)
 vendor/agency-agents/
+
+# Build Eclipse / output local
+agrogestion-backend/bin/
+simple-app/bin/
+compile-out*.txt
+startup-log.txt
+
+# EULA generados en runtime
+**/eula-pdfs/
+
+# Credenciales y utilidades locales (nunca al repo)
+.cursor/mcp.json
+password-superman.txt
+hash-superman.txt
+crear-superman-directo.ps1
+ejecutar-crear-superman.ps1
+generar-hash-superman.ps1
+GenerarHashPassword.java
+backup/
+
+# Archivos accidentales de consola
+/tash
+/tatus --short
+/tr porcinos
+/ervicio de email con template HTML profesional

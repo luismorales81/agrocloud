@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa una causa de nacido muerto configurable
  */
 @Entity
-@Table(name = "porcinos_causas_nacidos_muertos")
+@Table(name = "porcinos_legacy_causas_nacidos_muertos")
 @EntityListeners(AuditingEntityListener.class)
 public class CausaNacidoMuerto {
 

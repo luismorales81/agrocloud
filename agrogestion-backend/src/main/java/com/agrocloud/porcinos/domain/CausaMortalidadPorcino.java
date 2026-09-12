@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa una causa de mortalidad configurable por etapa
  */
 @Entity
-@Table(name = "porcinos_causas_mortalidad_porcinos")
+@Table(name = "porcinos_legacy_causas_mortalidad_porcinos")
 @EntityListeners(AuditingEntityListener.class)
 public class CausaMortalidadPorcino {
 

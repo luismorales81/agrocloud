@@ -5,8 +5,11 @@ import com.agrocloud.core.infrastructure.CampanaRepository;
 import com.agrocloud.dto.CampanaDTO;
 import com.agrocloud.dto.CrearCampanaRequest;
 import com.agrocloud.exception.BadRequestException;
+import com.agrocloud.exception.ResourceConflictException;
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.model.enums.EstadoCampana;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -20,18 +23,26 @@ import java.util.List;
 @Transactional
 public class CampanaService {
 
+    private static final Logger logger = LoggerFactory.getLogger(CampanaService.class);
+
     @Autowired
     @Qualifier("campanaRepositoryCore")
     private CampanaRepository campanaRepository;
 
     @Transactional(readOnly = true)
     public List<CampanaDTO> listarPorEmpresa(Long empresaId) {
-        return campanaRepository.findByEmpresaIdOrderByFechaInicioDesc(empresaId).stream()
-                .map(this::aDto)
-                .toList();
+        logger.info("Listando campañas para empresa {}", empresaId);
+        try {
+            return campanaRepository.findByEmpresaIdOrderByFechaInicioDesc(empresaId).stream()
+                    .map(this::aDto)
+                    .toList();
+        } catch (Exception e) {
+            logger.error("Error listando campañas para empresa {}: {}", empresaId, e.getMessage(), e);
+            throw e;
+        }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public CampanaDTO obtenerActiva(Long empresaId) {
         return campanaRepository.findByEmpresaIdAndEstado(empresaId, EstadoCampana.ACTIVA)
                 .map(this::aDto)
@@ -58,7 +69,7 @@ public class CampanaService {
             throw new BadRequestException("La fecha fin debe ser posterior a la fecha inicio");
         }
         if (campanaRepository.existsByEmpresaIdAndCodigo(empresaId, request.getCodigo())) {
-            throw new BadRequestException("Ya existe una campaña con ese código");
+            throw new ResourceConflictException("Ya existe un período con el código \"" + request.getCodigo() + "\"");
         }
         Campana campana = new Campana();
         campana.setEmpresaId(empresaId);

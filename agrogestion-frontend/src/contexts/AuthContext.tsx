@@ -42,15 +42,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
         const currentUser = authService.getCurrentUser();
         if (currentUser && authService.isAuthenticated()) {
-          setUser(currentUser);
-          console.log('✅ [AuthContext] Usuario restaurado desde localStorage');
+          // El JWT vive en cookie httpOnly; localStorage solo guarda el perfil.
+          // Si la cookie expiró o se perdió, mis-empresas responde 403 y hay que limpiar.
+          const sesionValida = await authService.validarSesion();
+          if (sesionValida) {
+            setUser(currentUser);
+            console.log('✅ [AuthContext] Usuario restaurado desde localStorage');
+          } else {
+            console.warn('⚠️ [AuthContext] Sesión local sin cookie JWT válida; limpiando');
+            authService.logout();
+            setUser(null);
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
+        authService.logout();
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -67,10 +78,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🔧 [AuthContext] Llamando a authService.login...');
       const response = await authService.login(username, password);
       
-      console.log('✅ [AuthContext] Login exitoso, respuesta:', response);
-      
-      // Guardar datos de autenticación
-      localStorage.setItem('token', response.token);
+      // Guardar datos de usuario (JWT en cookie httpOnly)
+      localStorage.removeItem('token');
+      localStorage.removeItem('empresaActiva');
+      localStorage.removeItem('empresaIdValidada');
+      localStorage.removeItem('campanaActiva');
+      localStorage.removeItem('rolUsuario');
       localStorage.setItem('user', JSON.stringify(response.user));
       
       // Si rememberMe es true, marcar la sesión como persistente

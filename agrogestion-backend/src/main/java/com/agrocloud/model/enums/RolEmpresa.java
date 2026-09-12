@@ -49,12 +49,16 @@ public enum RolEmpresa {
      * Mapea roles antiguos a roles nuevos
      */
     public RolEmpresa getRolActualizado() {
-        return switch (this) {
-            case PRODUCTOR, ASESOR, TECNICO -> JEFE_CAMPO;
-            case CONTADOR -> JEFE_FINANCIERO;
-            case LECTURA -> CONSULTOR_EXTERNO;
-            default -> this;
-        };
+        if (this == PRODUCTOR || this == ASESOR || this == TECNICO) {
+            return JEFE_CAMPO;
+        }
+        if (this == CONTADOR) {
+            return JEFE_FINANCIERO;
+        }
+        if (this == LECTURA) {
+            return CONSULTOR_EXTERNO;
+        }
+        return this;
     }
 
     /**
@@ -72,15 +76,22 @@ public enum RolEmpresa {
      */
     private int getNivelPermisos() {
         RolEmpresa rolActualizado = getRolActualizado();
-        return switch (rolActualizado) {
-            case SUPERADMIN -> 5;
-            case ADMINISTRADOR -> 4;
-            case JEFE_CAMPO -> 3;
-            case JEFE_FINANCIERO -> 2;
-            case OPERARIO -> 1;
-            case CONSULTOR_EXTERNO -> 0;
-            default -> 0;
-        };
+        if (rolActualizado == SUPERADMIN) {
+            return 5;
+        }
+        if (rolActualizado == ADMINISTRADOR) {
+            return 4;
+        }
+        if (rolActualizado == JEFE_CAMPO) {
+            return 3;
+        }
+        if (rolActualizado == JEFE_FINANCIERO) {
+            return 2;
+        }
+        if (rolActualizado == OPERARIO) {
+            return 1;
+        }
+        return 0;
     }
 
     /**

@@ -17,8 +17,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -103,8 +105,12 @@ public class TrazabilidadComercialController {
 
     private User obtenerUsuario(UserDetails detalles) {
         if (detalles == null) {
-            return userService.findByEmailWithAllRelations("test@test.com");
+            throw new AuthenticationCredentialsNotFoundException("Usuario no autenticado");
         }
-        return userService.findByEmailWithAllRelations(detalles.getUsername());
+        User usuario = userService.findByEmailWithAllRelations(detalles.getUsername());
+        if (usuario == null) {
+            throw new UsernameNotFoundException("Usuario no encontrado");
+        }
+        return usuario;
     }
 }

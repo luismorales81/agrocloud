@@ -172,9 +172,33 @@ WHERE e.activo = 1
       SELECT 1 FROM core_campanas c WHERE c.empresa_id = e.id
   );
 
--- Backfill ciclos desde historial de cosechas
-SET @sql = CONCAT('
-INSERT INTO cultivo_ciclos (campana_id, lote_id, cultivo_id, superficie_hectareas, fecha_siembra, fecha_cosecha, estado, created_at)
+-- Backfill ciclos desde historial de cosechas (solo si hay datos y se puede resolver empresa)
+SET @tiene_empresa_campo = (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE() AND table_name = 'cultivo_campos' AND column_name = 'empresa_id'
+);
+SET @tiene_empresa_lote = (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE() AND table_name = 'cultivo_lotes' AND column_name = 'empresa_id'
+);
+SET @tiene_empresa_cultivo = (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE() AND table_name = 'cultivo_cultivos' AND column_name = 'empresa_id'
+);
+SET @tiene_liberado_siembra = (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE() AND table_name = 'cultivo_lotes' AND column_name = 'liberado_para_siembra'
+);
+SET @tiene_cultivo_id_lote = (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE() AND table_name = 'cultivo_lotes' AND column_name = 'cultivo_id'
+);
+
+SET @sql = IF(
+    @tabla_historial IS NULL OR (@tiene_empresa_campo = 0 AND @tiene_empresa_lote = 0),
+    'SELECT 1',
+    IF(@tiene_empresa_campo > 0,
+        CONCAT('INSERT INTO cultivo_ciclos (campana_id, lote_id, cultivo_id, superficie_hectareas, fecha_siembra, fecha_cosecha, estado, created_at)
 SELECT c.id, hc.lote_id, hc.cultivo_id, hc.superficie_hectareas, hc.fecha_siembra, hc.fecha_cosecha, ''COSECHADO'', NOW()
 FROM ', @tabla_historial, ' hc
 INNER JOIN cultivo_lotes l ON l.id = hc.lote_id
@@ -182,36 +206,70 @@ INNER JOIN cultivo_campos f ON f.id = l.campo_id
 INNER JOIN core_campanas c ON c.empresa_id = f.empresa_id AND c.estado = ''ACTIVA''
 WHERE NOT EXISTS (
     SELECT 1 FROM cultivo_ciclos cc WHERE cc.lote_id = hc.lote_id AND cc.fecha_cosecha = hc.fecha_cosecha
-)
-');
+)'),
+        CONCAT('INSERT INTO cultivo_ciclos (campana_id, lote_id, cultivo_id, superficie_hectareas, fecha_siembra, fecha_cosecha, estado, created_at)
+SELECT c.id, hc.lote_id, hc.cultivo_id, hc.superficie_hectareas, hc.fecha_siembra, hc.fecha_cosecha, ''COSECHADO'', NOW()
+FROM ', @tabla_historial, ' hc
+INNER JOIN cultivo_lotes l ON l.id = hc.lote_id
+INNER JOIN core_campanas c ON c.empresa_id = l.empresa_id AND c.estado = ''ACTIVA''
+WHERE NOT EXISTS (
+    SELECT 1 FROM cultivo_ciclos cc WHERE cc.lote_id = hc.lote_id AND cc.fecha_cosecha = hc.fecha_cosecha
+)')
+    )
+);
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- Vincular historial a ciclo
-SET @sql = CONCAT('
-UPDATE ', @tabla_historial, ' hc
+SET @sql = IF(
+    @tabla_historial IS NULL,
+    'SELECT 1',
+    CONCAT('UPDATE ', @tabla_historial, ' hc
 INNER JOIN cultivo_ciclos cc ON cc.lote_id = hc.lote_id AND cc.fecha_cosecha = hc.fecha_cosecha
 SET hc.ciclo_cultivo_id = cc.id
-WHERE hc.ciclo_cultivo_id IS NULL
-');
+WHERE hc.ciclo_cultivo_id IS NULL')
+);
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- Ciclos EN_CULTIVO para lotes con siembra vigente sin cosecha posterior
-INSERT INTO cultivo_ciclos (campana_id, lote_id, cultivo_id, superficie_hectareas, fecha_siembra, estado, created_at)
-SELECT c.id, l.id, cu.id, l.area_hectareas, l.fecha_siembra, 'EN_CULTIVO', NOW()
+-- Ciclos EN_CULTIVO para lotes con siembra vigente (omitir si no hay columnas necesarias)
+SET @sql = IF(
+    @tiene_empresa_campo = 0 AND @tiene_empresa_lote = 0,
+    'SELECT 1',
+    IF(@tiene_empresa_campo > 0 AND @tiene_empresa_cultivo > 0 AND @tiene_cultivo_id_lote > 0,
+        CONCAT('INSERT INTO cultivo_ciclos (campana_id, lote_id, cultivo_id, superficie_hectareas, fecha_siembra, estado, created_at)
+SELECT c.id, l.id, cu.id, l.area_hectareas, l.fecha_siembra, ''EN_CULTIVO'', NOW()
 FROM cultivo_lotes l
 INNER JOIN cultivo_campos f ON f.id = l.campo_id
-INNER JOIN core_campanas c ON c.empresa_id = f.empresa_id AND c.estado = 'ACTIVA'
+INNER JOIN core_campanas c ON c.empresa_id = f.empresa_id AND c.estado = ''ACTIVA''
 INNER JOIN cultivo_cultivos cu ON cu.id = COALESCE(l.cultivo_id, (
     SELECT c2.id FROM cultivo_cultivos c2
     WHERE c2.empresa_id = f.empresa_id AND c2.nombre = l.cultivo_actual LIMIT 1
 ))
-WHERE l.fecha_siembra IS NOT NULL
-  AND l.cultivo_actual IS NOT NULL
-  AND (l.liberado_para_siembra IS NULL OR l.liberado_para_siembra = 0)
-  AND NOT EXISTS (
-      SELECT 1 FROM cultivo_ciclos cc
-      WHERE cc.lote_id = l.id AND cc.estado IN ('PLANIFICADO', 'EN_CULTIVO')
-  );
+WHERE l.fecha_siembra IS NOT NULL AND l.cultivo_actual IS NOT NULL',
+        IF(@tiene_liberado_siembra > 0, ' AND (l.liberado_para_siembra IS NULL OR l.liberado_para_siembra = 0)', ''),
+        ' AND NOT EXISTS (SELECT 1 FROM cultivo_ciclos cc WHERE cc.lote_id = l.id AND cc.estado IN (''PLANIFICADO'', ''EN_CULTIVO''))'),
+        IF(@tiene_empresa_campo > 0,
+            CONCAT('INSERT INTO cultivo_ciclos (campana_id, lote_id, cultivo_id, superficie_hectareas, fecha_siembra, estado, created_at)
+SELECT c.id, l.id, COALESCE(l.cultivo_id, (SELECT MIN(c2.id) FROM cultivo_cultivos c2 WHERE c2.nombre = l.cultivo_actual)), l.area_hectareas, l.fecha_siembra, ''EN_CULTIVO'', NOW()
+FROM cultivo_lotes l
+INNER JOIN cultivo_campos f ON f.id = l.campo_id
+INNER JOIN core_campanas c ON c.empresa_id = f.empresa_id AND c.estado = ''ACTIVA''
+WHERE l.fecha_siembra IS NOT NULL AND l.cultivo_actual IS NOT NULL',
+            IF(@tiene_liberado_siembra > 0, ' AND (l.liberado_para_siembra IS NULL OR l.liberado_para_siembra = 0)', ''),
+            ' AND NOT EXISTS (SELECT 1 FROM cultivo_ciclos cc WHERE cc.lote_id = l.id AND cc.estado IN (''PLANIFICADO'', ''EN_CULTIVO''))'),
+            IF(@tiene_empresa_lote > 0,
+                CONCAT('INSERT INTO cultivo_ciclos (campana_id, lote_id, cultivo_id, superficie_hectareas, fecha_siembra, estado, created_at)
+SELECT c.id, l.id, COALESCE(l.cultivo_id, (SELECT MIN(c2.id) FROM cultivo_cultivos c2 WHERE c2.nombre = l.cultivo_actual)), l.area_hectareas, l.fecha_siembra, ''EN_CULTIVO'', NOW()
+FROM cultivo_lotes l
+INNER JOIN core_campanas c ON c.empresa_id = l.empresa_id AND c.estado = ''ACTIVA''
+WHERE l.fecha_siembra IS NOT NULL AND l.cultivo_actual IS NOT NULL',
+                IF(@tiene_liberado_siembra > 0, ' AND (l.liberado_para_siembra IS NULL OR l.liberado_para_siembra = 0)', ''),
+                ' AND NOT EXISTS (SELECT 1 FROM cultivo_ciclos cc WHERE cc.lote_id = l.id AND cc.estado IN (''PLANIFICADO'', ''EN_CULTIVO''))'),
+                'SELECT 1'
+            )
+        )
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 UPDATE cultivo_lotes l
 INNER JOIN cultivo_ciclos cc ON cc.lote_id = l.id AND cc.estado IN ('PLANIFICADO', 'EN_CULTIVO')

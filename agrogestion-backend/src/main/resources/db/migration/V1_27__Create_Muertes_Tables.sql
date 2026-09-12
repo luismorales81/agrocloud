@@ -168,11 +168,18 @@ PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
 
--- Agregar índices si no existen
-CREATE INDEX IF NOT EXISTS idx_muertes_lactancia_madre ON muertes_lactancia(madre_id);
-CREATE INDEX IF NOT EXISTS idx_muertes_lactancia_etapa ON muertes_lactancia(etapa);
-CREATE INDEX IF NOT EXISTS idx_muertes_lactancia_empresa ON muertes_lactancia(empresa_id);
-CREATE INDEX IF NOT EXISTS idx_muertes_lactancia_activo ON muertes_lactancia(activo);
+-- Agregar índices si no existen (MySQL no soporta CREATE INDEX IF NOT EXISTS en todas las versiones)
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @dbname AND table_name = 'muertes_lactancia' AND index_name = 'idx_muertes_lactancia_madre') > 0, 'SELECT 1', 'CREATE INDEX idx_muertes_lactancia_madre ON muertes_lactancia(madre_id)');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @dbname AND table_name = 'muertes_lactancia' AND index_name = 'idx_muertes_lactancia_etapa') > 0, 'SELECT 1', 'CREATE INDEX idx_muertes_lactancia_etapa ON muertes_lactancia(etapa)');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @dbname AND table_name = 'muertes_lactancia' AND index_name = 'idx_muertes_lactancia_empresa') > 0, 'SELECT 1', 'CREATE INDEX idx_muertes_lactancia_empresa ON muertes_lactancia(empresa_id)');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @dbname AND table_name = 'muertes_lactancia' AND index_name = 'idx_muertes_lactancia_activo') > 0, 'SELECT 1', 'CREATE INDEX idx_muertes_lactancia_activo ON muertes_lactancia(activo)');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 -- Renombrar tabla muertes_lactancia a muertes_lechones (si no existe ya)
 -- Nota: En MySQL no se puede renombrar directamente, así que creamos la nueva y migramos datos si es necesario
@@ -285,7 +292,12 @@ EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
 
 -- Agregar índices si no existen
-CREATE INDEX IF NOT EXISTS idx_muertes_recria_causa ON muertes_recria(causa);
-CREATE INDEX IF NOT EXISTS idx_muertes_recria_empresa ON muertes_recria(empresa_id);
-CREATE INDEX IF NOT EXISTS idx_muertes_recria_activo ON muertes_recria(activo);
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @dbname AND table_name = 'muertes_recria' AND index_name = 'idx_muertes_recria_causa') > 0, 'SELECT 1', 'CREATE INDEX idx_muertes_recria_causa ON muertes_recria(causa)');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @dbname AND table_name = 'muertes_recria' AND index_name = 'idx_muertes_recria_empresa') > 0, 'SELECT 1', 'CREATE INDEX idx_muertes_recria_empresa ON muertes_recria(empresa_id)');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @dbname AND table_name = 'muertes_recria' AND index_name = 'idx_muertes_recria_activo') > 0, 'SELECT 1', 'CREATE INDEX idx_muertes_recria_activo ON muertes_recria(activo)');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 

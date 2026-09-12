@@ -5,6 +5,7 @@ import { useCampana } from '../contexts/CampanaContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
 import useConceptoTemporalModulo from '../core/hooks/useConceptoTemporalModulo';
 import { Icon } from './icons';
+import { normalizarCampana } from '../core/utils/campanaApi';
 
 interface Props {
   /** Si true, omite título principal (uso dentro de Configuración unificada). */
@@ -32,7 +33,7 @@ const etiquetaEstado = (estado: string) => {
 };
 
 const GestionCampanasScreen: React.FC<Props> = ({ incrustado = false }) => {
-  const { campanas, campanaActiva, recargarCampanas, cambiarCampana, loading } = useCampana();
+  const { campanas, campanaActiva, recargarCampanas, cambiarCampana, registrarCampanaCreada, loading } = useCampana();
   const { esAdministrador } = useEmpresa();
   const { concepto } = useConceptoTemporalModulo();
 
@@ -58,13 +59,21 @@ const GestionCampanasScreen: React.FC<Props> = ({ incrustado = false }) => {
     try {
       setGuardando(true);
       setMensaje(null);
-      await api.post('/v1/campanas', {
+      const { data } = await api.post('/v1/campanas', {
         codigo: codigo.trim(),
         nombre: nombre.trim(),
         fechaInicio,
         fechaFin,
       });
-      setMensaje({ tipo: 'exito', texto: `${tituloPeriodo} creada correctamente.` });
+      const creada = normalizarCampana(data);
+      if (creada) {
+        registrarCampanaCreada(creada);
+      }
+      await recargarCampanas();
+      setMensaje({
+        tipo: 'exito',
+        texto: `${tituloPeriodo} creada. Actívela para usarla en el selector superior.`,
+      });
       setCodigo('');
       setNombre('');
       setFechaInicio('');

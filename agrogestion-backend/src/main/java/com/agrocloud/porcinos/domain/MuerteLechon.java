@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * Entidad que representa la muerte de un lechón (nacimiento o lactancia)
  */
 @Entity
-@Table(name = "porcinos_muertes_lactancia")
+@Table(name = "porcinos_legacy_muertes_lactancia")
 @EntityListeners(AuditingEntityListener.class)
 public class MuerteLechon {
 

@@ -2,6 +2,9 @@
  * Tipos TypeScript para el módulo de Porcinos
  */
 
+/** Tipos API v2 (/api/porcinos) — ver typesApiV2.ts */
+export * from './typesApiV2';
+
 // ============================================================================
 // ESTADOS Y ENUMS
 // ============================================================================

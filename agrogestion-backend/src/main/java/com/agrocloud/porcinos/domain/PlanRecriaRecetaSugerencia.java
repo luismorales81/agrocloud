@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "porcinos_plan_recria_receta_sugerencia")
+@Table(name = "porcinos_legacy_plan_recria_receta_sugerencia")
 public class PlanRecriaRecetaSugerencia {
 
     @Id

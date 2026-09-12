@@ -18,6 +18,8 @@ public interface MaquinariaRepository extends JpaRepository<Maquinaria, Long> {
     // Buscar maquinaria por usuario y estado activo
     List<Maquinaria> findByUserIdAndEstado(Long userId, Maquinaria.EstadoMaquinaria estado);
 
+    List<Maquinaria> findByEmpresaIdAndActivoTrue(Long empresaId);
+
 
 
     // Query personalizada para buscar maquinaria accesible por un usuario

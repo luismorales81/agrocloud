@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { climaService } from '../services/climaService';
 
 interface FieldWeatherData {
   temperature: number;
@@ -48,11 +49,6 @@ const FieldWeatherWidget: React.FC<FieldWeatherWidgetProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showForecast, setShowForecast] = useState(false);
 
-  // API Key de OpenWeatherMap
-  const API_KEY: string = '9dee7c2c4e36ce49c32fab5a51d6e25b';
-  const USE_MOCK_DATA = API_KEY === 'demo-key' || API_KEY === '1234567890abcdef';
-  const BASE_URL = 'https://api.openweathermap.org/data/2.5';
-
   useEffect(() => {
     if (coordinates) {
       fetchWeatherData();
@@ -65,60 +61,25 @@ const FieldWeatherWidget: React.FC<FieldWeatherWidgetProps> = ({
       setLoading(true);
       setError(null);
 
-      let weatherData: FieldWeatherData;
-
-      if (USE_MOCK_DATA) {
-        // Datos simulados específicos para el campo
-        weatherData = {
-          temperature: 22 + Math.floor(Math.random() * 8), // Variación por campo
-          description: 'Parcialmente nublado',
-          humidity: 65 + Math.floor(Math.random() * 15),
-          windSpeed: 10 + Math.floor(Math.random() * 10),
-          pressure: 1010 + Math.floor(Math.random() * 10),
-          icon: '02d',
-          forecast: [
-            {
-              date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              temp: { min: 18, max: 26 },
-              description: 'Soleado',
-              icon: '01d',
-              humidity: 60,
-              windSpeed: 12
-            },
-            {
-              date: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString().split('T')[0],
-              temp: { min: 16, max: 23 },
-              description: 'Nublado',
-              icon: '03d',
-              humidity: 75,
-              windSpeed: 18
-            }
-          ],
-          alerts: []
-        };
-      } else {
-        // Obtener datos reales de la API
-        const response = await fetch(
-          `${BASE_URL}/weather?lat=${coordinates.lat}&lon=${coordinates.lon}&appid=${API_KEY}&units=metric&lang=es`
-        );
-
-        if (!response.ok) {
-          throw new Error('Error obteniendo datos del clima');
-        }
-
-        const data = await response.json();
-
-        weatherData = {
-          temperature: Math.round(data.main.temp),
-          description: data.weather[0].description,
-          humidity: data.main.humidity,
-          windSpeed: Math.round(data.wind.speed * 3.6),
-          pressure: data.main.pressure,
-          icon: data.weather[0].icon,
-          forecast: [],
-          alerts: []
-        };
-      }
+      const datos = await climaService.obtenerPorCoordenadas(coordinates.lat, coordinates.lon);
+      const actual = datos.current;
+      const weatherData: FieldWeatherData = {
+        temperature: Math.round(actual.temperature),
+        description: actual.weatherDescription,
+        humidity: actual.humidity,
+        windSpeed: Math.round(actual.windSpeed * 3.6),
+        pressure: 1013,
+        icon: actual.icon,
+        forecast: (datos.forecast ?? []).slice(0, 5).map((dia) => ({
+          date: typeof dia.date === 'string' ? dia.date : String(dia.date),
+          temp: { min: Math.round(dia.minTemperature), max: Math.round(dia.maxTemperature) },
+          description: dia.weatherDescription,
+          icon: dia.icon,
+          humidity: actual.humidity,
+          windSpeed: Math.round(actual.windSpeed * 3.6),
+        })),
+        alerts: [],
+      };
 
       // Generar alertas basadas en condiciones
       if (weatherData.temperature > 30) {

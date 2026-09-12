@@ -1,0 +1,141 @@
+# Compose de producción (VPS). No usar en el PC local.
+#
+#   ./deploy/levantar-produccion.sh
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Imágenes preconstruidas (GHCR), sin Maven en el VPS:
+#   IMAGEN_BACKEND / IMAGEN_FRONTEND en .env y ./deploy/actualizar-desde-registro.sh
+#
+# Caddy termina TLS (80/443). MySQL, backend y frontend no se publican al host.
+# El navegador habla con https://DOMINIO ; /api se proxifica al backend (mismo origen).
+# Actuator y Swagger se responden 404 en Caddy (el health interno de Docker sigue en la red).
+
+name: agrogestion
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: agrogestion-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-agroclouddb}
+      MYSQL_USER: ${DATABASE_USERNAME}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
+      TZ: UTC
+    volumes:
+      - mysql_datos:/var/lib/mysql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-time-zone=+00:00
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - agrogestion
+
+  backend:
+    build:
+      context: ./agrogestion-backend
+      dockerfile: Dockerfile
+    image: ${IMAGEN_BACKEND:-agrogestion-backend:prod}
+    container_name: agrogestion-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+      PORT: "8080"
+      DATABASE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-agroclouddb}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_SAME_SITE: Lax
+      CHAT_IA_ENCRYPTION_KEY: ${CHAT_IA_ENCRYPTION_KEY}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      FRONTEND_URL: ${FRONTEND_URL}
+      SPRING_FLYWAY_ENABLED: "${SPRING_FLYWAY_ENABLED:-true}"
+      EULA_STORAGE_PATH: /app/eula-pdfs
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      IA_GEMINI_API_KEY: ${IA_GEMINI_API_KEY:-}
+      IA_GEMINI_HABILITADO: ${IA_GEMINI_HABILITADO:-true}
+      IA_GEMINI_MODEL: ${IA_GEMINI_MODEL:-gemini-flash-latest}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom}
+    volumes:
+      - eula_pdfs:/app/eula-pdfs
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 8
+      start_period: 300s
+    networks:
+      - agrogestion
+
+  frontend:
+    build:
+      context: ./agrogestion-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+    image: ${IMAGEN_FRONTEND:-agrogestion-frontend:prod}
+    container_name: agrogestion-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - agrogestion
+
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: agrogestion-caddy
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO}
+      CADDY_EMAIL: ${CADDY_EMAIL}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data
+      - caddy_config:/config
+    networks:
+      - agrogestion
+
+volumes:
+  mysql_datos:
+  eula_pdfs:
+  caddy_datos:
+  caddy_config:
+
+networks:
+  agrogestion:
+    driver: bridge

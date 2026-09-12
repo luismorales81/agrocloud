@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * Stock de alimento (insumos, granos propios, subproductos). Usa cultivoId para no depender de Cultivos.
  */
 @Entity
-@Table(name = "porcinos_stock_alimento")
+@Table(name = "porcinos_legacy_stock_alimento")
 @EntityListeners(AuditingEntityListener.class)
 public class StockAlimento {
 

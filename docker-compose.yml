@@ -1,43 +1,123 @@
-version: '3.8'
+# Compose local: MySQL + backend + frontend desde cero.
+# No incluye secretos. Copiar .env.example a .env y completar valores.
+#
+#   powershell -File deploy/levantar-local.ps1
+#   docker compose up --build
+#
+# Puertos en el host (evitan choque con MySQL/npm de Windows):
+#   frontend 3001, backend 8080, mysql 3307.
+# Las imagenes de backend y frontend son independientes (sin secretos horneados).
+
+name: agrogestion
 
 services:
   mysql:
     image: mysql:8.0
-    container_name: agrocloud-mysql
+    container_name: agrogestion-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: agroclouddb
-      MYSQL_USER: agrocloud
-      MYSQL_PASSWORD: agrocloud123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-agroclouddb}
+      MYSQL_USER: ${DATABASE_USERNAME}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
+      TZ: UTC
     ports:
-      - "3306:3306"
+      - "${PUERTO_MYSQL_HOST:-3307}:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./agrogestion-backend/src/main/resources/schema-mysql.sql:/docker-entrypoint-initdb.d/schema-mysql.sql
-    command: --default-authentication-plugin=mysql_native_password
+      - mysql_datos:/var/lib/mysql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-time-zone=+00:00
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
-      - agrocloud-network
+      - agrogestion
 
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: agrocloud-phpmyadmin
+  backend:
+    build:
+      context: ./agrogestion-backend
+      dockerfile: Dockerfile
+    image: agrogestion-backend:local
+    container_name: agrogestion-backend
     restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: password
-    ports:
-      - "8081:80"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+      PORT: "8080"
+      DATABASE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-agroclouddb}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_COOKIE_SECURE: "false"
+      JWT_COOKIE_SAME_SITE: Lax
+      CHAT_IA_ENCRYPTION_KEY: ${CHAT_IA_ENCRYPTION_KEY}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3001}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
+      SPRING_FLYWAY_ENABLED: "true"
+      EULA_STORAGE_PATH: /app/eula-pdfs
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      IA_GEMINI_API_KEY: ${IA_GEMINI_API_KEY:-}
+      IA_GEMINI_HABILITADO: ${IA_GEMINI_HABILITADO:-true}
+      IA_GEMINI_MODEL: ${IA_GEMINI_MODEL:-gemini-flash-latest}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+      APP_CREAR_USUARIO_LOCAL: ${APP_CREAR_USUARIO_LOCAL:-true}
+      APP_USUARIO_LOCAL_EMAIL: ${APP_USUARIO_LOCAL_EMAIL:-admin@localhost}
+      APP_USUARIO_LOCAL_PASSWORD: ${APP_USUARIO_LOCAL_PASSWORD:-AgrocloudLocal1}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom}
+    ports:
+      - "${PUERTO_BACKEND_HOST:-8080}:8080"
+    volumes:
+      - eula_pdfs:/app/eula-pdfs
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 8
+      start_period: 300s
     networks:
-      - agrocloud-network
+      - agrogestion
+
+  frontend:
+    build:
+      context: ./agrogestion-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+    image: agrogestion-frontend:local
+    container_name: agrogestion-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${PUERTO_FRONTEND_HOST:-3001}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - agrogestion
 
 volumes:
-  mysql_data:
+  mysql_datos:
+  eula_pdfs:
 
 networks:
-  agrocloud-network:
+  agrogestion:
     driver: bridge

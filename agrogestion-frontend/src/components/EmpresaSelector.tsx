@@ -127,7 +127,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
             {empresasUsuario.map((usuarioEmpresa) => (
               <button
                 key={usuarioEmpresa.id}
-                onClick={() => handleCambiarEmpresa(usuarioEmpresa.id)}
+                onClick={() => handleCambiarEmpresa(usuarioEmpresa.empresaId)}
                 className={`w-full px-3 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
                   empresaActiva.id === usuarioEmpresa.empresaId ? 'bg-blue-50' : ''
                 }`}

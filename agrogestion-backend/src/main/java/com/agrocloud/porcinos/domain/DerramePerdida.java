@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
  * Derrames, pérdidas o accidentes de insumos. Usa loteId y cultivoId para no depender de Cultivos.
  */
 @Entity
-@Table(name = "porcinos_derrames_perdidas")
+@Table(name = "porcinos_legacy_derrames_perdidas")
 @EntityListeners(AuditingEntityListener.class)
 public class DerramePerdida {
 

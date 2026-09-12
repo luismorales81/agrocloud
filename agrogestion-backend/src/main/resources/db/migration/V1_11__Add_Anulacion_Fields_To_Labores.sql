@@ -1,31 +1,43 @@
--- Migración para agregar campos de auditoría de anulación a la tabla labores
--- Permite registrar quién, cuándo y por qué se anuló una labor
+-- Migración V1.11: Campos de anulación en labores (defensiva)
 
--- 1. Agregar campos de auditoría de anulación
-ALTER TABLE labores
-ADD COLUMN motivo_anulacion VARCHAR(1000) NULL COMMENT 'Justificación de la anulación de la labor',
-ADD COLUMN fecha_anulacion TIMESTAMP NULL COMMENT 'Fecha y hora en que se anuló la labor',
-ADD COLUMN usuario_anulacion_id BIGINT NULL COMMENT 'Usuario que realizó la anulación';
+SET @esquema = DATABASE();
 
--- 2. Agregar foreign key para el usuario que realizó la anulación
-ALTER TABLE labores
-ADD CONSTRAINT fk_labores_usuario_anulacion 
-FOREIGN KEY (usuario_anulacion_id) REFERENCES usuarios(id) ON DELETE SET NULL;
+SET @tabla_labores = (
+    SELECT CASE
+        WHEN EXISTS (SELECT 1 FROM information_schema.tables t WHERE t.table_schema = @esquema AND t.table_name = 'cultivo_labores')
+            THEN 'cultivo_labores'
+        WHEN EXISTS (SELECT 1 FROM information_schema.tables t WHERE t.table_schema = @esquema AND t.table_name = 'labores')
+            THEN 'labores'
+        ELSE NULL
+    END
+);
 
--- 3. Crear índice para consultas por usuario que anuló
-CREATE INDEX idx_labores_usuario_anulacion ON labores(usuario_anulacion_id);
+SET @sql = IF(@tabla_labores IS NULL, 'SELECT 1',
+    IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @esquema AND TABLE_NAME = @tabla_labores AND COLUMN_NAME = 'motivo_anulacion') > 0,
+        'SELECT 1',
+        CONCAT('ALTER TABLE ', @tabla_labores, ' ADD COLUMN motivo_anulacion VARCHAR(1000) NULL, ADD COLUMN fecha_anulacion TIMESTAMP NULL, ADD COLUMN usuario_anulacion_id BIGINT NULL')
+    )
+);
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
--- 4. Crear índice para consultas por fecha de anulación
-CREATE INDEX idx_labores_fecha_anulacion ON labores(fecha_anulacion);
+SET @sql = IF(@tabla_labores IS NULL
+    OR (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = @esquema AND TABLE_NAME = @tabla_labores AND CONSTRAINT_NAME = 'fk_labores_usuario_anulacion') > 0,
+    'SELECT 1',
+    CONCAT('ALTER TABLE ', @tabla_labores, ' ADD CONSTRAINT fk_labores_usuario_anulacion FOREIGN KEY (usuario_anulacion_id) REFERENCES usuarios(id) ON DELETE SET NULL')
+);
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
--- 5. Actualizar el check constraint del enum estado si existe (MySQL 8.0.16+)
--- Nota: En versiones anteriores de MySQL, los ENUM se manejan directamente en la columna
--- Esta alteración agrega 'ANULADA' como nuevo estado válido
-ALTER TABLE labores 
-MODIFY COLUMN estado ENUM('PLANIFICADA', 'EN_PROGRESO', 'COMPLETADA', 'CANCELADA', 'ANULADA') 
-DEFAULT 'PLANIFICADA'
-COMMENT 'Estado actual de la labor: PLANIFICADA (no ejecutada), EN_PROGRESO (en ejecución), COMPLETADA (finalizada), CANCELADA (cancelada antes de ejecutar), ANULADA (anulada después de ejecutar)';
+SET @sql = IF(@tabla_labores IS NULL OR (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @esquema AND table_name = @tabla_labores AND index_name = 'idx_labores_usuario_anulacion') > 0,
+    'SELECT 1', CONCAT('CREATE INDEX idx_labores_usuario_anulacion ON ', @tabla_labores, '(usuario_anulacion_id)'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
--- 6. Comentarios para documentar el propósito de los nuevos campos
-ALTER TABLE labores 
-COMMENT = 'Tabla de labores agrícolas con sistema de anulación y auditoría completo. Incluye gestión de estados y trazabilidad de cambios.';
+SET @sql = IF(@tabla_labores IS NULL OR (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @esquema AND table_name = @tabla_labores AND index_name = 'idx_labores_fecha_anulacion') > 0,
+    'SELECT 1', CONCAT('CREATE INDEX idx_labores_fecha_anulacion ON ', @tabla_labores, '(fecha_anulacion)'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql = IF(@tabla_labores IS NULL, 'SELECT 1',
+    CONCAT('ALTER TABLE ', @tabla_labores, ' MODIFY COLUMN estado VARCHAR(50) DEFAULT ''PLANIFICADA''')
+);
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SELECT 'Migración V1_11 anulación en labores aplicada (modo defensivo)' AS mensaje;

@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  * Evento reproductivo que indica la pérdida de embriones durante la gestación.
  */
 @Entity
-@Table(name = "porcinos_reabsorciones")
+@Table(name = "porcinos_legacy_reabsorciones")
 @EntityListeners(AuditingEntityListener.class)
 public class Reabsorcion {
 

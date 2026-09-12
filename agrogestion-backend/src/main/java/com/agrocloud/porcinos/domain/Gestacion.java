@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "porcinos_gestacion")
+@Table(name = "porcinos_legacy_gestacion")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"madre", "servicio"})
 public class Gestacion {

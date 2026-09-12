@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useModule } from '../core/hooks/useModule';
 import { getModuleMenu } from '../modules';
@@ -29,11 +29,6 @@ const ModularSidebar: React.FC<ModularSidebarProps> = ({
   const location = useLocation();
   const permissions = usePermissions();
 
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(() => {
-    const saved = localStorage.getItem(`sidebar-expanded-${currentModule}`);
-    return saved ? JSON.parse(saved) : [];
-  });
-
   if (!currentModule || !moduleInfo) {
     console.log('ModularSidebar: No hay módulo o moduleInfo', { currentModule, moduleInfo });
     return (
@@ -54,24 +49,9 @@ const ModularSidebar: React.FC<ModularSidebarProps> = ({
   }
 
   const menuItems = getModuleMenu(currentModule);
-  console.log('ModularSidebar: menuItems', menuItems, 'currentModule', currentModule);
-
-  const toggleGroup = (groupId: string) => {
-    setExpandedGroups((prev) => {
-      const newExpanded = prev.includes(groupId)
-        ? prev.filter((id) => id !== groupId)
-        : [...prev, groupId];
-      localStorage.setItem(`sidebar-expanded-${currentModule}`, JSON.stringify(newExpanded));
-      return newExpanded;
-    });
-  };
-
-  // Filtrar items según permisos
   const filteredItems = menuItems.filter(
     (item) => !item.permisos || item.permisos.some((perm) => permissions[perm as keyof typeof permissions])
   );
-
-  console.log('ModularSidebar: filteredItems', filteredItems, 'menuItems', menuItems, 'permissions', permissions);
 
   const isActive = (ruta: string) => {
     return location.pathname === ruta || location.pathname.startsWith(ruta + '/');
@@ -215,6 +195,46 @@ const ModularSidebar: React.FC<ModularSidebarProps> = ({
             }}
           >
             <Icon name="Lock" size={16} style={{ marginRight: '0.25rem' }} /> Cambiar Contraseña
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('abrir-chat-ia'))}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              backgroundColor: '#374151',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.25rem',
+              marginTop: '0.5rem',
+            }}
+          >
+            <Icon name="Bot" size={16} style={{ marginRight: '0.25rem' }} /> Asistente IA
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('abrir-config-chat-ia'))}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              backgroundColor: '#374151',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.25rem',
+              marginTop: '0.5rem',
+            }}
+          >
+            <Icon name="Settings" size={16} style={{ marginRight: '0.25rem' }} /> Configuración IA
           </button>
         </div>
 

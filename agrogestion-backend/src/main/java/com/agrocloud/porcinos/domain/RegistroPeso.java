@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * Registro histórico de pesada por lote (recría/engorde).
  */
 @Entity
-@Table(name = "porcinos_registros_peso")
+@Table(name = "porcinos_legacy_registros_peso")
 @EntityListeners(AuditingEntityListener.class)
 public class RegistroPeso {
 

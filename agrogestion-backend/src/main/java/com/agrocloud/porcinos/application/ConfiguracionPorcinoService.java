@@ -38,6 +38,9 @@ public class ConfiguracionPorcinoService {
         if (existente.isPresent()) {
             return existente;
         }
+        if (configuracionRepository.existsByClaveAndActivoTrue(clave)) {
+            return Optional.empty();
+        }
         return asegurarConfiguracionPorDefecto(clave, empresa);
     }
 
@@ -152,7 +155,11 @@ public class ConfiguracionPorcinoService {
                 empresa
         );
         config.setDescripcion((String) configData.get("descripcion"));
-        return Optional.of(configuracionRepository.save(config));
+        try {
+            return Optional.of(configuracionRepository.save(config));
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            return configuracionRepository.findByClaveAndEmpresaAndActivoTrue(clave, empresa);
+        }
     }
 
     private Map<String, Map<String, Object>> mapaConfiguracionesPorDefecto() {

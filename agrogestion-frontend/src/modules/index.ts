@@ -21,6 +21,11 @@ export const availableModules: ModuleConfig[] = [
   lecheriaModule,
 ];
 
+/** Módulos visibles en el selector principal (sin duplicados avícola). */
+export const modulosParaSelector: ModuleConfig[] = availableModules.filter(
+  (m) => m.visibleEnSelector !== false
+);
+
 /**
  * Obtener la configuración de un módulo por su ID
  */

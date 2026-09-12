@@ -1,5 +1,6 @@
 package com.agrocloud.config;
 
+import com.agrocloud.exception.BadRequestException;
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.exception.ResourceConflictException;
 import com.agrocloud.exception.EulaNoAceptadoException;
@@ -50,8 +51,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
     
+    private static final String MENSAJE_CREDENCIALES_INVALIDAS =
+            "Email o contraseña incorrectos. Por favor, verifica tus credenciales.";
+    
     /**
-     * Maneja excepciones de usuario no encontrado
+     * Maneja excepciones de usuario no encontrado (mismo mensaje que credenciales incorrectas)
      */
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleUsernameNotFound(UsernameNotFoundException ex, WebRequest request) {
@@ -60,8 +64,8 @@ public class GlobalExceptionHandler {
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now());
         response.put("status", HttpStatus.UNAUTHORIZED.value());
-        response.put("error", "Usuario no encontrado");
-        response.put("message", "El email proporcionado no está registrado en el sistema.");
+        response.put("error", "Credenciales inválidas");
+        response.put("message", MENSAJE_CREDENCIALES_INVALIDAS);
         response.put("path", request.getDescription(false).replace("uri=", ""));
         
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
@@ -131,8 +135,6 @@ public class GlobalExceptionHandler {
         response.put("error", "Error de conexión a base de datos");
         response.put("message", "Problema temporal con la base de datos. Inténtalo de nuevo en unos momentos.");
         response.put("path", request.getDescription(false).replace("uri=", ""));
-        response.put("sqlState", ex.getSQLState());
-        response.put("errorCode", ex.getErrorCode());
         
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
@@ -211,6 +213,25 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Maneja solicitudes inválidas de negocio (validación de dominio).
+     */
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequestException(
+            BadRequestException ex, WebRequest request) {
+
+        logger.warn("⚠️ [GlobalExceptionHandler] Solicitud inválida: {}", ex.getMessage());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", ex.getMessage());
+        response.put("message", ex.getMessage());
+        response.put("path", request.getDescription(false).replace("uri=", ""));
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
      * Maneja excepciones de recursos no encontrados.
      */
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -223,7 +244,7 @@ public class GlobalExceptionHandler {
         response.put("timestamp", LocalDateTime.now());
         response.put("status", HttpStatus.NOT_FOUND.value());
         response.put("error", "Recurso no encontrado");
-        response.put("message", ex.getMessage());
+        response.put("message", "El recurso solicitado no existe.");
         response.put("path", request.getDescription(false).replace("uri=", ""));
         
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
@@ -299,7 +320,7 @@ public class GlobalExceptionHandler {
         response.put("timestamp", LocalDateTime.now());
         response.put("status", HttpStatus.BAD_REQUEST.value());
         response.put("error", "Argumento inválido");
-        response.put("message", ex.getMessage());
+        response.put("message", "La solicitud no es válida.");
         response.put("path", request.getDescription(false).replace("uri=", ""));
         
         return ResponseEntity.badRequest().body(response);
@@ -318,7 +339,7 @@ public class GlobalExceptionHandler {
         response.put("timestamp", LocalDateTime.now());
         response.put("status", HttpStatus.BAD_REQUEST.value());
         response.put("error", "Estado inválido");
-        response.put("message", ex.getMessage());
+        response.put("message", "No se pudo completar la operación.");
         response.put("path", request.getDescription(false).replace("uri=", ""));
         
         return ResponseEntity.badRequest().body(response);

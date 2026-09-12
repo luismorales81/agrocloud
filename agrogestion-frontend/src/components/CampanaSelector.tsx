@@ -1,81 +1,171 @@
-import React, { useState } from 'react';
-import { useCampana } from '../contexts/CampanaContext';
-import useConceptoTemporalModulo from '../core/hooks/useConceptoTemporalModulo';
-
-const CampanaSelector: React.FC = () => {
-  const { campanaActiva, campanas, cambiarCampana, loading, error } = useCampana();
-  const { concepto } = useConceptoTemporalModulo();
-  const [abierto, setAbierto] = useState(false);
-
-  const estadoColor = (estado: string) => {
-    switch (estado) {
-      case 'ACTIVA': return 'text-green-700 bg-green-100';
-      case 'CERRADA': return 'text-gray-700 bg-gray-200';
-      default: return 'text-amber-700 bg-amber-100';
-    }
-  };
-
-  if (loading) {
-    return <span className="text-sm text-gray-500">{concepto.etiquetaPeriodo}…</span>;
-  }
-  if (error) {
-    return <span className="text-sm text-red-600">{error}</span>;
-  }
-  if (!campanaActiva) {
-    return <span className="text-sm text-gray-500">Sin período</span>;
-  }
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setAbierto(!abierto)}
-        className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 min-w-[200px]"
-        title={concepto.ayuda}
-      >
-        <span className="text-lg">📅</span>
-        <div className="text-left flex-1 min-w-0">
-          <div className="text-[10px] uppercase tracking-wide text-gray-500 truncate">
-            {concepto.etiquetaPeriodo}
-          </div>
-          <div className="text-sm font-medium text-gray-900 truncate">{campanaActiva.nombre}</div>
-          <div className="text-xs text-gray-500">{campanaActiva.codigo}</div>
-        </div>
-        <svg className={`w-4 h-4 text-gray-400 shrink-0 ${abierto ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {abierto && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
-          <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-72 overflow-y-auto">
-            <div className="px-3 py-2 bg-gray-50 border-b text-xs text-gray-600">
-              {concepto.ayuda}
-            </div>
-            {campanas.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={async () => {
-                  await cambiarCampana(c.id);
-                  setAbierto(false);
-                }}
-                className={`w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 ${
-                  campanaActiva.id === c.id ? 'bg-blue-50' : ''
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">{c.nombre}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${estadoColor(c.estado)}`}>{c.estado}</span>
-                </div>
-                <div className="text-xs text-gray-500">{c.fechaInicio} — {c.fechaFin}</div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
-
-export default CampanaSelector;
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useCampana } from '../contexts/CampanaContext';
+import useConceptoTemporalModulo from '../core/hooks/useConceptoTemporalModulo';
+import { useModule } from '../core/hooks/useModule';
+
+const CampanaSelector: React.FC = () => {
+  const { campanaActiva, campanas, cambiarCampana, loading, error } = useCampana();
+  const { concepto } = useConceptoTemporalModulo();
+  const { currentModule } = useModule();
+  const navigate = useNavigate();
+  const [abierto, setAbierto] = useState(false);
+
+  const estadoColor = (estado: string) => {
+    switch (estado) {
+      case 'ACTIVA': return { fondo: '#d1fae5', color: '#065f46' };
+      case 'CERRADA': return { fondo: '#e5e7eb', color: '#374151' };
+      default: return { fondo: '#fef3c7', color: '#92400e' };
+    }
+  };
+
+  const irAGestionPeriodos = () => {
+    if (!currentModule) return;
+    const ruta =
+      currentModule === 'cultivos'
+        ? `/${currentModule}/configuracion?tab=periodos`
+        : `/${currentModule}/configuracion/periodos`;
+    navigate(ruta);
+    setAbierto(false);
+  };
+
+  const periodoVisible = campanaActiva ?? campanas[0] ?? null;
+
+  if (loading) {
+    return <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{concepto.etiquetaPeriodo}…</span>;
+  }
+  if (error) {
+    return <span style={{ fontSize: '0.875rem', color: '#dc2626' }}>{error}</span>;
+  }
+  if (!periodoVisible) {
+    return (
+      <button
+        type="button"
+        onClick={irAGestionPeriodos}
+        style={{
+          fontSize: '0.875rem',
+          color: '#6b7280',
+          background: '#fff',
+          border: '1px dashed #d1d5db',
+          borderRadius: '0.375rem',
+          padding: '0.5rem 0.75rem',
+          cursor: 'pointer',
+        }}
+        title="Configurar período de gestión"
+      >
+        Sin período — configurar
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setAbierto(!abierto)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.5rem 0.75rem',
+          backgroundColor: '#fff',
+          border: '1px solid #d1d5db',
+          borderRadius: '0.375rem',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+          minWidth: '200px',
+          cursor: 'pointer',
+        }}
+        title={concepto.ayuda}
+      >
+        <span style={{ fontSize: '1.125rem' }}>📅</span>
+        <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280' }}>
+            {concepto.etiquetaPeriodo}
+          </div>
+          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {periodoVisible.nombre}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{periodoVisible.codigo}</div>
+        </div>
+        <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{abierto ? '▲' : '▼'}</span>
+      </button>
+      {abierto && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+            onClick={() => setAbierto(false)}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              marginTop: '0.25rem',
+              width: '20rem',
+              backgroundColor: '#fff',
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.375rem',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+              zIndex: 50,
+              maxHeight: '18rem',
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: '0.75rem', color: '#4b5563' }}>
+              {concepto.ayuda}
+            </div>
+            {campanas.map((c) => {
+              const estilo = estadoColor(c.estado);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={async () => {
+                    await cambiarCampana(c.id);
+                    setAbierto(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem 0.75rem',
+                    textAlign: 'left',
+                    border: 'none',
+                    borderBottom: '1px solid #f3f4f6',
+                    backgroundColor: periodoVisible.id === c.id ? '#eff6ff' : '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{c.nombre}</span>
+                    <span style={{ fontSize: '0.75rem', padding: '0.125rem 0.5rem', borderRadius: '9999px', backgroundColor: estilo.fondo, color: estilo.color }}>
+                      {c.estado}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{c.fechaInicio} — {c.fechaFin}</div>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={irAGestionPeriodos}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: 'none',
+                borderTop: '1px solid #e5e7eb',
+                backgroundColor: '#f9fafb',
+                color: '#2563eb',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Administrar períodos →
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default CampanaSelector;

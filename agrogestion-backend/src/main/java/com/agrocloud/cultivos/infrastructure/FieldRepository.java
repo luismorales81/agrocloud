@@ -18,6 +18,8 @@ public interface FieldRepository extends JpaRepository<Field, Long> {
     // Buscar campos por usuario y estado activo
     List<Field> findByUserIdAndActivoTrue(Long userId);
 
+    List<Field> findByEmpresaIdAndActivoTrue(Long empresaId);
+
     // Buscar campos por usuario y estado
     List<Field> findByUserIdAndEstado(Long userId, String estado);
 

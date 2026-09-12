@@ -29,6 +29,16 @@ interface DetalleBalance {
   descripcion?: string;
 }
 
+const escaparHtml = (texto: string | undefined): string => {
+  if (!texto) return '';
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 const BalanceReport: React.FC = () => {
   const { formatCurrency } = useCurrencyContext();
   const [balance, setBalance] = useState<BalanceData | null>(null);
@@ -211,12 +221,12 @@ const BalanceReport: React.FC = () => {
             </tr>
             ${balance.detalles.map(detalle => `
               <tr>
-                <td style="padding: 8px;">${detalle.tipo}</td>
-                <td style="padding: 8px;">${detalle.concepto}</td>
-                <td style="padding: 8px;">${detalle.fecha}</td>
+                <td style="padding: 8px;">${escaparHtml(detalle.tipo)}</td>
+                <td style="padding: 8px;">${escaparHtml(detalle.concepto)}</td>
+                <td style="padding: 8px;">${escaparHtml(detalle.fecha)}</td>
                 <td style="padding: 8px; color: ${detalle.tipo === 'INGRESO' ? 'green' : 'red'};">${formatCurrency(detalle.monto)}</td>
-                <td style="padding: 8px;">${detalle.categoria}</td>
-                ${tipoReporte === 'lote' ? `<td style="padding: 8px;">${detalle.lote || '-'}</td>` : ''}
+                <td style="padding: 8px;">${escaparHtml(detalle.categoria)}</td>
+                ${tipoReporte === 'lote' ? `<td style="padding: 8px;">${escaparHtml(detalle.lote || '-')}</td>` : ''}
               </tr>
             `).join('')}
           </table>
@@ -291,12 +301,12 @@ const BalanceReport: React.FC = () => {
             </tr>
             ${balance.detalles.map(detalle => `
               <tr>
-                <td style="border: 1px solid #bdc3c7; padding: 8px;">${detalle.tipo}</td>
-                <td style="border: 1px solid #bdc3c7; padding: 8px;">${detalle.concepto}</td>
-                <td style="border: 1px solid #bdc3c7; padding: 8px;">${detalle.fecha}</td>
+                <td style="border: 1px solid #bdc3c7; padding: 8px;">${escaparHtml(detalle.tipo)}</td>
+                <td style="border: 1px solid #bdc3c7; padding: 8px;">${escaparHtml(detalle.concepto)}</td>
+                <td style="border: 1px solid #bdc3c7; padding: 8px;">${escaparHtml(detalle.fecha)}</td>
                 <td style="border: 1px solid #bdc3c7; padding: 8px; text-align: right; color: ${detalle.tipo === 'INGRESO' ? '#27ae60' : '#e74c3c'};">${formatCurrency(detalle.monto)}</td>
-                <td style="border: 1px solid #bdc3c7; padding: 8px;">${detalle.categoria}</td>
-                ${tipoReporte === 'lote' ? `<td style="border: 1px solid #bdc3c7; padding: 8px;">${detalle.lote || '-'}</td>` : ''}
+                <td style="border: 1px solid #bdc3c7; padding: 8px;">${escaparHtml(detalle.categoria)}</td>
+                ${tipoReporte === 'lote' ? `<td style="border: 1px solid #bdc3c7; padding: 8px;">${escaparHtml(detalle.lote || '-')}</td>` : ''}
               </tr>
             `).join('')}
           </table>

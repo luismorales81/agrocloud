@@ -1,0 +1,26 @@
+---
+description: Protocolo obligatorio de desarrollo Spec Driven Development (SDD). Ningún código sin SPEC aprobada.
+alwaysApply: true
+---
+
+# Protocolo obligatorio de desarrollo (Spec Driven Development)
+
+Todo el desarrollo debe seguir **Spec Driven Development (SDD)**. Referencia: `/cursor-development-rules.md`.
+
+## Reglas obligatorias
+
+1. **Toda funcionalidad nueva** debe comenzar con un archivo SPEC en `/docs/specs`.
+2. **No se puede generar código fuente** antes de que la SPEC esté aprobada.
+3. El asistente debe:
+   - Crear la spec
+   - Identificar reglas de negocio faltantes
+   - Identificar riesgos arquitectónicos
+   - Hacer preguntas de clarificación
+4. **Solo después de aprobación explícita** de la SPEC se puede proponer el diseño técnico.
+5. **Solo después de aprobación del diseño técnico** se puede generar código.
+
+## Flujo
+
+1. Crear SPEC en `/docs/specs` → revisión y aprobación.
+2. Proponer diseño técnico → aprobación.
+3. Generar código según diseño aprobado.

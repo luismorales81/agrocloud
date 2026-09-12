@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Entidad que representa un proveedor de genética o empresa de semen
  */
 @Entity
-@Table(name = "porcinos_proveedores_genetica")
+@Table(name = "porcinos_legacy_proveedores_genetica")
 @EntityListeners(AuditingEntityListener.class)
 public class ProveedorGenetica {
 

@@ -3,6 +3,7 @@ package com.agrocloud.controller;
 import com.agrocloud.cultivos.domain.Cultivo;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.cultivos.application.CultivoService;
+import com.agrocloud.core.application.EmpresaContextService;
 import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -25,6 +26,9 @@ public class CultivoController {
     @Autowired
     @Qualifier("userServiceCore")
     private UserService userService;
+
+    @Autowired
+    private EmpresaContextService empresaContextService;
 
     // Obtener todos los cultivos accesibles por el usuario
     @GetMapping
@@ -78,10 +82,9 @@ public class CultivoController {
             User user = userService.findByEmailWithAllRelations(userDetails.getUsername());
             cultivo.setUsuario(user);
             
-            // Establecer la empresa del usuario si no está establecida
-            if (cultivo.getEmpresa() == null && !user.getUserCompanyRoles().isEmpty()) {
-                // Obtener la primera empresa del usuario
-                cultivo.setEmpresa(user.getUserCompanyRoles().get(0).getEmpresa());
+            if (cultivo.getEmpresa() == null) {
+                empresaContextService.obtenerEmpresaPrincipalDelUsuario(user.getId())
+                        .ifPresent(cultivo::setEmpresa);
             }
             
             Cultivo savedCultivo = cultivoService.saveCultivo(cultivo);

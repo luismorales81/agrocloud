@@ -10,6 +10,8 @@ export const avicolaPonedorasModule: ModuleConfig = {
   color: '#7c3aed',
   menu: avicolaPonedorasMenu,
   routes: avicolaPonedorasRoutes,
+  /** Consolidado en avicola-huevos; rutas legacy sin selector duplicado. */
+  visibleEnSelector: false,
 };
 
 export { avicolaPonedorasMenu } from './menu';

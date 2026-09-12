@@ -118,13 +118,4 @@ public class DashboardController {
             return ResponseEntity.status(500).body(null);
         }
     }
-
-    /**
-     * Endpoint de prueba para verificar que el controlador funcione
-     */
-    @GetMapping("/test")
-    @Operation(summary = "Test endpoint", description = "Endpoint de prueba para verificar que el controlador funcione")
-    public ResponseEntity<String> test() {
-        return ResponseEntity.ok("DashboardController funcionando correctamente");
-    }
 }

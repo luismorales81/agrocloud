@@ -12,7 +12,8 @@ import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -21,9 +22,6 @@ import java.util.Optional;
 
 /**
  * Controlador para la gestión de ingresos.
- * 
- * @author AgroGestion Team
- * @version 1.0.0
  */
 @RestController
 @RequestMapping("/api/v1/ingresos")
@@ -31,7 +29,7 @@ public class IngresoController {
 
     @Autowired
     @Qualifier("ingresoRepositoryCore")
-        private IngresoRepository ingresoRepository;
+    private IngresoRepository ingresoRepository;
 
     @Autowired
     private PlotRepository plotRepository;
@@ -47,15 +45,24 @@ public class IngresoController {
     @Qualifier("campanaContextServiceCore")
     private CampanaContextService campanaContextService;
 
-    /**
-     * Obtiene todos los ingresos del usuario autenticado.
-     */
+    private Optional<User> obtenerUsuario(UserDetails userDetails) {
+        if (userDetails == null || userDetails.getUsername() == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(userService.findByEmailWithAllRelations(userDetails.getUsername()));
+        } catch (RuntimeException e) {
+            return Optional.empty();
+        }
+    }
+
     @GetMapping
-    public ResponseEntity<List<Ingreso>> obtenerIngresos(Authentication authentication) {
-        User user = userService.findByEmailWithAllRelations(authentication.getName());
-        if (user == null) {
+    public ResponseEntity<List<Ingreso>> obtenerIngresos(@AuthenticationPrincipal UserDetails userDetails) {
+        Optional<User> usuario = obtenerUsuario(userDetails);
+        if (usuario.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+        User user = usuario.get();
         Long campanaId = CampanaRequestContext.getCampanaId();
         if (campanaId != null) {
             try {
@@ -66,66 +73,65 @@ public class IngresoController {
                 return ResponseEntity.ok(ingresoRepository.findByUserIdOrderByFechaDesc(user.getId()));
             }
         }
-        List<Ingreso> ingresos = ingresoRepository.findByUserIdOrderByFechaDesc(user.getId());
-        return ResponseEntity.ok(ingresos);
+        return ResponseEntity.ok(ingresoRepository.findByUserIdOrderByFechaDesc(user.getId()));
     }
 
-    /**
-     * Obtiene un ingreso por ID.
-     */
     @GetMapping("/{id}")
-    public ResponseEntity<Ingreso> obtenerIngresoPorId(@PathVariable Long id, Authentication authentication) {
-        Long usuarioId = Long.parseLong(authentication.getName());
-        Optional<Ingreso> ingreso = ingresoRepository.findById(id);
-        
-        if (ingreso.isPresent() && ingreso.get().getUser().getId().equals(usuarioId)) {
-            return ResponseEntity.ok(ingreso.get());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    /**
-     * Crea un nuevo ingreso.
-     */
-    @PostMapping
-    public ResponseEntity<Ingreso> crearIngreso(@Valid @RequestBody Ingreso ingreso, Authentication authentication) {
-        User user = userService.findByEmailWithAllRelations(authentication.getName());
-        if (user == null) {
+    public ResponseEntity<Ingreso> obtenerIngresoPorId(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Optional<User> usuario = obtenerUsuario(userDetails);
+        if (usuario.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        
-        // Validar que el lote pertenece al usuario si se especifica
+        Optional<Ingreso> ingreso = ingresoRepository.findById(id);
+        if (ingreso.isPresent() && ingreso.get().getUser().getId().equals(usuario.get().getId())) {
+            return ResponseEntity.ok(ingreso.get());
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping
+    public ResponseEntity<Ingreso> crearIngreso(
+            @Valid @RequestBody Ingreso ingreso,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Optional<User> usuario = obtenerUsuario(userDetails);
+        if (usuario.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        User user = usuario.get();
+
         if (ingreso.getLote() != null && ingreso.getLote().getId() != null) {
             Optional<com.agrocloud.cultivos.domain.Plot> lote = plotRepository.findById(ingreso.getLote().getId());
             if (lote.isEmpty() || !lote.get().getUser().getId().equals(user.getId())) {
                 return ResponseEntity.badRequest().build();
             }
         }
-        
+
         ingreso.setUser(user);
         try {
             Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
             ingreso.setCampanaId(campanaContextService.resolverCampanaIdActiva(empresaId));
         } catch (Exception ignored) {
         }
-        
-        Ingreso ingresoGuardado = ingresoRepository.save(ingreso);
-        return ResponseEntity.ok(ingresoGuardado);
+
+        return ResponseEntity.ok(ingresoRepository.save(ingreso));
     }
 
-    /**
-     * Actualiza un ingreso existente.
-     */
     @PutMapping("/{id}")
-    public ResponseEntity<Ingreso> actualizarIngreso(@PathVariable Long id, @Valid @RequestBody Ingreso ingreso, Authentication authentication) {
-        Long usuarioId = Long.parseLong(authentication.getName());
+    public ResponseEntity<Ingreso> actualizarIngreso(
+            @PathVariable Long id,
+            @Valid @RequestBody Ingreso ingreso,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Optional<User> usuario = obtenerUsuario(userDetails);
+        if (usuario.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
         Optional<Ingreso> ingresoExistente = ingresoRepository.findById(id);
-        
-        if (ingresoExistente.isEmpty() || !ingresoExistente.get().getUser().getId().equals(usuarioId)) {
+        if (ingresoExistente.isEmpty() || !ingresoExistente.get().getUser().getId().equals(usuario.get().getId())) {
             return ResponseEntity.notFound().build();
         }
-        
+
         Ingreso ingresoActual = ingresoExistente.get();
         ingresoActual.setConcepto(ingreso.getConcepto());
         ingresoActual.setDescripcion(ingreso.getDescripcion());
@@ -135,45 +141,35 @@ public class IngresoController {
         ingresoActual.setUnidadMedida(ingreso.getUnidadMedida());
         ingresoActual.setCantidad(ingreso.getCantidad());
         ingresoActual.setClienteComprador(ingreso.getClienteComprador());
-
         ingresoActual.setObservaciones(ingreso.getObservaciones());
         ingresoActual.setLote(ingreso.getLote());
-        
-        Ingreso ingresoActualizado = ingresoRepository.save(ingresoActual);
-        return ResponseEntity.ok(ingresoActualizado);
+
+        return ResponseEntity.ok(ingresoRepository.save(ingresoActual));
     }
 
-    /**
-     * Elimina un ingreso.
-     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarIngreso(@PathVariable Long id, Authentication authentication) {
-        Long usuarioId = Long.parseLong(authentication.getName());
-        Optional<Ingreso> ingreso = ingresoRepository.findById(id);
-        
-        if (ingreso.isPresent() && ingreso.get().getUser().getId().equals(usuarioId)) {
-            ingresoRepository.deleteById(id);
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Void> eliminarIngreso(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Optional<User> usuario = obtenerUsuario(userDetails);
+        if (usuario.isEmpty()) {
+            return ResponseEntity.badRequest().build();
         }
+        Optional<Ingreso> ingreso = ingresoRepository.findById(id);
+        if (ingreso.isPresent() && ingreso.get().getUser().getId().equals(usuario.get().getId())) {
+            ingresoRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 
-    /**
-     * Obtiene ingresos por tipo.
-     */
     @GetMapping("/tipo/{tipoIngreso}")
     public ResponseEntity<List<Ingreso>> obtenerIngresosPorTipo(@PathVariable Ingreso.TipoIngreso tipoIngreso) {
-        List<Ingreso> ingresos = ingresoRepository.findByTipoIngresoOrderByFechaDesc(tipoIngreso);
-        return ResponseEntity.ok(ingresos);
+        return ResponseEntity.ok(ingresoRepository.findByTipoIngresoOrderByFechaDesc(tipoIngreso));
     }
 
-    /**
-     * Obtiene ingresos por lote.
-     */
     @GetMapping("/lote/{loteId}")
     public ResponseEntity<List<Ingreso>> obtenerIngresosPorLote(@PathVariable Long loteId) {
-        List<Ingreso> ingresos = ingresoRepository.findByLoteIdOrderByFechaDesc(loteId);
-        return ResponseEntity.ok(ingresos);
+        return ResponseEntity.ok(ingresoRepository.findByLoteIdOrderByFechaDesc(loteId));
     }
 }
