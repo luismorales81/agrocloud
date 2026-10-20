@@ -57,7 +57,7 @@ public class InventoryServiceImpl implements InventoryService {
         if (cantidad == null || cantidad.compareTo(BigDecimal.ZERO) <= 0) {
             return InventoryResult.error("La cantidad debe ser mayor que cero");
         }
-        Optional<Insumo> opt = insumoRepository.findById(productoId);
+        Optional<Insumo> opt = insumoRepository.buscarPorIdConEmpresa(productoId);
         if (opt.isEmpty()) {
             return InventoryResult.error("Producto no encontrado con ID: " + productoId);
         }
@@ -85,7 +85,7 @@ public class InventoryServiceImpl implements InventoryService {
         if (cantidad == null || cantidad.compareTo(BigDecimal.ZERO) <= 0) {
             return InventoryResult.error("La cantidad debe ser mayor que cero");
         }
-        Optional<Insumo> opt = insumoRepository.findById(productoId);
+        Optional<Insumo> opt = insumoRepository.buscarPorIdConEmpresa(productoId);
         if (opt.isEmpty()) {
             return InventoryResult.error("Producto no encontrado con ID: " + productoId);
         }
@@ -105,7 +105,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal consultarStock(Long empresaId, Long productoId) {
-        Optional<Insumo> opt = insumoRepository.findById(productoId);
+        Optional<Insumo> opt = insumoRepository.buscarPorIdConEmpresa(productoId);
         if (opt.isEmpty()) return null;
         Insumo insumo = opt.get();
         if (insumo.getEmpresa() == null || !insumo.getEmpresa().getId().equals(empresaId)) {
@@ -128,7 +128,7 @@ public class InventoryServiceImpl implements InventoryService {
         if (cantidad == null || cantidad.compareTo(BigDecimal.ZERO) <= 0) {
             return InventoryResult.error("La cantidad debe ser mayor que cero");
         }
-        Optional<Insumo> opt = insumoRepository.findById(productoId);
+        Optional<Insumo> opt = insumoRepository.buscarPorIdConEmpresa(productoId);
         if (opt.isEmpty()) {
             return InventoryResult.error("Producto no encontrado con ID: " + productoId);
         }
@@ -148,7 +148,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductoInfo> consultarProducto(Long empresaId, Long productoId) {
-        Optional<Insumo> opt = insumoRepository.findById(productoId);
+        Optional<Insumo> opt = insumoRepository.buscarPorIdConEmpresa(productoId);
         if (opt.isEmpty()) return Optional.empty();
         Insumo i = opt.get();
         if (i.getEmpresa() == null || !i.getEmpresa().getId().equals(empresaId)) return Optional.empty();
@@ -166,7 +166,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public List<MovimientoInventarioDTO> listarMovimientosPorInsumo(Long empresaId, Long productoId) {
-        Optional<Insumo> opt = insumoRepository.findById(productoId);
+        Optional<Insumo> opt = insumoRepository.buscarPorIdConEmpresa(productoId);
         if (opt.isEmpty()) return List.of();
         if (opt.get().getEmpresa() == null || !opt.get().getEmpresa().getId().equals(empresaId)) return List.of();
         return movimientoInventarioRepository.findByInsumoIdOrderByFechaMovimientoDesc(productoId).stream()
@@ -185,7 +185,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal calcularSaldoPorInsumo(Long empresaId, Long productoId) {
-        Optional<Insumo> opt = insumoRepository.findById(productoId);
+        Optional<Insumo> opt = insumoRepository.buscarPorIdConEmpresa(productoId);
         if (opt.isEmpty()) return null;
         if (opt.get().getEmpresa() == null || !opt.get().getEmpresa().getId().equals(empresaId)) return null;
         return movimientoInventarioRepository.calcularSaldoByInsumoId(productoId);

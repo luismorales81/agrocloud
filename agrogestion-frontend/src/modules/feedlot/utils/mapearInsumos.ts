@@ -6,7 +6,17 @@ export interface InsumoOpcionFeedlot {
   stockActual?: number;
 }
 
-const TIPOS_AGROQUIMICO = new Set(['HERBICIDA', 'FUNGICIDA', 'INSECTICIDA', 'FERTILIZANTE']);
+const TIPOS_AGROQUIMICO = new Set([
+  'HERBICIDA',
+  'FUNGICIDA',
+  'INSECTICIDA',
+  'FERTILIZANTE',
+  'ACARICIDA',
+  'COADYUVANTE',
+  'MOLUSQUICIDA',
+  'NEMATICIDA',
+  'RODENTICIDA',
+]);
 
 export function esAgroquimico(tipo?: string): boolean {
   return tipo != null && TIPOS_AGROQUIMICO.has(tipo.toUpperCase());

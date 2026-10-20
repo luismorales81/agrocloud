@@ -15,4 +15,11 @@ public interface FeedlotEventoSanitarioRepository extends JpaRepository<FeedlotE
 
     @Query("SELECT e FROM FeedlotEventoSanitario e WHERE e.id = :id AND e.empresaId = :empresaId")
     Optional<FeedlotEventoSanitario> buscarPorIdYEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    @Query("SELECT e FROM FeedlotEventoSanitario e WHERE e.animalId = :animalId ORDER BY e.fecha DESC, e.id DESC")
+    List<FeedlotEventoSanitario> listarPorAnimalId(@Param("animalId") Long animalId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM FeedlotEventoSanitario e WHERE e.sesionId = :sesionId")
+    void eliminarPorSesionId(@Param("sesionId") Long sesionId);
 }

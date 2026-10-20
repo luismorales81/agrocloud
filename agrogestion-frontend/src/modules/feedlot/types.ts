@@ -436,3 +436,222 @@ export interface FeedlotAnalisisLoteItem {
 export interface FeedlotAnalisisLotes {
   lotes?: FeedlotAnalisisLoteItem[];
 }
+
+export type FeedlotEstadoAnimal = 'ACTIVO' | 'MUERTO' | 'VENDIDO' | 'FAENADO' | 'DESCARTADO';
+
+export type FeedlotTipoSesionManga = 'ENROLAMIENTO' | 'PESADA' | 'SANIDAD' | 'RECUENTO' | 'BAJA';
+
+export type FeedlotEstadoSesionManga = 'BORRADOR' | 'CONFIRMADA' | 'ANULADA';
+
+export type FeedlotResultadoFilaManga = 'OK' | 'ERROR' | 'ADVERTENCIA';
+
+export type FeedlotAplicador = 'PERSONAL_ESTABLECIMIENTO' | 'VETERINARIO';
+
+export type FeedlotOrigenInsumo = 'STOCK_EMPRESA' | 'PROVEIDO_POR_APLICADOR' | 'SIN_INSUMO';
+
+export type FeedlotSubtipoBaja = 'MUERTE' | 'FAENA' | 'VENTA_EN_PIE' | 'DESCARTE';
+
+export interface FeedlotAnimal {
+  id: number;
+  loteId?: number;
+  eid?: string | null;
+  caravanaVisual?: string | null;
+  sexo?: string | null;
+  estado?: FeedlotEstadoAnimal | string;
+  fechaAlta?: string;
+  fechaBaja?: string | null;
+  pesoIngresoKg?: number | null;
+  retiroVigente?: boolean;
+}
+
+export interface FeedlotPesadaAnimal {
+  id: number;
+  fecha: string;
+  pesoKg: number;
+}
+
+export interface FeedlotAnimalDetalle extends FeedlotAnimal {
+  pesadas?: FeedlotPesadaAnimal[];
+  eventosSanitarios?: FeedlotEventoSanitario[];
+}
+
+export interface FeedlotMapeoColumnas {
+  indiceEid?: number | null;
+  indiceCaravanaVisual?: number | null;
+  indicePeso?: number | null;
+  indiceFechaHora?: number | null;
+  indiceHora?: number | null;
+  delimitador?: string | null;
+}
+
+export interface FeedlotLecturaArchivoManga {
+  eidCrudo?: string | null;
+  eidNormalizado?: string | null;
+  caravanaVisual?: string | null;
+  pesoKg?: number | null;
+  fechaHoraLectura?: string | null;
+}
+
+export interface FeedlotResumenArchivoManga {
+  lecturas?: number;
+  tienePeso?: boolean;
+  pesosEncontrados?: number;
+  eidRepetidos?: number;
+  fechaMayoritaria?: string | null;
+  horaDesde?: string | null;
+  horaHasta?: string | null;
+  entendioArchivo?: boolean;
+  mapeo?: FeedlotMapeoColumnas;
+  encabezados?: string[];
+  filaMuestra?: string[];
+  mensajeResumen?: string;
+  loteSugeridoId?: number | null;
+  loteSugeridoNombre?: string | null;
+  mezclaLotes?: boolean;
+  eidsOtroLote?: string[];
+  lecturasDetalle?: FeedlotLecturaArchivoManga[];
+  perfilArchivo?: string | null;
+  columnasNoMapeadas?: string[];
+  porcentajeEidInvalidos?: number;
+  avisos?: string[];
+  bloqueantes?: string[];
+  perfilLecturaId?: number | null;
+}
+
+export interface FeedlotAliasColumnasPerfil {
+  eid?: string[];
+  vid?: string[];
+  peso?: string[];
+  fecha?: string[];
+  hora?: string[];
+  dosis?: string[];
+  loteProducto?: string[];
+  retiro?: string[];
+  esi?: string[];
+}
+
+export interface FeedlotPerfilLecturaManga {
+  id: number;
+  nombre: string;
+  tipo: FeedlotTipoSesionManga;
+  predeterminado?: boolean;
+  alias?: FeedlotAliasColumnasPerfil;
+  insumoId?: number | null;
+}
+
+export interface FeedlotEncabezadosMuestra {
+  encabezados?: string[];
+  filaMuestra?: string[];
+  delimitador?: string;
+}
+
+export interface FeedlotSesionMangaSolicitud {
+  loteId: number;
+  tipo: FeedlotTipoSesionManga;
+  fecha: string;
+  perfilLecturaId?: number | null;
+  ajustarPlantel?: boolean;
+  tipoEvento?: FeedlotTipoEventoSanitario;
+  insumoId?: number | null;
+  dosisPorAnimal?: number | null;
+  unidadDosis?: string | null;
+  cantidadTotal?: number | null;
+  diasRetiro?: number | null;
+  aplicador?: FeedlotAplicador;
+  aplicadorNombre?: string | null;
+  origenInsumo?: FeedlotOrigenInsumo;
+  descripcion?: string | null;
+  subtipoBaja?: FeedlotSubtipoBaja;
+  motivoMuerteId?: number | null;
+  precioKg?: number | null;
+}
+
+export type FeedlotAccionDesconocido = 'IGNORAR' | 'ENROLAR_EN_ESTE_LOTE' | 'ENROLAR_EN_LOTE_NUEVO';
+export type FeedlotOrigenFilaRecuento =
+  | 'PRESENTE'
+  | 'FALTANTE'
+  | 'OTRO_LOTE'
+  | 'INACTIVO'
+  | 'DESCONOCIDO';
+
+export interface FeedlotAccionDesconocidoSolicitud {
+  filaId: number;
+  accion: FeedlotAccionDesconocido;
+}
+
+export interface FeedlotLoteNuevoRecuentoSolicitud {
+  corralId: number;
+  nombre: string;
+  categoriaId?: number | null;
+  razaId?: number | null;
+}
+
+export interface FeedlotConfirmarSesionSolicitud {
+  ajustarPlantel?: boolean;
+  cantidadTotal?: number | null;
+  accionesDesconocidos?: FeedlotAccionDesconocidoSolicitud[];
+  loteNuevo?: FeedlotLoteNuevoRecuentoSolicitud | null;
+}
+
+export interface FeedlotIdentificacionAnimal {
+  id?: number | null;
+  filaId?: number | null;
+  eid?: string | null;
+  caravanaVisual?: string | null;
+  loteId?: number | null;
+  loteNombre?: string | null;
+  corralNombre?: string | null;
+  estado?: string | null;
+}
+
+export interface FeedlotResumenRecuento {
+  presentes?: number;
+  cabezasSinEnrolar?: number;
+  faltantes?: FeedlotIdentificacionAnimal[];
+  intrusos?: FeedlotIdentificacionAnimal[];
+  desconocidos?: FeedlotIdentificacionAnimal[];
+  otroLote?: FeedlotIdentificacionAnimal[];
+  inactivos?: FeedlotIdentificacionAnimal[];
+}
+
+export interface FeedlotSesionMangaFila {
+  id?: number;
+  numeroLinea?: number;
+  eidCrudo?: string | null;
+  eidNormalizado?: string | null;
+  caravanaVisual?: string | null;
+  pesoKg?: number | null;
+  fechaHoraLectura?: string | null;
+  animalId?: number | null;
+  resultado?: FeedlotResultadoFilaManga | string;
+  mensaje?: string | null;
+  origenRecuento?: FeedlotOrigenFilaRecuento | string | null;
+  accionDesconocido?: FeedlotAccionDesconocido | string | null;
+  loteDestinoId?: number | null;
+}
+
+export interface FeedlotSesionManga {
+  id: number;
+  loteId?: number;
+  loteNombre?: string | null;
+  tipo: FeedlotTipoSesionManga | string;
+  fecha: string;
+  estado: FeedlotEstadoSesionManga | string;
+  nombreArchivo?: string | null;
+  filasOk?: number;
+  filasError?: number;
+  ajustarPlantel?: boolean;
+  aplicador?: FeedlotAplicador | string | null;
+  origenInsumo?: FeedlotOrigenInsumo | string | null;
+  tipoEvento?: FeedlotTipoEventoSanitario | string | null;
+  insumoId?: number | null;
+  dosisPorAnimal?: number | null;
+  cantidadTotal?: number | null;
+  diasRetiro?: number | null;
+  subtipoBaja?: FeedlotSubtipoBaja | string | null;
+  filas?: FeedlotSesionMangaFila[];
+  resumenRecuento?: FeedlotResumenRecuento | null;
+  avisos?: string[];
+  bloqueantes?: string[];
+  puedeConfirmar?: boolean;
+}

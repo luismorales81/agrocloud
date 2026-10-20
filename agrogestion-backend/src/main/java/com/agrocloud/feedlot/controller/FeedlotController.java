@@ -3,6 +3,7 @@ package com.agrocloud.feedlot.controller;
 import com.agrocloud.annotation.RequiresModule;
 import com.agrocloud.core.application.UserService;
 import com.agrocloud.core.domain.User;
+import com.agrocloud.dto.InsumoDTO;
 import com.agrocloud.feedlot.model.dto.*;
 import com.agrocloud.feedlot.model.enums.FeedlotLoteEstado;
 import com.agrocloud.feedlot.service.*;
@@ -14,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -37,6 +40,10 @@ public class FeedlotController {
     private final ServicioFeedlotConfiguracion servicioConfiguracion;
     private final GeneradorPdfFeedlotCloseout generadorPdfCloseout;
     private final UserService userService;
+    private final ServicioFeedlotAnimales servicioAnimales;
+    private final ServicioFeedlotSesionManga servicioSesionManga;
+    private final ServicioFeedlotPerfilLecturaManga servicioPerfilLectura;
+    private final ObjectMapper objectMapper;
 
     public FeedlotController(
             ServicioFeedlotCatalogos servicioCatalogos,
@@ -49,7 +56,11 @@ public class FeedlotController {
             ServicioFeedlotReportes servicioReportes,
             ServicioFeedlotConfiguracion servicioConfiguracion,
             GeneradorPdfFeedlotCloseout generadorPdfCloseout,
-            UserService userService) {
+            UserService userService,
+            ServicioFeedlotAnimales servicioAnimales,
+            ServicioFeedlotSesionManga servicioSesionManga,
+            ServicioFeedlotPerfilLecturaManga servicioPerfilLectura,
+            ObjectMapper objectMapper) {
         this.servicioCatalogos = servicioCatalogos;
         this.servicioLotes = servicioLotes;
         this.servicioOperaciones = servicioOperaciones;
@@ -61,13 +72,17 @@ public class FeedlotController {
         this.servicioConfiguracion = servicioConfiguracion;
         this.generadorPdfCloseout = generadorPdfCloseout;
         this.userService = userService;
+        this.servicioAnimales = servicioAnimales;
+        this.servicioSesionManga = servicioSesionManga;
+        this.servicioPerfilLectura = servicioPerfilLectura;
+        this.objectMapper = objectMapper;
     }
 
     private User requerirUsuario(UserDetails detalles) {
         if (detalles == null) {
             throw new IllegalArgumentException("Usuario no autenticado");
         }
-        User u = userService.findByEmailWithAllRelations(detalles.getUsername());
+        User u = userService.findByEmailWithAllRelationsCombined(detalles.getUsername());
         if (u == null) {
             throw new IllegalArgumentException("Usuario no encontrado");
         }
@@ -213,6 +228,13 @@ public class FeedlotController {
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
         return ResponseEntity.ok(servicioCatalogos.listarProveedores());
+    }
+
+    @GetMapping("/insumos")
+    public ResponseEntity<List<InsumoDTO>> listarInsumos(
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioCatalogos.listarInsumos());
     }
 
     @PostMapping("/proveedores")
@@ -641,5 +663,168 @@ public class FeedlotController {
             @AuthenticationPrincipal UserDetails detalles) {
         requerirUsuario(detalles);
         return ResponseEntity.ok(servicioConfiguracion.actualizarMetodoCloseout(solicitud));
+    }
+
+    @GetMapping("/lotes/{id}/animales")
+    public ResponseEntity<List<FeedlotAnimalRespuesta>> listarAnimalesLote(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioAnimales.listarPorLote(id));
+    }
+
+    @GetMapping("/animales/{id}")
+    public ResponseEntity<FeedlotAnimalDetalleRespuesta> obtenerAnimal(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioAnimales.obtener(id));
+    }
+
+    @GetMapping("/perfiles-lectura-manga")
+    public ResponseEntity<List<FeedlotPerfilLecturaMangaRespuesta>> listarPerfilesLectura(
+            @RequestParam(value = "tipo", required = false) com.agrocloud.feedlot.model.enums.FeedlotTipoSesionManga tipo,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioPerfilLectura.listar(tipo));
+    }
+
+    @PostMapping("/perfiles-lectura-manga")
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotPerfilLecturaMangaRespuesta> crearPerfilLectura(
+            @RequestBody FeedlotPerfilLecturaMangaSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.status(HttpStatus.CREATED).body(servicioPerfilLectura.crear(solicitud));
+    }
+
+    @PutMapping("/perfiles-lectura-manga/{id}")
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotPerfilLecturaMangaRespuesta> actualizarPerfilLectura(
+            @PathVariable Long id,
+            @RequestBody FeedlotPerfilLecturaMangaSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioPerfilLectura.actualizar(id, solicitud));
+    }
+
+    @DeleteMapping("/perfiles-lectura-manga/{id}")
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<Void> eliminarPerfilLectura(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        servicioPerfilLectura.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/perfiles-lectura-manga/desde-muestra", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotEncabezadosMuestra> extraerEncabezadosPerfil(
+            @RequestParam("archivo") MultipartFile archivo,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioPerfilLectura.extraerMuestra(archivo));
+    }
+
+    @PostMapping("/sesiones-manga")
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotSesionMangaRespuesta> crearSesionManga(
+            @Valid @RequestBody FeedlotSesionMangaSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        User usuario = requerirUsuario(detalles);
+        return ResponseEntity.status(HttpStatus.CREATED).body(servicioSesionManga.crearBorrador(solicitud, usuario));
+    }
+
+    @PostMapping(value = "/sesiones-manga/analizar-archivo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotResumenArchivoManga> analizarArchivoSesionManga(
+            @RequestParam("archivo") MultipartFile archivo,
+            @RequestParam(value = "mapeo", required = false) String mapeoJson,
+            @RequestParam(value = "perfilLecturaId", required = false) Long perfilLecturaId,
+            @RequestParam(value = "tipo", required = false) com.agrocloud.feedlot.model.enums.FeedlotTipoSesionManga tipo,
+            @RequestParam(value = "cargaManualPeso", required = false) Boolean cargaManualPeso,
+            @AuthenticationPrincipal UserDetails detalles) throws IOException {
+        requerirUsuario(detalles);
+        FeedlotMapeoColumnas mapeo = parsearMapeoOpcional(mapeoJson);
+        return ResponseEntity.ok(servicioSesionManga.analizarArchivo(
+                archivo, mapeo, perfilLecturaId, tipo, Boolean.TRUE.equals(cargaManualPeso)));
+    }
+
+    @PutMapping("/sesiones-manga/{id}")
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotSesionMangaRespuesta> actualizarSesionManga(
+            @PathVariable Long id,
+            @Valid @RequestBody FeedlotSesionMangaSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioSesionManga.actualizarCabecera(id, solicitud));
+    }
+
+    @PostMapping(value = "/sesiones-manga/{id}/archivo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotSesionMangaRespuesta> subirArchivoSesionManga(
+            @PathVariable Long id,
+            @RequestParam("archivo") MultipartFile archivo,
+            @RequestParam(value = "mapeo", required = false) String mapeoJson,
+            @AuthenticationPrincipal UserDetails detalles) throws IOException {
+        requerirUsuario(detalles);
+        FeedlotMapeoColumnas mapeo = parsearMapeoOpcional(mapeoJson);
+        return ResponseEntity.ok(servicioSesionManga.cargarArchivo(id, archivo, mapeo));
+    }
+
+    @GetMapping("/sesiones-manga/{id}")
+    public ResponseEntity<FeedlotSesionMangaRespuesta> obtenerSesionManga(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioSesionManga.obtener(id));
+    }
+
+    @GetMapping("/lotes/{id}/sesiones-manga")
+    public ResponseEntity<List<FeedlotSesionMangaRespuesta>> listarSesionesManga(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioSesionManga.listarPorLote(id));
+    }
+
+    @PostMapping("/sesiones-manga/{id}/confirmar")
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotSesionMangaRespuesta> confirmarSesionManga(
+            @PathVariable Long id,
+            @RequestBody(required = false) FeedlotConfirmarSesionSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        User usuario = requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioSesionManga.confirmar(id, solicitud, usuario));
+    }
+
+    @PostMapping("/sesiones-manga/{id}/generar-baja-faltantes")
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotSesionMangaRespuesta> generarBajaFaltantes(
+            @PathVariable Long id,
+            @RequestBody FeedlotGenerarBajaFaltantesSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        User usuario = requerirUsuario(detalles);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(servicioSesionManga.generarBajaFaltantes(id, solicitud, usuario));
+    }
+
+    @PostMapping("/sesiones-manga/{id}/anular")
+    @RequiresModule(value = "FEEDLOT", permission = "write")
+    public ResponseEntity<FeedlotSesionMangaRespuesta> anularSesionManga(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioSesionManga.anular(id));
+    }
+
+    private FeedlotMapeoColumnas parsearMapeoOpcional(String mapeoJson) throws IOException {
+        if (mapeoJson == null || mapeoJson.isBlank()) {
+            FeedlotMapeoColumnas vacio = new FeedlotMapeoColumnas();
+            vacio.setDelimitador("AUTO");
+            return vacio;
+        }
+        return objectMapper.readValue(mapeoJson, FeedlotMapeoColumnas.class);
     }
 }

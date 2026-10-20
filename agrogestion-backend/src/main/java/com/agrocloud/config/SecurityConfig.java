@@ -123,6 +123,7 @@ public class SecurityConfig {
         } else if (isProduction) {
             logger.warn("PRODUCCION sin CORS_ALLOWED_ORIGINS; usando orígenes restrictivos por defecto");
             allowedOrigins = Arrays.asList(
+                "https://app.agrocloud.com.ar",
                 "https://agrocloud.com.ar",
                 "https://www.agrocloud.com.ar"
             );

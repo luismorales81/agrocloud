@@ -1,6 +1,8 @@
 package com.agrocloud.feedlot.service;
 
 import com.agrocloud.core.security.ServicioSeguridadContexto;
+import com.agrocloud.cultivos.application.InsumoService;
+import com.agrocloud.dto.InsumoDTO;
 import com.agrocloud.exception.ResourceConflictException;
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.feedlot.model.dto.*;
@@ -25,6 +27,7 @@ public class ServicioFeedlotCatalogos {
     private final FeedlotMotivoMuerteRepository motivoMuerteRepository;
     private final FeedlotProveedorOrigenRepository proveedorRepository;
     private final FeedlotLoteRepository loteRepository;
+    private final InsumoService insumoService;
 
     public ServicioFeedlotCatalogos(
             ServicioSeguridadContexto servicioSeguridadContexto,
@@ -34,7 +37,8 @@ public class ServicioFeedlotCatalogos {
             FeedlotRazaRepository razaRepository,
             FeedlotMotivoMuerteRepository motivoMuerteRepository,
             FeedlotProveedorOrigenRepository proveedorRepository,
-            FeedlotLoteRepository loteRepository) {
+            FeedlotLoteRepository loteRepository,
+            @org.springframework.beans.factory.annotation.Qualifier("insumoServiceCultivos") InsumoService insumoService) {
         this.servicioSeguridadContexto = servicioSeguridadContexto;
         this.establecimientoRepository = establecimientoRepository;
         this.corralRepository = corralRepository;
@@ -43,6 +47,7 @@ public class ServicioFeedlotCatalogos {
         this.motivoMuerteRepository = motivoMuerteRepository;
         this.proveedorRepository = proveedorRepository;
         this.loteRepository = loteRepository;
+        this.insumoService = insumoService;
     }
 
     @Transactional(readOnly = true)
@@ -276,6 +281,11 @@ public class ServicioFeedlotCatalogos {
             p.setActivo(solicitud.getActivo());
         }
         return aProveedorRespuesta(proveedorRepository.save(p));
+    }
+
+    @Transactional(readOnly = true)
+    public List<InsumoDTO> listarInsumos() {
+        return insumoService.listarDtoPorEmpresaActual();
     }
 
     private Long empresaActual() {

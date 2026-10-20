@@ -22,4 +22,11 @@ public interface FeedlotVentaRepository extends JpaRepository<FeedlotVenta, Long
 
     @Query("SELECT COALESCE(SUM(v.cabezas), 0) FROM FeedlotVenta v WHERE v.lote.id = :loteId AND v.empresaId = :empresaId")
     Integer sumarCabezasVendidasPorLoteIdYEmpresaId(@Param("loteId") Long loteId, @Param("empresaId") Long empresaId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM FeedlotVenta v WHERE v.sesionId = :sesionId")
+    void eliminarPorSesionId(@Param("sesionId") Long sesionId);
+
+    @Query("SELECT v FROM FeedlotVenta v WHERE v.sesionId = :sesionId")
+    java.util.List<FeedlotVenta> listarPorSesionId(@Param("sesionId") Long sesionId);
 }

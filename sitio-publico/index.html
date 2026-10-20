@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgroCloud — La gestión de tu explotación, en un solo lugar</title>
+  <meta name="description" content="AgroCloud reúne la operación, los costos y el inventario. Cultivos, ganadería, porcinos, avícola y lechería, con los módulos que tu empresa usa.">
+  <meta name="theme-color" content="#1c6b3a">
+  <link rel="icon" href="logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,650&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="cabecera">
+    <a class="marca" href="#contenido">
+      <img class="marca-logo" src="logo.png" alt="">
+      <span>AgroCloud</span>
+    </a>
+    <nav class="navegacion" aria-label="Secciones">
+      <a href="#modulos">Módulos</a>
+      <a href="#agenda">Agenda</a>
+      <a class="boton boton-compacto" data-enlace-sistema target="_blank" rel="noopener noreferrer" href="https://app.agrocloud.com.ar">Entrar al sistema</a>
+    </nav>
+  </header>
+
+  <main id="contenido">
+    <section class="portada">
+      <div class="portada-texto">
+        <p class="sobrelinea">Para empresas que producen en el campo</p>
+        <h1>La gestión de tu explotación, en un solo lugar.</h1>
+        <p class="bajada">
+          AgroCloud junta la operación diaria, los costos y el inventario.
+          Cada empresa activa los módulos que usa: cultivos, ganadería, porcinos, avícola o lechería.
+        </p>
+        <div class="acciones">
+          <a class="boton boton-principal" data-enlace-sistema target="_blank" rel="noopener noreferrer" href="https://app.agrocloud.com.ar">Entrar al sistema</a>
+          <a class="boton boton-secundario" href="#agenda">Agendar una charla</a>
+        </div>
+      </div>
+      <aside class="ficha" aria-label="Módulos disponibles">
+        <p class="ficha-titulo">Módulos de la empresa</p>
+        <ul>
+          <li><span>Cultivos</span><small>Lotes, labores y granos</small></li>
+          <li><span>Ganadería</span><small>Engorde a corral</small></li>
+          <li><span>Porcinos</span><small>De la madre al engorde</small></li>
+          <li><span>Avícola</span><small>Crianza, huevos y ponedoras</small></li>
+          <li><span>Lechería</span><small>Ordeñe y ventas de leche</small></li>
+        </ul>
+      </aside>
+      <svg class="horizonte" viewBox="0 0 1440 280" preserveAspectRatio="none" aria-hidden="true">
+        <path fill="#187246" d="M0 90c180-70 320 40 560-10 220-46 340 70 560 10 140-36 220 20 320-20v210H0Z"/>
+        <path fill="#124a30" d="M0 160c220-50 380 30 640-20 250-48 390 60 800 8v132H0Z"/>
+      </svg>
+    </section>
+
+    <section class="comun" aria-label="Lo que comparten los módulos">
+      <ul>
+        <li>
+          <h2>Una empresa, varios roles</h2>
+          <p>Dueño, administración y operación entran con su usuario y ven lo que les corresponde.</p>
+        </li>
+        <li>
+          <h2>Módulos según el negocio</h2>
+          <p>Se empieza por el rubro que ya se trabaja y se suman los demás cuando hace falta.</p>
+        </li>
+        <li>
+          <h2>Inventario y períodos</h2>
+          <p>Insumos y períodos de gestión se comparten entre los módulos de la misma empresa.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="modulos" id="modulos">
+      <div class="seccion-encabezado">
+        <p class="sobrelinea">Qué se registra</p>
+        <h2>Cinco módulos, la misma explotación</h2>
+      </div>
+      <div class="grilla-modulos">
+        <article class="tarjeta" data-modulo="cultivos">
+          <h3>Cultivos</h3>
+          <ul>
+            <li>Campos, lotes y ciclos de cultivo.</li>
+            <li>Labores con el costo de insumos, maquinaria y mano de obra.</li>
+            <li>Inventario de insumos y de granos.</li>
+            <li>Calendario de tareas, finanzas y reportes.</li>
+          </ul>
+        </article>
+        <article class="tarjeta" data-modulo="ganaderia">
+          <h3>Ganadería</h3>
+          <p class="aclaracion">Engorde a corral</p>
+          <ul>
+            <li>Del ingreso de la hacienda a la venta o la faena.</li>
+            <li>Pesadas, dietas y sanidad del lote.</li>
+            <li>Sesión de manga y lecturas de bastón.</li>
+            <li>Ganancia diaria, conversión y cierre económico del lote.</li>
+          </ul>
+        </article>
+        <article class="tarjeta" data-modulo="porcinos">
+          <h3>Porcinos</h3>
+          <ul>
+            <li>Plantel de madres y padrillos.</li>
+            <li>Servicio, gestación, parto y destete.</li>
+            <li>Lotes de engorde, dietas y sanidad.</li>
+            <li>Ventas y reportes del ciclo.</li>
+          </ul>
+        </article>
+        <article class="tarjeta" data-modulo="avicola">
+          <h3>Avícola</h3>
+          <ul>
+            <li>Galpones y lotes de crianza y engorde.</li>
+            <li>Producción diaria de huevos.</li>
+            <li>Ponedoras y recría.</li>
+            <li>Alimento, sanidad y reportes.</li>
+          </ul>
+        </article>
+        <article class="tarjeta" data-modulo="lecheria">
+          <h3>Lechería</h3>
+          <ul>
+            <li>Animales de bovino, caprino, ovino y búfalo.</li>
+            <li>Ordeñe, lactancia y secado.</li>
+            <li>Ventas de leche.</li>
+            <li>Sanidad, control lechero y ubicación en el mapa.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="agenda" id="agenda">
+      <div class="agenda-texto">
+        <p class="sobrelinea">Conversemos</p>
+        <h2>Charla de 30 minutos para ver si AgroCloud encaja en tu explotación.</h2>
+        <p>Elegí día y horario. La reunión queda agendada en tu calendario.</p>
+        <a class="boton boton-principal" data-enlace-sistema target="_blank" rel="noopener noreferrer" href="https://app.agrocloud.com.ar">Entrar al sistema</a>
+      </div>
+      <div
+        class="calendly-inline-widget"
+        data-url="https://calendly.com/morales-luis-ariel/30min?hide_gdpr_banner=1&locale=es&background_color=f4efe4&text_color=1c2416&primary_color=1f4d38"
+        style="min-width:320px;height:700px;"
+      ></div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p class="marca marca-pie">
+      <img class="marca-logo" src="logo.png" alt="">
+      <span>AgroCloud</span>
+    </p>
+    <a data-enlace-sistema target="_blank" rel="noopener noreferrer" href="https://app.agrocloud.com.ar">Entrar al sistema</a>
+  </footer>
+
+  <script src="https://assets.calendly.com/assets/external/widget.js" async></script>
+  <script>
+    // Única URL del sistema. En el dominio público abre la aplicación;
+    // al previsualizar en el equipo, abre el frontend de desarrollo.
+    (function () {
+      var enEquipo = location.hostname === 'localhost'
+        || location.hostname === '127.0.0.1'
+        || location.protocol === 'file:';
+      var urlSistema = enEquipo
+        ? 'http://localhost:3001/login'
+        : 'https://app.agrocloud.com.ar';
+      var enlaces = document.querySelectorAll('[data-enlace-sistema]');
+      for (var i = 0; i < enlaces.length; i++) {
+        enlaces[i].href = urlSistema;
+      }
+    })();
+  </script>
+</body>
+</html>

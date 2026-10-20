@@ -14,6 +14,18 @@ export const feedlotMenu: MenuItem[] = [
     ruta: '/feedlot/lotes',
   },
   {
+    id: 'sesion-manga',
+    nombre: 'Sesión de manga',
+    icono: 'ClipboardList',
+    ruta: '/feedlot/manga',
+  },
+  {
+    id: 'lecturas-baston',
+    nombre: 'Lecturas del bastón',
+    icono: 'Settings',
+    ruta: '/feedlot/lecturas-baston',
+  },
+  {
     id: 'reportes',
     nombre: 'Reportes',
     icono: 'BarChart',

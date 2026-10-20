@@ -36,6 +36,9 @@ public class FeedlotPesada {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
+    @Column(name = "sesion_id")
+    private Long sesionId;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -94,6 +97,14 @@ public class FeedlotPesada {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public Long getSesionId() {
+        return sesionId;
+    }
+
+    public void setSesionId(Long sesionId) {
+        this.sesionId = sesionId;
     }
 
     public LocalDateTime getCreatedAt() {

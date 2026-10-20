@@ -23,10 +23,9 @@ import {
   TableRow,
   TextField,
   Typography,
+  MenuItem,
 } from '@mui/material';
 import { ChevronDown, ChevronRight, Pencil, Plus } from 'lucide-react';
-import { insumosService } from '../../../services/domain/insumosLaboresServices';
-import { Autocomplete } from '../../../components/ui/Autocomplete';
 import { Icon } from '../../../components/icons';
 import type { FeedlotDieta, FeedlotDietaFase, FeedlotDietaFaseSolicitud } from '../types';
 import {
@@ -35,6 +34,7 @@ import {
   crearDieta,
   crearFaseDieta,
   listarDietas,
+  listarInsumos,
   mensajeError,
 } from '../services/feedlotApi';
 
@@ -72,7 +72,7 @@ const DietasFeedlotScreen: React.FC = () => {
   }, []);
 
   const cargarInsumos = useCallback(async () => {
-    const rawInsumos = await insumosService.listar().catch(() => []);
+    const rawInsumos = await listarInsumos().catch(() => []);
     setInsumos(filtrarInsumosAlimento(mapearInsumosDesdeApi(rawInsumos)));
   }, []);
 
@@ -397,30 +397,27 @@ const DietasFeedlotScreen: React.FC = () => {
               Referencia opcional del balanceado o insumo principal de la fase. Si la ración mezcla varios
               insumos, registrá el detalle en los consumos del lote.
             </Typography>
-            <Autocomplete<InsumoOpcionFeedlot>
+            <TextField
+              select
               label="Insumo de referencia (opcional)"
-              options={opcionesInsumoFase.map((i) => ({
-                value: i.id,
-                label: etiquetaInsumoOpcion(i),
-                data: i,
-              }))}
-              value={insumoFase === '' ? undefined : insumoFase}
-              onChange={(value) =>
-                setInsumoFase(value != null && value !== '' ? Number(value) : '')
+              fullWidth
+              value={insumoFase === '' ? '' : String(insumoFase)}
+              onChange={(ev) =>
+                setInsumoFase(ev.target.value === '' ? '' : Number(ev.target.value))
               }
-              placeholder="Buscar balanceado por nombre…"
-              emptyMessage={
+              helperText={
                 insumos.length === 0
-                  ? 'No hay insumos de alimento en inventario. Cargá balanceados (tipo OTROS) en Insumos.'
-                  : 'No se encontraron insumos'
+                  ? 'No hay insumos de alimento en inventario.'
+                  : `${insumos.length} productos en inventario`
               }
-              maxHeight={280}
-            />
-            {insumos.length === 0 && (
-              <Typography variant="caption" color="text.secondary">
-                No hay insumos de alimento en inventario. Cargá balanceados (tipo OTROS) en Insumos.
-              </Typography>
-            )}
+            >
+              <MenuItem value="">Ninguno</MenuItem>
+              {opcionesInsumoFase.map((i) => (
+                <MenuItem key={i.id} value={String(i.id)}>
+                  {etiquetaInsumoOpcion(i)}
+                </MenuItem>
+              ))}
+            </TextField>
           </Stack>
         </DialogContent>
         <DialogActions>

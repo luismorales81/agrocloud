@@ -14,6 +14,8 @@ import com.agrocloud.feedlot.repository.*;
 import com.agrocloud.cultivos.application.UtilCentroideCoordenadasCampo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -247,6 +249,18 @@ public class ServicioFeedlotLotes {
         }
     }
 
+    @Transactional
+    public void reabrirLoteYOcuparCorral(FeedlotLote lote) {
+        lote.setEstado(FeedlotLoteEstado.ACTIVO);
+        lote.setFechaCierre(null);
+        loteRepository.save(lote);
+        FeedlotCorral corral = lote.getCorral();
+        if (corral != null) {
+            corral.setEstado(FeedlotCorralEstado.OCUPADO);
+            corralRepository.save(corral);
+        }
+    }
+
     @Transactional(readOnly = true)
     public FeedlotLote obtenerEntidadLote(Long empresaId, Long loteId) {
         return loteRepository.buscarPorIdYEmpresaId(loteId, empresaId)
@@ -284,19 +298,47 @@ public class ServicioFeedlotLotes {
         if (usuario == null || usuario.getId() == null) {
             throw new IllegalArgumentException("Usuario obligatorio para ajuste de plantel");
         }
-        boolean permitido = usuario.getRoles() != null && usuario.getRoles().stream()
-                .anyMatch(r -> {
-                    String nombre = r.getNombre();
-                    if (nombre == null) {
-                        return false;
-                    }
-                    String upper = nombre.toUpperCase();
-                    return upper.contains("ADMIN") || upper.contains("SUPERVISOR")
-                            || "JEFE_CAMPO".equals(upper) || "ADMINISTRADOR".equals(upper);
-                });
-        if (!permitido) {
-            throw new IllegalStateException("Solo administradores o supervisores pueden ajustar plantel");
+        if (puedeAjustarPlantel(usuario)) {
+            return;
         }
+        throw new ResourceConflictException("Solo administradores o supervisores pueden ajustar plantel");
+    }
+
+    private static boolean puedeAjustarPlantel(User usuario) {
+        if (usuario.getUsuarioEmpresas() != null) {
+            try {
+                boolean porEmpresa = usuario.getUsuarioEmpresas().stream()
+                        .anyMatch(ue -> rolPermiteAjuste(ue.getRol() != null ? ue.getRol().name() : null));
+                if (porEmpresa) {
+                    return true;
+                }
+            } catch (org.hibernate.LazyInitializationException ignored) {
+                // se intenta el resto de fuentes
+            }
+        }
+        try {
+            if (usuario.getRoles() != null && usuario.getRoles().stream()
+                    .anyMatch(r -> rolPermiteAjuste(r.getNombre()))) {
+                return true;
+            }
+        } catch (org.hibernate.LazyInitializationException ignored) {
+            // se intenta SecurityContext
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getAuthorities() == null) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> rolPermiteAjuste(a.getAuthority()));
+    }
+
+    private static boolean rolPermiteAjuste(String nombre) {
+        if (nombre == null || nombre.isBlank()) {
+            return false;
+        }
+        String upper = nombre.toUpperCase();
+        return upper.contains("ADMIN") || upper.contains("SUPERVISOR")
+                || upper.contains("JEFE_CAMPO");
     }
 
     private FeedlotLoteRespuesta aLoteRespuesta(FeedlotLote l) {

@@ -415,11 +415,11 @@ Headers: `X-Campaign-Id` en escrituras (patrón CORE).
 
 ### 11.3 v2 — Premium / integraciones
 
-1. Caravana individual y movimientos entre corrales.
+1. Caravana individual y movimientos entre corrales. **Padrón + sesión de manga:** [`SPEC-FEEDLOT-V2-SESION-MANGA-BASTON.md`](SPEC-FEEDLOT-V2-SESION-MANGA-BASTON.md) (aprobada 12 Sep 2026). Diseño: [`DISENO-TECNICO-FEEDLOT-V2-SESION-MANGA.md`](DISENO-TECNICO-FEEDLOT-V2-SESION-MANGA.md). Hospital / movimientos de corral quedan fuera de esa spec (fase 2).
 2. Corral hospital / pulls.
-3. Retiro medicamentos con bloqueo faena.
+3. Retiro medicamentos con bloqueo faena. **Cubierto** en la spec de sesión de manga (RN-MG-B04).
 4. App móvil offline (pesada, muerte, tratamiento en corral).
-5. Importación balanza mixer / bastón RFID.
+5. Importación balanza mixer / bastón RFID. **Bastón CSV:** misma spec de sesión de manga. Balanza mixer: fuera de alcance.
 6. Peso carne / rendimiento frigorífico (RP).
 7. Mapa visual del yard.
 8. Alertas inteligentes (caída consumo, pico mortalidad).
@@ -441,6 +441,8 @@ Headers: `X-Campaign-Id` en escrituras (patrón CORE).
 |-----------|--------|
 | `SPEC-CAMPANA-TRANSVERSAL.md` | Fila feedlot en matriz FKs; concepto temporal — **actualizado** |
 | `SPEC-EXPEDIENTE-TRAZABILIDAD-CICLO-VIDA.md` | Tipo `FEEDLOT_LOTE` (v1.5) — **anotado** |
+| `SPEC-FEEDLOT-V2-SESION-MANGA-BASTON.md` | Padrón animal + CSV bastón + sanidad/inventario — **aprobada 12 Sep 2026** |
+| `DISENO-TECNICO-FEEDLOT-V2-SESION-MANGA.md` | DDL, API, servicios y UI de sesión de manga — **aprobado 12 Sep 2026** |
 | `DISENO-TECNICO-MODULO-FEEDLOT-v1.5.md` | Diseño técnico v1.5 — **Implementada Junio 2026** |
 | `InventoryOrigin.java` | Valor `FEEDLOT` |
 | `conceptosTemporalesPorModulo.ts` | Entrada `feedlot` |

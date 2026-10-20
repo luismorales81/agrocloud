@@ -19,6 +19,26 @@ public interface InsumoRepository extends JpaRepository<Insumo, Long> {
 
     List<Insumo> findByEmpresaIdAndActivoTrue(Long empresaId);
 
+    @Query("SELECT i FROM Insumo i JOIN FETCH i.empresa WHERE i.id = :id")
+    java.util.Optional<Insumo> buscarPorIdConEmpresa(@Param("id") Long id);
+
+    @Query(value = "SELECT i.id, i.nombre, i.descripcion, i.tipo, i.unidad_medida, "
+            + "i.precio_unitario, i.stock_actual, i.stock_minimo, i.proveedor, i.activo "
+            + "FROM cultivo_insumos i "
+            + "WHERE (i.activo IS NULL OR i.activo = TRUE) "
+            + "AND (i.empresa_id = :empresaId OR i.empresa_id IS NULL) "
+            + "ORDER BY i.nombre",
+            nativeQuery = true)
+    List<Object[]> listarFilasPorEmpresa(@Param("empresaId") Long empresaId);
+
+    @Query(value = "SELECT i.id, i.nombre, i.descripcion, i.tipo, i.unidad_medida, "
+            + "i.precio_unitario, i.stock_actual, i.stock_minimo, i.proveedor, i.activo "
+            + "FROM cultivo_insumos i "
+            + "WHERE (i.activo IS NULL OR i.activo = TRUE) "
+            + "ORDER BY i.nombre",
+            nativeQuery = true)
+    List<Object[]> listarFilasActivas();
+
     List<Insumo> findByUserIdAndTipo(Long userId, Insumo.TipoInsumo tipo);
 
     @Query("SELECT i FROM Insumo i WHERE i.user.id = :userId AND i.stockActual <= i.stockMinimo")

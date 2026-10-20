@@ -14,6 +14,10 @@ import InsumosFeedlotScreen from './pages/InsumosFeedlotScreen';
 import ReportesFeedlotScreen from './pages/ReportesFeedlotScreen';
 import DietasFeedlotScreen from './pages/DietasFeedlotScreen';
 import CalendarioFeedlotScreen from './pages/CalendarioFeedlotScreen';
+import SesionMangaFeedlotScreen from './pages/SesionMangaFeedlotScreen';
+import PerfilesLecturaMangaFeedlotScreen from './pages/PerfilesLecturaMangaFeedlotScreen';
+import DetalleSesionMangaFeedlotScreen from './pages/DetalleSesionMangaFeedlotScreen';
+import DetalleAnimalFeedlotScreen from './pages/DetalleAnimalFeedlotScreen';
 
 const ID_MODULO: ModuleId = 'feedlot';
 
@@ -62,9 +66,29 @@ export const feedlotRoutes: ModuleRoute[] = [
     component: envolverSiModuloFeedlotHabilitado(FeedlotLoteFormScreen),
   },
   {
+    path: '/feedlot/lotes/:id/animales/:animalId',
+    name: 'Ficha animal',
+    component: envolverSiModuloFeedlotHabilitado(DetalleAnimalFeedlotScreen),
+  },
+  {
     path: '/feedlot/lotes/:id',
     name: 'Detalle lote',
     component: envolverSiModuloFeedlotHabilitado(DetalleLoteFeedlotScreen),
+  },
+  {
+    path: '/feedlot/manga/:id',
+    name: 'Detalle sesión de manga',
+    component: envolverSiModuloFeedlotHabilitado(DetalleSesionMangaFeedlotScreen),
+  },
+  {
+    path: '/feedlot/manga',
+    name: 'Sesión de manga',
+    component: envolverSiModuloFeedlotHabilitado(SesionMangaFeedlotScreen),
+  },
+  {
+    path: '/feedlot/lecturas-baston',
+    name: 'Lecturas del bastón',
+    component: envolverSiModuloFeedlotHabilitado(PerfilesLecturaMangaFeedlotScreen),
   },
   {
     path: '/feedlot/lotes',

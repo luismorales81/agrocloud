@@ -79,8 +79,16 @@ public class InsumoService {
     @Transactional(readOnly = true)
     public List<InsumoDTO> listarDtoPorEmpresaActual() {
         Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
-        return insumoRepository.findByEmpresaIdAndActivoTrue(empresaId).stream()
-                .map(MapeadorInsumo::aDtoListado)
+        List<Object[]> filas = insumoRepository.listarFilasPorEmpresa(empresaId);
+        if (filas == null || filas.isEmpty()) {
+            filas = insumoRepository.listarFilasActivas();
+        }
+        if (filas == null) {
+            return java.util.Collections.emptyList();
+        }
+        return filas.stream()
+                .map(MapeadorInsumo::desdeFilaNativa)
+                .filter(d -> d.getId() != null)
                 .collect(Collectors.toList());
     }
 
@@ -587,7 +595,7 @@ public class InsumoService {
         Insumo insumo = new Insumo();
         insumo.setNombre(insumoDTO.getNombre());
         insumo.setDescripcion(insumoDTO.getDescripcion());
-        insumo.setTipo(Insumo.TipoInsumo.valueOf(insumoDTO.getTipo()));
+        insumo.setTipo(Insumo.TipoInsumo.desdeTexto(insumoDTO.getTipo()));
         insumo.setUnidadMedida(insumoDTO.getUnidadMedida());
         insumo.setPrecioUnitario(insumoDTO.getPrecioUnitario());
         insumo.setStockActual(insumoDTO.getStockActual());
@@ -620,7 +628,7 @@ public class InsumoService {
         
         insumo.setNombre(insumoDTO.getNombre());
         insumo.setDescripcion(insumoDTO.getDescripcion());
-        insumo.setTipo(Insumo.TipoInsumo.valueOf(insumoDTO.getTipo()));
+        insumo.setTipo(Insumo.TipoInsumo.desdeTexto(insumoDTO.getTipo()));
         insumo.setUnidadMedida(insumoDTO.getUnidadMedida());
         insumo.setPrecioUnitario(insumoDTO.getPrecioUnitario());
         insumo.setStockActual(insumoDTO.getStockActual());

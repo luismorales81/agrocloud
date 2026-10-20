@@ -15,4 +15,8 @@ public interface FeedlotPesadaRepository extends JpaRepository<FeedlotPesada, Lo
 
     @Query("SELECT p FROM FeedlotPesada p WHERE p.id = :id AND p.empresaId = :empresaId")
     Optional<FeedlotPesada> buscarPorIdYEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM FeedlotPesada p WHERE p.sesionId = :sesionId")
+    void eliminarPorSesionId(@Param("sesionId") Long sesionId);
 }

@@ -32,7 +32,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { insumosService } from '../../../services/domain/insumosLaboresServices';
 import { Autocomplete } from '../../../components/ui/Autocomplete';
 import type {
   FeedlotAjustePlantel,
@@ -49,6 +48,7 @@ import type {
   FeedlotTipoEventoSanitario,
   FeedlotTipoVenta,
   FeedlotVenta,
+  FeedlotAnimal,
 } from '../types';
 import {
   actualizarConsumo,
@@ -63,6 +63,7 @@ import {
   listarAjustesPlantel,
   listarConsumos,
   listarEventosSanitarios,
+  listarInsumos,
   listarLecturasComedero,
   listarMotivosMuerte,
   listarMuertes,
@@ -80,6 +81,7 @@ import {
   registrarMuerte,
   registrarPesada,
   registrarVenta,
+  listarAnimalesLote,
 } from '../services/feedlotApi';
 import type { FeedlotCatalogo } from '../types';
 import PanelClimaEstablecimiento from '../../../components/PanelClimaEstablecimiento';
@@ -173,6 +175,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
   const [muertes, setMuertes] = useState<FeedlotMuerte[]>([]);
   const [eventos, setEventos] = useState<FeedlotEventoSanitario[]>([]);
   const [ventas, setVentas] = useState<FeedlotVenta[]>([]);
+  const [animales, setAnimales] = useState<FeedlotAnimal[]>([]);
   const [motivosMuerte, setMotivosMuerte] = useState<FeedlotCatalogo[]>([]);
   const [insumos, setInsumos] = useState<InsumoOpcion[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -274,7 +277,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
 
   const recargarListas = useCallback(async () => {
     if (Number.isNaN(loteId)) return;
-    const [p, c, m, e, v, r, lt, aj] = await Promise.all([
+    const [p, c, m, e, v, r, lt, aj, an] = await Promise.all([
       listarPesadas(loteId),
       listarConsumos(loteId),
       listarMuertes(loteId),
@@ -283,6 +286,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
       obtenerResumenLote(loteId),
       obtenerLote(loteId),
       listarAjustesPlantel(loteId),
+      listarAnimalesLote(loteId).catch(() => [] as FeedlotAnimal[]),
     ]);
     setPesadas(p);
     setConsumos(c);
@@ -292,6 +296,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
     setResumen(r);
     setLote(lt);
     setAjustes(aj);
+    setAnimales(an);
     try {
       const curva = await obtenerCurvaPeso(loteId);
       const pts = [...(curva.serie ?? []), ...(curva.proyeccion ?? [])].map((p) => ({
@@ -334,7 +339,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
       setCargando(true);
       setError(null);
       const [rawInsumos, motivos] = await Promise.all([
-        insumosService.listar().catch(() => []),
+        listarInsumos().catch(() => []),
         listarMotivosMuerte(),
       ]);
       setInsumos(mapearInsumosDesdeApi(rawInsumos));
@@ -637,6 +642,7 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
             <Tab label="Muertes" />
             <Tab label="Sanidad" />
             <Tab label="Ventas" />
+            <Tab label="Animales" />
           </Tabs>
 
           {pestana === 0 && resumen && (
@@ -1014,6 +1020,10 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
 
           {pestana === 6 && (
             <Box>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Para vacunar por caravana electrónica usá Sesión de manga. Este formulario descuenta stock del lote
+                completo.
+              </Alert>
               <Button
                 variant="contained"
                 sx={{ mb: 2 }}
@@ -1112,6 +1122,47 @@ const DetalleLoteFeedlotScreen: React.FC = () => {
                         <TableCell align="right">{v.cabezas}</TableCell>
                         <TableCell align="right">{v.total != null ? String(v.total) : '—'}</TableCell>
                         <TableCell>{v.comprador ?? '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          {pestana === 8 && (
+            <Box>
+              <Stack direction="row" spacing={2} sx={{ mb: 2 }} alignItems="center">
+                <Button variant="contained" onClick={() => navigate('/feedlot/manga')}>
+                  Sesión de manga
+                </Button>
+                {lote && animales.filter((a) => a.estado === 'ACTIVO').length < (lote.cabezasActuales ?? 0) && (
+                  <Chip label="Lote híbrido: hay cabezas sin enrolar" color="warning" />
+                )}
+              </Stack>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>EID</TableCell>
+                      <TableCell>Caravana</TableCell>
+                      <TableCell>Estado</TableCell>
+                      <TableCell>Retiro</TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {animales.map((a) => (
+                      <TableRow key={a.id}>
+                        <TableCell>{a.eid ?? '—'}</TableCell>
+                        <TableCell>{a.caravanaVisual ?? '—'}</TableCell>
+                        <TableCell>{a.estado}</TableCell>
+                        <TableCell>{a.retiroVigente ? 'Sí' : '—'}</TableCell>
+                        <TableCell>
+                          <Button size="small" onClick={() => navigate(`/feedlot/lotes/${loteId}/animales/${a.id}`)}>
+                            Ficha
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

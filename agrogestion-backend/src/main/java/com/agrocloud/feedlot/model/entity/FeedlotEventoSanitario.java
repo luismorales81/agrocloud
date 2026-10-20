@@ -1,5 +1,7 @@
 package com.agrocloud.feedlot.model.entity;
 
+import com.agrocloud.feedlot.model.enums.FeedlotAplicador;
+import com.agrocloud.feedlot.model.enums.FeedlotOrigenInsumo;
 import com.agrocloud.feedlot.model.enums.FeedlotTipoEventoSanitario;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -42,6 +44,20 @@ public class FeedlotEventoSanitario {
 
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
+
+    @Column(name = "animal_id")
+    private Long animalId;
+
+    @Column(name = "sesion_id")
+    private Long sesionId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "aplicador", length = 30)
+    private FeedlotAplicador aplicador;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origen_insumo", length = 30)
+    private FeedlotOrigenInsumo origenInsumo;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -117,6 +133,38 @@ public class FeedlotEventoSanitario {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public Long getAnimalId() {
+        return animalId;
+    }
+
+    public void setAnimalId(Long animalId) {
+        this.animalId = animalId;
+    }
+
+    public Long getSesionId() {
+        return sesionId;
+    }
+
+    public void setSesionId(Long sesionId) {
+        this.sesionId = sesionId;
+    }
+
+    public FeedlotAplicador getAplicador() {
+        return aplicador;
+    }
+
+    public void setAplicador(FeedlotAplicador aplicador) {
+        this.aplicador = aplicador;
+    }
+
+    public FeedlotOrigenInsumo getOrigenInsumo() {
+        return origenInsumo;
+    }
+
+    public void setOrigenInsumo(FeedlotOrigenInsumo origenInsumo) {
+        this.origenInsumo = origenInsumo;
     }
 
     public LocalDateTime getCreatedAt() {

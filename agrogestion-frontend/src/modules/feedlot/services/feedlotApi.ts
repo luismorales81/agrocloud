@@ -38,6 +38,18 @@ import type {
   FeedlotProveedorOrigenSolicitud,
   FeedlotResumen,
   FeedlotVenta,
+  FeedlotAnimal,
+  FeedlotAnimalDetalle,
+  FeedlotMapeoColumnas,
+  FeedlotResumenArchivoManga,
+  FeedlotSesionManga,
+  FeedlotSesionMangaSolicitud,
+  FeedlotConfirmarSesionSolicitud,
+  FeedlotSubtipoBaja,
+  FeedlotTipoSesionManga,
+  FeedlotPerfilLecturaManga,
+  FeedlotAliasColumnasPerfil,
+  FeedlotEncabezadosMuestra,
   FeedlotVentaSolicitud,
   FiltrosListadoLotesFeedlot,
 } from '../types';
@@ -174,6 +186,32 @@ export async function actualizarRaza(id: number, cuerpo: FeedlotCatalogoSolicitu
 export async function listarMotivosMuerte(): Promise<FeedlotCatalogo[]> {
   const { data } = await api.get<FeedlotCatalogo[]>(`${BASE}/motivos-muerte`);
   return Array.isArray(data) ? data : [];
+}
+
+function arregloRespuesta(data: unknown): unknown[] {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && typeof data === 'object') {
+    const cuerpo = data as { content?: unknown; data?: unknown };
+    if (Array.isArray(cuerpo.content)) {
+      return cuerpo.content;
+    }
+    if (Array.isArray(cuerpo.data)) {
+      return cuerpo.data;
+    }
+  }
+  return [];
+}
+
+export async function listarInsumos(): Promise<unknown[]> {
+  const { data } = await api.get(`${BASE}/insumos`);
+  const lista = arregloRespuesta(data);
+  if (lista.length > 0) {
+    return lista;
+  }
+  const respaldo = await api.get('/insumos');
+  return arregloRespuesta(respaldo.data);
 }
 
 export async function crearMotivoMuerte(cuerpo: FeedlotCatalogoSolicitud): Promise<FeedlotCatalogo> {
@@ -544,5 +582,149 @@ export async function actualizarConfigCloseout(
     `${BASE}/configuracion/closeout`,
     cuerpo
   );
+  return data;
+}
+
+export async function listarAnimalesLote(loteId: number): Promise<FeedlotAnimal[]> {
+  const { data } = await api.get<FeedlotAnimal[]>(`${BASE}/lotes/${loteId}/animales`);
+  return data;
+}
+
+export async function obtenerAnimalFeedlot(id: number): Promise<FeedlotAnimalDetalle> {
+  const { data } = await api.get<FeedlotAnimalDetalle>(`${BASE}/animales/${id}`);
+  return data;
+}
+
+export async function listarSesionesManga(loteId: number): Promise<FeedlotSesionManga[]> {
+  const { data } = await api.get<FeedlotSesionManga[]>(`${BASE}/lotes/${loteId}/sesiones-manga`);
+  return data;
+}
+
+export async function analizarArchivoSesionManga(
+  archivo: File,
+  mapeo?: FeedlotMapeoColumnas | null,
+  extras?: { perfilLecturaId?: number | null; tipo?: FeedlotTipoSesionManga | ''; cargaManualPeso?: boolean }
+): Promise<FeedlotResumenArchivoManga> {
+  const form = new FormData();
+  form.append('archivo', archivo);
+  if (mapeo) {
+    form.append('mapeo', JSON.stringify(mapeo));
+  }
+  if (extras?.perfilLecturaId) {
+    form.append('perfilLecturaId', String(extras.perfilLecturaId));
+  }
+  if (extras?.tipo) {
+    form.append('tipo', extras.tipo);
+  }
+  if (extras?.cargaManualPeso) {
+    form.append('cargaManualPeso', 'true');
+  }
+  const { data } = await api.post<FeedlotResumenArchivoManga>(`${BASE}/sesiones-manga/analizar-archivo`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
+export async function crearSesionManga(cuerpo: FeedlotSesionMangaSolicitud): Promise<FeedlotSesionManga> {
+  const { data } = await api.post<FeedlotSesionManga>(`${BASE}/sesiones-manga`, cuerpo);
+  return data;
+}
+
+export async function actualizarSesionManga(
+  id: number,
+  cuerpo: FeedlotSesionMangaSolicitud
+): Promise<FeedlotSesionManga> {
+  const { data } = await api.put<FeedlotSesionManga>(`${BASE}/sesiones-manga/${id}`, cuerpo);
+  return data;
+}
+
+export async function subirArchivoSesionManga(
+  id: number,
+  archivo: File,
+  mapeo?: FeedlotMapeoColumnas | null
+): Promise<FeedlotSesionManga> {
+  const form = new FormData();
+  form.append('archivo', archivo);
+  if (mapeo) {
+    form.append('mapeo', JSON.stringify(mapeo));
+  }
+  const { data } = await api.post<FeedlotSesionManga>(`${BASE}/sesiones-manga/${id}/archivo`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
+export async function obtenerSesionManga(id: number): Promise<FeedlotSesionManga> {
+  const { data } = await api.get<FeedlotSesionManga>(`${BASE}/sesiones-manga/${id}`);
+  return data;
+}
+
+export async function confirmarSesionManga(
+  id: number,
+  cuerpo?: FeedlotConfirmarSesionSolicitud
+): Promise<FeedlotSesionManga> {
+  const { data } = await api.post<FeedlotSesionManga>(`${BASE}/sesiones-manga/${id}/confirmar`, cuerpo ?? {});
+  return data;
+}
+
+export async function anularSesionManga(id: number): Promise<FeedlotSesionManga> {
+  const { data } = await api.post<FeedlotSesionManga>(`${BASE}/sesiones-manga/${id}/anular`);
+  return data;
+}
+
+export async function listarPerfilesLecturaManga(tipo?: FeedlotTipoSesionManga | ''): Promise<FeedlotPerfilLecturaManga[]> {
+  const { data } = await api.get<FeedlotPerfilLecturaManga[]>(`${BASE}/perfiles-lectura-manga`, {
+    params: tipo ? { tipo } : undefined,
+  });
+  return data;
+}
+
+export async function crearPerfilLecturaManga(cuerpo: {
+  nombre: string;
+  tipo: FeedlotTipoSesionManga;
+  predeterminado?: boolean;
+  alias: FeedlotAliasColumnasPerfil;
+  insumoId?: number | null;
+}): Promise<FeedlotPerfilLecturaManga> {
+  const { data } = await api.post<FeedlotPerfilLecturaManga>(`${BASE}/perfiles-lectura-manga`, cuerpo);
+  return data;
+}
+
+export async function actualizarPerfilLecturaManga(
+  id: number,
+  cuerpo: {
+    nombre?: string;
+    tipo?: FeedlotTipoSesionManga;
+    predeterminado?: boolean;
+    alias?: FeedlotAliasColumnasPerfil;
+    insumoId?: number | null;
+  }
+): Promise<FeedlotPerfilLecturaManga> {
+  const { data } = await api.put<FeedlotPerfilLecturaManga>(`${BASE}/perfiles-lectura-manga/${id}`, cuerpo);
+  return data;
+}
+
+export async function eliminarPerfilLecturaManga(id: number): Promise<void> {
+  await api.delete(`${BASE}/perfiles-lectura-manga/${id}`);
+}
+
+export async function extraerEncabezadosPerfilLectura(archivo: File): Promise<FeedlotEncabezadosMuestra> {
+  const form = new FormData();
+  form.append('archivo', archivo);
+  const { data } = await api.post<FeedlotEncabezadosMuestra>(`${BASE}/perfiles-lectura-manga/desde-muestra`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
+export async function generarBajaFaltantes(
+  id: number,
+  animalIds: number[],
+  subtipoBaja?: FeedlotSubtipoBaja
+): Promise<FeedlotSesionManga> {
+  const { data } = await api.post<FeedlotSesionManga>(`${BASE}/sesiones-manga/${id}/generar-baja-faltantes`, {
+    animalIds,
+    subtipoBaja: subtipoBaja ?? 'MUERTE',
+  });
   return data;
 }

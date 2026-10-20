@@ -7,8 +7,10 @@
 #   IMAGEN_BACKEND / IMAGEN_FRONTEND en .env y ./deploy/actualizar-desde-registro.sh
 #
 # Caddy termina TLS (80/443). MySQL, backend y frontend no se publican al host.
-# El navegador habla con https://DOMINIO ; /api se proxifica al backend (mismo origen).
+# https://DOMINIO sirve el sitio público (sitio-publico/).
+# https://app.DOMINIO sirve el sistema. /api se proxifica al backend en ambos hosts.
 # Actuator y Swagger se responden 404 en Caddy (el health interno de Docker sigue en la red).
+# Antes de publicar: DNS A de "app" y FRONTEND_URL / CORS hacia https://app.DOMINIO.
 
 name: agrogestion
 
@@ -125,6 +127,7 @@ services:
       CADDY_EMAIL: ${CADDY_EMAIL}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sitio-publico:/srv/sitio:ro
       - caddy_datos:/data
       - caddy_config:/config
     networks:

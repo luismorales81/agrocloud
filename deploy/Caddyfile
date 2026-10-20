@@ -1,104 +1,76 @@
 {
-
 	email {$CADDY_EMAIL}
-
 }
 
+# Sitio público en {$DOMINIO}. El sistema vive en app.{$DOMINIO}.
+# No publicar este archivo hasta crear el DNS A de "app" (ver docs/specs/SPEC-SITIO-PUBLICO-AGROCLOUD.md).
 
+(cabeceras) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+(rutas_ocultas) {
+	handle /actuator* {
+		respond 404
+	}
+	handle /swagger-ui* {
+		respond 404
+	}
+	handle /swagger-ui.html {
+		respond 404
+	}
+	handle /v3/api-docs* {
+		respond 404
+	}
+	handle /api/actuator* {
+		respond 404
+	}
+	handle /api/swagger-ui* {
+		respond 404
+	}
+	handle /api/swagger-ui.html {
+		respond 404
+	}
+	handle /api/v3/api-docs* {
+		respond 404
+	}
+}
 
 www.{$DOMINIO} {
-
 	redir https://{$DOMINIO}{uri} permanent
-
 }
-
-
 
 {$DOMINIO} {
-
 	encode gzip
-
-
-
-	header {
-
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-
-		X-Content-Type-Options nosniff
-
-		X-Frame-Options DENY
-
-		Referrer-Policy strict-origin-when-cross-origin
-
-		-Server
-
-	}
-
-
-
-	handle /actuator* {
-
-		respond 404
-
-	}
-
-	handle /swagger-ui* {
-
-		respond 404
-
-	}
-
-	handle /swagger-ui.html {
-
-		respond 404
-
-	}
-
-	handle /v3/api-docs* {
-
-		respond 404
-
-	}
-
-	handle /api/actuator* {
-
-		respond 404
-
-	}
-
-	handle /api/swagger-ui* {
-
-		respond 404
-
-	}
-
-	handle /api/swagger-ui.html {
-
-		respond 404
-
-	}
-
-	handle /api/v3/api-docs* {
-
-		respond 404
-
-	}
-
-
+	import cabeceras
+	import rutas_ocultas
 
 	handle /api* {
-
 		reverse_proxy backend:8080
-
 	}
-
-
 
 	handle {
-
-		reverse_proxy frontend:80
-
+		root * /srv/sitio
+		file_server
 	}
-
 }
 
+app.{$DOMINIO} {
+	encode gzip
+	import cabeceras
+	import rutas_ocultas
+
+	handle /api* {
+		reverse_proxy backend:8080
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}

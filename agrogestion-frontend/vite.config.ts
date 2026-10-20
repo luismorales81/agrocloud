@@ -1,11 +1,55 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
-import { copyFileSync } from 'fs'
+import { copyFileSync, createReadStream, existsSync, mkdirSync } from 'fs'
+
+const raizSitio = path.resolve(__dirname, '../sitio-publico')
+
+function sitioPublico(): Plugin {
+  const tipos: Record<string, string> = {
+    '/': 'text/html; charset=utf-8',
+    '/estilos.css': 'text/css; charset=utf-8',
+    '/logo.png': 'image/png',
+  }
+
+  const servir = (req: { url?: string }, res: { setHeader: (nombre: string, valor: string) => void; end: (dato?: string) => void }, next: () => void) => {
+    const ruta = (req.url || '').split('?')[0]
+    if (!(ruta in tipos)) {
+      next()
+      return
+    }
+    const archivo = ruta === '/' ? 'index.html' : ruta.slice(1)
+    const completo = path.join(raizSitio, archivo)
+    if (!existsSync(completo)) {
+      next()
+      return
+    }
+    res.setHeader('Content-Type', tipos[ruta])
+    createReadStream(completo).pipe(res as unknown as NodeJS.WritableStream)
+  }
+
+  return {
+    name: 'sitio-publico',
+    configureServer(server) {
+      server.middlewares.use(servir)
+    },
+    closeBundle() {
+      if (!existsSync(raizSitio)) {
+        return
+      }
+      const destino = path.resolve(__dirname, 'dist/sitio')
+      mkdirSync(destino, { recursive: true })
+      for (const nombre of ['index.html', 'estilos.css', 'logo.png']) {
+        copyFileSync(path.join(raizSitio, nombre), path.join(destino, nombre))
+      }
+    },
+  }
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    sitioPublico(),
     react(),
     // Plugin personalizado para copiar manifest.json
     {

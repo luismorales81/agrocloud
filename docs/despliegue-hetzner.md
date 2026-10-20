@@ -17,6 +17,7 @@ Procedimiento de cutover (piloto, dump Railway, backups, GHCR): [migracion-railw
 3. En el DNS del dominio, creá:
    - `A`  `@` → IPv4 del VPS
    - `A`  `www` → misma IPv4
+   - `A`  `app` → misma IPv4 (el sistema; el dominio raíz sirve el sitio público)
 4. En Hetzner: **Firewall** inbound TCP **22, 80, 443**. Nada más (sobre todo no 3306 ni 8080).
 5. Si el repo es privado, tené a mano un **deploy key** o un token de clone.
 6. Generá secretos **nuevos** para producción (no copies los de desarrollo):
@@ -141,8 +142,8 @@ JWT_SECRET=...generado min 32 chars...
 CHAT_IA_ENCRYPTION_KEY=...generado min 32 chars...
 DOMINIO=agrocloud.com.ar
 CADDY_EMAIL=admin@agrocloud.com.ar
-FRONTEND_URL=https://agrocloud.com.ar
-CORS_ALLOWED_ORIGINS=https://agrocloud.com.ar,https://www.agrocloud.com.ar
+FRONTEND_URL=https://app.agrocloud.com.ar
+CORS_ALLOWED_ORIGINS=https://app.agrocloud.com.ar,https://agrocloud.com.ar,https://www.agrocloud.com.ar
 VITE_API_BASE_URL=/api
 VITE_GOOGLE_MAPS_API_KEY=...si usás mapas...
 ```
@@ -184,7 +185,7 @@ curl -s https://TU_DOMINIO/api/health
 ./deploy/verificar-piloto.sh
 ```
 
-En el navegador: `https://TU_DOMINIO`.
+En el navegador: `https://TU_DOMINIO` abre el sitio público y `https://app.TU_DOMINIO` abre el sistema. El registro `app` tiene que existir antes de este Caddyfile; si no, el login deja de estar en el dominio raíz y el sistema no resuelve.
 
 Si Caddy falla por TLS: el dominio no apunta a esta IP, el firewall bloquea 80, o `DOMINIO` / `CADDY_EMAIL` están vacíos.
 
@@ -197,7 +198,7 @@ docker compose -f docker-compose.prod.yml logs caddy
 ## 7. Después del primer arranque
 
 1. Creá el usuario administrador **dentro de la app** (no hay usuario mágico en Docker).
-2. En Google Cloud Console, restringí la clave de Maps a `https://TU_DOMINIO/*`.
+2. En Google Cloud Console, restringí la clave de Maps a `https://app.TU_DOMINIO/*`.
 3. Completá SMTP en `.env` si querés reset de contraseña; luego `docker compose -f docker-compose.prod.yml up -d backend`.
 4. Swagger y Actuator no se publican: Caddy responde 404 (ver `deploy/Caddyfile`).
 

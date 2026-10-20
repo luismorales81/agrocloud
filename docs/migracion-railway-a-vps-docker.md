@@ -15,7 +15,7 @@ chmod +x deploy/*.sh
 
 `levantar-produccion.sh` espera a que el backend esté healthy y corre `verificar-piloto.sh` (HTTPS, `/api/health`, login alcanzable, Actuator/Swagger 404).
 
-Comprobación manual: abrir `https://$DOMINIO`, iniciar sesión y un CRUD de un módulo.
+Comprobación manual: abrir `https://$DOMINIO` (sitio público), entrar al sistema en `https://app.$DOMINIO`, iniciar sesión y un CRUD de un módulo. El DNS `A` de `app` tiene que existir antes de publicar el Caddyfile que separa los dos hosts.
 
 `VITE_API_BASE_URL` debe ser `/api` (ya es el default de `docker-compose.prod.yml`).
 

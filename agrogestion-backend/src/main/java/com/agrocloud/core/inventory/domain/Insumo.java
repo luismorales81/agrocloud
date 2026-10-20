@@ -36,8 +36,8 @@ public class Insumo {
     private String descripcion;
 
     @NotNull(message = "El tipo de insumo es obligatorio")
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo", nullable = false)
+    @Convert(converter = ConvertidorTipoInsumo.class)
+    @Column(name = "tipo", nullable = false, length = 50)
     private TipoInsumo tipo;
 
     @NotBlank(message = "La unidad de medida es obligatoria")
@@ -128,7 +128,43 @@ public class Insumo {
 
     // Enums
     public enum TipoInsumo {
-        FERTILIZANTE, HERBICIDA, FUNGICIDA, INSECTICIDA, SEMILLA, COMBUSTIBLE, LUBRICANTE, REPUESTO, HERRAMIENTA, OTROS
+        FERTILIZANTE,
+        HERBICIDA,
+        FUNGICIDA,
+        INSECTICIDA,
+        ACARICIDA,
+        COADYUVANTE,
+        MOLUSQUICIDA,
+        NEMATICIDA,
+        RODENTICIDA,
+        SEMILLA,
+        COMBUSTIBLE,
+        LUBRICANTE,
+        REPUESTO,
+        HERRAMIENTA,
+        OTROS;
+
+        @com.fasterxml.jackson.annotation.JsonCreator
+        public static TipoInsumo desdeTexto(String texto) {
+            if (texto == null || texto.isBlank()) {
+                return OTROS;
+            }
+            String normalizado = texto.trim().toUpperCase();
+            if ("OTRO".equals(normalizado)) {
+                return OTROS;
+            }
+            try {
+                return TipoInsumo.valueOf(normalizado);
+            } catch (IllegalArgumentException ex) {
+                return OTROS;
+            }
+        }
+
+        public boolean esAgroquimico() {
+            return this == HERBICIDA || this == FUNGICIDA || this == INSECTICIDA
+                    || this == FERTILIZANTE || this == ACARICIDA || this == COADYUVANTE
+                    || this == MOLUSQUICIDA || this == NEMATICIDA || this == RODENTICIDA;
+        }
     }
 
     // Constructors
@@ -384,8 +420,7 @@ public class Insumo {
     // Métodos helper para agroquímicos
     @JsonIgnore
     public boolean esAgroquimico() {
-        return tipo == TipoInsumo.HERBICIDA || tipo == TipoInsumo.FUNGICIDA || 
-               tipo == TipoInsumo.INSECTICIDA || tipo == TipoInsumo.FERTILIZANTE;
+        return tipo != null && tipo.esAgroquimico();
     }
 
     @JsonIgnore

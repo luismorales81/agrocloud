@@ -18,4 +18,11 @@ public interface FeedlotMuerteRepository extends JpaRepository<FeedlotMuerte, Lo
 
     @Query("SELECT COALESCE(SUM(m.cabezas), 0) FROM FeedlotMuerte m WHERE m.lote.id = :loteId AND m.empresaId = :empresaId")
     Integer sumarCabezasPorLoteIdYEmpresaId(@Param("loteId") Long loteId, @Param("empresaId") Long empresaId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM FeedlotMuerte m WHERE m.sesionId = :sesionId")
+    void eliminarPorSesionId(@Param("sesionId") Long sesionId);
+
+    @Query("SELECT m FROM FeedlotMuerte m WHERE m.sesionId = :sesionId")
+    java.util.List<FeedlotMuerte> listarPorSesionId(@Param("sesionId") Long sesionId);
 }
