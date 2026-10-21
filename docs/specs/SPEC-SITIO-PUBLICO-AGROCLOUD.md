@@ -1,10 +1,10 @@
 # SPEC — Sitio público de AgroCloud
 
-**Versión:** 1.0  
+**Versión:** 1.2  
 **Fecha:** Octubre 2026  
 **Metodología:** SDD  
-**Estado:** Aprobada con el plan de implementación  
-**Relacionada con:** `docs/despliegue-hetzner.md`, `deploy/Caddyfile`
+**Estado:** Aprobada con el pedido de rediseño  
+**Relacionada con:** `docs/BRIEF-PARA-INTERESADOS.md`, `docs/PROPUESTA-CLIENTE-AGROGESTION.md`, `docs/despliegue-hetzner.md`, `deploy/Caddyfile`
 
 ---
 
@@ -47,19 +47,33 @@ La clave de Google Maps, si se usa, debe permitir `https://app.agrocloud.com.ar/
 
 ## 4. Público y contenido
 
-Texto en castellano, corto, legible en el celular. Sin testimonios, logos de clientes ni cifras que el producto no tenga.
+Texto en castellano, voseo, frases cortas, legible en el celular. Sin testimonios, logos de clientes ni cifras que el producto no tenga.
+
+La identidad visual sale de la guía de rediseño: fondo `#FDF4E3`, paneles `#F3E6D2`, verde `#3A5533`, tinta `#2B2B24`, naranja `#E07B2A` y ocre `#E3A72F` solo en dibujos. Títulos en Lora, texto en Source Sans 3. Tarjetas planas, esquinas de 6px, sin sombras fuertes ni degradados.
+
+El tono y las secciones nuevas salen de la presentación «AgroCloud: Gestión agropecuaria en la nube». Se suman al contenido que ya estaba. No se publica el pedido de inversión, ni precios, ni un roadmap de rubros que el producto no tiene (caprina, apícola). Lechería se muestra como módulo actual.
 
 ### 4.1 Portada
 
-Qué resuelve: operación, costos e inventario en un solo lugar, con los módulos que la empresa activa. Dos acciones: entrar al sistema y agendar.
+«Dejá de pelear con cuadernos, planillas y WhatsApp.» Bajada: controlar la empresa en un solo lugar. Dos acciones: pedir una demo y entrar al sistema.
 
-### 4.2 Lo común
+### 4.2 El problema
 
-- Usuarios y roles dentro de la empresa.
-- Módulos que se activan según el negocio.
-- Inventario y períodos de gestión compartidos.
+Cinco tarjetas: sistemas desconectados, costos opacos, inventario sin trazabilidad, equipos desalineados, producción mixta sin puente.
 
-### 4.3 Módulos
+### 4.3 El costo de no cambiar
+
+Decisiones tardías, márgenes opacos, errores de stock y tiempo perdido.
+
+### 4.4 La solución
+
+100% en la nube, módulos a tu medida y costos explicables (insumos, maquinaria y mano de obra).
+
+### 4.5 Núcleo y beneficios
+
+Multiempresa, roles, inventario unificado, mapa y clima. La cadena: menos fragmentación, márgenes claros, equipos alineados.
+
+### 4.6 Módulos
 
 | Módulo | Qué se muestra |
 |--------|----------------|
@@ -69,15 +83,20 @@ Qué resuelve: operación, costos e inventario en un solo lugar, con los módulo
 | Avícola | Un solo rubro: crianza y engorde, producción de huevos, ponedoras. Alimento, sanidad y reportes. No se ofrece carne avícola como módulo aparte. |
 | Lechería | Bovino, caprino, ovino y búfalo. Ordeñe y lactancia. Ventas de leche. Sanidad, control lechero y mapa. |
 
-### 4.4 Agenda
+### 4.7 Para quién
 
-Widget embebido de `https://calendly.com/morales-luis-ariel/30min`. Texto: «Charla de 30 minutos para ver si AgroCloud encaja en tu explotación».
+Dueño o gerente de producción, administración, y encargado o agrónomo. Encaja en empresas con varios lotes, más de un usuario, o campo y animales en la misma explotación.
+
+### 4.8 Agenda
+
+Widget embebido de `https://calendly.com/morales-luis-ariel/30min`. El cierre retoma: «Dejá de pelear con planillas. Controlá tu operación y explicá tus costos.» La demo dura 30 minutos.
 
 ---
 
 ## 5. Fuera de alcance
 
 - Formulario de contacto propio, además de Calendly.
-- Precios, planes comerciales y alta de usuarios desde el sitio.
+- Precios, planes comerciales, facturación y alta de usuarios desde el sitio.
+- Stack técnico, proveedores cloud, SLA y hoja de ruta.
 - Cambiar el login ni las pantallas del sistema.
 - Ejecutar el corte en el VPS desde este repositorio.
