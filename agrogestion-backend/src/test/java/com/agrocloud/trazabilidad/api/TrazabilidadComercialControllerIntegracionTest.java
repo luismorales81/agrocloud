@@ -1,11 +1,14 @@
 package com.agrocloud.trazabilidad.api;
 
+import com.agrocloud.core.domain.Campana;
 import com.agrocloud.core.domain.Empresa;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.core.domain.UsuarioEmpresa;
+import com.agrocloud.core.infrastructure.CampanaRepository;
 import com.agrocloud.core.infrastructure.EmpresaRepository;
 import com.agrocloud.core.infrastructure.UserRepository;
 import com.agrocloud.core.infrastructure.UsuarioEmpresaRepository;
+import com.agrocloud.model.enums.EstadoCampana;
 import com.agrocloud.cultivos.domain.Field;
 import com.agrocloud.cultivos.domain.Plot;
 import com.agrocloud.cultivos.infrastructure.FieldRepository;
@@ -20,12 +23,16 @@ import com.agrocloud.trazabilidad.domain.TrazabilidadCertificacion;
 import com.agrocloud.trazabilidad.domain.TrazabilidadReglaCertificacion;
 import com.agrocloud.trazabilidad.infrastructure.TrazabilidadCertificacionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,10 +64,12 @@ class TrazabilidadComercialControllerIntegracionTest {
     @Autowired private LaborInsumoRepository laborInsumoRepository;
     @Autowired private InsumoRepository insumoRepository;
     @Autowired private TrazabilidadCertificacionRepository trazabilidadCertificacionRepository;
+    @Autowired private CampanaRepository campanaRepository;
 
     private User usuario;
     private Empresa empresa;
     private Plot lote;
+    private Long campanaId;
 
     @BeforeEach
     void setUp() {
@@ -82,6 +91,16 @@ class TrazabilidadComercialControllerIntegracionTest {
         UsuarioEmpresa ue = new UsuarioEmpresa(usuario, empresa, com.agrocloud.model.enums.RolEmpresa.ADMINISTRADOR);
         usuarioEmpresaRepository.save(ue);
 
+        Campana campana = new Campana();
+        campana.setEmpresaId(empresa.getId());
+        campana.setCodigo("2025-26");
+        campana.setNombre("Campaña prueba");
+        campana.setFechaInicio(LocalDate.of(2025, 10, 1));
+        campana.setFechaFin(LocalDate.of(2026, 9, 30));
+        campana.setEstado(EstadoCampana.ACTIVA);
+        campana.setEsDefault(true);
+        campanaId = campanaRepository.save(campana).getId();
+
         Field campo = new Field();
         campo.setNombre("Campo Test");
         campo.setUbicacion("Test");
@@ -99,6 +118,19 @@ class TrazabilidadComercialControllerIntegracionTest {
         lote.setUser(usuario);
         lote.setActivo(true);
         lote = plotRepository.save(lote);
+
+        UserDetails detalles = org.springframework.security.core.userdetails.User
+                .withUsername(usuario.getEmail())
+                .password(usuario.getPassword())
+                .roles("USER")
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(detalles, null, detalles.getAuthorities()));
+    }
+
+    @AfterEach
+    void limpiarSesion() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -135,6 +167,7 @@ class TrazabilidadComercialControllerIntegracionTest {
         laborInsumoRepository.save(li);
 
         mockMvc.perform(post("/api/trazabilidad/reportes")
+                .header("X-Campaign-Id", campanaId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"entidadTipo\":\"LOTE\",\"entidadId\":" + lote.getId() + ",\"certificacion\":\"LIBRE_AGROQUIMICOS\"}"))
             .andExpect(status().isBadRequest())
@@ -176,6 +209,7 @@ class TrazabilidadComercialControllerIntegracionTest {
         laborInsumoRepository.save(li);
 
         String cuerpoCreado = mockMvc.perform(post("/api/trazabilidad/reportes")
+                .header("X-Campaign-Id", campanaId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"entidadTipo\":\"LOTE\",\"entidadId\":" + lote.getId() + ",\"certificacion\":\"LIBRE_AGROQUIMICOS\"}"))
             .andExpect(status().isCreated())
@@ -202,6 +236,7 @@ class TrazabilidadComercialControllerIntegracionTest {
     @Test
     void post_expediente_lote_ok_y_get_pdf() throws Exception {
         String cuerpoCreado = mockMvc.perform(post("/api/trazabilidad/expedientes")
+                .header("X-Campaign-Id", campanaId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"entidadTipo\":\"LOTE\",\"entidadId\":" + lote.getId() + "}"))
             .andExpect(status().isCreated())
@@ -229,6 +264,7 @@ class TrazabilidadComercialControllerIntegracionTest {
         assertThat(idRegla).isPositive();
 
         mockMvc.perform(put("/api/admin/trazabilidad/reglas/" + idRegla)
+                .header("X-Campaign-Id", campanaId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"parametrosJson\":\"{\\\"tiposInsumoProhibidos\\\":[\\\"FERTILIZANTE\\\"]}\"}"))
             .andExpect(status().isOk())
@@ -249,6 +285,7 @@ class TrazabilidadComercialControllerIntegracionTest {
         long idRegla = c.getReglas().stream().findFirst().orElseThrow().getId();
 
         mockMvc.perform(put("/api/admin/trazabilidad/reglas/" + idRegla)
+                .header("X-Campaign-Id", campanaId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"parametrosJson\":\"{\\\"tiposInsumoProhibidos\\\":[}\"}"))
             .andExpect(status().isBadRequest())

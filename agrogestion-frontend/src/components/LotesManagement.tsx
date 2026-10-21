@@ -516,7 +516,7 @@ const LotesManagement: React.FC = () => {
         fechaSiembra: null, // Se asigna automáticamente al sembrar el lote
         fechaCosechaEsperada: null, // Se calcula automáticamente al sembrar
         activo: true,
-        campo: { id: formData.campo_id }
+        campoId: formData.campo_id
       };
 
       if (isEditing && selectedLote) {

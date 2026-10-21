@@ -153,7 +153,11 @@ public class AuthService implements UserDetailsService {
         user.getRoles().add(role);
 
         User savedUser = userRepository.save(user);
-        emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getVerificationToken());
+        try {
+            emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getVerificationToken());
+        } catch (Exception correo) {
+            logger.error("No se pudo enviar el correo de verificación a {}: {}", savedUser.getEmail(), correo.getMessage());
+        }
         logger.info("Usuario registrado; pendiente de confirmar el correo: {}", savedUser.getEmail());
         return convertToDto(savedUser);
     }

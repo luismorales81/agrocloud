@@ -182,6 +182,15 @@ public class PlotService {
                         p.getCampo().getEmpresa().getId();
                     }
                 }
+                if (p.getEstadoConfigurado() != null) {
+                    p.getEstadoConfigurado().getNombre();
+                }
+                if (p.getCultivo() != null) {
+                    p.getCultivo().getNombre();
+                }
+                if (p.getTipoCultivo() != null) {
+                    p.getTipoCultivo().getId();
+                }
                 validarYCorregirLotes(List.of(p));
                 return lote;
             }

@@ -4,6 +4,7 @@ import com.agrocloud.core.domain.Campana;
 import com.agrocloud.core.infrastructure.CampanaRepository;
 import com.agrocloud.dto.CrearCampanaRequest;
 import com.agrocloud.exception.BadRequestException;
+import com.agrocloud.exception.ResourceConflictException;
 import com.agrocloud.model.enums.EstadoCampana;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +43,7 @@ class CampanaServiceTest {
         req.setNombre("Test");
         req.setFechaInicio(LocalDate.of(2025, 10, 1));
         req.setFechaFin(LocalDate.of(2026, 9, 30));
-        assertThrows(BadRequestException.class, () -> campanaService.crear(1L, req));
+        assertThrows(ResourceConflictException.class, () -> campanaService.crear(1L, req));
     }
 
     @Test

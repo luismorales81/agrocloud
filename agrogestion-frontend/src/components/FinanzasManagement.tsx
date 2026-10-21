@@ -398,6 +398,10 @@ const FinanzasManagement: React.FC = () => {
 
   const handleSubmitEgreso = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!egresoForm.tipoEgreso) {
+      alert('Seleccioná el tipo de egreso');
+      return;
+    }
     setLoading(true);
     try {
       // Validar que si es un egreso de insumos, tenga la información completa

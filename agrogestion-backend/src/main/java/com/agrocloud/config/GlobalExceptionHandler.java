@@ -5,6 +5,7 @@ import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.exception.ResourceConflictException;
 import com.agrocloud.exception.CorreoNoVerificadoException;
 import com.agrocloud.exception.EulaNoAceptadoException;
+import com.agrocloud.trazabilidad.excepcion.CertificacionRechazadaExcepcion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,7 +21,9 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -349,6 +352,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(cuerpo(
                 HttpStatus.NOT_ACCEPTABLE, "Tipo de respuesta no aceptable",
                 "El formato pedido no está disponible para este recurso.", request));
+    }
+
+    @ExceptionHandler(CertificacionRechazadaExcepcion.class)
+    public ResponseEntity<Map<String, Object>> manejarCertificacionRechazada(
+            CertificacionRechazadaExcepcion ex, WebRequest request) {
+        Map<String, Object> response = cuerpo(
+                HttpStatus.BAD_REQUEST, "CERTIFICACION_RECHAZADA", ex.getMessage(), request);
+        response.put("incidencias", ex.getIncidencias());
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> manejarCuerpoIlegible(
+            HttpMessageNotReadableException ex, WebRequest request) {
+        logger.warn("Cuerpo de la solicitud ilegible: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(cuerpo(
+                HttpStatus.BAD_REQUEST, "Solicitud inválida", "El cuerpo de la solicitud no es válido.", request));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> manejarRecursoNoEncontrado(
+            NoResourceFoundException ex, WebRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(cuerpo(
+                HttpStatus.NOT_FOUND, "No encontrado", "No se encontró el recurso.", request));
     }
 
     private Map<String, Object> cuerpo(HttpStatus estado, String error, String mensaje, WebRequest request) {
