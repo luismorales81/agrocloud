@@ -75,6 +75,7 @@ services:
       IA_GEMINI_HABILITADO: ${IA_GEMINI_HABILITADO:-true}
       IA_GEMINI_MODEL: ${IA_GEMINI_MODEL:-gemini-flash-latest}
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+      GOOGLE_MAPS_API_KEY_SECRET: ${GOOGLE_MAPS_API_KEY_SECRET:-}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom}
     volumes:
       - eula_pdfs:/app/eula-pdfs
@@ -93,7 +94,6 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
     image: ${IMAGEN_FRONTEND:-agrogestion-frontend:prod}
     container_name: agrogestion-frontend
     restart: unless-stopped

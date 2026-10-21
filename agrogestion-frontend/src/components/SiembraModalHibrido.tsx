@@ -276,8 +276,6 @@ const SiembraModalHibrido: React.FC<SiembraModalProps> = ({ lote, onClose, onSuc
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      
       // Preparar datos de insumos
       const insumosData = insumosUsados.map(i => ({
         insumoId: i.insumoId,

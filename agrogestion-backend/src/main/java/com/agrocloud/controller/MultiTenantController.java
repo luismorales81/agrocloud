@@ -2,6 +2,7 @@ package com.agrocloud.controller;
 
 import com.agrocloud.core.domain.*;
 import com.agrocloud.core.application.MultiTenantService;
+import com.agrocloud.core.application.UserService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +30,14 @@ public class MultiTenantController {
     @Autowired
     @Qualifier("multiTenantServiceCore")
     private MultiTenantService multiTenantService;
+
+    @Autowired
+    @Qualifier("userServiceCore")
+    private UserService servicioUsuarios;
+
+    private Long idUsuarioAutenticado(Authentication autenticacion) {
+        return servicioUsuarios.findByEmail(autenticacion.getName()).getId();
+    }
 
     // Endpoints para gestión de usuarios
     @GetMapping("/usuarios")
@@ -152,7 +161,7 @@ public class MultiTenantController {
     public ResponseEntity<List<Role>> getMyRolesInCompany(
             @PathVariable Long companyId, 
             Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = idUsuarioAutenticado(authentication);
         List<Role> roles = multiTenantService.getUserRolesInCompany(userId, companyId);
         return ResponseEntity.ok(roles);
     }
@@ -162,7 +171,7 @@ public class MultiTenantController {
     public ResponseEntity<Set<String>> getMyPermissionsInCompany(
             @PathVariable Long companyId, 
             Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = idUsuarioAutenticado(authentication);
         Set<String> permissions = multiTenantService.getUserPermissionsInCompany(userId, companyId);
         return ResponseEntity.ok(permissions);
     }
@@ -170,7 +179,7 @@ public class MultiTenantController {
     @GetMapping("/mis-empresas")
     @Operation(summary = "Obtener mis empresas", description = "Obtiene todas las empresas del usuario autenticado")
     public ResponseEntity<List<Empresa>> getMyCompanies(Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = idUsuarioAutenticado(authentication);
         List<Empresa> companies = multiTenantService.getUserCompanies(userId);
         return ResponseEntity.ok(companies);
     }
@@ -182,7 +191,7 @@ public class MultiTenantController {
             @PathVariable Long companyId, 
             @PathVariable String permissionName, 
             Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = idUsuarioAutenticado(authentication);
         boolean hasPermission = multiTenantService.userHasPermissionInCompany(userId, companyId, permissionName);
         return ResponseEntity.ok(hasPermission);
     }

@@ -5,7 +5,6 @@ import com.agrocloud.dto.PlotDTO;
 import com.agrocloud.cultivos.infrastructure.PlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +13,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/public/lotes")
-@Profile("dev")
 public class PublicPlotController {
 
     @Autowired

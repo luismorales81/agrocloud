@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { eulaService } from '../services/apiServices';
 
 interface EulaModalProps {
-  email: string;
+  ticket: string;
   onAceptar: () => void;
   onCancelar?: () => void;
 }
 
-const EulaModal: React.FC<EulaModalProps> = ({ email, onAceptar, onCancelar }) => {
+const EulaModal: React.FC<EulaModalProps> = ({ ticket, onAceptar, onCancelar }) => {
   const [aceptado, setAceptado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [textoEula, setTextoEula] = useState('');
@@ -36,13 +36,16 @@ const EulaModal: React.FC<EulaModalProps> = ({ email, onAceptar, onCancelar }) =
       return;
     }
 
+    if (!ticket) {
+      setError('No se pudo validar la aceptación. Volvé a ingresar tu contraseña.');
+      return;
+    }
+
     setCargando(true);
     setError('');
 
     try {
-      console.log('📄 [EulaModal] Aceptando EULA para:', email);
-      const resultado = await eulaService.aceptarEula(email, true);
-      console.log('✅ [EulaModal] EULA aceptado exitosamente:', resultado);
+      await eulaService.aceptarEula(ticket, true);
       onAceptar();
     } catch (err: any) {
       console.error('❌ [EulaModal] Error aceptando EULA:', err);

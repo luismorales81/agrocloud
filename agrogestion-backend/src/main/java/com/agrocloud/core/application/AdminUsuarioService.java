@@ -284,7 +284,7 @@ public class AdminUsuarioService {
         nuevoUsuario.setPhone(usuarioDTO.getPhone());
         nuevoUsuario.setEstado(EstadoUsuario.PENDIENTE);
         nuevoUsuario.setActivo(true);
-        nuevoUsuario.setEmailVerified(false);
+        nuevoUsuario.setEmailVerified(true);
         
         // PREVENCIÓN AUTOMÁTICA: Siempre asignar creador (ya validado antes que no sea null)
         nuevoUsuario.setCreadoPor(creadoPor);

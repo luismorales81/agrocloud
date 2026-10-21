@@ -60,16 +60,10 @@ const HistorialCosechasModal: React.FC<HistorialCosechasModalProps> = ({
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('No hay token de autenticación');
-        return;
-      }
-
       const response = await fetch(`/api/historial-cosechas/lote/${loteId}`, {
         method: 'GET',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });

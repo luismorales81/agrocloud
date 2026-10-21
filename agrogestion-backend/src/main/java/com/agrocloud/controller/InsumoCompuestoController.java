@@ -202,6 +202,8 @@ public class InsumoCompuestoController {
             List<RecetaAlimentacionPorEtapa> recetas = 
                 insumoCompuestoService.obtenerRecetasPorEtapa(etapaEnum, user);
             return ResponseEntity.ok(recetas);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
@@ -222,6 +224,8 @@ public class InsumoCompuestoController {
                 insumoCompuestoService.obtenerRecetaPorDefecto(etapaEnum, user);
             return receta.map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }

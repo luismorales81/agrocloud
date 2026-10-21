@@ -9,7 +9,10 @@ public class AceptarEulaRequest {
     
     @NotNull(message = "Debe aceptar el EULA")
     private Boolean aceptado;
-    
+
+    /** Ticket de corta vida emitido al detectar que falta el EULA. */
+    private String ticket;
+
     private String ipAddress;
     private String userAgent;
     
@@ -28,6 +31,14 @@ public class AceptarEulaRequest {
     
     public void setAceptado(Boolean aceptado) {
         this.aceptado = aceptado;
+    }
+
+    public String getTicket() {
+        return ticket;
+    }
+
+    public void setTicket(String ticket) {
+        this.ticket = ticket;
     }
     
     public String getIpAddress() {

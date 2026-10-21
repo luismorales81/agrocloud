@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Badge from './ui/Badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
 import { ingresosService, egresosService, camposService, insumosService } from '../services/apiServices';
+import { haySesionActiva } from '../services/api';
 import PermissionGate from './PermissionGate';
 import { Icon } from '../core/components/Icon';
 import { useCurrencyContext } from '../contexts/CurrencyContext';
@@ -543,8 +544,7 @@ const FinanzasManagement: React.FC = () => {
       try {
         setLoading(true);
         
-        const token = localStorage.getItem('token');
-        if (!token) {
+        if (!haySesionActiva()) {
           alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
           return;
         }
@@ -568,8 +568,7 @@ const FinanzasManagement: React.FC = () => {
       try {
         setLoading(true);
         
-        const token = localStorage.getItem('token');
-        if (!token) {
+        if (!haySesionActiva()) {
           alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
           return;
         }

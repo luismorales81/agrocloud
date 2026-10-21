@@ -121,6 +121,7 @@ public class InicializadorUsuarioDockerLocal implements CommandLineRunner {
         usuario.setFirstName("Admin");
         usuario.setLastName("Local");
         usuario.setActivo(true);
+        usuario.setEmailVerified(true);
         usuario.setEulaAceptado(true);
         usuario.getUserRoles().add(new UserRole(usuario, superadmin));
         usuario = repositorioUsuarios.save(usuario);

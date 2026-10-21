@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { lotesService, cultivosService, reportesService } from '../services/apiServices';
+import { haySesionActiva } from '../services/api';
 
 interface RindeLote {
   id?: number;
@@ -81,9 +82,8 @@ const RindeManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No hay token de autenticación');
+      if (!haySesionActiva()) {
+        console.error('No hay sesión activa');
         setLotes([]);
         setCultivos([]);
         setRindes([]);

@@ -73,6 +73,7 @@ services:
       IA_GEMINI_HABILITADO: ${IA_GEMINI_HABILITADO:-true}
       IA_GEMINI_MODEL: ${IA_GEMINI_MODEL:-gemini-flash-latest}
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+      GOOGLE_MAPS_API_KEY_SECRET: ${GOOGLE_MAPS_API_KEY_SECRET:-}
       APP_CREAR_USUARIO_LOCAL: ${APP_CREAR_USUARIO_LOCAL:-true}
       APP_USUARIO_LOCAL_EMAIL: ${APP_USUARIO_LOCAL_EMAIL:-admin@localhost}
       APP_USUARIO_LOCAL_PASSWORD: ${APP_USUARIO_LOCAL_PASSWORD:-AgrocloudLocal1}
@@ -96,7 +97,6 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
     image: agrogestion-frontend:local
     container_name: agrogestion-frontend
     restart: unless-stopped

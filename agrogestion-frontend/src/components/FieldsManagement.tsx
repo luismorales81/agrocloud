@@ -6,6 +6,7 @@ import OpenMeteoWeatherWidget from './OpenMeteoWeatherWidget';
 import PermissionGate from './PermissionGate';
 import { loadGoogleMaps, GOOGLE_MAPS_CONFIG } from '../config/googleMaps';
 import { camposService } from '../services/apiServices';
+import { haySesionActiva } from '../services/api';
 import { Icon } from './icons';
 
 // Declaraciones de tipos para Google Maps
@@ -467,9 +468,7 @@ const FieldsManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Obtener token de autenticación
-      const token = localStorage.getItem('token');
-      if (!token) {
+      if (!haySesionActiva()) {
         setError('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }
@@ -877,8 +876,7 @@ const FieldsManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      const token = localStorage.getItem('token');
-      if (!token) {
+      if (!haySesionActiva()) {
         alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }
@@ -947,9 +945,8 @@ const FieldsManagement: React.FC = () => {
   const handleEliminarCampo = async (campoId: number) => {
     if (window.confirm(`¿Estás seguro de que quieres eliminar el campo?`)) {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          console.error('No hay token de autenticación');
+        if (!haySesionActiva()) {
+          console.error('No hay sesión activa');
           alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
           return;
         }

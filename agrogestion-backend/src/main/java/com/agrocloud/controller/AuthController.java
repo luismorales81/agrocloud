@@ -3,10 +3,11 @@ package com.agrocloud.controller;
 import com.agrocloud.dto.LoginRequest;
 import com.agrocloud.dto.LoginResponse;
 import com.agrocloud.dto.RegistroPublicoSolicitud;
-import com.agrocloud.dto.UserDto;
+import com.agrocloud.exception.CorreoNoVerificadoException;
 import com.agrocloud.exception.EulaNoAceptadoException;
+import com.agrocloud.exception.LimiteTasaExcedidoException;
+import com.agrocloud.core.security.DireccionIpCliente;
 import com.agrocloud.core.application.AuthService;
-import com.agrocloud.core.application.EmailService;
 import com.agrocloud.core.security.ServicioLimiteTasaAuth;
 import com.agrocloud.config.ConfiguracionCookieJwt;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,11 +19,9 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,13 +33,6 @@ public class AuthController {
     @Autowired
     @Qualifier("authServiceCore")
     private AuthService authService;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired(required = false)
-    @Qualifier("emailServiceCore")
-    private EmailService emailService;
 
     @Autowired
     private ServicioLimiteTasaAuth servicioLimiteTasaAuth;
@@ -57,7 +49,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest solicitud) {
         try {
-            servicioLimiteTasaAuth.verificarLogin(obtenerIpCliente(solicitud));
+            servicioLimiteTasaAuth.verificarLogin(DireccionIpCliente.obtener(solicitud));
             LoginResponse response = authService.login(loginRequest);
             ResponseCookie cookie = ResponseCookie.from(ConfiguracionCookieJwt.NOMBRE_COOKIE, response.getToken())
                     .httpOnly(true)
@@ -69,8 +61,10 @@ public class AuthController {
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
                     .body(response);
-        } catch (EulaNoAceptadoException e) {
+        } catch (EulaNoAceptadoException | CorreoNoVerificadoException e) {
             throw e;
+        } catch (LimiteTasaExcedidoException e) {
+            return ResponseEntity.status(429).body(e.getMessage());
         } catch (BadCredentialsException | UsernameNotFoundException e) {
             throw e;
         } catch (RuntimeException e) {
@@ -88,49 +82,62 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegistroPublicoSolicitud solicitud, HttpServletRequest request) {
         try {
-            servicioLimiteTasaAuth.verificarRegistro(obtenerIpCliente(request));
-            UserDto userDto = authService.registrarUsuarioPublico(solicitud);
-            return ResponseEntity.ok(userDto);
+            servicioLimiteTasaAuth.verificarRegistro(DireccionIpCliente.obtener(request));
+            authService.registrarUsuarioPublico(solicitud);
+            return ResponseEntity.ok(java.util.Map.of(
+                    "mensaje",
+                    "Si los datos son válidos, enviamos un correo para confirmar la cuenta."));
+        } catch (LimiteTasaExcedidoException e) {
+            return ResponseEntity.status(429).body(e.getMessage());
         } catch (Exception e) {
             logger.error("Error en registro: {}", e.getMessage());
             return ResponseEntity.badRequest().body("No se pudo completar el registro. Verificá los datos e intentá de nuevo.");
         }
     }
 
-    @PostMapping("/generate-hash")
-    @Profile("dev")
-    public ResponseEntity<String> generateHash(@RequestParam String password) {
-        return ResponseEntity.ok(passwordEncoder.encode(password));
+    @PostMapping("/verificar-email")
+    public ResponseEntity<?> verificarEmail(@RequestBody com.agrocloud.dto.PasswordResetRequest request,
+                                             HttpServletRequest solicitud) {
+        try {
+            servicioLimiteTasaAuth.verificarRecupero(DireccionIpCliente.obtener(solicitud), null);
+            authService.verifyEmail(request.getToken());
+            return ResponseEntity.ok(java.util.Map.of("mensaje", "Correo confirmado. Ya podés ingresar."));
+        } catch (LimiteTasaExcedidoException e) {
+            return ResponseEntity.status(429).body(e.getMessage());
+        } catch (Exception e) {
+            logger.warn("Verificación de correo rechazada");
+            return ResponseEntity.badRequest().body("No se pudo confirmar el correo. El enlace puede haber vencido.");
+        }
     }
 
-    @GetMapping("/generate-hash")
-    @Profile("dev")
-    public ResponseEntity<String> generateHashGet(@RequestParam String password) {
-        return ResponseEntity.ok(passwordEncoder.encode(password));
-    }
-
-    @GetMapping("/test-hash")
-    @Profile("dev")
-    public ResponseEntity<String> testHash(@RequestParam String password) {
-        String hash = passwordEncoder.encode(password);
-        return ResponseEntity.ok("Matches: " + passwordEncoder.matches(password, hash));
-    }
-
-    @PostMapping("/test-password")
-    @Profile("dev")
-    public ResponseEntity<String> testPassword(@RequestParam String password, @RequestParam String hash) {
-        return ResponseEntity.ok("Matches: " + passwordEncoder.matches(password, hash));
+    @PostMapping("/reenviar-verificacion")
+    public ResponseEntity<?> reenviarVerificacion(@RequestBody com.agrocloud.dto.PasswordResetRequest request,
+                                                   HttpServletRequest solicitud) {
+        String mensaje = "Si el correo está pendiente de confirmación, enviamos un nuevo enlace.";
+        try {
+            servicioLimiteTasaAuth.verificarRecupero(DireccionIpCliente.obtener(solicitud), request.getEmail());
+            authService.reenviarVerificacion(request.getEmail());
+        } catch (LimiteTasaExcedidoException e) {
+            return ResponseEntity.status(429).body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("Error al reenviar verificación: {}", e.getMessage());
+        }
+        return ResponseEntity.ok(java.util.Map.of("mensaje", mensaje));
     }
 
     @PostMapping("/request-password-reset")
-    public ResponseEntity<?> requestPasswordReset(@RequestBody com.agrocloud.dto.PasswordResetRequest request) {
+    public ResponseEntity<?> requestPasswordReset(@RequestBody com.agrocloud.dto.PasswordResetRequest request,
+                                                   HttpServletRequest solicitud) {
         try {
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("El email es requerido");
             }
+            servicioLimiteTasaAuth.verificarRecupero(DireccionIpCliente.obtener(solicitud), request.getEmail());
             authService.requestPasswordReset(request.getEmail());
             return ResponseEntity.ok().body(
                 "Si el email existe en nuestro sistema, recibirás un correo con las instrucciones para recuperar tu contraseña");
+        } catch (LimiteTasaExcedidoException e) {
+            return ResponseEntity.status(429).body(e.getMessage());
         } catch (Exception e) {
             logger.error("Error inesperado en recupero de contraseña: {}", e.getMessage());
             return ResponseEntity.ok().body(
@@ -139,10 +146,14 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody com.agrocloud.dto.PasswordResetRequest request) {
+    public ResponseEntity<?> resetPassword(@RequestBody com.agrocloud.dto.PasswordResetRequest request,
+                                            HttpServletRequest solicitud) {
         try {
+            servicioLimiteTasaAuth.verificarRecupero(DireccionIpCliente.obtener(solicitud), null);
             authService.resetPassword(request.getToken(), request.getNewPassword());
             return ResponseEntity.ok().body("Contraseña restablecida exitosamente");
+        } catch (LimiteTasaExcedidoException e) {
+            return ResponseEntity.status(429).body(e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body("No se pudo restablecer la contraseña. El enlace puede haber expirado.");
         } catch (Exception e) {
@@ -165,29 +176,4 @@ public class AuthController {
                 .build();
     }
 
-    private String obtenerIpCliente(HttpServletRequest solicitud) {
-        String reenviada = solicitud.getHeader("X-Forwarded-For");
-        if (reenviada != null && !reenviada.isBlank()) {
-            return reenviada.split(",")[0].trim();
-        }
-        return solicitud.getRemoteAddr();
-    }
-
-    @PostMapping("/test-email")
-    @Profile("dev")
-    public ResponseEntity<?> testEmail(@RequestBody com.agrocloud.dto.PasswordResetRequest request) {
-        try {
-            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Email requerido para prueba");
-            }
-            if (emailService == null) {
-                return ResponseEntity.badRequest().body("EmailService no está disponible.");
-            }
-            emailService.sendPasswordResetEmail(request.getEmail(), "test-token-" + System.currentTimeMillis());
-            return ResponseEntity.ok().body("Email de prueba enviado a: " + request.getEmail());
-        } catch (Exception e) {
-            logger.error("Error en test de email: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error enviando email de prueba: " + e.getMessage());
-        }
-    }
 }

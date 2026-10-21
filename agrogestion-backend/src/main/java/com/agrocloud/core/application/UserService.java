@@ -92,7 +92,7 @@ public class UserService {
         usuario.setCreadoPor(creadoPor);
         usuario.setEstado(EstadoUsuario.PENDIENTE);
         usuario.setActivo(true);
-        usuario.setEmailVerified(false);
+        usuario.setEmailVerified(true);
         return userRepository.save(usuario);
     }
 

@@ -1,9 +1,23 @@
 // Configuración de Google Maps para AgroCloud.
-// La clave se lee de VITE_GOOGLE_MAPS_API_KEY (.env.local / Vercel). Nunca hardcodear.
-const claveApiMaps = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? '';
+// La clave no vive en el bundle: se pide al backend con la sesión iniciada.
+import api from '../services/api';
+
+let claveMapaEnMemoria: string | null = null;
+
+async function obtenerClaveMapa(): Promise<string> {
+  if (claveMapaEnMemoria) {
+    return claveMapaEnMemoria;
+  }
+  const { data } = await api.get<{ clave?: string }>('/mapas/clave');
+  const clave = data?.clave?.trim() ?? '';
+  if (!clave) {
+    throw new Error('El servidor no tiene configurada la clave de mapas');
+  }
+  claveMapaEnMemoria = clave;
+  return clave;
+}
 
 export const GOOGLE_MAPS_CONFIG = {
-  API_KEY: claveApiMaps,
   
   // Configuración por defecto del mapa
   DEFAULT_CENTER: { lat: -34.6118, lng: -58.3960 }, // Buenos Aires
@@ -73,16 +87,31 @@ export const loadGoogleMaps = (callback?: () => void): Promise<void> => {
       return;
     }
 
-    if (!GOOGLE_MAPS_CONFIG.API_KEY) {
-      console.warn('VITE_GOOGLE_MAPS_API_KEY no configurada. Los mapas no estarán disponibles.');
-      alFallo();
-      return;
-    }
+    obtenerClaveMapa()
+      .then((claveApi) => agregarScriptMapas(claveApi, alExito, alFallo))
+      .catch(() => {
+        console.warn('No se pudo obtener la clave de mapas del servidor. Los mapas no estarán disponibles.');
+        alFallo();
+      });
+  });
 
-    // Crear script con configuración mejorada
+  if (callback !== undefined) {
+    void promesa.catch(() => {
+      /* Compatibilidad: cultivos solo usan callback; evitar rechazo no manejado. */
+    });
+  }
+
+  return promesa;
+};
+
+function agregarScriptMapas(
+  claveApi: string,
+  alExito: () => void,
+  alFallo: () => void
+): void {
     const script = document.createElement('script');
     // geometry para computeArea. Dibujo con TerraDraw (drawing deprecado mayo 2026)
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_CONFIG.API_KEY}&libraries=geometry&callback=initGoogleMaps&loading=async&v=weekly`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(claveApi)}&libraries=geometry&callback=initGoogleMaps&loading=async&v=weekly`;
     script.async = true;
     script.defer = true;
 
@@ -119,16 +148,7 @@ export const loadGoogleMaps = (callback?: () => void): Promise<void> => {
     };
 
     document.head.appendChild(script);
-  });
-
-  if (callback !== undefined) {
-    void promesa.catch(() => {
-      /* Compatibilidad: cultivos solo usan callback; evitar rechazo no manejado. */
-    });
-  }
-
-  return promesa;
-};
+}
 
 // Declaraciones de tipos para TypeScript
 declare global {

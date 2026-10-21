@@ -64,15 +64,15 @@ En `pom.xml` hay dependencias para MySQL y PostgreSQL (PostgreSQL en runtime par
 | `application-prod.properties` | **Solo variables de entorno:** `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` (con valores por defecto locales). |
 | `application-railway.properties` | `DATABASE_URL`, `DB_USERNAME`, `DB_PASSWORD` (por defecto H2). |
 | `application-railway-mysql.properties` | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`. |
-| `application-agrocloud.properties` | **Hardcodeado:** `agrocloudbd` / `Jones1212` (y Flyway deshabilitado). |
+| `application-agrocloud.properties` | **Hardcodeado:** `agrocloudbd` / `[redactado]` (y Flyway deshabilitado). |
 
 ### 2.3 Valores hardcodeados (crítico para seguridad)
 
 - **`application.properties`** (carga base en todos los perfiles):
   - `spring.datasource.username=root`, `password=123456`.
-  - **Email Zoho:** `spring.mail.password=XJa6LFJepdHm`, `spring.mail.username=info@AgroCloud.com.ar`.
+  - **Email Zoho:** `spring.mail.password=[redactado]`, `spring.mail.username=info@AgroCloud.com.ar`.
 - **`application-default.properties`:** `root` / `123456`.
-- **`application-agrocloud.properties`:** `agrocloudbd` / `Jones1212`.
+- **`application-agrocloud.properties`:** `agrocloudbd` / `[redactado]`.
 
 **Riesgo:** Cualquier persona con acceso al repositorio ve credenciales de BD y de correo. En producción debe usarse siempre perfil que tome solo variables de entorno y **nunca** subir contraseñas al repo.
 
@@ -239,8 +239,8 @@ Para **Railway con MySQL** (perfil `railway-mysql`):
 
 ### 5.2 Qué NO debería estar en el repo
 
-- Contraseñas de BD (`root`/`123456`, `agrocloudbd`/`Jones1212`).
-- Contraseña de email (`XJa6LFJepdHm`) – **crítico:** está en `application.properties`.
+- Contraseñas de BD (`root`/`123456`, `agrocloudbd`/`[redactado]`).
+- Contraseña de email (`[redactado]`) – **crítico:** está en `application.properties`.
 - Cualquier `JWT_SECRET` real.
 - Claves de APIs externas (p. ej. mapas, email, etc.) si se añadieran a properties.
 

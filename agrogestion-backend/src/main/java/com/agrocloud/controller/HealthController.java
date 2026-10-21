@@ -59,8 +59,7 @@ public class HealthController {
         
         // Información adicional
         versionInfo.put("timestamp", LocalDateTime.now());
-        versionInfo.put("environment", System.getenv().getOrDefault("SPRING_PROFILES_ACTIVE", "default"));
-        
+
         return ResponseEntity.ok(versionInfo);
     }
 }

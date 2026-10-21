@@ -3,6 +3,7 @@ package com.agrocloud.config;
 import com.agrocloud.exception.BadRequestException;
 import com.agrocloud.exception.ResourceNotFoundException;
 import com.agrocloud.exception.ResourceConflictException;
+import com.agrocloud.exception.CorreoNoVerificadoException;
 import com.agrocloud.exception.EulaNoAceptadoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,10 +14,13 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -84,8 +88,23 @@ public class GlobalExceptionHandler {
         response.put("status", HttpStatus.FORBIDDEN.value());
         response.put("error", "EULA_NO_ACEPTADO");
         response.put("message", ex.getMessage());
+        if (ex.getTicket() != null && !ex.getTicket().isBlank()) {
+            response.put("ticket", ex.getTicket());
+        }
         response.put("path", request.getDescription(false).replace("uri=", ""));
         
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(CorreoNoVerificadoException.class)
+    public ResponseEntity<Map<String, Object>> handleCorreoNoVerificado(
+            CorreoNoVerificadoException ex, WebRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.FORBIDDEN.value());
+        response.put("error", "CORREO_NO_VERIFICADO");
+        response.put("message", ex.getMessage());
+        response.put("path", request.getDescription(false).replace("uri=", ""));
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
     
@@ -305,6 +324,41 @@ public class GlobalExceptionHandler {
         response.put("path", request.getDescription(false).replace("uri=", ""));
         
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> manejarTipoInvalido(
+            MethodArgumentTypeMismatchException ex, WebRequest request) {
+        logger.warn("Tipo de parámetro inválido: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(cuerpo(
+                HttpStatus.BAD_REQUEST, "Argumento inválido", "La solicitud no es válida.", request));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> manejarParametroObligatorio(
+            MissingServletRequestParameterException ex, WebRequest request) {
+        logger.warn("Falta un parámetro obligatorio: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(cuerpo(
+                HttpStatus.BAD_REQUEST, "Argumento inválido", "Falta un parámetro obligatorio.", request));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<Map<String, Object>> manejarTipoNoAceptable(
+            HttpMediaTypeNotAcceptableException ex, WebRequest request) {
+        logger.warn("El cliente no acepta el tipo de respuesta: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(cuerpo(
+                HttpStatus.NOT_ACCEPTABLE, "Tipo de respuesta no aceptable",
+                "El formato pedido no está disponible para este recurso.", request));
+    }
+
+    private Map<String, Object> cuerpo(HttpStatus estado, String error, String mensaje, WebRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", estado.value());
+        response.put("error", error);
+        response.put("message", mensaje);
+        response.put("path", request.getDescription(false).replace("uri=", ""));
+        return response;
     }
 
     /**

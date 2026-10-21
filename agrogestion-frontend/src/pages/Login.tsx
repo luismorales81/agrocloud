@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
-import { eulaService } from '../services/apiServices';
+import { authService } from '../services/apiServices';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import EmpresaSelector from '../components/EmpresaSelector';
@@ -16,6 +16,8 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [mostrarSelectorEmpresa, setMostrarSelectorEmpresa] = useState(false);
   const [mostrarEulaModal, setMostrarEulaModal] = useState(false);
+  const [ticketEula, setTicketEula] = useState('');
+  const [correoPendiente, setCorreoPendiente] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Por defecto activado
   const { login } = useAuth();
   const { empresasUsuario, cargarEmpresasUsuario, cambiarEmpresa } = useEmpresa();
@@ -59,11 +61,17 @@ const Login: React.FC = () => {
         (err.response?.status === 403 && err.response?.data?.error === 'EULA_NO_ACEPTADO');
       
       if (isEulaError) {
-        // Log mínimo para EULA (no es un error real, es parte del flujo)
-        console.log('📄 [Login] Usuario sin EULA aceptado, mostrando modal');
+        setTicketEula(err.response?.data?.ticket || err.eulaError?.ticket || '');
         setMostrarEulaModal(true);
         setLoading(false);
         setError('');
+        return;
+      }
+
+      if (err.response?.status === 403 && err.response?.data?.error === 'CORREO_NO_VERIFICADO') {
+        setCorreoPendiente(true);
+        setError(err.response.data.message || 'Confirmá tu correo antes de ingresar.');
+        setLoading(false);
         return;
       }
       
@@ -150,6 +158,22 @@ const Login: React.FC = () => {
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-700 font-medium">{error}</p>
+                {correoPendiente && (
+                  <button
+                    type="button"
+                    className="mt-2 text-sm text-red-800 underline"
+                    onClick={async () => {
+                      try {
+                        await authService.reenviarVerificacion(username);
+                        setError('Si el correo está pendiente, enviamos un nuevo enlace.');
+                      } catch {
+                        setError('No se pudo reenviar el correo. Intentá más tarde.');
+                      }
+                    }}
+                  >
+                    Reenviar correo de confirmación
+                  </button>
+                )}
               </div>
             )}
             
@@ -160,7 +184,8 @@ const Login: React.FC = () => {
               value={username}
               onChange={(value) => {
                 setUsername(value);
-                setError(''); // Limpiar error al escribir
+                setError('');
+                setCorreoPendiente(false);
               }}
               data-testid="email-input"
               required
@@ -274,7 +299,7 @@ const Login: React.FC = () => {
       {/* Modal de EULA */}
       {mostrarEulaModal && (
         <EulaModal
-          email={username}
+          ticket={ticketEula}
           onAceptar={handleEulaAceptado}
           onCancelar={() => {
             setMostrarEulaModal(false);

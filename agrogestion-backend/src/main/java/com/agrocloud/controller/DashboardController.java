@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -34,20 +35,14 @@ public class DashboardController {
     @GetMapping("/estadisticas")
     @Operation(summary = "Estadísticas del dashboard", description = "Obtener estadísticas del dashboard para el usuario logueado")
     public ResponseEntity<Map<String, Object>> obtenerEstadisticasDashboard(
-            @RequestParam(required = false) String username) {
+            @RequestParam(required = false) String username,
+            Authentication authentication) {
         try {
-            User usuario;
-            
-            if (username != null && !username.isEmpty()) {
-                // Si se especifica username, buscar ese usuario por email (ya que usamos email para login)
-                usuario = userService.findByEmail(username);
-                if (usuario == null) {
-                    return ResponseEntity.notFound().build();
-                }
-            } else {
-                // Por defecto, usar admin (en producción esto vendría del JWT)
-                usuario = userService.findByEmail("admin@agrocloud.com");
+            if (authentication == null) {
+                return ResponseEntity.status(401).build();
             }
+            String email = (username != null && !username.isEmpty()) ? username : authentication.getName();
+            User usuario = userService.findByEmailWithAllRelations(email);
 
             Map<String, Object> estadisticas = dashboardService.obtenerEstadisticasDashboard(usuario);
             return ResponseEntity.ok(estadisticas);

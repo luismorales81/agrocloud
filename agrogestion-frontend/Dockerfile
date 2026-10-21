@@ -4,8 +4,7 @@
 # Contexto de build: agrogestion-frontend/
 #
 # VITE_* se inyectan como ARG de build (Vite las embebe en el JS).
-# No incluir secretos de servidor. VITE_GOOGLE_MAPS_API_KEY es
-# una clave de navegador (restringir por HTTP referrer en GCP).
+# La clave de Maps no entra en esta imagen: el backend la entrega con la sesión.
 # ============================================================
 
 # --- Etapa 1: compilación ---
@@ -19,10 +18,8 @@ RUN npm ci
 COPY . .
 
 ARG VITE_API_BASE_URL=/api
-ARG VITE_GOOGLE_MAPS_API_KEY=
 
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 
 RUN npm run build
 

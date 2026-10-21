@@ -3,6 +3,7 @@ import { useCurrencyContext } from '../contexts/CurrencyContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
 import { insumosService } from '../services/apiServices';
+import { haySesionActiva } from '../services/api';
 import PermissionGate from './PermissionGate';
 import InsumoWizard from './InsumoWizard';
 
@@ -342,8 +343,7 @@ const InsumosManagement: React.FC = () => {
       try {
         setLoading(true);
         
-        const token = localStorage.getItem('token');
-        if (!token) {
+        if (!haySesionActiva()) {
           alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
           return;
         }

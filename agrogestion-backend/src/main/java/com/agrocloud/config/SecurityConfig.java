@@ -49,9 +49,12 @@ public class SecurityConfig {
                     "/api/auth/request-password-reset",
                     "/api/auth/reset-password",
                     "/api/auth/logout",
+                    "/api/auth/verificar-email",
+                    "/api/auth/reenviar-verificacion",
                     "/api/health",
                     "/api/version",
-                    "/api/eula/**"
+                    "/api/eula/texto",
+                    "/api/eula/aceptar"
                 ).permitAll()
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/actuator/**").hasAuthority("ROLE_SUPERADMIN")

@@ -5,7 +5,6 @@ import com.agrocloud.core.infrastructure.EgresoRepository;
 import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +13,6 @@ import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/public/egresos")
-@Profile("dev")
 public class PublicEgresoController {
 
     @Autowired

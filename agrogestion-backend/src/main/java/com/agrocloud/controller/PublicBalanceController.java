@@ -4,7 +4,6 @@ import com.agrocloud.dto.BalanceDTO;
 import com.agrocloud.core.application.BalanceService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Profile;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +12,6 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/public/balance")
-@Profile("dev")
 public class PublicBalanceController {
 
     @Autowired

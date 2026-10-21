@@ -26,6 +26,7 @@ import OfflineIndicator from './components/OfflineIndicator';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import VerificarCorreo from './pages/VerificarCorreo';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import CurrencySelector from './components/CurrencySelector';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -722,6 +723,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
       <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+      <Route path="/verify-email" element={<VerificarCorreo />} />
       <Route path="/select-module" element={<ProtectedRoute><ModuleSelectorScreen /></ProtectedRoute>} />
       <Route path="/dashboard/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />
       <Route path="/cultivos/*" element={<ProtectedRoute><ModularDashboard /></ProtectedRoute>} />

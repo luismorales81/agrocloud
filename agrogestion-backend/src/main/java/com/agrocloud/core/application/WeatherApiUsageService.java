@@ -4,8 +4,13 @@ import com.agrocloud.core.domain.WeatherApiUsage;
 import com.agrocloud.core.infrastructure.WeatherApiUsageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -22,24 +27,37 @@ public class WeatherApiUsageService {
     @Autowired
     @Qualifier("weatherApiUsageRepositoryCore")
         private WeatherApiUsageRepository weatherApiUsageRepository;
+
+    private final Object candadoRegistroDiario = new Object();
+    private TransactionTemplate transaccionNueva;
+
+    @Autowired
+    public void configurarTransaccionNueva(PlatformTransactionManager administradorTransacciones) {
+        TransactionTemplate plantilla = new TransactionTemplate(administradorTransacciones);
+        plantilla.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.transaccionNueva = plantilla;
+    }
     
     /**
-     * Registra un uso de la API del clima
+     * Registra un uso de la API del clima.
+     * El candado cubre el commit para que dos llamadas simultáneas no inserten la misma fecha.
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void registrarUso() {
-        LocalDate hoy = LocalDate.now();
-        Optional<WeatherApiUsage> usageOpt = weatherApiUsageRepository.findByFecha(hoy);
-        
-        WeatherApiUsage usage;
-        if (usageOpt.isPresent()) {
-            usage = usageOpt.get();
-            usage.incrementarUso();
-        } else {
-            usage = new WeatherApiUsage(hoy);
-            usage.incrementarUso();
+        synchronized (candadoRegistroDiario) {
+            try {
+                transaccionNueva.executeWithoutResult(estado -> persistirUso(LocalDate.now()));
+            } catch (DataIntegrityViolationException duplicado) {
+                transaccionNueva.executeWithoutResult(estado -> persistirUso(LocalDate.now()));
+            }
         }
-        
-        weatherApiUsageRepository.save(usage);
+    }
+
+    private void persistirUso(LocalDate hoy) {
+        WeatherApiUsage uso = weatherApiUsageRepository.findByFecha(hoy)
+                .orElseGet(() -> new WeatherApiUsage(hoy));
+        uso.incrementarUso();
+        weatherApiUsageRepository.saveAndFlush(uso);
     }
     
     /**

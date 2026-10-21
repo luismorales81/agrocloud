@@ -21,6 +21,8 @@ public class FiltroDeprecacionApiPorcinosLegacy extends OncePerRequestFilter {
 
     private static final String PREFIJO_LEGACY = "/api/v1/porcinos";
     private static final String NUEVA_RUTA = "/api/porcinos";
+    /** La pantalla de configuración general sigue usando este recurso. No tiene equivalente en /api/porcinos. */
+    private static final String RUTA_CONFIGURACIONES = "/api/v1/porcinos/configuraciones";
 
     private final ObjectMapper objectMapper;
 
@@ -32,6 +34,10 @@ public class FiltroDeprecacionApiPorcinosLegacy extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
+        if (path != null && (path.equals(RUTA_CONFIGURACIONES) || path.startsWith(RUTA_CONFIGURACIONES + "/"))) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         if (path != null && (path.equals(PREFIJO_LEGACY) || path.startsWith(PREFIJO_LEGACY + "/"))) {
             response.setStatus(HttpServletResponse.SC_GONE);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

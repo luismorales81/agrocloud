@@ -77,8 +77,45 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        Claims claims = extractAllClaims(token);
+        if (claims.get("alcance") != null) {
+            return false;
+        }
+        final String username = claims.getSubject();
+        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+    }
+
+    /**
+     * Ticket de un solo propósito (por ejemplo aceptar el EULA). No abre sesión.
+     */
+    public String generarTicketAlcance(String email, String alcance, long validezMs) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("alcance", alcance);
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(email)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + validezMs))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String validarTicketAlcance(String token, String alcanceEsperado) {
+        Claims claims = extractAllClaims(token);
+        if (!alcanceEsperado.equals(claims.get("alcance", String.class))) {
+            throw new JwtException("Ticket de alcance incorrecto");
+        }
+        if (claims.getExpiration() == null || claims.getExpiration().before(new Date())) {
+            throw new JwtException("Ticket vencido");
+        }
+        if (claims.getSubject() == null || claims.getSubject().isBlank()) {
+            throw new JwtException("Ticket sin sujeto");
+        }
+        return claims.getSubject();
+    }
+
+    public Date fechaEmision(String token) {
+        return extractClaim(token, Claims::getIssuedAt);
     }
 
     private boolean isTokenExpired(String token) {

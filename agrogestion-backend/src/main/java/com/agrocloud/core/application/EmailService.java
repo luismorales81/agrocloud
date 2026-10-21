@@ -36,20 +36,13 @@ public class EmailService {
         logger.info("========================================");
         logger.info("Destinatario: {}", email);
         logger.info("Remitente: {}", fromEmail);
-        logger.info("Token: {}", resetToken);
-        
+
         try {
-            // Codificar el token para URL (importante para caracteres especiales)
             String encodedToken = java.net.URLEncoder.encode(resetToken, java.nio.charset.StandardCharsets.UTF_8);
             String resetUrl = frontendUrl + "/reset-password?token=" + encodedToken;
-            logger.info("URL de recuperación: {}", resetUrl);
-            logger.info("Token original: {}", resetToken);
-            logger.info("Token codificado: {}", encodedToken);
             
             if (javaMailSender == null) {
-                logger.error("❌ [EmailService] JavaMailSender es NULL - No está configurado");
-                logger.warn("JavaMailSender no configurado. Solo se loguea la información.");
-                logger.info("Email de recuperación (simulado) - Para: {}, URL: {}", email, resetUrl);
+                logger.error("JavaMailSender no está configurado; no se envía el correo de recupero");
                 return;
             }
             
@@ -164,16 +157,13 @@ public class EmailService {
      */
     public void sendVerificationEmail(String email, String verificationToken) {
         logger.info("Enviando email de verificación a: {}", email);
-        logger.info("Token de verificación: {}", verificationToken);
-        
+
         try {
-            String verificationUrl = frontendUrl + "/verify-email?token=" + verificationToken;
-            logger.info("URL de verificación: {}", verificationUrl);
-            
+            String verificationUrl = frontendUrl + "/verify-email?token="
+                    + java.net.URLEncoder.encode(verificationToken, java.nio.charset.StandardCharsets.UTF_8);
+
             if (javaMailSender == null) {
-                logger.warn("JavaMailSender no configurado. Solo se loguea la información.");
-                logger.info("Email de verificación (simulado) - Para: {}, URL: {}", email, verificationUrl);
-                return;
+                throw new IllegalStateException("El correo no está configurado");
             }
             
             MimeMessage message = javaMailSender.createMimeMessage();

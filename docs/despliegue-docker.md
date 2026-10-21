@@ -132,7 +132,7 @@ docker compose down          # conserva volúmenes (datos MySQL y EULA)
 docker compose down -v       # borra datos (vuelve a cero)
 ```
 
-Tras cambiar `VITE_API_BASE_URL` o `VITE_GOOGLE_MAPS_API_KEY`:
+Tras cambiar `VITE_API_BASE_URL`:
 
 ```bash
 docker compose build frontend --no-cache
@@ -145,8 +145,7 @@ docker compose up -d frontend
 docker build -t agrogestion-backend:local ./agrogestion-backend
 
 docker build -t agrogestion-frontend:local ./agrogestion-frontend \
-  --build-arg VITE_API_BASE_URL=http://localhost:8080/api \
-  --build-arg VITE_GOOGLE_MAPS_API_KEY=
+  --build-arg VITE_API_BASE_URL=http://localhost:8080/api
 ```
 
 No pasar secretos como `ARG` del backend. El backend solo recibe secretos en `docker run` / Compose `environment`.
@@ -178,6 +177,7 @@ No pasar secretos como `ARG` del backend. El backend solo recibe secretos en `do
 | `MAIL_HOST` / `MAIL_*` | no | SMTP |
 | `IA_GEMINI_API_KEY` | no | Chat IA de proyecto |
 | `OPENWEATHER_API_KEY` | no | Clima |
+| `GOOGLE_MAPS_API_KEY_SECRET` | no | Maps JavaScript API. El frontend la pide autenticado |
 | `JAVA_OPTS` | no | Memoria JVM |
 | `FORWARD_HEADERS_STRATEGY` | no (`framework`) | Proxy inverso (X-Forwarded-*) |
 | `MANAGEMENT_HEALTH_MAIL_ENABLED` | no (`false`) | Evita health DOWN sin SMTP |
@@ -187,7 +187,6 @@ No pasar secretos como `ARG` del backend. El backend solo recibe secretos en `do
 | Variable | Uso |
 |----------|-----|
 | `VITE_API_BASE_URL` | URL que el navegador usa para la API (ej. `http://localhost:8080/api`) |
-| `VITE_GOOGLE_MAPS_API_KEY` | Maps en el browser (restringir por referrer) |
 
 ---
 

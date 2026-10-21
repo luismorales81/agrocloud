@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HistorialCosechasModal from './HistorialCosechasModal';
 import { cosechasService, lotesService, cultivosService } from '../services/apiServices';
+import { haySesionActiva } from '../services/api';
 import PermissionGate from './PermissionGate';
 // import humidityService from '../services/humidityService';
 
@@ -183,9 +184,8 @@ const CosechasManagement: React.FC = () => {
     setLoading(true);
     try {
       // Obtener token del localStorage
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No hay token de autenticación');
+      if (!haySesionActiva()) {
+        console.error('No hay sesión activa');
         alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }
@@ -296,9 +296,8 @@ const CosechasManagement: React.FC = () => {
     
     try {
       // Obtener token del localStorage
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No hay token de autenticación');
+      if (!haySesionActiva()) {
+        console.error('No hay sesión activa');
         alert('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }

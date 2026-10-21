@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { authService, mensajeErrorConexionApi } from '../services/api';
-import { eulaService } from '../services/apiServices';
 import EulaModal from './EulaModal';
 
 interface LoginProps {
@@ -23,6 +22,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [mostrarEulaModal, setMostrarEulaModal] = useState(false);
+  const [ticketEula, setTicketEula] = useState('');
   const [usuarioPendienteEula, setUsuarioPendienteEula] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,24 +43,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         data = await authService.login(formData.email, formData.password);
         console.log('✅ [Login] Autenticación exitosa:', data);
       
-      // Verificar si el usuario tiene EULA aceptado
-      try {
-        const estadoEula = await eulaService.obtenerEstado(formData.email);
-        console.log('📄 [Login] Estado EULA:', estadoEula);
-        
-        if (!estadoEula.aceptado) {
-          // Mostrar modal de EULA
-          setUsuarioPendienteEula(data.user);
-          setMostrarEulaModal(true);
-          setLoading(false);
-          return;
-        }
-      } catch (eulaError: any) {
-        console.warn('⚠️ [Login] Error verificando EULA, continuando:', eulaError);
-        // Si hay error verificando EULA, continuar con el login normal
-      }
-      
-        localStorage.setItem('token', data.token);
+        localStorage.removeItem('token');
         localStorage.setItem('user', JSON.stringify(data.user));
         onLoginSuccess(data.token, data.user);
       } catch (loginError: any) {
@@ -83,7 +66,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           console.log('🔴 [Login] isEulaError:', isEulaError);
           
           if (isEulaError) {
-            console.log('✅ [Login] EULA no aceptado detectado en try interno, mostrando modal');
+            setTicketEula(errorData?.ticket || '');
             setUsuarioPendienteEula({ email: formData.email });
             setMostrarEulaModal(true);
             setLoading(false);
@@ -123,7 +106,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         console.log('📄 [Login] isEulaError final:', isEulaError);
         
         if (isEulaError) {
-          console.log('✅ [Login] EULA no aceptado detectado, mostrando modal para:', formData.email);
+          setTicketEula(errorData?.ticket || '');
           setUsuarioPendienteEula({ email: formData.email });
           setMostrarEulaModal(true);
           setLoading(false);
@@ -397,13 +380,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       {/* Modal de EULA */}
       {mostrarEulaModal && (
         <EulaModal
-          email={formData.email}
+          ticket={ticketEula}
           onAceptar={async () => {
             setMostrarEulaModal(false);
             // Intentar login nuevamente después de aceptar EULA
             try {
               const data = await authService.login(formData.email, formData.password);
-              localStorage.setItem('token', data.token);
+              localStorage.removeItem('token');
               localStorage.setItem('user', JSON.stringify(data.user));
               onLoginSuccess(data.token, data.user);
             } catch (err: any) {

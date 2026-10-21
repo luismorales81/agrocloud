@@ -176,6 +176,12 @@ public class PlotService {
         if (lote.isPresent()) {
             Plot p = lote.get();
             if (user.isSuperAdmin() || p.getUser().getId().equals(user.getId())) {
+                if (p.getCampo() != null) {
+                    p.getCampo().getNombre();
+                    if (p.getCampo().getEmpresa() != null) {
+                        p.getCampo().getEmpresa().getId();
+                    }
+                }
                 validarYCorregirLotes(List.of(p));
                 return lote;
             }

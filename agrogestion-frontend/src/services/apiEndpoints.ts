@@ -14,7 +14,7 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD: '/auth/reset-password',
     REQUEST_RESET: '/auth/request-password-reset',
     CHANGE_PASSWORD: '/auth/change-password',
-    VERIFY_EMAIL: '/auth/verify-email',
+    VERIFY_EMAIL: '/auth/verificar-email',
     USERS: '/auth/users',
     USER: (id: number) => `/auth/users/${id}`,
     USER_TOGGLE_STATUS: (id: number) => `/auth/users/${id}/toggle-status`,

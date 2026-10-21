@@ -10,7 +10,7 @@ Este directorio contiene los scripts SQL necesarios para configurar la base de d
 - **Charset**: `utf8mb4`
 - **Collation**: `utf8mb4_unicode_ci`
 - **Usuario**: `agrocloudbd`
-- **Password**: `Jones1212`
+- **Password**: definirla en el entorno, nunca en este archivo
 
 ## 📁 Archivos Disponibles
 
@@ -150,7 +150,7 @@ El archivo `application-mysql.properties` ya está configurado para usar `agrocl
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/agroclouddb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 spring.datasource.username=agrocloudbd
-spring.datasource.password=Jones1212
+spring.datasource.password=${DATABASE_PASSWORD}
 ```
 
 ## 🆘 Solución de Problemas

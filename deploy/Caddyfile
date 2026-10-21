@@ -52,7 +52,10 @@ www.{$DOMINIO} {
 	import rutas_ocultas
 
 	handle /api* {
-		reverse_proxy backend:8080
+		reverse_proxy backend:8080 {
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Real-IP {remote_host}
+		}
 	}
 
 	handle {
@@ -67,7 +70,10 @@ app.{$DOMINIO} {
 	import rutas_ocultas
 
 	handle /api* {
-		reverse_proxy backend:8080
+		reverse_proxy backend:8080 {
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Real-IP {remote_host}
+		}
 	}
 
 	handle {

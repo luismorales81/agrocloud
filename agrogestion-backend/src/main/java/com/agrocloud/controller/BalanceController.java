@@ -202,7 +202,8 @@ public class BalanceController {
     @GetMapping("/resumen")
     public ResponseEntity<BalanceDTO> obtenerResumenBalance(Authentication authentication) {
         try {
-            Long usuarioId = Long.parseLong(authentication.getName());
+            User usuario = userService.findByEmailWithAllRelations(authentication.getName());
+            Long usuarioId = usuario.getId();
             
             // Balance del mes actual
             LocalDate fechaInicio = LocalDate.now().withDayOfMonth(1);
@@ -228,7 +229,8 @@ public class BalanceController {
             // Validar rango de fechas
             validarRangoFechas(fechaInicio, fechaFin);
             
-            Long usuarioId = Long.parseLong(authentication.getName());
+            User usuario = userService.findByEmailWithAllRelations(authentication.getName());
+            Long usuarioId = usuario.getId();
             BalanceDTO balance = balanceService.calcularBalance(usuarioId, fechaInicio, fechaFin);
             return ResponseEntity.ok(balance);
         } catch (IllegalArgumentException e) {

@@ -6,6 +6,7 @@ import AccionLoteModal from './AccionLoteModal';
 import EstadoLoteDisplay from './EstadoLoteDisplay';
 import ResetLoteModal from './ResetLoteModal';
 import { camposService, lotesService, laboresService, cultivosService } from '../services/apiServices';
+import { haySesionActiva } from '../services/api';
 import type { LaborDetalladoDTO } from '../types/labor.types';
 import PermissionGate from './PermissionGate';
 import { Icon } from './icons';
@@ -240,8 +241,7 @@ const LotesManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      if (!token) {
+      if (!haySesionActiva()) {
         setError('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }
@@ -290,8 +290,7 @@ const LotesManagement: React.FC = () => {
   // Cargar lotes del backend
   const cargarLotes = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      if (!haySesionActiva()) {
         setError('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }
@@ -352,8 +351,7 @@ const LotesManagement: React.FC = () => {
   // Cargar labores del backend
   const cargarLabores = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      if (!haySesionActiva()) {
         setError('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }
@@ -389,9 +387,8 @@ const LotesManagement: React.FC = () => {
   // Cargar cultivos del backend
   const cargarCultivos = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.warn('No hay token de autenticación para cargar cultivos');
+      if (!haySesionActiva()) {
+        console.warn('No hay sesión activa para cargar cultivos');
         // Fallback a lista básica
         setCultivos(['Soja', 'Maíz', 'Trigo', 'Girasol', 'Sorgo', 'Cebada', 'Avena', 'Arroz']);
         return;
@@ -504,8 +501,7 @@ const LotesManagement: React.FC = () => {
 
     // Guardar en el backend
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      if (!haySesionActiva()) {
         alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }
@@ -561,8 +557,7 @@ const LotesManagement: React.FC = () => {
       try {
         setLoading(true);
         
-        const token = localStorage.getItem('token');
-        if (!token) {
+        if (!haySesionActiva()) {
           alert('Error de autenticación. Por favor, inicia sesión nuevamente.');
           return;
         }

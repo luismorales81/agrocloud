@@ -26,6 +26,16 @@ export const authService = {
     return response.data;
   },
 
+  async verificarCorreo(token: string) {
+    const response = await api.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, { token });
+    return response.data;
+  },
+
+  async reenviarVerificacion(email: string) {
+    const response = await api.post('/auth/reenviar-verificacion', { email });
+    return response.data;
+  },
+
   async changePassword(currentPassword: string, newPassword: string, confirmPassword: string) {
     const response = await api.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
       currentPassword,
@@ -88,28 +98,17 @@ export const authService = {
 };
 
 export const eulaService = {
-  async obtenerEstado(email?: string) {
-    if (email) {
-      const response = await api.get(`/eula/estado/${email}`);
-      return response.data;
-    } else {
-      const response = await api.get('/eula/estado');
-      return response.data;
-    }
+  async obtenerEstado() {
+    const response = await api.get('/eula/estado');
+    return response.data;
   },
 
-  async aceptarEula(email: string, aceptado: boolean) {
-    try {
-      const response = await api.post(`/eula/aceptar/${email}`, {
-        aceptado,
-        ipAddress: '',
-        userAgent: navigator.userAgent,
-      });
-      return response.data;
-    } catch (error) {
-      console.error('[EulaService] Error en aceptarEula:', error);
-      throw error;
-    }
+  async aceptarEula(ticket: string, aceptado: boolean) {
+    const response = await api.post('/eula/aceptar', {
+      aceptado,
+      ticket,
+    });
+    return response.data;
   },
 
   async obtenerTexto() {
@@ -117,8 +116,8 @@ export const eulaService = {
     return response.data;
   },
 
-  async descargarPdf(userId: number) {
-    const response = await api.get(`/eula/pdf/${userId}`, { responseType: 'blob' });
+  async descargarPdf() {
+    const response = await api.get('/eula/pdf', { responseType: 'blob' });
     return response.data;
   },
 };

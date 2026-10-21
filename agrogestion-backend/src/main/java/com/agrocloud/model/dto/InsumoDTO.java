@@ -46,10 +46,13 @@ public class InsumoDTO {
         this.fechaCreacion = insumo.getFechaCreacion();
         this.fechaActualizacion = insumo.getFechaActualizacion();
         
-        // Solo información básica del usuario para evitar referencias circulares
         if (insumo.getUser() != null) {
             this.userId = insumo.getUser().getId();
-            this.userName = insumo.getUser().getUsername();
+            try {
+                this.userName = insumo.getUser().getUsername();
+            } catch (org.hibernate.LazyInitializationException ignorada) {
+                this.userName = null;
+            }
         }
     }
 

@@ -4,7 +4,6 @@ import com.agrocloud.core.domain.Ingreso;
 import com.agrocloud.core.infrastructure.IngresoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,7 +11,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/public/ingresos")
-@Profile("dev")
 public class PublicIngresoController {
 
     @Autowired

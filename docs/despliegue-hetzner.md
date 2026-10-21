@@ -145,7 +145,7 @@ CADDY_EMAIL=admin@agrocloud.com.ar
 FRONTEND_URL=https://app.agrocloud.com.ar
 CORS_ALLOWED_ORIGINS=https://app.agrocloud.com.ar,https://agrocloud.com.ar,https://www.agrocloud.com.ar
 VITE_API_BASE_URL=/api
-VITE_GOOGLE_MAPS_API_KEY=...si usás mapas...
+GOOGLE_MAPS_API_KEY_SECRET=...clave de Maps, solo en el servidor...
 ```
 
 Permisos:

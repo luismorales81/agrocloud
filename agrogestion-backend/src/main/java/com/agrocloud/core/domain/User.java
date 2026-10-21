@@ -85,6 +85,10 @@ public class User implements UserDetails {
     @Column(name = "reset_password_token_expiry")
     private LocalDateTime resetPasswordTokenExpiry;
 
+    /** Los JWT emitidos antes de este instante dejan de servir (cambio de contraseña). */
+    @Column(name = "sesion_invalidada_en")
+    private LocalDateTime sesionInvalidadaEn;
+
     // Campos EULA
     @Column(name = "eula_aceptado", nullable = false)
     private Boolean eulaAceptado = false;
@@ -345,6 +349,11 @@ public class User implements UserDetails {
 
     public void setPassword(String password) {
         this.password = password;
+        this.sesionInvalidadaEn = LocalDateTime.now();
+    }
+
+    public LocalDateTime getSesionInvalidadaEn() {
+        return sesionInvalidadaEn;
     }
 
     public Boolean getActivo() {

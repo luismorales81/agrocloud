@@ -64,7 +64,6 @@ jobs:
             ${{ steps.names.outputs.frontend }}:latest
           build-args: |
             VITE_API_BASE_URL=${{ env.VITE_API_BASE_URL }}
-            VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 

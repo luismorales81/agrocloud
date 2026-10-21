@@ -2,11 +2,12 @@ package com.agrocloud.controller;
 
 import com.agrocloud.dto.AceptarEulaRequest;
 import com.agrocloud.dto.EulaEstadoResponse;
-import com.agrocloud.exception.EulaNoAceptadoException;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.core.infrastructure.UserRepository;
 import com.agrocloud.core.application.EulaService;
-import org.springframework.beans.factory.annotation.Qualifier;
+import com.agrocloud.core.application.JwtService;
+import com.agrocloud.core.security.DireccionIpCliente;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +19,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -41,6 +41,10 @@ public class EulaController {
     @Autowired
     @Qualifier("userRepositoryCore")
     private UserRepository userRepository;
+
+    @Autowired
+    @Qualifier("jwtServiceCore")
+    private JwtService jwtService;
     
     /**
      * Obtiene el estado del EULA para el usuario autenticado
@@ -62,7 +66,7 @@ public class EulaController {
             response.setVersion(usuario.getEulaVersion());
             
             if (usuario.getEulaPdfPath() != null && !usuario.getEulaPdfPath().isEmpty()) {
-                response.setPdfUrl("/api/eula/pdf/" + usuario.getId());
+                response.setPdfUrl("/api/eula/pdf");
             }
             
             return ResponseEntity.ok(response);
@@ -73,93 +77,11 @@ public class EulaController {
     }
     
     /**
-     * Obtiene el estado del EULA por email (para verificación antes de login)
-     */
-    @GetMapping("/estado/{email}")
-    public ResponseEntity<EulaEstadoResponse> obtenerEstadoPorEmail(@PathVariable String email) {
-        try {
-            Optional<User> usuarioOpt = userRepository.findByEmail(email);
-            
-            if (usuarioOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            User usuario = usuarioOpt.get();
-            EulaEstadoResponse response = new EulaEstadoResponse();
-            response.setAceptado(usuario.getEulaAceptado());
-            response.setFechaAceptacion(usuario.getEulaFechaAceptacion());
-            response.setVersion(usuario.getEulaVersion());
-            
-            if (usuario.getEulaPdfPath() != null && !usuario.getEulaPdfPath().isEmpty()) {
-                response.setPdfUrl("/api/eula/pdf/" + usuario.getId());
-            }
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("Error obteniendo estado EULA: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    /**
-     * Acepta el EULA para el usuario autenticado
+     * Acepta el EULA con el ticket emitido tras una contraseña correcta.
+     * La IP y el navegador salen de la petición, no del cuerpo.
      */
     @PostMapping("/aceptar")
     public ResponseEntity<?> aceptarEula(
-            @RequestBody AceptarEulaRequest request,
-            HttpServletRequest httpRequest,
-            Authentication authentication) {
-        try {
-            if (request.getAceptado() == null || !request.getAceptado()) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Debe aceptar el EULA para continuar"));
-            }
-            
-            String email = authentication.getName();
-            Optional<User> usuarioOpt = userRepository.findByEmail(email);
-            
-            if (usuarioOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            User usuario = usuarioOpt.get();
-            
-            // Obtener IP y User Agent
-            String ipAddress = obtenerIpAddress(httpRequest);
-            String userAgent = httpRequest.getHeader("User-Agent");
-            
-            // Si no se proporcionaron en el request, usar los de la petición HTTP
-            if (request.getIpAddress() == null || request.getIpAddress().isEmpty()) {
-                request.setIpAddress(ipAddress);
-            }
-            if (request.getUserAgent() == null || request.getUserAgent().isEmpty()) {
-                request.setUserAgent(userAgent);
-            }
-            
-            // Aceptar EULA
-            eulaService.aceptarEula(usuario, request.getIpAddress(), request.getUserAgent());
-            
-            logger.info("EULA aceptado por usuario: {}", email);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensaje", "EULA aceptado correctamente");
-            response.put("aceptado", true);
-            response.put("fechaAceptacion", usuario.getEulaFechaAceptacion());
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("Error aceptando EULA: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Error al aceptar el EULA: " + e.getMessage()));
-        }
-    }
-    
-    /**
-     * Acepta el EULA por email (para uso antes del login)
-     */
-    @PostMapping("/aceptar/{email}")
-    public ResponseEntity<?> aceptarEulaPorEmail(
-            @PathVariable String email,
             @RequestBody AceptarEulaRequest request,
             HttpServletRequest httpRequest) {
         try {
@@ -167,71 +89,65 @@ public class EulaController {
                 return ResponseEntity.badRequest()
                     .body(Map.of("error", "Debe aceptar el EULA para continuar"));
             }
-            
+            if (request.getTicket() == null || request.getTicket().isBlank()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "La aceptación del EULA no es válida"));
+            }
+
+            String email;
+            try {
+                email = jwtService.validarTicketAlcance(request.getTicket(), "eula");
+            } catch (JwtException | IllegalArgumentException e) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "La aceptación del EULA no es válida"));
+            }
+
             Optional<User> usuarioOpt = userRepository.findByEmail(email);
-            
             if (usuarioOpt.isEmpty()) {
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("error", "Usuario no encontrado");
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "La aceptación del EULA no es válida"));
             }
-            
+
             User usuario = usuarioOpt.get();
-            
-            // Obtener IP y User Agent
-            String ipAddress = obtenerIpAddress(httpRequest);
+            String ipAddress = DireccionIpCliente.obtener(httpRequest);
             String userAgent = httpRequest.getHeader("User-Agent");
-            
-            // Si no se proporcionaron en el request, usar los de la petición HTTP
-            if (request.getIpAddress() == null || request.getIpAddress().isEmpty()) {
-                request.setIpAddress(ipAddress);
-            }
-            if (request.getUserAgent() == null || request.getUserAgent().isEmpty()) {
-                request.setUserAgent(userAgent);
-            }
-            
-            // Aceptar EULA
-            eulaService.aceptarEula(usuario, request.getIpAddress(), request.getUserAgent());
-            
+            eulaService.aceptarEula(usuario, ipAddress, userAgent);
+
             logger.info("EULA aceptado por usuario: {}", email);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "EULA aceptado correctamente");
             response.put("aceptado", true);
             response.put("fechaAceptacion", usuario.getEulaFechaAceptacion());
-            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Error aceptando EULA: {}", e.getMessage(), e);
+            logger.error("Error aceptando EULA: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Error al aceptar el EULA: " + e.getMessage()));
+                .body(Map.of("error", "No se pudo registrar la aceptación del EULA"));
         }
     }
-    
+
     /**
-     * Descarga el PDF del EULA firmado por un usuario
+     * Descarga el PDF del EULA del usuario autenticado.
      */
-    @GetMapping("/pdf/{userId}")
-    public ResponseEntity<Resource> descargarPdfEula(@PathVariable Long userId) {
+    @GetMapping("/pdf")
+    public ResponseEntity<Resource> descargarPdfEula(Authentication authentication) {
         try {
-            Optional<User> usuarioOpt = userRepository.findById(userId);
-            
+            if (authentication == null || authentication.getName() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            Optional<User> usuarioOpt = userRepository.findByEmail(authentication.getName());
             if (usuarioOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            
             User usuario = usuarioOpt.get();
-            
             if (usuario.getEulaPdfPath() == null || usuario.getEulaPdfPath().isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            
             Resource resource = eulaService.obtenerPdfEula(usuario);
-            
             return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, 
-                    "attachment; filename=\"EULA_" + usuario.getEmail() + ".pdf\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"EULA.pdf\"")
                 .body(resource);
         } catch (Exception e) {
             logger.error("Error descargando PDF EULA: {}", e.getMessage());
@@ -300,30 +216,5 @@ public class EulaController {
                "Al presionar \"Aceptar\", \"Crear cuenta\", \"Ingresar\" o al utilizar el sistema, el Usuario declara haber leído, comprendido y aceptado la totalidad de este EULA.";
     }
     
-    /**
-     * Obtiene la dirección IP del cliente desde la petición HTTP
-     */
-    private String obtenerIpAddress(HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getHeader("X-Real-IP");
-        }
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getHeader("Proxy-Client-IP");
-        }
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        
-        // Si hay múltiples IPs (proxies), tomar la primera
-        if (ipAddress != null && ipAddress.contains(",")) {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
-        
-        return ipAddress;
-    }
 }
 

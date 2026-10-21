@@ -4,6 +4,7 @@ import com.agrocloud.dto.CreateUserRequest;
 import com.agrocloud.dto.LoginRequest;
 import com.agrocloud.dto.LoginResponse;
 import com.agrocloud.dto.UserDto;
+import com.agrocloud.exception.CorreoNoVerificadoException;
 import com.agrocloud.core.domain.Role;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.core.infrastructure.RoleRepository;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -87,10 +89,17 @@ public class AuthService implements UserDetailsService {
                 throw new RuntimeException("Usuario inactivo");
             }
 
+            if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+                logger.warn("Correo sin confirmar para usuario: {}", loginRequest.getEmail());
+                throw new CorreoNoVerificadoException();
+            }
+
             if (user.getEulaAceptado() == null || !user.getEulaAceptado()) {
                 logger.warn("Usuario sin EULA aceptado: {}", loginRequest.getEmail());
+                String ticket = jwtService.generarTicketAlcance(user.getEmail(), "eula", 600_000L);
                 throw new com.agrocloud.exception.EulaNoAceptadoException(
-                    "Debe aceptar el EULA antes de acceder al sistema. Por favor, acepte los términos y condiciones.");
+                    "Debe aceptar el EULA antes de acceder al sistema. Por favor, acepte los términos y condiciones.",
+                    ticket);
             }
 
             String token = jwtService.generateToken(userDetails);
@@ -126,7 +135,8 @@ public class AuthService implements UserDetailsService {
         logger.info("Registro público de usuario: {}", solicitud.getEmail());
 
         if (userRepository.existsByEmail(solicitud.getEmail())) {
-            throw new RuntimeException("El email ya está registrado");
+            logger.info("Registro público para un email que ya existe; se responde igual que un alta nueva");
+            return null;
         }
 
         Role role = roleRepository.findByNombre("USUARIO_REGISTRADO")
@@ -138,10 +148,13 @@ public class AuthService implements UserDetailsService {
         user.setEmail(solicitud.getEmail());
         user.setPassword(passwordEncoder.encode(solicitud.getPassword()));
         user.setActivo(true);
+        user.setEmailVerified(false);
+        user.setVerificationToken(UUID.randomUUID().toString());
         user.getRoles().add(role);
 
         User savedUser = userRepository.save(user);
-        logger.info("Usuario registrado exitosamente: {}", savedUser.getEmail());
+        emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getVerificationToken());
+        logger.info("Usuario registrado; pendiente de confirmar el correo: {}", savedUser.getEmail());
         return convertToDto(savedUser);
     }
 
@@ -165,6 +178,7 @@ public class AuthService implements UserDetailsService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setActivo(true);
+        user.setEmailVerified(true);
         user.getRoles().add(role);
 
         User savedUser = userRepository.save(user);
@@ -233,17 +247,52 @@ public class AuthService implements UserDetailsService {
     }
 
     public boolean verifyEmail(String token) {
-        logger.info("Verificando email con token: {}", token);
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException("Token de verificación inválido");
+        }
 
-        User user = userRepository.findByVerificationToken(token)
+        User user = userRepository.findByVerificationToken(token.trim())
                 .orElseThrow(() -> new RuntimeException("Token de verificación inválido"));
 
         user.setEmailVerified(true);
         user.setVerificationToken(null);
         userRepository.save(user);
 
-        logger.info("Email verificado exitosamente para usuario: {}", user.getEmail());
+        logger.info("Email verificado para usuario: {}", user.getEmail());
         return true;
+    }
+
+    public void reenviarVerificacion(String email) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        User user = userRepository.findByEmail(email.trim()).orElse(null);
+        if (user == null || !Boolean.TRUE.equals(user.getActivo()) || Boolean.TRUE.equals(user.getEmailVerified())) {
+            return;
+        }
+        user.setVerificationToken(UUID.randomUUID().toString());
+        userRepository.save(user);
+        emailService.sendVerificationEmail(user.getEmail(), user.getVerificationToken());
+    }
+
+    public boolean sesionSigueVigente(String email, Date emitidoEn) {
+        if (emitidoEn == null) {
+            return false;
+        }
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.getSesionInvalidadaEn() == null) {
+            return true;
+        }
+        java.time.temporal.ChronoUnit segundo = java.time.temporal.ChronoUnit.SECONDS;
+        java.time.Instant emitido = emitidoEn.toInstant().truncatedTo(segundo);
+        java.time.Instant corte = user.getSesionInvalidadaEn()
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .truncatedTo(segundo);
+        return !emitido.isBefore(corte);
     }
 
     public void requestPasswordReset(String email) {
@@ -283,6 +332,9 @@ public class AuthService implements UserDetailsService {
 
     public void resetPassword(String token, String newPassword) {
         logger.info("Reseteando contraseña con token de un solo uso");
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres");
+        }
 
         User user = userRepository.findByResetPasswordToken(token)
                 .orElseThrow(() -> new RuntimeException("Token de reset inválido"));
@@ -307,6 +359,9 @@ public class AuthService implements UserDetailsService {
 
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new RuntimeException("Contraseña actual incorrecta");
+        }
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres");
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));

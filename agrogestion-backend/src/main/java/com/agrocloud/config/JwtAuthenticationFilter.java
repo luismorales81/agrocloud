@@ -100,11 +100,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 || requestURI.contains("/api/auth/logout")
 
+                || requestURI.contains("/api/auth/verificar-email")
+
+                || requestURI.contains("/api/auth/reenviar-verificacion")
+
                 || requestURI.contains("/api/health")
 
                 || requestURI.contains("/api/version")
 
-                || requestURI.contains("/api/eula/")
+                || requestURI.contains("/api/eula/texto")
+
+                || requestURI.contains("/api/eula/aceptar")
 
                 || requestURI.contains("/actuator/health")
 
@@ -142,7 +148,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 
 
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                if (jwtService.isTokenValid(jwt, userDetails)
+                        && authService.sesionSigueVigente(userEmail, jwtService.fechaEmision(jwt))) {
 
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
 

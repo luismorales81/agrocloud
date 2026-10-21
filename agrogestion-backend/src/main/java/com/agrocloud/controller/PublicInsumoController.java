@@ -5,8 +5,8 @@ import com.agrocloud.model.dto.InsumoDTO;
 import com.agrocloud.core.inventory.infrastructure.InsumoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/public/insumos")
-@Profile("dev")
+@Transactional
 public class PublicInsumoController {
 
     @Autowired
