@@ -6,7 +6,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useEmpresa } from '../../contexts/EmpresaContext';
 import {
   fusionarModulosApiConCatalogo,
-  modulosDesdeCatalogoFrontend,
 } from '../utils/modulosDisponibles';
 
 interface ModuleContextType {
@@ -43,7 +42,7 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
 
     const cargarModulos = async () => {
       if (!user) {
-        setAvailableModules(modulosDesdeCatalogoFrontend());
+        setAvailableModules([]);
         setLoading(false);
         return;
       }
@@ -57,19 +56,15 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
       try {
         setLoading(true);
         const response = await api.get('/modules/available').catch((error) => {
-          console.warn('No se pudieron cargar módulos del backend, usando catálogo local:', error.message);
+          console.warn('No se pudieron cargar los módulos de la empresa:', error.message);
           return { data: [] as Record<string, unknown>[] };
         });
 
         const datos = Array.isArray(response?.data) ? response.data : [];
-        if (datos.length > 0) {
-          setAvailableModules(fusionarModulosApiConCatalogo(datos));
-        } else {
-          setAvailableModules(modulosDesdeCatalogoFrontend());
-        }
+        setAvailableModules(datos.length > 0 ? fusionarModulosApiConCatalogo(datos) : []);
       } catch (error) {
         console.error('Error cargando módulos:', error);
-        setAvailableModules(modulosDesdeCatalogoFrontend());
+        setAvailableModules([]);
       } finally {
         setLoading(false);
       }

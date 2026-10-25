@@ -105,6 +105,8 @@ const AdminUsuarios: React.FC = () => {
   });
 
   const [nuevaContraseña, setNuevaContraseña] = useState('');
+  const [confirmacionContraseña, setConfirmacionContraseña] = useState('');
+  const [mensajeReseteo, setMensajeReseteo] = useState('');
 
   // NO restaurar automáticamente el estado del modal desde localStorage
   // Solo mantener la persistencia durante la sesión activa
@@ -309,23 +311,39 @@ const AdminUsuarios: React.FC = () => {
     }
   };
 
-  const resetearContraseña = async () => {
-    if (!usuarioSeleccionado || !nuevaContraseña) return;
+  const cerrarReseteoContraseña = () => {
+    setDialogResetPassword(false);
+    setNuevaContraseña('');
+    setConfirmacionContraseña('');
+    setMensajeReseteo('');
+  };
 
-    if (nuevaContraseña.length < 6) {
-      showNotification('La contraseña debe tener al menos 6 caracteres', 'error');
+  const resetearContraseña = async () => {
+    if (!usuarioSeleccionado || !nuevaContraseña || !confirmacionContraseña) {
+      setMensajeReseteo('Completá la contraseña y su confirmación');
       return;
     }
+
+    if (nuevaContraseña !== confirmacionContraseña) {
+      setMensajeReseteo('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (nuevaContraseña.length < 6) {
+      setMensajeReseteo('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    setMensajeReseteo('');
 
     try {
       await usuariosService.resetPassword(usuarioSeleccionado.id, nuevaContraseña);
 
       showNotification('Contraseña reseteada exitosamente', 'success');
-      setDialogResetPassword(false);
-      setNuevaContraseña('');
+      cerrarReseteoContraseña();
       cargarDatos();
     } catch (error) {
-      showNotification('Error al resetear contraseña', 'error');
+      setMensajeReseteo('No se pudo resetear la contraseña');
     }
   };
 
@@ -566,6 +584,9 @@ const AdminUsuarios: React.FC = () => {
                         <button
                           onClick={() => {
                             setUsuarioSeleccionado(usuario);
+                            setNuevaContraseña('');
+                            setConfirmacionContraseña('');
+                            setMensajeReseteo('');
                             setDialogResetPassword(true);
                           }}
                           className="text-yellow-600 hover:text-yellow-900 text-xs"
@@ -843,16 +864,30 @@ const AdminUsuarios: React.FC = () => {
                 <p className="text-sm text-gray-600 mb-4">
                   Nueva contraseña para {usuarioSeleccionado.username}
                 </p>
+                {mensajeReseteo && (
+                  <p className="text-sm text-red-700 mb-3">{mensajeReseteo}</p>
+                )}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
                 <input
                   type="password"
                   placeholder="Nueva contraseña"
                   value={nuevaContraseña}
                   onChange={(e) => setNuevaContraseña(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  autoComplete="new-password"
+                />
+                <label className="block text-sm font-medium text-gray-700 mt-3 mb-1">Confirmar contraseña</label>
+                <input
+                  type="password"
+                  placeholder="Repetí la contraseña"
+                  value={confirmacionContraseña}
+                  onChange={(e) => setConfirmacionContraseña(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  autoComplete="new-password"
                 />
                 <div className="flex justify-end space-x-3 mt-6">
                   <button
-                    onClick={() => setDialogResetPassword(false)}
+                    onClick={cerrarReseteoContraseña}
                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
                   >
                     Cancelar

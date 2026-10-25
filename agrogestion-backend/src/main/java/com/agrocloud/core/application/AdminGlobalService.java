@@ -209,22 +209,33 @@ public class AdminGlobalService {
         empresa.setFechaInicioTrial(LocalDate.now());
         empresa.setFechaFinTrial(LocalDate.now().plusDays(30));
 
-        // Obtener el primer SUPERADMIN disponible como creador
+        // El login asigna ROLE_SUPERADMIN desde usuario_empresas (RolEmpresa).
+        // getRoles() solo mira la tabla vieja y por eso no encontraba a superadmin@localhost.
         System.out.println("🔍 [AdminGlobalService] Buscando SUPERADMIN...");
-        User superAdmin = userRepository.findAll().stream()
-                .filter(u -> u.getRoles().stream()
-                        .anyMatch(r -> "SUPERADMIN".equals(r.getNombre())))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("SUPERADMIN no encontrado"));
+        User superAdmin = buscarSuperadmin();
         System.out.println("✅ [AdminGlobalService] SUPERADMIN encontrado: " + superAdmin.getUsername());
         empresa.setCreadoPor(superAdmin);
 
         System.out.println("💾 [AdminGlobalService] Guardando empresa en base de datos...");
         empresa = empresaRepository.save(empresa);
         System.out.println("✅ [AdminGlobalService] Empresa guardada con ID: " + empresa.getId());
-        campanaService.asegurarCampanaActivaPorDefecto(empresa.getId());
+        campanaService.asegurarCampanaActivaPorDefectoEnCurso(empresa.getId());
 
         return empresa;
+    }
+
+    private User buscarSuperadmin() {
+        Optional<User> porVinculo = usuarioEmpresaRepository.findByRol(RolEmpresa.SUPERADMIN).stream()
+                .map(UsuarioEmpresa::getUsuario)
+                .filter(usuario -> usuario != null)
+                .findFirst();
+        if (porVinculo.isPresent()) {
+            return porVinculo.get();
+        }
+
+        return userRepository.findByRoleName("SUPERADMIN").stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("SUPERADMIN no encontrado"));
     }
 
     /**

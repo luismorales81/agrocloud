@@ -82,7 +82,7 @@ public class EmpresaService {
         if (empresa.getActivo() == null) empresa.setActivo(true);
         empresa.setCreadoPor(creadoPor);
         Empresa guardada = empresaRepository.save(empresa);
-        campanaService.asegurarCampanaActivaPorDefecto(guardada.getId());
+        campanaService.asegurarCampanaActivaPorDefectoEnCurso(guardada.getId());
         return guardada;
     }
 

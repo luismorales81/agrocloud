@@ -32,7 +32,7 @@ const ModulosManagement: React.FC = () => {
   const [modules, setModules] = useState<Module[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'modules' | 'companies'>('modules');
+  const [activeTab, setActiveTab] = useState<'modules' | 'companies'>('companies');
   
   // Estados para módulos
   const [showCreateModule, setShowCreateModule] = useState(false);

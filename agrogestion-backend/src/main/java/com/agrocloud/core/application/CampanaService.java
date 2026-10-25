@@ -103,11 +103,24 @@ public class CampanaService {
     }
 
     /**
-     * Crea campaña activa por defecto para una empresa nueva o migración.
+     * Crea campaña activa por defecto para una empresa que ya está confirmada.
      * REQUIRES_NEW: puede ejecutarse desde transacciones de solo lectura (p. ej. paneles).
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Campana asegurarCampanaActivaPorDefecto(Long empresaId) {
+        return crearSiFalta(empresaId);
+    }
+
+    /**
+     * Misma transacción que acaba de insertar la empresa.
+     * Una transacción nueva no ve esa fila y el insert de la campaña espera el bloqueo hasta agotar el tiempo.
+     */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Campana asegurarCampanaActivaPorDefectoEnCurso(Long empresaId) {
+        return crearSiFalta(empresaId);
+    }
+
+    private Campana crearSiFalta(Long empresaId) {
         return campanaRepository.findByEmpresaIdAndEstado(empresaId, EstadoCampana.ACTIVA)
                 .orElseGet(() -> {
                     LocalDate hoy = LocalDate.now();

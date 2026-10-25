@@ -206,12 +206,7 @@ function arregloRespuesta(data: unknown): unknown[] {
 
 export async function listarInsumos(): Promise<unknown[]> {
   const { data } = await api.get(`${BASE}/insumos`);
-  const lista = arregloRespuesta(data);
-  if (lista.length > 0) {
-    return lista;
-  }
-  const respaldo = await api.get('/insumos');
-  return arregloRespuesta(respaldo.data);
+  return arregloRespuesta(data);
 }
 
 export async function crearMotivoMuerte(cuerpo: FeedlotCatalogoSolicitud): Promise<FeedlotCatalogo> {

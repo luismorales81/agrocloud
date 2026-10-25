@@ -18,6 +18,7 @@ import FinanzasManagement from './components/FinanzasManagement';
 import InventarioGranosManagement from './components/InventarioGranosManagement';
 import AdminUsuarios from './components/AdminUsuarios';
 import AdminEmpresas from './components/AdminEmpresas';
+import ModulosManagement from './components/ModulosManagement';
 import AdminDashboard from './components/AdminDashboard';
 import AdminGlobalDashboard from './components/AdminGlobalDashboard';
 import AyudaSistema from './components/AyudaSistema';
@@ -263,6 +264,12 @@ const Dashboard: React.FC = () => {
             <AdminEmpresas />
           </ProtectedRouteComponent>
         );
+      case 'admin-modulos':
+        return (
+          <ProtectedRouteComponent permission="canManageCompanies">
+            <ModulosManagement />
+          </ProtectedRouteComponent>
+        );
       case 'ayuda':
         return (
           <ProtectedRouteComponent permission="canManageUsers">
@@ -323,6 +330,7 @@ const Dashboard: React.FC = () => {
             items: [
               { id: 'users', label: 'Usuarios', icon: '👥', permission: 'canManageUsers' },
               { id: 'admin-empresas', label: 'Empresas', icon: '🏢', permission: 'canManageCompanies' },
+              { id: 'admin-modulos', label: 'Módulos', icon: '📦', permission: 'canManageCompanies' },
               { id: 'ayuda', label: 'Ayuda', icon: '📚', permission: 'canManageUsers' }
             ]
           }

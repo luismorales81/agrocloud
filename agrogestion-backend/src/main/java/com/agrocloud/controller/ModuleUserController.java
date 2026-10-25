@@ -48,7 +48,7 @@ public class ModuleUserController {
 
     private static final Set<String> CODIGOS_PLATAFORMA = Set.of(
             "CULTIVOS", "CROPS", "PORCINOS", "PIGS",
-            "AVICOLA_CRIANZA", "AVICOLA_CARNE", "AVICOLA_HUEVOS",
+            "AVICOLA_CRIANZA", "AVICOLA_CARNE", "AVICOLA_HUEVOS", "AVICOLA_PONEDORAS",
             "FEEDLOT", "LECHERIA"
     );
 
@@ -112,7 +112,7 @@ public class ModuleUserController {
             
             logger.debug("Obteniendo mÃ³dulos para empresa: {}", empresaActiva.getId());
             
-            // Catálogo activo + estado habilitado por empresa (incluye filas faltantes como habilitadas)
+            // Solo los módulos con fila habilitada en company_modules. Si no hay fila, no está asignado.
             Map<String, Boolean> habilitadoPorCodigo = new HashMap<>();
             try {
                 for (CompanyModuleDTO cm : companyModuleService.getAllModulesForCompany(empresaActiva.getId())) {
@@ -141,7 +141,10 @@ public class ModuleUserController {
                 }
                 try {
                     String moduleId = mapModuleCodeToId(moduleCode);
-                    boolean habilitado = habilitadoPorCodigo.getOrDefault(moduleCode.toUpperCase(), true);
+                    boolean habilitado = habilitadoPorCodigo.getOrDefault(moduleCode.toUpperCase(), false);
+                    if (!habilitado) {
+                        continue;
+                    }
                     if (modulesMap.containsKey(moduleId)) {
                         Map<String, Object> existente = modulesMap.get(moduleId);
                         boolean yaHabilitado = Boolean.TRUE.equals(existente.get("habilitado"));

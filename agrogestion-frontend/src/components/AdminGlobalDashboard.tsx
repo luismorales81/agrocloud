@@ -453,7 +453,7 @@ NOTA: El balance financiero ha sido removido del dashboard por solicitud del usu
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+          <nav className="flex space-x-8 overflow-x-auto">
             {[
               { id: 'resumen', name: '📊 Resumen Global', icon: '📊' },
               { id: 'empresas', name: '🏢 Empresas', icon: '🏢' },

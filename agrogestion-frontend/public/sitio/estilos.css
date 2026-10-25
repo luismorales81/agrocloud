@@ -481,8 +481,6 @@ h2 {
 .pie .marca-logo {
   height: 2.4rem;
   width: 2.4rem;
-  background: var(--crema);
-  border-radius: 6px;
 }
 
 .pie p {

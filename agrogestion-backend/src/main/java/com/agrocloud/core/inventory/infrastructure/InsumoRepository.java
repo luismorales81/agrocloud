@@ -26,7 +26,7 @@ public interface InsumoRepository extends JpaRepository<Insumo, Long> {
             + "i.precio_unitario, i.stock_actual, i.stock_minimo, i.proveedor, i.activo "
             + "FROM cultivo_insumos i "
             + "WHERE (i.activo IS NULL OR i.activo = TRUE) "
-            + "AND (i.empresa_id = :empresaId OR i.empresa_id IS NULL) "
+            + "AND i.empresa_id = :empresaId "
             + "ORDER BY i.nombre",
             nativeQuery = true)
     List<Object[]> listarFilasPorEmpresa(@Param("empresaId") Long empresaId);

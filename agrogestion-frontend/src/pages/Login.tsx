@@ -42,15 +42,7 @@ const Login: React.FC = () => {
         const empresasCargadas = await cargarEmpresasUsuario();
         
         // Usar las empresas cargadas directamente
-        if (empresasCargadas.length > 1) {
-          setMostrarSelectorEmpresa(true);
-        } else if (empresasCargadas.length === 1) {
-          // Si solo tiene una empresa, navegar directamente
-          navigate('/dashboard');
-        } else {
-          // Si no tiene empresas, mostrar mensaje de error
-          setError('No tienes acceso a ninguna empresa. Contacta al administrador.');
-        }
+        irDespuesDelIngreso(empresasCargadas.length);
       } else {
         setError('❌ Email o contraseña incorrectos. Por favor, verifica tus credenciales.');
       }
@@ -102,13 +94,7 @@ const Login: React.FC = () => {
         console.log('✅ [Login] Login exitoso después de EULA, cargando empresas...');
         const empresasCargadas = await cargarEmpresasUsuario();
         console.log('📄 [Login] Empresas cargadas:', empresasCargadas.length);
-        if (empresasCargadas.length > 1) {
-          setMostrarSelectorEmpresa(true);
-        } else if (empresasCargadas.length === 1) {
-          navigate('/dashboard');
-        } else {
-          setError('No tienes acceso a ninguna empresa. Contacta al administrador.');
-        }
+        irDespuesDelIngreso(empresasCargadas.length);
       } else {
         console.warn('⚠️ [Login] Login falló después de aceptar EULA');
         setError('Error al iniciar sesión después de aceptar el EULA. Por favor, intente nuevamente.');
@@ -123,11 +109,42 @@ const Login: React.FC = () => {
     }
   };
 
+  const esSuperAdministrador = () => {
+    try {
+      const guardado = localStorage.getItem('user');
+      if (!guardado) {
+        return false;
+      }
+      return JSON.parse(guardado).roleName === 'SUPERADMIN';
+    } catch {
+      return false;
+    }
+  };
+
+  const irDespuesDelIngreso = (cantidadEmpresas: number) => {
+    if (esSuperAdministrador()) {
+      if (cantidadEmpresas > 1) {
+        setMostrarSelectorEmpresa(true);
+        return;
+      }
+      navigate('/dashboard-legacy');
+      return;
+    }
+
+    if (cantidadEmpresas > 1) {
+      setMostrarSelectorEmpresa(true);
+    } else if (cantidadEmpresas === 1) {
+      navigate('/dashboard');
+    } else {
+      setError('No tienes acceso a ninguna empresa. Contacta al administrador.');
+    }
+  };
+
   const handleEmpresaSeleccionada = async (empresaIdDestino: number) => {
     try {
       await cambiarEmpresa(empresaIdDestino);
       setMostrarSelectorEmpresa(false);
-      navigate('/select-module');
+      navigate(esSuperAdministrador() ? '/dashboard-legacy' : '/select-module');
     } catch {
       setError('No se pudo seleccionar la empresa. Intentá de nuevo.');
     }

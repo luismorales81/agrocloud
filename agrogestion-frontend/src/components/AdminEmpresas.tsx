@@ -119,16 +119,29 @@ const AdminEmpresas: React.FC = () => {
     try {
       setLoading(true);
       
-      // Cargar empresas del usuario
-      const responseEmpresas = await api.get(API_ENDPOINTS.EMPRESAS.MIS_EMPRESAS);
-      // Transformar UsuarioEmpresaDTO a formato de empresa
-      const empresasTransformadas = responseEmpresas.data.map((relacion: any) => ({
-        id: relacion.empresaId,
-        nombre: relacion.empresaNombre,
-        cuit: relacion.empresaCuit,
-        emailContacto: relacion.empresaEmail,
-        activo: relacion.estado === 'ACTIVO'
-      }));
+      // El alta global no vincula al superadmin. mis-empresas solo devuelve las suyas.
+      const responseEmpresas = user?.roleName === 'SUPERADMIN'
+        ? await api.get(API_ENDPOINTS.ADMIN_GLOBAL.EMPRESAS_BASIC)
+        : await api.get(API_ENDPOINTS.EMPRESAS.MIS_EMPRESAS);
+      const empresasTransformadas = user?.roleName === 'SUPERADMIN'
+        ? (Array.isArray(responseEmpresas.data) ? responseEmpresas.data : []).map((empresa: any) => ({
+            id: empresa.id,
+            nombre: empresa.nombre,
+            cuit: empresa.cuit,
+            emailContacto: empresa.emailContacto,
+            estado: empresa.estado,
+            activo: empresa.activo,
+            fechaCreacion: empresa.fechaCreacion
+          }))
+        : responseEmpresas.data.map((relacion: any) => ({
+            id: relacion.empresaId,
+            nombre: relacion.empresaNombre,
+            cuit: relacion.empresaCuit,
+            emailContacto: relacion.empresaEmail,
+            estado: relacion.estado,
+            activo: relacion.estado === 'ACTIVO',
+            fechaCreacion: relacion.fechaInicio
+          }));
       setEmpresas(empresasTransformadas);
 
       // Cargar usuarios - usar endpoint básico

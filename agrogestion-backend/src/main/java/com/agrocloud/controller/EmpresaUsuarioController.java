@@ -479,18 +479,10 @@ public class EmpresaUsuarioController {
      * Verificar si un usuario es SUPERADMIN
      */
     private boolean esSuperAdmin(User usuario) {
-        if (usuario == null) return false;
-        
-        // Verificar en el sistema multitenant (UserCompanyRole)
-        boolean esSuperAdmin = usuario.getUserCompanyRoles().stream()
-            .anyMatch(ucr -> "SUPERADMIN".equals(ucr.getRol().getNombre()));
-        
-        // Fallback: verificar en el sistema antiguo (Roles directos)
-        if (!esSuperAdmin && !usuario.getRoles().isEmpty()) {
-            esSuperAdmin = "SUPERADMIN".equals(usuario.getRoles().iterator().next().getNombre());
+        if (usuario == null) {
+            return false;
         }
-        
-        return esSuperAdmin;
+        return usuario.isSuperAdmin();
     }
     
     /**

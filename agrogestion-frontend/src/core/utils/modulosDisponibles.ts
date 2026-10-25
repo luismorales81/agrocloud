@@ -77,19 +77,6 @@ export function fusionarModulosApiConCatalogo(
     const desdeApi = habilitadosApi.get(moduloCatalogo.id);
     if (desdeApi?.habilitado) {
       resultado.push(desdeApi);
-    } else if (desdeApi) {
-      // API lo listó explícitamente deshabilitado: no mostrar en selector
-      continue;
-    } else {
-      // Sin fila en API: mostrar si el catálogo lo incluye (resiliencia)
-      resultado.push({
-        id: moduloCatalogo.id,
-        nombre: moduloCatalogo.nombre,
-        descripcion: moduloCatalogo.descripcion,
-        icono: moduloCatalogo.icono,
-        color: moduloCatalogo.color,
-        habilitado: true,
-      });
     }
   }
 

@@ -79,11 +79,11 @@ public class InsumoService {
     @Transactional(readOnly = true)
     public List<InsumoDTO> listarDtoPorEmpresaActual() {
         Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
+        if (empresaId == null) {
+            return java.util.Collections.emptyList();
+        }
         List<Object[]> filas = insumoRepository.listarFilasPorEmpresa(empresaId);
         if (filas == null || filas.isEmpty()) {
-            filas = insumoRepository.listarFilasActivas();
-        }
-        if (filas == null) {
             return java.util.Collections.emptyList();
         }
         return filas.stream()

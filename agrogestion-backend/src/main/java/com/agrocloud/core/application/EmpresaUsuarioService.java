@@ -150,7 +150,7 @@ public class EmpresaUsuarioService {
 
     public List<UsuarioEmpresa> obtenerTodasLasRelaciones() {
         logger.info("Obteniendo todas las relaciones usuario-empresa");
-        return usuarioEmpresaRepository.findAll();
+        return usuarioEmpresaRepository.findAllConUsuarioYEmpresa();
     }
 
     public List<UsuarioEmpresaRol> asignarRolesAUsuarioEnEmpresa(Long usuarioId, Long empresaId, Set<RolEmpresa> roles) {

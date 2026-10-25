@@ -32,6 +32,9 @@ public interface UsuarioEmpresaRepository extends JpaRepository<UsuarioEmpresa, 
     @Query("SELECT ue FROM UsuarioEmpresa ue JOIN FETCH ue.empresa JOIN FETCH ue.usuario WHERE ue.usuario.id = :usuarioId AND ue.estado = 'ACTIVO'")
     List<UsuarioEmpresa> findEmpresasActivasByUsuarioId(@Param("usuarioId") Long usuarioId);
 
+    @Query("SELECT DISTINCT ue FROM UsuarioEmpresa ue JOIN FETCH ue.usuario JOIN FETCH ue.empresa LEFT JOIN FETCH ue.creadoPor")
+    List<UsuarioEmpresa> findAllConUsuarioYEmpresa();
+
     List<UsuarioEmpresa> findByEmpresa(Empresa empresa);
 
     @Query("SELECT ue FROM UsuarioEmpresa ue WHERE ue.empresa.id = :empresaId")
