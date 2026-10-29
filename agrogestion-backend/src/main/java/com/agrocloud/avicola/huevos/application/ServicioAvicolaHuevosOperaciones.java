@@ -5,11 +5,18 @@ import com.agrocloud.avicola.huevos.model.entity.AvicolaHuevoConsumo;
 import com.agrocloud.avicola.huevos.model.entity.AvicolaHuevoEventoSanitario;
 import com.agrocloud.avicola.huevos.model.entity.AvicolaHuevoLote;
 import com.agrocloud.avicola.huevos.model.entity.AvicolaHuevoProduccionDiaria;
+import com.agrocloud.avicola.huevos.model.entity.AvicolaHuevoVenta;
 import com.agrocloud.avicola.huevos.model.enums.AvicolaHuevoLoteEstado;
 import com.agrocloud.avicola.huevos.repository.AvicolaHuevoConsumoRepository;
 import com.agrocloud.avicola.huevos.repository.AvicolaHuevoEventoSanitarioRepository;
 import com.agrocloud.avicola.huevos.repository.AvicolaHuevoProduccionDiariaRepository;
+import com.agrocloud.avicola.huevos.repository.AvicolaHuevoVentaRepository;
+import com.agrocloud.core.application.ServicioLibroEmpresa;
+import com.agrocloud.core.domain.Ingreso;
 import com.agrocloud.core.inventory.application.InventoryService;
+import com.agrocloud.exception.BadRequestException;
+import com.agrocloud.exception.ResourceConflictException;
+import com.agrocloud.model.enums.ModuloSistema;
 import com.agrocloud.core.inventory.domain.InventoryOrigin;
 import com.agrocloud.core.inventory.domain.InventoryResult;
 import com.agrocloud.core.inventory.domain.Insumo;
@@ -34,6 +41,8 @@ public class ServicioAvicolaHuevosOperaciones {
     private final AvicolaHuevoEventoSanitarioRepository eventoSanitarioRepository;
     private final InventoryService inventoryService;
     private final InsumoRepository insumoRepository;
+    private final AvicolaHuevoVentaRepository ventaRepository;
+    private final ServicioLibroEmpresa libroEmpresa;
 
     public ServicioAvicolaHuevosOperaciones(
             ServicioAvicolaHuevosLote servicioLote,
@@ -41,13 +50,17 @@ public class ServicioAvicolaHuevosOperaciones {
             AvicolaHuevoConsumoRepository consumoRepository,
             AvicolaHuevoEventoSanitarioRepository eventoSanitarioRepository,
             InventoryService inventoryService,
-            @Qualifier("insumoRepositoryInventario") InsumoRepository insumoRepository) {
+            @Qualifier("insumoRepositoryInventario") InsumoRepository insumoRepository,
+            AvicolaHuevoVentaRepository ventaRepository,
+            ServicioLibroEmpresa libroEmpresa) {
         this.servicioLote = servicioLote;
         this.produccionRepository = produccionRepository;
         this.consumoRepository = consumoRepository;
         this.eventoSanitarioRepository = eventoSanitarioRepository;
         this.inventoryService = inventoryService;
         this.insumoRepository = insumoRepository;
+        this.ventaRepository = ventaRepository;
+        this.libroEmpresa = libroEmpresa;
     }
 
     private static int nz(Integer v) {
@@ -302,6 +315,90 @@ public class ServicioAvicolaHuevosOperaciones {
         if (c.getInsumoId() != null) {
             insumoRepository.findById(c.getInsumoId()).map(Insumo::getNombre).ifPresent(dto::setInsumoNombre);
         }
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvicolaHuevoVentaRespuesta> listarVentas(Long empresaId, Long loteId) {
+        servicioLote.obtenerEntidadLote(empresaId, loteId);
+        return ventaRepository.listarPorLoteIdYEmpresaId(loteId, empresaId).stream()
+                .map(this::aVentaRespuesta)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AvicolaHuevoVentaRespuesta registrarVenta(Long empresaId, Long loteId, AvicolaHuevoVentaSolicitud solicitud) {
+        AvicolaHuevoLote lote = loteActivo(empresaId, loteId);
+        if (solicitud.getFecha() == null) {
+            throw new BadRequestException("La fecha de la venta es obligatoria");
+        }
+        if (solicitud.getCantidad() == null || solicitud.getCantidad() <= 0) {
+            throw new BadRequestException("La cantidad de huevos vendidos debe ser mayor que cero");
+        }
+        long comercializables = nzLong(produccionRepository.sumarHuevosComercializables(loteId, empresaId));
+        long yaVendidos = nzLong(ventaRepository.sumarCantidadVendida(loteId, empresaId));
+        long disponible = comercializables - yaVendidos;
+        if (solicitud.getCantidad() > disponible) {
+            throw new ResourceConflictException(
+                    "No hay huevos suficientes para vender. Disponibles: " + Math.max(disponible, 0)
+                            + " (producidos sin rotos, menos lo ya vendido).");
+        }
+
+        BigDecimal total = solicitud.getTotal();
+        if (total == null && solicitud.getPrecioUnitario() != null) {
+            total = solicitud.getPrecioUnitario()
+                    .multiply(BigDecimal.valueOf(solicitud.getCantidad()))
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
+        AvicolaHuevoVenta venta = new AvicolaHuevoVenta();
+        venta.setLote(lote);
+        venta.setEmpresaId(empresaId);
+        venta.setFecha(solicitud.getFecha());
+        venta.setCantidad(solicitud.getCantidad());
+        venta.setPrecioUnitario(solicitud.getPrecioUnitario());
+        venta.setTotal(total);
+        venta.setComprador(solicitud.getComprador());
+        venta.setObservaciones(solicitud.getObservaciones());
+        venta.setCampanaId(lote.getCampanaId());
+        venta = ventaRepository.save(venta);
+
+        Long ingresoId = libroEmpresa.asegurarIngresoDeVenta(
+                venta.getIngresoId(),
+                ModuloSistema.AVICOLA_HUEVOS,
+                Ingreso.TipoIngreso.VENTA_HUEVOS,
+                venta.getTotal(),
+                venta.getFecha(),
+                "Venta de huevos lote " + lote.getNombre(),
+                venta.getComprador(),
+                venta.getCampanaId(),
+                ServicioLibroEmpresa.REF_VENTA_HUEVOS,
+                venta.getId());
+        if (ingresoId != null && venta.getIngresoId() == null) {
+            venta.setIngresoId(ingresoId);
+            venta = ventaRepository.save(venta);
+        }
+        return aVentaRespuesta(venta);
+    }
+
+    private static long nzLong(Long valor) {
+        return valor != null ? valor : 0L;
+    }
+
+    private AvicolaHuevoVentaRespuesta aVentaRespuesta(AvicolaHuevoVenta venta) {
+        AvicolaHuevoVentaRespuesta dto = new AvicolaHuevoVentaRespuesta();
+        dto.setId(venta.getId());
+        dto.setLoteId(venta.getLote() != null ? venta.getLote().getId() : null);
+        dto.setEmpresaId(venta.getEmpresaId());
+        dto.setFecha(venta.getFecha());
+        dto.setCantidad(venta.getCantidad());
+        dto.setPrecioUnitario(venta.getPrecioUnitario());
+        dto.setTotal(venta.getTotal());
+        dto.setComprador(venta.getComprador());
+        dto.setObservaciones(venta.getObservaciones());
+        dto.setCampanaId(venta.getCampanaId());
+        dto.setIngresoId(venta.getIngresoId());
+        dto.setCreatedAt(venta.getCreatedAt());
         return dto;
     }
 

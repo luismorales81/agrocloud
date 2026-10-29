@@ -26,6 +26,13 @@ export const lecheriaMenu: MenuItem[] = [
     ruta: '/lecheria/ventas',
   },
   {
+    id: 'finanzas',
+    nombre: 'Finanzas',
+    icono: 'DollarSign',
+    ruta: '/lecheria/finanzas',
+    permisos: ['canViewFinances'],
+  },
+  {
     id: 'establecimientos',
     nombre: 'Establecimientos y rodeos',
     icono: 'Warehouse',

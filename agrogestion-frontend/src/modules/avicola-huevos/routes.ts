@@ -10,6 +10,7 @@ import DetalleLoteHuevosScreen from './screens/DetalleLoteHuevosScreen';
 import CalendarioHuevosScreen from './screens/CalendarioHuevosScreen';
 import InsumosHuevosScreen from './screens/InsumosHuevosScreen';
 import ReportesHuevosScreen from './screens/ReportesHuevosScreen';
+import FinanzasDelModulo from '../../components/FinanzasDelModulo';
 import GestionPeriodosScreen from '../../components/GestionCampanasScreen';
 
 /** Compatibilidad con enlaces antiguos a `/avicola-huevos/calendario`. (Sin JSX: este archivo es .ts) */
@@ -71,6 +72,12 @@ export const avicolaHuevosRoutes: ModuleRoute[] = [
     name: 'Insumos',
     component: InsumosHuevosScreen,
     permisos: ['canViewInsumos'],
+  },
+  {
+    path: '/avicola-huevos/finanzas',
+    name: 'Finanzas',
+    component: FinanzasDelModulo,
+    permisos: ['canViewFinances'],
   },
   {
     path: '/avicola-huevos/reportes',

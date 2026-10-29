@@ -1,21 +1,28 @@
 package com.agrocloud.avicola.ponedoras.service;
 
+import com.agrocloud.avicola.comun.ComposicionRazasLote;
 import com.agrocloud.avicola.crianza.model.entity.AvicolaEstablecimiento;
 import com.agrocloud.avicola.crianza.repository.AvicolaEstablecimientoRepository;
 import com.agrocloud.avicola.ponedoras.model.dto.AvicolaPonedorasGalponRespuesta;
 import com.agrocloud.avicola.ponedoras.model.dto.AvicolaPonedorasGalponSolicitud;
 import com.agrocloud.avicola.ponedoras.model.entity.AvicolaPonedorasGalpon;
+import com.agrocloud.avicola.ponedoras.model.entity.AvicolaPonedorasRaza;
 import com.agrocloud.avicola.ponedoras.model.enums.AvicolaPonedorasGalponEstado;
 import com.agrocloud.avicola.ponedoras.repository.AvicolaPonedorasGalponRepository;
+import com.agrocloud.avicola.ponedoras.repository.AvicolaPonedorasRazaRepository;
 import com.agrocloud.core.application.CampanaContextService;
 import com.agrocloud.core.security.ServicioSeguridadContexto;
 import com.agrocloud.cultivos.application.UtilCentroideCoordenadasCampo;
+import com.agrocloud.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -26,6 +33,7 @@ public class ServicioAvicolaPonedorasGalpon {
 
     private final ServicioSeguridadContexto servicioSeguridadContexto;
     private final AvicolaPonedorasGalponRepository galponRepository;
+    private final AvicolaPonedorasRazaRepository razaRepository;
     private final AvicolaEstablecimientoRepository establecimientoRepository;
     private final CampanaContextService campanaContextService;
     private final ObjectMapper objectMapper;
@@ -33,11 +41,13 @@ public class ServicioAvicolaPonedorasGalpon {
     public ServicioAvicolaPonedorasGalpon(
             ServicioSeguridadContexto servicioSeguridadContexto,
             AvicolaPonedorasGalponRepository galponRepository,
+            AvicolaPonedorasRazaRepository razaRepository,
             AvicolaEstablecimientoRepository establecimientoRepository,
             @Qualifier("campanaContextServiceCore") CampanaContextService campanaContextService,
             ObjectMapper objectMapper) {
         this.servicioSeguridadContexto = servicioSeguridadContexto;
         this.galponRepository = galponRepository;
+        this.razaRepository = razaRepository;
         this.establecimientoRepository = establecimientoRepository;
         this.campanaContextService = campanaContextService;
         this.objectMapper = objectMapper;
@@ -83,7 +93,7 @@ public class ServicioAvicolaPonedorasGalpon {
         g.setEmpresaId(empresaId);
         g.setEstablecimiento(est);
         g.setNombre(solicitud.getNombre().trim());
-        g.setRaza(solicitud.getRaza() != null ? solicitud.getRaza().trim() : "");
+        asignarRazas(g, empresaId, ComposicionRazasLote.idsSolicitados(solicitud.getRazaIds(), null, true));
         g.setFechaIngreso(solicitud.getFechaIngreso());
         g.setCantidadInicial(solicitud.getCantidadInicial());
         g.setCantidadAves(solicitud.getCantidadAves() != null ? solicitud.getCantidadAves() : solicitud.getCantidadInicial());
@@ -111,8 +121,9 @@ public class ServicioAvicolaPonedorasGalpon {
         if (solicitud.getNombre() != null) {
             g.setNombre(solicitud.getNombre().trim());
         }
-        if (solicitud.getRaza() != null) {
-            g.setRaza(solicitud.getRaza().trim());
+        List<Long> idsRazas = ComposicionRazasLote.idsSolicitados(solicitud.getRazaIds(), null, false);
+        if (idsRazas != null) {
+            asignarRazas(g, empresaId, idsRazas);
         }
         if (solicitud.getFechaIngreso() != null) {
             g.setFechaIngreso(solicitud.getFechaIngreso());
@@ -149,6 +160,28 @@ public class ServicioAvicolaPonedorasGalpon {
         if (solicitud.getCantidadInicial() == null || solicitud.getCantidadInicial() <= 0) {
             throw new IllegalStateException("La cantidad inicial de aves debe ser mayor a cero");
         }
+        if (solicitud.getRazaIds() == null || solicitud.getRazaIds().isEmpty()) {
+            throw new IllegalArgumentException("El galpón debe tener al menos una raza");
+        }
+    }
+
+    private void asignarRazas(AvicolaPonedorasGalpon galpon, Long empresaId, List<Long> ids) {
+        List<AvicolaPonedorasRaza> encontradas = razaRepository.buscarPorIdsYEmpresaId(ids, empresaId);
+        if (encontradas.size() != ids.size()) {
+            throw new ResourceNotFoundException("Raza no encontrada");
+        }
+        Set<Long> previas = galpon.getRazas().stream().map(AvicolaPonedorasRaza::getId).collect(Collectors.toSet());
+        for (AvicolaPonedorasRaza raza : encontradas) {
+            boolean yaEstaba = previas.contains(raza.getId());
+            if (!yaEstaba && !Boolean.TRUE.equals(raza.getActivo())) {
+                throw new IllegalArgumentException("La raza " + raza.getNombre() + " no está activa");
+            }
+        }
+        galpon.getRazas().clear();
+        galpon.getRazas().addAll(encontradas);
+        String nombres = ComposicionRazasLote.unirNombres(
+                encontradas.stream().map(AvicolaPonedorasRaza::getNombre).toList());
+        galpon.setRaza(ComposicionRazasLote.textoColumna(nombres, 120));
     }
 
     private AvicolaPonedorasGalponRespuesta aGalponRespuesta(AvicolaPonedorasGalpon g) {
@@ -165,7 +198,7 @@ public class ServicioAvicolaPonedorasGalpon {
                     });
         }
         dto.setNombre(g.getNombre());
-        dto.setRaza(g.getRaza());
+        completarRazas(dto, g);
         dto.setFechaIngreso(g.getFechaIngreso());
         dto.setCantidadInicial(g.getCantidadInicial());
         dto.setCantidadAves(g.getCantidadAves());
@@ -175,5 +208,18 @@ public class ServicioAvicolaPonedorasGalpon {
         dto.setCreatedAt(g.getCreatedAt());
         dto.setUpdatedAt(g.getUpdatedAt());
         return dto;
+    }
+
+    private void completarRazas(AvicolaPonedorasGalponRespuesta dto, AvicolaPonedorasGalpon galpon) {
+        List<AvicolaPonedorasRaza> lista = new ArrayList<>(galpon.getRazas() != null ? galpon.getRazas() : List.of());
+        lista.sort(Comparator.comparing(
+                raza -> raza.getNombre() == null ? "" : raza.getNombre(), String.CASE_INSENSITIVE_ORDER));
+        if (lista.isEmpty()) {
+            dto.setRaza(galpon.getRaza());
+            dto.setRazaIds(List.of());
+            return;
+        }
+        dto.setRazaIds(lista.stream().map(AvicolaPonedorasRaza::getId).toList());
+        dto.setRaza(ComposicionRazasLote.unirNombres(lista.stream().map(AvicolaPonedorasRaza::getNombre).toList()));
     }
 }

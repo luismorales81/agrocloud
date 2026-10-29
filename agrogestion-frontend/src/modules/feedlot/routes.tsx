@@ -11,6 +11,7 @@ import EstablecimientosFeedlotScreen from './pages/EstablecimientosFeedlotScreen
 import UbicacionEstablecimientosFeedlotScreen from './pages/UbicacionEstablecimientosFeedlotScreen';
 import CatalogosFeedlotScreen from './pages/CatalogosFeedlotScreen';
 import InsumosFeedlotScreen from './pages/InsumosFeedlotScreen';
+import FinanzasDelModulo from '../../components/FinanzasDelModulo';
 import ReportesFeedlotScreen from './pages/ReportesFeedlotScreen';
 import DietasFeedlotScreen from './pages/DietasFeedlotScreen';
 import CalendarioFeedlotScreen from './pages/CalendarioFeedlotScreen';
@@ -114,6 +115,11 @@ export const feedlotRoutes: ModuleRoute[] = [
     path: '/feedlot/insumos',
     name: 'Insumos',
     component: envolverSiModuloFeedlotHabilitado(InsumosFeedlotScreen),
+  },
+  {
+    path: '/feedlot/finanzas',
+    name: 'Finanzas',
+    component: envolverSiModuloFeedlotHabilitado(FinanzasDelModulo),
   },
   {
     path: '/feedlot/reportes',

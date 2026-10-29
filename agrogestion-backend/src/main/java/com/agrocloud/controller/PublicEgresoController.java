@@ -67,17 +67,8 @@ public class PublicEgresoController {
                 egreso.setUser(usuario);
             }
             
-            // Si es un egreso de insumos, actualizar el stock
-            if (egreso.getTipo() == Egreso.TipoEgreso.INSUMO && 
-                egreso.getReferenciaId() != null) {
-                
-                insumoRepository.findById(egreso.getReferenciaId()).ifPresent(insumo -> {
-                    BigDecimal nuevoStock = insumo.getStockActual().subtract(egreso.getCantidad());
-                    if (nuevoStock.compareTo(BigDecimal.ZERO) >= 0) {
-                        insumo.setStockActual(nuevoStock);
-                        insumoRepository.save(insumo);
-                    }
-                });
+            if (egreso.getTipo() == Egreso.TipoEgreso.INSUMO || egreso.getTipo() == Egreso.TipoEgreso.INSUMOS) {
+                return ResponseEntity.badRequest().build();
             }
             
             Egreso egresoGuardado = egresoRepository.save(egreso);

@@ -77,10 +77,7 @@ public class BalanceController {
             BalanceDTO balance;
             try {
                 Long empresaId = servicioSeguridadContexto.obtenerEmpresaIdActual();
-                Campana campana = campanaContextService.resolverCampanaActiva(empresaId);
-                LocalDate inicio = fechaInicio != null ? fechaInicio : campana.getFechaInicio();
-                LocalDate fin = fechaFin != null ? fechaFin : campana.getFechaFin();
-                balance = balanceService.calcularBalancePorCampana(campana.getId(), inicio, fin);
+                balance = balanceService.calcularBalancePorEmpresa(empresaId, fechaInicio, fechaFin);
             } catch (Exception e) {
                 balance = balanceService.calcularBalance(user.getId(), fechaInicio, fechaFin);
             }

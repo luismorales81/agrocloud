@@ -174,6 +174,25 @@ public class AvicolaHuevosController {
         return ResponseEntity.ok(servicioOperaciones.registrarProduccionDiaria(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, solicitud));
     }
 
+    @GetMapping("/lotes/{loteId}/ventas")
+    public ResponseEntity<List<AvicolaHuevoVentaRespuesta>> listarVentas(
+            @PathVariable Long loteId,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioOperaciones.listarVentas(servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId));
+    }
+
+    @PostMapping("/lotes/{loteId}/ventas")
+    @RequiresModule(value = "AVICOLA_HUEVOS", permission = "write")
+    public ResponseEntity<AvicolaHuevoVentaRespuesta> registrarVenta(
+            @PathVariable Long loteId,
+            @RequestBody AvicolaHuevoVentaSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioOperaciones.registrarVenta(
+                servicioSeguridadContexto.obtenerEmpresaIdActual(), loteId, solicitud));
+    }
+
     @GetMapping("/lotes/{loteId}/consumos")
     public ResponseEntity<List<AvicolaHuevoConsumoRespuesta>> listarConsumos(
             @PathVariable Long loteId,

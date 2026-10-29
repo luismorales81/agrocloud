@@ -1,6 +1,9 @@
 package com.agrocloud.feedlot.service;
 
+import com.agrocloud.core.application.ServicioLibroEmpresa;
+import com.agrocloud.core.domain.Ingreso;
 import com.agrocloud.core.inventory.application.InventoryService;
+import com.agrocloud.model.enums.ModuloSistema;
 import com.agrocloud.core.inventory.domain.InventoryOrigin;
 import com.agrocloud.core.inventory.domain.InventoryResult;
 import com.agrocloud.core.security.ServicioSeguridadContexto;
@@ -28,6 +31,7 @@ public class ServicioFeedlotOperaciones {
     private final FeedlotEventoSanitarioRepository eventoSanitarioRepository;
     private final FeedlotMotivoMuerteRepository motivoMuerteRepository;
     private final InventoryService inventoryService;
+    private final ServicioLibroEmpresa libroEmpresa;
 
     public ServicioFeedlotOperaciones(
             ServicioSeguridadContexto servicioSeguridadContexto,
@@ -38,7 +42,8 @@ public class ServicioFeedlotOperaciones {
             FeedlotVentaRepository ventaRepository,
             FeedlotEventoSanitarioRepository eventoSanitarioRepository,
             FeedlotMotivoMuerteRepository motivoMuerteRepository,
-            InventoryService inventoryService) {
+            InventoryService inventoryService,
+            ServicioLibroEmpresa libroEmpresa) {
         this.servicioSeguridadContexto = servicioSeguridadContexto;
         this.servicioLotes = servicioLotes;
         this.pesadaRepository = pesadaRepository;
@@ -48,6 +53,7 @@ public class ServicioFeedlotOperaciones {
         this.eventoSanitarioRepository = eventoSanitarioRepository;
         this.motivoMuerteRepository = motivoMuerteRepository;
         this.inventoryService = inventoryService;
+        this.libroEmpresa = libroEmpresa;
     }
 
     private FeedlotLote loteActivo(Long empresaId, Long loteId) {
@@ -313,7 +319,23 @@ public class ServicioFeedlotOperaciones {
         v.setTotal(calcularTotalVenta(solicitud));
         v.setComprador(solicitud.getComprador());
         v.setObservaciones(solicitud.getObservaciones());
-        return aVentaRespuesta(ventaRepository.save(v));
+        v = ventaRepository.save(v);
+        Long ingresoId = libroEmpresa.asegurarIngresoDeVenta(
+                v.getIngresoId(),
+                ModuloSistema.FEEDLOT,
+                Ingreso.TipoIngreso.VENTA_ANIMAL,
+                v.getTotal(),
+                v.getFecha(),
+                "Venta feedlot lote " + lote.getNombre(),
+                v.getComprador(),
+                v.getCampanaId(),
+                ServicioLibroEmpresa.REF_VENTA_FEEDLOT,
+                v.getId());
+        if (ingresoId != null && v.getIngresoId() == null) {
+            v.setIngresoId(ingresoId);
+            v = ventaRepository.save(v);
+        }
+        return aVentaRespuesta(v);
     }
 
     @Transactional(readOnly = true)

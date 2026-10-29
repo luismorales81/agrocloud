@@ -36,6 +36,7 @@ Gestionar **postura y producción de huevos** en explotaciones independientes de
 - Lotes con `cantidad_aves_inicial` / `cantidad_aves_actual` y estado `ACTIVO` | `CERRADO`.
 - Producción diaria agregada por día (sin clasificación por calibre en v1).
 - Sin FK a tablas `avicola_*` de crianza.
+- **Venta de huevos** del lote de postura: cantidad, precio y comprador. No se puede vender más que los huevos producidos menos los rotos y menos lo ya vendido. Si el importe es mayor que cero, se crea un ingreso `VENTA_HUEVOS` en el libro de la empresa (`SPEC-ECONOMIA-EMPRESA.md`). Aprobado para desarrollo local en octubre 2026.
 
 ## 5. Excluido (v2+)
 

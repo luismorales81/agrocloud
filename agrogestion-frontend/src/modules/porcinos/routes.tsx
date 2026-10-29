@@ -12,6 +12,7 @@ import LotesPorcinosScreen from './pages/LotesPorcinosScreen';
 import DetalleLotePorcinosScreen from './pages/DetalleLotePorcinosScreen';
 import DietasPorcinosScreen from './pages/DietasPorcinosScreen';
 import InsumosPorcinosScreen from './pages/InsumosPorcinosScreen';
+import FinanzasDelModulo from '../../components/FinanzasDelModulo';
 import VentasPorcinosScreen from './pages/VentasPorcinosScreen';
 import SanidadPorcinosScreen from './pages/SanidadPorcinosScreen';
 import EstablecimientosPorcinosScreen from './pages/EstablecimientosPorcinosScreen';
@@ -159,6 +160,11 @@ export const porcinosRoutes: ModuleRoute[] = [
     path: '/porcinos/insumos',
     name: 'Insumos',
     component: envolverSiModuloPorcinosHabilitado(InsumosPorcinosScreen),
+  },
+  {
+    path: '/porcinos/finanzas',
+    name: 'Finanzas',
+    component: envolverSiModuloPorcinosHabilitado(FinanzasDelModulo),
   },
   {
     path: '/porcinos/ventas',

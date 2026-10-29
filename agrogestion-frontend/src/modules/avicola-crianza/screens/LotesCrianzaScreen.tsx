@@ -24,6 +24,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { Pencil } from 'lucide-react';
+import SelectorRazasLote from '../../../components/SelectorRazasLote';
 import {
   listarLotesCrianza,
   listarEstablecimientosCrianza,
@@ -60,7 +61,7 @@ const LotesCrianzaScreen: React.FC = () => {
   const [loteEditando, setLoteEditando] = useState<AvicolaLoteRespuesta | null>(null);
 
   const [establecimientoId, setEstablecimientoId] = useState<number | ''>('');
-  const [razaId, setRazaId] = useState<number | ''>('');
+  const [razaIds, setRazaIds] = useState<number[]>([]);
   const [nombre, setNombre] = useState('');
   const [especie, setEspecie] = useState<EspecieCrianza>('POLLO_PARRILLERO');
   const [origen, setOrigen] = useState('EXTERNO');
@@ -110,7 +111,7 @@ const LotesCrianzaScreen: React.FC = () => {
   const abrirNuevo = () => {
     setLoteEditando(null);
     setEstablecimientoId('');
-    setRazaId('');
+    setRazaIds([]);
     setNombre('');
     setEspecie('POLLO_PARRILLERO');
     setOrigen('EXTERNO');
@@ -123,10 +124,9 @@ const LotesCrianzaScreen: React.FC = () => {
   };
 
   const abrirEditar = (l: AvicolaLoteRespuesta) => {
-    if (l.estado === 'CERRADO') return;
     setLoteEditando(l);
     setEstablecimientoId(l.establecimientoId ?? '');
-    setRazaId(l.razaId ?? '');
+    setRazaIds(l.razaIds && l.razaIds.length > 0 ? l.razaIds : l.razaId != null ? [l.razaId] : []);
     setNombre(l.nombre);
     setEspecie((l.especie as EspecieCrianza) || 'POLLO_PARRILLERO');
     setOrigen(l.origen || 'EXTERNO');
@@ -144,22 +144,32 @@ const LotesCrianzaScreen: React.FC = () => {
         setError('El nombre del lote es obligatorio.');
         return;
       }
+      const loteCerrado = loteEditando?.estado === 'CERRADO';
+      if (razaIds.length === 0) {
+        setError('Seleccioná al menos una raza.');
+        return;
+      }
       if (loteEditando) {
-        if (establecimientoId === '' || razaId === '') {
-          setError('Seleccioná establecimiento y raza.');
+        if (!loteCerrado && establecimientoId === '') {
+          setError('Seleccioná establecimiento y al menos una raza.');
           return;
         }
-        await actualizarLoteCrianza(loteEditando.id, {
-          establecimientoId: Number(establecimientoId),
-          razaId: Number(razaId),
-          nombre: nombre.trim(),
-          especie,
-          origen: origen.trim() || undefined,
-          observaciones: observaciones.trim() || null,
-        });
+        await actualizarLoteCrianza(
+          loteEditando.id,
+          loteCerrado
+            ? { razaIds }
+            : {
+                establecimientoId: Number(establecimientoId),
+                razaIds,
+                nombre: nombre.trim(),
+                especie,
+                origen: origen.trim() || undefined,
+                observaciones: observaciones.trim() || null,
+              }
+        );
       } else {
-        if (establecimientoId === '' || razaId === '') {
-          setError('Seleccioná establecimiento y raza.');
+        if (establecimientoId === '' || razaIds.length === 0) {
+          setError('Seleccioná establecimiento y al menos una raza.');
           return;
         }
         const ci = parseInt(cantidadInicial, 10);
@@ -179,7 +189,7 @@ const LotesCrianzaScreen: React.FC = () => {
         }
         await crearLoteCrianza({
           establecimientoId: Number(establecimientoId),
-          razaId: Number(razaId),
+          razaIds,
           nombre: nombre.trim(),
           especie,
           origen: origen.trim() || 'EXTERNO',
@@ -252,7 +262,7 @@ const LotesCrianzaScreen: React.FC = () => {
               <TableRow>
                 <TableCell>Nombre</TableCell>
                 <TableCell>Establecimiento</TableCell>
-                <TableCell>Raza</TableCell>
+                <TableCell>Razas</TableCell>
                 <TableCell>Especie</TableCell>
                 <TableCell align="right">Aves</TableCell>
                 <TableCell>Ingreso</TableCell>
@@ -289,8 +299,12 @@ const LotesCrianzaScreen: React.FC = () => {
                       <Button size="small" variant="text" onClick={() => navigate(`/avicola-crianza/lotes/${l.id}`)}>
                         Ver
                       </Button>
-                      {l.estado !== 'CERRADO' && (
+                      {l.estado !== 'CERRADO' ? (
                         <IconButton size="small" onClick={() => abrirEditar(l)} aria-label="Editar lote">
+                          <Pencil size={18} />
+                        </IconButton>
+                      ) : (
+                        <IconButton size="small" onClick={() => abrirEditar(l)} aria-label="Corregir razas">
                           <Pencil size={18} />
                         </IconButton>
                       )}
@@ -304,14 +318,18 @@ const LotesCrianzaScreen: React.FC = () => {
       )}
 
       <Dialog open={dialogo} onClose={() => setDialogo(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{loteEditando ? 'Editar lote' : 'Nuevo lote'}</DialogTitle>
+        <DialogTitle>{loteEditando?.estado === 'CERRADO' ? 'Corregir razas' : loteEditando ? 'Editar lote' : 'Nuevo lote'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            {loteEditando?.estado === 'CERRADO' && (
+              <Alert severity="info">En un lote cerrado solo se pueden corregir las razas.</Alert>
+            )}
             <TextField
               select
               label="Establecimiento"
               fullWidth
               required
+              disabled={loteEditando?.estado === 'CERRADO'}
               value={establecimientoId}
               onChange={(ev) => setEstablecimientoId(ev.target.value === '' ? '' : Number(ev.target.value))}
             >
@@ -322,30 +340,39 @@ const LotesCrianzaScreen: React.FC = () => {
                 </MenuItem>
               ))}
             </TextField>
+            <SelectorRazasLote razas={razas} seleccionadas={razaIds} onChange={setRazaIds} />
+            {(razasActivas.length === 0 && razaIds.length === 0) && (
+              <Alert severity="warning">No hay razas activas. Cargá al menos una raza en el catálogo.</Alert>
+            )}
+            <TextField
+              label="Nombre del lote"
+              fullWidth
+              value={nombre}
+              disabled={loteEditando?.estado === 'CERRADO'}
+              onChange={(ev) => setNombre(ev.target.value)}
+            />
             <TextField
               select
-              label="Raza"
+              label="Especie"
               fullWidth
-              required
-              value={razaId}
-              onChange={(ev) => setRazaId(ev.target.value === '' ? '' : Number(ev.target.value))}
+              disabled={loteEditando?.estado === 'CERRADO'}
+              value={especie}
+              onChange={(ev) => setEspecie(ev.target.value as EspecieCrianza)}
             >
-              <MenuItem value="">Seleccionar…</MenuItem>
-              {razasActivas.map((r) => (
-                <MenuItem key={r.id} value={r.id}>
-                  {r.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField label="Nombre del lote" fullWidth value={nombre} onChange={(ev) => setNombre(ev.target.value)} />
-            <TextField select label="Especie" fullWidth value={especie} onChange={(ev) => setEspecie(ev.target.value as EspecieCrianza)}>
               {ESPECIES.map((esp) => (
                 <MenuItem key={esp} value={esp}>
                   {ETIQUETA_ESPECIE[esp]}
                 </MenuItem>
               ))}
             </TextField>
-            <TextField label="Origen" fullWidth value={origen} onChange={(ev) => setOrigen(ev.target.value)} helperText="Ej. EXTERNO, PROPIO" />
+            <TextField
+              label="Origen"
+              fullWidth
+              disabled={loteEditando?.estado === 'CERRADO'}
+              value={origen}
+              onChange={(ev) => setOrigen(ev.target.value)}
+              helperText="Ej. EXTERNO, PROPIO"
+            />
             {!loteEditando && (
               <TextField
                 label="Fecha de ingreso"
@@ -392,6 +419,7 @@ const LotesCrianzaScreen: React.FC = () => {
               fullWidth
               multiline
               minRows={2}
+              disabled={loteEditando?.estado === 'CERRADO'}
               value={observaciones}
               onChange={(ev) => setObservaciones(ev.target.value)}
             />

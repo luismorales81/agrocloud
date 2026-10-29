@@ -10,6 +10,7 @@ import InsumosCrianzaScreen from './screens/InsumosCrianzaScreen';
 import LotesCrianzaScreen from './screens/LotesCrianzaScreen';
 import DetalleLoteCrianzaScreen from './screens/DetalleLoteCrianzaScreen';
 import ReportesCrianzaScreen from './screens/ReportesCrianzaScreen';
+import FinanzasDelModulo from '../../components/FinanzasDelModulo';
 import GestionPeriodosScreen from '../../components/GestionCampanasScreen';
 
 const RedirigirCatalogoCrianzaAEstablecimientos = () =>
@@ -61,6 +62,12 @@ export const avicolaCrianzaRoutes: ModuleRoute[] = [
     name: 'Insumos',
     component: InsumosCrianzaScreen,
     permisos: ['canViewInsumos'],
+  },
+  {
+    path: '/avicola-crianza/finanzas',
+    name: 'Finanzas',
+    component: FinanzasDelModulo,
+    permisos: ['canViewFinances'],
   },
   {
     path: '/avicola-crianza/reportes',

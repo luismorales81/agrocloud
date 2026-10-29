@@ -163,3 +163,31 @@ export async function guardarAmbienteDiario(
   const { data } = await api.put<AmbienteDiario>(`${BASE}/galpones/${galponId}/ambiente-diario`, cuerpo);
   return data;
 }
+
+export interface AvicolaPonedorasRaza {
+  id: number;
+  empresaId: number;
+  nombre: string;
+  activo?: boolean;
+}
+
+export async function listarRazasPonedoras(): Promise<AvicolaPonedorasRaza[]> {
+  const { data } = await api.get<AvicolaPonedorasRaza[]>(`${BASE}/razas`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function crearRazaPonedoras(cuerpo: {
+  nombre: string;
+  activo?: boolean;
+}): Promise<AvicolaPonedorasRaza> {
+  const { data } = await api.post<AvicolaPonedorasRaza>(`${BASE}/razas`, cuerpo);
+  return data;
+}
+
+export async function actualizarRazaPonedoras(
+  id: number,
+  cuerpo: { nombre: string; activo?: boolean }
+): Promise<AvicolaPonedorasRaza> {
+  const { data } = await api.put<AvicolaPonedorasRaza>(`${BASE}/razas/${id}`, cuerpo);
+  return data;
+}

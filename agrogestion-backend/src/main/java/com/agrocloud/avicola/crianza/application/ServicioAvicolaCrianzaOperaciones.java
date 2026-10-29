@@ -4,7 +4,10 @@ import com.agrocloud.avicola.crianza.model.dto.*;
 import com.agrocloud.avicola.crianza.model.entity.*;
 import com.agrocloud.avicola.crianza.model.enums.AvicolaLoteEstado;
 import com.agrocloud.avicola.crianza.repository.*;
+import com.agrocloud.core.application.ServicioLibroEmpresa;
+import com.agrocloud.core.domain.Ingreso;
 import com.agrocloud.core.inventory.application.InventoryService;
+import com.agrocloud.model.enums.ModuloSistema;
 import com.agrocloud.core.inventory.domain.InventoryOrigin;
 import com.agrocloud.core.inventory.domain.InventoryResult;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,7 @@ public class ServicioAvicolaCrianzaOperaciones {
     private final AvicolaConsumoRepository consumoRepository;
     private final AvicolaEventoSanitarioRepository eventoSanitarioRepository;
     private final InventoryService inventoryService;
+    private final ServicioLibroEmpresa libroEmpresa;
 
     public ServicioAvicolaCrianzaOperaciones(
             ServicioAvicolaCrianzaLote servicioLote,
@@ -35,7 +39,8 @@ public class ServicioAvicolaCrianzaOperaciones {
             AvicolaVentaRepository ventaRepository,
             AvicolaConsumoRepository consumoRepository,
             AvicolaEventoSanitarioRepository eventoSanitarioRepository,
-            InventoryService inventoryService) {
+            InventoryService inventoryService,
+            ServicioLibroEmpresa libroEmpresa) {
         this.servicioLote = servicioLote;
         this.pesadaRepository = pesadaRepository;
         this.muerteRepository = muerteRepository;
@@ -43,6 +48,7 @@ public class ServicioAvicolaCrianzaOperaciones {
         this.consumoRepository = consumoRepository;
         this.eventoSanitarioRepository = eventoSanitarioRepository;
         this.inventoryService = inventoryService;
+        this.libroEmpresa = libroEmpresa;
     }
 
     private AvicolaLote loteActivo(Long empresaId, Long loteId) {
@@ -150,7 +156,23 @@ public class ServicioAvicolaCrianzaOperaciones {
         v.setComprador(solicitud.getComprador());
         v.setObservaciones(solicitud.getObservaciones());
         v.setCampanaId(l.getCampanaId());
-        return aVentaRespuesta(ventaRepository.save(v));
+        v = ventaRepository.save(v);
+        Long ingresoId = libroEmpresa.asegurarIngresoDeVenta(
+                v.getIngresoId(),
+                ModuloSistema.AVICOLA_CRIANZA,
+                Ingreso.TipoIngreso.VENTA_ANIMAL,
+                v.getTotal(),
+                v.getFecha(),
+                "Venta avícola lote " + l.getNombre(),
+                v.getComprador(),
+                v.getCampanaId(),
+                ServicioLibroEmpresa.REF_VENTA_AVICOLA,
+                v.getId());
+        if (ingresoId != null && v.getIngresoId() == null) {
+            v.setIngresoId(ingresoId);
+            v = ventaRepository.save(v);
+        }
+        return aVentaRespuesta(v);
     }
 
     @Transactional(readOnly = true)

@@ -1,5 +1,6 @@
 package com.agrocloud.avicola.crianza.application;
 
+import com.agrocloud.avicola.comun.ComposicionRazasLote;
 import com.agrocloud.avicola.crianza.model.dto.AvicolaCrianzaCierreLoteSolicitud;
 import com.agrocloud.avicola.crianza.model.dto.AvicolaLoteRespuesta;
 import com.agrocloud.avicola.crianza.model.dto.AvicolaLoteSolicitud;
@@ -19,7 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -100,14 +104,15 @@ public class ServicioAvicolaCrianzaLote {
         AvicolaEstablecimiento est = establecimientoRepository
                 .buscarPorIdYEmpresaIdYModulo(solicitud.getEstablecimientoId(), empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Establecimiento no encontrado"));
-        AvicolaRaza raza = razaRepository.buscarPorIdYEmpresaIdYModulo(solicitud.getRazaId(), empresaId, modulo)
-                .orElseThrow(() -> new ResourceNotFoundException("Raza no encontrada"));
-
         AvicolaLote l = new AvicolaLote();
         l.setEmpresaId(empresaId);
         l.setModuloOrigen(modulo);
         l.setEstablecimiento(est);
-        l.setRaza(raza);
+        asignarRazas(
+                l,
+                empresaId,
+                modulo,
+                ComposicionRazasLote.idsSolicitados(solicitud.getRazaIds(), solicitud.getRazaId(), true));
         l.setNombre(solicitud.getNombre());
         l.setEspecie(solicitud.getEspecie());
         l.setOrigen(solicitud.getOrigen() != null ? solicitud.getOrigen() : "EXTERNO");
@@ -132,19 +137,22 @@ public class ServicioAvicolaCrianzaLote {
             Long empresaId, Long loteId, AvicolaModuloOrigen modulo, AvicolaLoteSolicitud solicitud) {
         AvicolaLote l = loteRepository.buscarPorIdYEmpresaIdYModulo(loteId, empresaId, modulo)
                 .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado"));
+        List<Long> idsRazas = ComposicionRazasLote.idsSolicitados(solicitud.getRazaIds(), solicitud.getRazaId(), false);
         if (l.getEstado() == AvicolaLoteEstado.CERRADO) {
-            throw new IllegalArgumentException("No se puede editar un lote cerrado");
+            if (idsRazas == null) {
+                throw new IllegalArgumentException("No se puede editar un lote cerrado");
+            }
+            asignarRazas(l, empresaId, modulo, idsRazas);
+            return aLoteRespuesta(loteRepository.save(l));
+        }
+        if (idsRazas != null) {
+            asignarRazas(l, empresaId, modulo, idsRazas);
         }
         if (solicitud.getEstablecimientoId() != null) {
             AvicolaEstablecimiento est = establecimientoRepository
                     .buscarPorIdYEmpresaIdYModulo(solicitud.getEstablecimientoId(), empresaId, modulo)
                     .orElseThrow(() -> new ResourceNotFoundException("Establecimiento no encontrado"));
             l.setEstablecimiento(est);
-        }
-        if (solicitud.getRazaId() != null) {
-            AvicolaRaza raza = razaRepository.buscarPorIdYEmpresaIdYModulo(solicitud.getRazaId(), empresaId, modulo)
-                    .orElseThrow(() -> new ResourceNotFoundException("Raza no encontrada"));
-            l.setRaza(raza);
         }
         if (solicitud.getNombre() != null) {
             l.setNombre(solicitud.getNombre());
@@ -206,8 +214,7 @@ public class ServicioAvicolaCrianzaLote {
         dto.setEmpresaId(l.getEmpresaId());
         dto.setEstablecimientoId(l.getEstablecimiento() != null ? l.getEstablecimiento().getId() : null);
         dto.setEstablecimientoNombre(l.getEstablecimiento() != null ? l.getEstablecimiento().getNombre() : null);
-        dto.setRazaId(l.getRaza() != null ? l.getRaza().getId() : null);
-        dto.setRazaNombre(l.getRaza() != null ? l.getRaza().getNombre() : null);
+        completarRazas(dto, l);
         dto.setNombre(l.getNombre());
         dto.setEspecie(l.getEspecie());
         dto.setOrigen(l.getOrigen());
@@ -228,5 +235,40 @@ public class ServicioAvicolaCrianzaLote {
                     });
         }
         return dto;
+    }
+
+    private void asignarRazas(AvicolaLote lote, Long empresaId, AvicolaModuloOrigen modulo, List<Long> ids) {
+        List<AvicolaRaza> encontradas = razaRepository.buscarPorIdsYEmpresaIdYModulo(ids, empresaId, modulo);
+        if (encontradas.size() != ids.size()) {
+            throw new ResourceNotFoundException("Raza no encontrada");
+        }
+        Set<Long> previas = lote.getRazas().stream().map(AvicolaRaza::getId).collect(Collectors.toSet());
+        for (AvicolaRaza raza : encontradas) {
+            boolean yaEstaba = previas.contains(raza.getId());
+            if (!yaEstaba && !Boolean.TRUE.equals(raza.getActivo())) {
+                throw new IllegalArgumentException("La raza " + raza.getNombre() + " no está activa");
+            }
+        }
+        lote.getRazas().clear();
+        lote.getRazas().addAll(encontradas);
+        AvicolaRaza principal = encontradas.stream()
+                .min(Comparator.comparing(
+                        raza -> raza.getNombre() == null ? "" : raza.getNombre(), String.CASE_INSENSITIVE_ORDER))
+                .orElseThrow(() -> new IllegalArgumentException("El lote debe tener al menos una raza"));
+        lote.setRaza(principal);
+    }
+
+    private void completarRazas(AvicolaLoteRespuesta dto, AvicolaLote lote) {
+        List<AvicolaRaza> lista = new ArrayList<>(lote.getRazas() != null ? lote.getRazas() : List.of());
+        if (lista.isEmpty() && lote.getRaza() != null) {
+            lista.add(lote.getRaza());
+        }
+        lista.sort(Comparator.comparing(
+                raza -> raza.getNombre() == null ? "" : raza.getNombre(), String.CASE_INSENSITIVE_ORDER));
+        dto.setRazaIds(lista.stream().map(AvicolaRaza::getId).toList());
+        dto.setRazaNombre(ComposicionRazasLote.unirNombres(lista.stream().map(AvicolaRaza::getNombre).toList()));
+        if (!lista.isEmpty()) {
+            dto.setRazaId(lista.get(0).getId());
+        }
     }
 }

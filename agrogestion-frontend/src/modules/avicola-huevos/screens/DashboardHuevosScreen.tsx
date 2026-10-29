@@ -145,7 +145,7 @@ const DashboardHuevosScreen: React.FC = () => {
                 <TableRow>
                   <TableCell>Nombre</TableCell>
                   <TableCell>Establecimiento</TableCell>
-                  <TableCell>Raza</TableCell>
+                      <TableCell>Razas</TableCell>
                   <TableCell align="right">Aves actuales</TableCell>
                   <TableCell>Inicio</TableCell>
                   <TableCell align="right">Acción</TableCell>

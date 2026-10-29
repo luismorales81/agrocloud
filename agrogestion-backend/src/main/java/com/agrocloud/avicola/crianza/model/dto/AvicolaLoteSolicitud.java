@@ -4,6 +4,7 @@ import com.agrocloud.avicola.crianza.model.enums.AvicolaEspecie;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Datos para crear o actualizar un lote avícola.
@@ -12,6 +13,7 @@ public class AvicolaLoteSolicitud {
 
     private Long establecimientoId;
     private Long razaId;
+    private List<Long> razaIds;
     private String nombre;
     private AvicolaEspecie especie;
     private String origen;
@@ -35,6 +37,14 @@ public class AvicolaLoteSolicitud {
 
     public void setRazaId(Long razaId) {
         this.razaId = razaId;
+    }
+
+    public List<Long> getRazaIds() {
+        return razaIds;
+    }
+
+    public void setRazaIds(List<Long> razaIds) {
+        this.razaIds = razaIds;
     }
 
     public String getNombre() {

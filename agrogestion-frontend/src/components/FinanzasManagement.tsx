@@ -4,7 +4,7 @@ import Input from './ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Badge from './ui/Badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
-import { ingresosService, egresosService, camposService, insumosService } from '../services/apiServices';
+import { camposService, insumosService, egresosService, economiaService, mensajeEconomia } from '../services/apiServices';
 import { haySesionActiva } from '../services/api';
 import PermissionGate from './PermissionGate';
 import { Icon } from '../core/components/Icon';
@@ -81,7 +81,7 @@ interface Insumo {
   userName?: string;
 }
 
-const FinanzasManagement: React.FC = () => {
+const FinanzasManagement: React.FC<{ modulo?: string }> = ({ modulo = 'CULTIVOS' }) => {
   const { formatCurrency } = useCurrencyContext();
   const { campanaId } = useContextoOperativo();
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
@@ -256,7 +256,7 @@ const FinanzasManagement: React.FC = () => {
 
   useEffect(() => {
     cargarDatos();
-  }, [campanaId]);
+  }, [campanaId, modulo]);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -277,7 +277,7 @@ const FinanzasManagement: React.FC = () => {
   const cargarIngresos = async () => {
     try {
       console.log('📥 Cargando ingresos desde BD...');
-      const data = await ingresosService.listar();
+      const data = await economiaService.listarIngresos(modulo);
       setIngresos(Array.isArray(data) ? data : []);
       console.log('✅ Ingresos cargados desde BD:', Array.isArray(data) ? data.length : 0);
     } catch (error) {
@@ -289,7 +289,7 @@ const FinanzasManagement: React.FC = () => {
   const cargarEgresos = async () => {
     try {
       console.log('📥 Cargando egresos desde BD...');
-      const data = await egresosService.listar();
+      const data = await economiaService.listarEgresos(modulo, true);
       setEgresos(Array.isArray(data) ? data : []);
       console.log('✅ Egresos cargados desde BD:', Array.isArray(data) ? data.length : 0);
     } catch (error) {
@@ -373,13 +373,14 @@ const FinanzasManagement: React.FC = () => {
         clienteComprador: ingresoForm.clienteComprador,
         observaciones: ingresoForm.observaciones,
         estado: ingresoForm.estado,
-        lote: ingresoForm.lote ? { id: ingresoForm.lote.id } : null
+        loteId: ingresoForm.lote?.id,
+        tipo: ingresoForm.tipoIngreso,
+        modulo
       };
 
       console.log('📤 Enviando ingreso al backend:', ingresoData);
       
-      // Guardar en la base de datos
-      const ingresoGuardado = await ingresosService.crear(ingresoData);
+      const ingresoGuardado = await economiaService.crearIngreso(ingresoData);
       
       console.log('✅ Ingreso guardado en BD:', ingresoGuardado);
       
@@ -390,7 +391,7 @@ const FinanzasManagement: React.FC = () => {
       cerrarModal();
     } catch (error) {
       console.error('❌ Error guardando ingreso:', error);
-      alert('❌ Error al guardar el ingreso en la base de datos');
+      alert(mensajeEconomia(error, 'No se pudo guardar el ingreso'));
     } finally {
       setLoading(false);
     }
@@ -405,22 +406,35 @@ const FinanzasManagement: React.FC = () => {
     setLoading(true);
     try {
       // Validar que si es un egreso de insumos, tenga la información completa
-      if (egresoForm.tipoEgreso === 'INSUMOS') {
-        if (!egresoForm.insumo?.nombre) {
-          alert('⚠️ Para egresos de insumos, debes especificar el nombre del insumo');
+      if (egresoForm.tipoEgreso === 'INSUMOS' || egresoForm.tipoEgreso === 'INSUMO') {
+        if (!egresoForm.insumo?.id) {
+          alert('Elegí un insumo ya cargado. Para dar de alta uno nuevo usá Insumos y después Reponer.');
           setLoading(false);
           return;
         }
         if (!egresoForm.cantidad || egresoForm.cantidad <= 0) {
-          alert('⚠️ Para egresos de insumos, debes especificar una cantidad válida');
+          alert('Indicá una cantidad mayor que cero');
           setLoading(false);
           return;
         }
-        if (!egresoForm.unidadMedida) {
-          alert('⚠️ Para egresos de insumos, debes especificar la unidad de medida');
+        if (!egresoForm.monto || egresoForm.monto <= 0) {
+          alert('Indicá el costo total de la compra');
           setLoading(false);
           return;
         }
+        await economiaService.comprarInsumo({
+          insumoId: egresoForm.insumo.id,
+          cantidad: egresoForm.cantidad,
+          costoTotal: egresoForm.monto,
+          fecha: egresoForm.fechaEgreso || new Date().toISOString().split('T')[0],
+          proveedor: egresoForm.proveedor,
+          modulo,
+          observaciones: egresoForm.observaciones
+        });
+        await cargarDatos();
+        alert('Compra registrada. El stock del insumo aumentó y el gasto quedó en el libro de la empresa.');
+        cerrarModal();
+        return;
       }
 
       // Preparar datos para enviar al backend
@@ -430,61 +444,29 @@ const FinanzasManagement: React.FC = () => {
         tipo: egresoForm.tipoEgreso,
         cantidad: egresoForm.cantidad,
         unidadMedida: egresoForm.unidadMedida,
-        costoTotal: egresoForm.monto,
+        monto: egresoForm.monto,
         fecha: egresoForm.fechaEgreso,
         proveedor: egresoForm.proveedor,
         observaciones: egresoForm.observaciones,
         estado: egresoForm.estado,
-        lote: egresoForm.lote ? { id: egresoForm.lote.id } : null,
-        referenciaId: egresoForm.insumo?.id
+        loteId: egresoForm.lote?.id,
+        modulo
       };
 
       console.log('📤 Enviando egreso al backend:', egresoData);
       
-      // Guardar en la base de datos
-      const egresoGuardado = await egresosService.crear(egresoData);
+      const egresoGuardado = await economiaService.crearEgreso(egresoData);
       
       console.log('✅ Egreso guardado en BD:', egresoGuardado);
       
       // Agregar a la lista local
       setEgresos(prev => [...prev, egresoGuardado]);
       
-      // Si es un egreso de insumos, actualizar el inventario
-      if (egresoForm.tipoEgreso === 'INSUMOS') {
-        if (egresoForm.insumo?.id) {
-          // Actualizar insumo existente
-          await actualizarInventarioInsumo(egresoForm.insumo.id, egresoForm.cantidad || 0);
-        } else if (egresoForm.insumo?.nombre) {
-          // Crear nuevo insumo con la cantidad comprada
-          const nuevoInsumo = {
-            nombre: egresoForm.insumo.nombre,
-            descripcion: egresoForm.descripcion || `Comprado el ${egresoForm.fechaEgreso}`,
-            tipo: 'OTROS',
-            unidadMedida: egresoForm.unidadMedida || 'unidad',
-            precioUnitario: (egresoForm.monto || 0) / (egresoForm.cantidad || 1),
-            stockMinimo: 1,
-            stockActual: egresoForm.cantidad || 0,
-            proveedor: egresoForm.proveedor || '',
-            fechaVencimiento: null,
-            activo: true
-          };
-
-          try {
-            const insumoCreado = await insumosService.crear(nuevoInsumo);
-            setInsumos(prev => [...prev, insumoCreado]);
-            alert(`✅ Nuevo insumo "${insumoCreado.nombre}" creado y agregado al inventario`);
-          } catch (error) {
-            console.error('Error creando insumo:', error);
-            alert('⚠️ El egreso se guardó pero hubo un error creando el insumo');
-          }
-        }
-      }
-      
       alert('✅ Egreso guardado exitosamente en la base de datos');
       cerrarModal();
     } catch (error) {
       console.error('❌ Error guardando egreso:', error);
-      alert('❌ Error al guardar el egreso en la base de datos');
+      alert(mensajeEconomia(error, 'No se pudo guardar el egreso'));
     } finally {
       setLoading(false);
     }
@@ -553,11 +535,9 @@ const FinanzasManagement: React.FC = () => {
           return;
         }
 
-        await ingresosService.eliminar(id);
-        
-        // Eliminar del estado local solo si la API confirma la eliminación
-        setIngresos(prev => prev.filter(ingreso => ingreso.id !== id));
-        alert('Ingreso eliminado exitosamente');
+        await economiaService.anularIngreso(id);
+        await cargarDatos();
+        alert('Ingreso anulado');
       } catch (error) {
         console.error('Error de conexión al eliminar el ingreso:', error);
         alert('Error de conexión al eliminar el ingreso. Por favor, verifica tu conexión e intenta nuevamente.');
@@ -577,14 +557,20 @@ const FinanzasManagement: React.FC = () => {
           return;
         }
 
-        await egresosService.eliminar(id);
-        
-        // Eliminar del estado local solo si la API confirma la eliminación
-        setEgresos(prev => prev.filter(egreso => egreso.id !== id));
-        alert('Egreso eliminado exitosamente');
+        const egreso = egresos.find((item) => item.id === id);
+        const esCompra = egreso?.tipo === 'INSUMO' || egreso?.tipo === 'INSUMOS' || egreso?.tipoEgreso === 'INSUMOS';
+        if (esCompra) {
+          await economiaService.anularCompra(id);
+          await cargarDatos();
+          alert('Compra anulada. El stock volvió atrás si todavía alcanzaba.');
+        } else {
+          await egresosService.eliminar(id);
+          setEgresos(prev => prev.filter(item => item.id !== id));
+          alert('Egreso eliminado');
+        }
       } catch (error) {
         console.error('Error de conexión al eliminar el egreso:', error);
-        alert('Error de conexión al eliminar el egreso. Por favor, verifica tu conexión e intenta nuevamente.');
+        alert(mensajeEconomia(error, 'No se pudo anular el egreso. Si el insumo ya se consumió, la compra no se puede deshacer.'));
       } finally {
         setLoading(false);
       }
@@ -714,6 +700,9 @@ const FinanzasManagement: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Icon name="DollarSign" size={24} /> Gestión Financiera
+          <p className="text-sm text-gray-600 mt-2">
+            Libro de la empresa, filtrado por este módulo. Las compras de insumos se ven en todos los módulos porque el stock es compartido. Consumir un insumo en una labor o una dieta no genera otro gasto: ese dinero ya salió en la compra.
+          </p>
         </h1>
         <div className="flex gap-2">
           <PermissionGate permission="canCreateFinances">

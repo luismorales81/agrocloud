@@ -126,6 +126,21 @@ public class BalanceService {
     /**
      * Balance filtrado por campaña (ingresos/egresos etiquetados + rango de fechas de la campaña).
      */
+    /**
+     * Suma solo el libro de la empresa. No incluye costos de labores: el insumo comprado ya es un egreso.
+     */
+    public BalanceDTO calcularBalancePorEmpresa(Long empresaId, LocalDate fechaInicio, LocalDate fechaFin) {
+        BigDecimal totalIngresos = ingresoRepository.sumarPorEmpresaYFecha(empresaId, fechaInicio, fechaFin);
+        BigDecimal totalEgresos = egresoRepository.sumarPorEmpresaYFecha(empresaId, fechaInicio, fechaFin);
+        if (totalIngresos == null) {
+            totalIngresos = BigDecimal.ZERO;
+        }
+        if (totalEgresos == null) {
+            totalEgresos = BigDecimal.ZERO;
+        }
+        return new BalanceDTO(fechaInicio, fechaFin, totalIngresos, totalEgresos);
+    }
+
     public BalanceDTO calcularBalancePorCampana(Long campanaId, LocalDate fechaInicio, LocalDate fechaFin) {
         BigDecimal totalIngresos = ingresoRepository.calcularTotalIngresosPorCampanaYFecha(campanaId, fechaInicio, fechaFin);
         BigDecimal totalEgresos = egresoRepository.calcularTotalEgresosPorCampanaYFecha(campanaId, fechaInicio, fechaFin);

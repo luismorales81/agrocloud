@@ -94,6 +94,58 @@ export const egresosService = {
   },
 };
 
+export const economiaService = {
+  async listarIngresos(modulo?: string) {
+    const response = await api.get('/v1/economia/ingresos', { params: { modulo } });
+    return response.data;
+  },
+
+  async listarEgresos(modulo?: string, incluirCompartidas = true) {
+    const response = await api.get('/v1/economia/egresos', {
+      params: { modulo, incluirCompartidas },
+    });
+    return response.data;
+  },
+
+  async comprarInsumo(datos: {
+    insumoId: number;
+    cantidad: number;
+    costoTotal: number;
+    fecha: string;
+    proveedor?: string;
+    modulo: string;
+    observaciones?: string;
+  }) {
+    const response = await api.post('/v1/economia/compras', datos);
+    return response.data;
+  },
+
+  async anularCompra(id: number) {
+    const response = await api.post(`/v1/economia/compras/${id}/anulacion`);
+    return response.data;
+  },
+
+  async crearEgreso(datos: any) {
+    const response = await api.post('/v1/economia/egresos', datos);
+    return response.data;
+  },
+
+  async crearIngreso(datos: any) {
+    const response = await api.post('/v1/economia/ingresos', datos);
+    return response.data;
+  },
+
+  async anularIngreso(id: number) {
+    const response = await api.post(`/v1/economia/ingresos/${id}/anulacion`);
+    return response.data;
+  },
+};
+
+export function mensajeEconomia(error: unknown, respaldo: string): string {
+  const datos = (error as { response?: { data?: { mensaje?: string } } })?.response?.data;
+  return datos?.mensaje || respaldo;
+}
+
 export const balanceService = {
   async obtenerGeneral(fechaInicio: string, fechaFin: string) {
     const response = await api.get(API_ENDPOINTS.BALANCE.GENERAL(fechaInicio, fechaFin));

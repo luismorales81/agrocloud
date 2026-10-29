@@ -8,7 +8,7 @@ export { authService, eulaService, usuariosService } from './domain/authServices
 export { cultivosService, lotesService } from './domain/cultivosLotesServices';
 export { insumosService, dosisAgroquimicosService, laboresService } from './domain/insumosLaboresServices';
 export { camposService, maquinariaService } from './domain/camposMaquinariaServices';
-export { ingresosService, egresosService, balanceService } from './domain/finanzasServices';
+export { ingresosService, egresosService, balanceService, economiaService, mensajeEconomia } from './domain/finanzasServices';
 export {
   rolesService,
   aplicacionesAgroquimicasService,

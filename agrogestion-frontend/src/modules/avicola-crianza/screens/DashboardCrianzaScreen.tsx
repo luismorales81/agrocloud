@@ -150,7 +150,7 @@ const DashboardCrianzaScreen: React.FC = () => {
                 <TableRow>
                   <TableCell>Nombre</TableCell>
                   <TableCell>Establecimiento</TableCell>
-                  <TableCell>Raza</TableCell>
+                  <TableCell>Razas</TableCell>
                   <TableCell>Especie</TableCell>
                   <TableCell align="right">Aves</TableCell>
                   <TableCell>Ingreso</TableCell>

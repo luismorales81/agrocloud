@@ -40,12 +40,15 @@ import {
   listarAjustesPlantelHuevos,
   listarEventosSanitariosHuevos,
   registrarEventoSanitarioHuevos,
+  listarVentasHuevos,
+  registrarVentaHuevos,
   AvicolaHuevoLoteRespuesta,
   AvicolaHuevosResumenRespuesta,
   AvicolaHuevoProduccionDiariaRespuesta,
   AvicolaHuevoConsumoRespuesta,
   AvicolaHuevoEventoSanitarioRespuesta,
   AvicolaHuevoAjustePlantelRespuesta,
+  AvicolaHuevoVentaRespuesta,
   mensajeError,
 } from '../services/avicolaHuevosApi';
 import {
@@ -76,11 +79,12 @@ const DetalleLoteHuevosScreen: React.FC = () => {
   const [produccion, setProduccion] = useState<AvicolaHuevoProduccionDiariaRespuesta[]>([]);
   const [consumos, setConsumos] = useState<AvicolaHuevoConsumoRespuesta[]>([]);
   const [eventos, setEventos] = useState<AvicolaHuevoEventoSanitarioRespuesta[]>([]);
+  const [ventas, setVentas] = useState<AvicolaHuevoVentaRespuesta[]>([]);
   const [insumos, setInsumos] = useState<InsumoOpcion[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [dialogo, setDialogo] = useState<'produccion' | 'consumo' | 'sanidad' | 'ajuste' | 'editarConsumo' | null>(null);
+  const [dialogo, setDialogo] = useState<'produccion' | 'consumo' | 'sanidad' | 'ajuste' | 'editarConsumo' | 'venta' | null>(null);
   const hoy = () => new Date().toISOString().slice(0, 10);
 
   const [fProd, setFProd] = useState(hoy());
@@ -110,6 +114,11 @@ const DetalleLoteHuevosScreen: React.FC = () => {
   const [insSan, setInsSan] = useState<number | ''>('');
   const [dosisSan, setDosisSan] = useState('');
   const [obsSan, setObsSan] = useState('');
+  const [fVenta, setFVenta] = useState(hoy());
+  const [cantVenta, setCantVenta] = useState('');
+  const [precioVenta, setPrecioVenta] = useState('');
+  const [compradorVenta, setCompradorVenta] = useState('');
+  const [obsVenta, setObsVenta] = useState('');
 
   const loteCerrado = lote?.estado === 'CERRADO';
 
@@ -200,17 +209,19 @@ const DetalleLoteHuevosScreen: React.FC = () => {
 
   const recargarListas = useCallback(async () => {
     if (Number.isNaN(loteId)) return;
-    const [p, c, e, r, lt, aj] = await Promise.all([
+    const [p, c, e, r, lt, aj, v] = await Promise.all([
       listarProduccionHuevos(loteId),
       listarConsumosHuevos(loteId),
       listarEventosSanitariosHuevos(loteId),
       obtenerResumenHuevos(loteId),
       obtenerLoteHuevos(loteId),
       listarAjustesPlantelHuevos(loteId),
+      listarVentasHuevos(loteId),
     ]);
     setProduccion(p);
     setConsumos(c);
     setEventos(e);
+    setVentas(v);
     setResumen(r);
     setLote(lt);
     setAjustes(aj);
@@ -305,6 +316,32 @@ const DetalleLoteHuevosScreen: React.FC = () => {
         temperaturaDia: parseOptDec(tempProd),
         humedadDia: parseOptDec(humProd),
         observaciones: obsProd.trim() || null,
+      });
+      cerrarDialogos();
+      await recargarListas();
+    } catch (err: unknown) {
+      setError(mensajeError(err));
+    }
+  };
+
+  const guardarVenta = async () => {
+    try {
+      const cantidad = parseInt(cantVenta, 10);
+      if (Number.isNaN(cantidad) || cantidad <= 0) {
+        setError('La cantidad de huevos tiene que ser mayor que cero');
+        return;
+      }
+      const precio = precioVenta.trim() === '' ? null : parseFloat(precioVenta.replace(',', '.'));
+      if (precio != null && (Number.isNaN(precio) || precio < 0)) {
+        setError('El precio por huevo no es válido');
+        return;
+      }
+      await registrarVentaHuevos(loteId, {
+        fecha: fVenta,
+        cantidad,
+        precioUnitario: precio,
+        comprador: compradorVenta.trim() || null,
+        observaciones: obsVenta.trim() || null,
       });
       cerrarDialogos();
       await recargarListas();
@@ -445,6 +482,7 @@ const DetalleLoteHuevosScreen: React.FC = () => {
             <Tab label="Producción diaria" />
             <Tab label="Consumos" />
             <Tab label="Sanidad" />
+            <Tab label="Ventas" />
           </Tabs>
 
           {pestana === 0 && lote && (
@@ -458,7 +496,7 @@ const DetalleLoteHuevosScreen: React.FC = () => {
                     <strong>Establecimiento:</strong> {lote.establecimientoNombre ?? '—'}
                   </Typography>
                   <Typography>
-                    <strong>Raza / línea:</strong> {lote.razaNombre ?? '—'}
+                    <strong>Razas:</strong> {lote.razaNombre ?? '—'}
                   </Typography>
                   <Typography>
                     <strong>Inicio de postura:</strong> {lote.fechaInicio?.slice(0, 10) ?? '—'}
@@ -755,6 +793,59 @@ const DetalleLoteHuevosScreen: React.FC = () => {
               </TableContainer>
             </Box>
           )}
+
+          {pestana === 4 && (
+            <Box>
+              <Button
+                variant="contained"
+                sx={{ mb: 2 }}
+                disabled={loteCerrado}
+                onClick={() => {
+                  setFVenta(hoy());
+                  setCantVenta('');
+                  setPrecioVenta('');
+                  setCompradorVenta('');
+                  setObsVenta('');
+                  setDialogo('venta');
+                }}
+              >
+                Registrar venta
+              </Button>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Se pueden vender los huevos producidos, sin contar los rotos y descontando lo ya vendido. Si hay precio, el importe entra al libro de Finanzas de este módulo.
+              </Typography>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Fecha</TableCell>
+                      <TableCell align="right">Cantidad</TableCell>
+                      <TableCell align="right">Precio</TableCell>
+                      <TableCell align="right">Total</TableCell>
+                      <TableCell>Comprador</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {ventas.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5}>Sin ventas registradas.</TableCell>
+                      </TableRow>
+                    ) : (
+                      ventas.map((venta) => (
+                        <TableRow key={venta.id}>
+                          <TableCell>{venta.fecha}</TableCell>
+                          <TableCell align="right">{venta.cantidad}</TableCell>
+                          <TableCell align="right">{venta.precioUnitario ?? '—'}</TableCell>
+                          <TableCell align="right">{venta.total ?? '—'}</TableCell>
+                          <TableCell>{venta.comprador ?? '—'}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
         </>
       )}
 
@@ -879,6 +970,23 @@ const DetalleLoteHuevosScreen: React.FC = () => {
           <Button variant="contained" onClick={guardarAjustePlantel}>
             Registrar ajuste
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={dialogo === 'venta'} onClose={cerrarDialogos} fullWidth maxWidth="sm">
+        <DialogTitle>Venta de huevos</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField type="date" label="Fecha" InputLabelProps={{ shrink: true }} fullWidth value={fVenta} onChange={(ev) => setFVenta(ev.target.value)} />
+            <TextField label="Cantidad de huevos" type="number" fullWidth value={cantVenta} onChange={(ev) => setCantVenta(ev.target.value)} inputProps={{ min: 1 }} />
+            <TextField label="Precio por huevo" type="number" fullWidth value={precioVenta} onChange={(ev) => setPrecioVenta(ev.target.value)} inputProps={{ min: 0, step: '0.01' }} />
+            <TextField label="Comprador" fullWidth value={compradorVenta} onChange={(ev) => setCompradorVenta(ev.target.value)} />
+            <TextField label="Observaciones" fullWidth multiline minRows={2} value={obsVenta} onChange={(ev) => setObsVenta(ev.target.value)} />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cerrarDialogos}>Cancelar</Button>
+          <Button variant="contained" onClick={guardarVenta}>Registrar venta</Button>
         </DialogActions>
       </Dialog>
 

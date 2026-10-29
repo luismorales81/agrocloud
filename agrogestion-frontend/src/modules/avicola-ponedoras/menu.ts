@@ -15,10 +15,23 @@ export const avicolaPonedorasMenu: MenuItem[] = [
     ruta: '/avicola-ponedoras/panel',
   },
   {
+    id: 'razas',
+    nombre: 'Razas',
+    icono: 'Bird',
+    ruta: '/avicola-ponedoras/razas',
+  },
+  {
     id: 'galpones',
     nombre: 'Galpones',
     icono: 'List',
     ruta: '/avicola-ponedoras/galpones',
+  },
+  {
+    id: 'finanzas',
+    nombre: 'Finanzas',
+    icono: 'DollarSign',
+    ruta: '/avicola-ponedoras/finanzas',
+    permisos: ['canViewFinances'],
   },
   {
     id: 'periodos-gestion',

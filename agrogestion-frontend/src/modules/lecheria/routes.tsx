@@ -11,6 +11,7 @@ import EstablecimientosLecheriaScreen from './pages/EstablecimientosLecheriaScre
 import UbicacionEstablecimientosLecheriaScreen from './pages/UbicacionEstablecimientosLecheriaScreen';
 import CatalogosLecheriaScreen from './pages/CatalogosLecheriaScreen';
 import VentasLecheScreen from './pages/VentasLecheScreen';
+import FinanzasDelModulo from '../../components/FinanzasDelModulo';
 import ReportesLecheriaScreen from './pages/ReportesLecheriaScreen';
 import ImportControlLecheroScreen from './pages/ImportControlLecheroScreen';
 
@@ -69,6 +70,11 @@ export const lecheriaRoutes: ModuleRoute[] = [
     path: '/lecheria/ventas',
     name: 'Ventas de leche',
     component: envolverSiModuloLecheriaHabilitado(VentasLecheScreen),
+  },
+  {
+    path: '/lecheria/finanzas',
+    name: 'Finanzas',
+    component: envolverSiModuloLecheriaHabilitado(FinanzasDelModulo),
   },
   {
     path: '/lecheria/establecimientos-mapa',

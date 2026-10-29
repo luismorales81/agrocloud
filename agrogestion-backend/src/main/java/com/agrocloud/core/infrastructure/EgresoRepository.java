@@ -61,4 +61,26 @@ public interface EgresoRepository extends JpaRepository<Egreso, Long> {
     List<Egreso> findByActivoTrue();
 
     List<Egreso> findByUserId(Long userId);
+
+    @Query("""
+            SELECT e FROM Egreso e
+            WHERE e.empresaId = :empresaId
+            AND (:modulo IS NULL OR e.moduloOrigen = :modulo
+                 OR (:incluirCompartidas = true AND e.imputacion = com.agrocloud.core.domain.ImputacionEconomica.COMPARTIDA))
+            ORDER BY e.fecha DESC, e.id DESC
+            """)
+    List<Egreso> listarPorEmpresa(@Param("empresaId") Long empresaId,
+                                  @Param("modulo") String modulo,
+                                  @Param("incluirCompartidas") boolean incluirCompartidas);
+
+    @Query("""
+            SELECT COALESCE(SUM(e.costoTotal), 0) FROM Egreso e
+            WHERE e.empresaId = :empresaId
+            AND e.fecha BETWEEN :fechaInicio AND :fechaFin
+            AND (e.activo = true OR e.activo IS NULL)
+            AND e.estado <> com.agrocloud.core.domain.Egreso.EstadoEgreso.CANCELADO
+            """)
+    BigDecimal sumarPorEmpresaYFecha(@Param("empresaId") Long empresaId,
+                                     @Param("fechaInicio") LocalDate fechaInicio,
+                                     @Param("fechaFin") LocalDate fechaFin);
 }

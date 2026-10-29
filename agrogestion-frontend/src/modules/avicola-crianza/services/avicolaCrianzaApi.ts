@@ -13,6 +13,7 @@ export interface AvicolaLoteRespuesta {
   establecimientoId?: number;
   establecimientoNombre?: string;
   razaId?: number;
+  razaIds?: number[];
   razaNombre?: string;
   nombre: string;
   especie?: string;
@@ -47,7 +48,8 @@ export interface AvicolaRazaRespuesta {
 
 export interface AvicolaLoteSolicitudCuerpo {
   establecimientoId: number;
-  razaId: number;
+  razaId?: number;
+  razaIds: number[];
   nombre: string;
   especie: EspecieCrianza;
   origen?: string;
@@ -61,6 +63,7 @@ export interface AvicolaLoteSolicitudCuerpo {
 export interface AvicolaLoteEdicionCuerpo {
   establecimientoId?: number;
   razaId?: number;
+  razaIds?: number[];
   nombre?: string;
   especie?: EspecieCrianza;
   origen?: string;

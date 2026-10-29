@@ -11,6 +11,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Lote productivo de aves.
@@ -41,6 +43,15 @@ public class AvicolaLote {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "raza_id", nullable = false)
     private AvicolaRaza raza;
+
+    /** Fuente de verdad de las razas del lote. {@code raza} queda sincronizada con una de ellas. */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "avicola_lote_raza",
+            joinColumns = @JoinColumn(name = "lote_id"),
+            inverseJoinColumns = @JoinColumn(name = "raza_id"))
+    @OrderBy("nombre ASC")
+    private Set<AvicolaRaza> razas = new LinkedHashSet<>();
 
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
@@ -128,6 +139,14 @@ public class AvicolaLote {
 
     public void setRaza(AvicolaRaza raza) {
         this.raza = raza;
+    }
+
+    public Set<AvicolaRaza> getRazas() {
+        return razas;
+    }
+
+    public void setRazas(Set<AvicolaRaza> razas) {
+        this.razas = razas;
     }
 
     public String getNombre() {

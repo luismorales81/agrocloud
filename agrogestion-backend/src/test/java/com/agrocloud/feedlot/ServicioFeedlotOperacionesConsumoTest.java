@@ -1,5 +1,6 @@
 package com.agrocloud.feedlot;
 
+import com.agrocloud.core.application.ServicioLibroEmpresa;
 import com.agrocloud.core.inventory.application.InventoryService;
 import com.agrocloud.core.inventory.domain.InventoryOrigin;
 import com.agrocloud.core.inventory.domain.InventoryResult;
@@ -46,6 +47,7 @@ class ServicioFeedlotOperacionesConsumoTest {
     @Mock private FeedlotEventoSanitarioRepository eventoSanitarioRepository;
     @Mock private FeedlotMotivoMuerteRepository motivoMuerteRepository;
     @Mock private InventoryService inventoryService;
+    @Mock private ServicioLibroEmpresa libroEmpresa;
 
     @InjectMocks
     private ServicioFeedlotOperaciones servicio;

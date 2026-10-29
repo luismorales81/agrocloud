@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmpresa } from '../contexts/EmpresaContext';
-import { insumosService } from '../services/apiServices';
+import { insumosService, economiaService, mensajeEconomia } from '../services/apiServices';
+import { useModule } from '../core/hooks/useModule';
+import { codigoModuloEconomia } from '../core/utils/codigoModuloEconomia';
 import PermissionGate from './PermissionGate';
 import InsumoWizard from './InsumoWizard';
 import { Icon } from './icons';
@@ -42,6 +44,7 @@ interface InsumosUnificadosProps {
 const InsumosUnificados: React.FC<InsumosUnificadosProps> = ({ vistaSimplificadaAvicola = false }) => {
   const { user } = useAuth();
   const { rolUsuario } = useEmpresa();
+  const { currentModule } = useModule();
   
   const [insumos, setInsumos] = useState<InsumoUnificado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +61,10 @@ const InsumosUnificados: React.FC<InsumosUnificadosProps> = ({ vistaSimplificada
   const [showWizard, setShowWizard] = useState(false);
   const [wizardMode, setWizardMode] = useState<'create' | 'edit'>('create');
   const [editingInsumo, setEditingInsumo] = useState<InsumoUnificado | null>(null);
+  const [insumoAReponer, setInsumoAReponer] = useState<InsumoUnificado | null>(null);
+  const [cantidadReposicion, setCantidadReposicion] = useState('');
+  const [costoReposicion, setCostoReposicion] = useState('');
+  const [fechaReposicion, setFechaReposicion] = useState(() => new Date().toISOString().split('T')[0]);
   
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
@@ -397,6 +404,16 @@ const InsumosUnificados: React.FC<InsumosUnificadosProps> = ({ vistaSimplificada
                     
                     <div className="flex items-center space-x-2">
                       <button
+                        onClick={() => {
+                          setInsumoAReponer(insumo);
+                          setCantidadReposicion('');
+                          setCostoReposicion('');
+                        }}
+                        className="text-green-700 hover:text-green-900 text-sm font-medium"
+                      >
+                        Reponer
+                      </button>
+                      <button
                         onClick={() => handleEdit(insumo)}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
@@ -464,6 +481,84 @@ const InsumosUnificados: React.FC<InsumosUnificadosProps> = ({ vistaSimplificada
         )}
 
         {/* Wizard */}
+        {insumoAReponer && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <form
+              className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md space-y-3"
+              onSubmit={async (evento) => {
+                evento.preventDefault();
+                const cantidad = Number(cantidadReposicion);
+                const costoTotal = Number(costoReposicion);
+                if (!cantidad || cantidad <= 0 || !costoTotal || costoTotal <= 0) {
+                  alert('La cantidad y el costo total tienen que ser mayores que cero');
+                  return;
+                }
+                try {
+                  await economiaService.comprarInsumo({
+                    insumoId: insumoAReponer.id,
+                    cantidad,
+                    costoTotal,
+                    fecha: fechaReposicion,
+                    modulo: codigoModuloEconomia(currentModule),
+                  });
+                  setInsumoAReponer(null);
+                  await cargarInsumos();
+                  alert('Stock repuesto. La compra quedó en el libro de la empresa.');
+                } catch (error) {
+                  alert(mensajeEconomia(error, 'No se pudo reponer el insumo'));
+                }
+              }}
+            >
+              <h3 className="text-lg font-semibold">Reponer {insumoAReponer.nombre}</h3>
+              <p className="text-sm text-gray-600">
+                Stock actual: {insumoAReponer.stockActual} {insumoAReponer.unidadMedida}. La compra suma a ese saldo y no se parte por módulo.
+              </p>
+              <label className="block text-sm">
+                Cantidad
+                <input
+                  className="mt-1 w-full border rounded px-2 py-1"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={cantidadReposicion}
+                  onChange={(e) => setCantidadReposicion(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="block text-sm">
+                Costo total
+                <input
+                  className="mt-1 w-full border rounded px-2 py-1"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={costoReposicion}
+                  onChange={(e) => setCostoReposicion(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="block text-sm">
+                Fecha
+                <input
+                  className="mt-1 w-full border rounded px-2 py-1"
+                  type="date"
+                  value={fechaReposicion}
+                  onChange={(e) => setFechaReposicion(e.target.value)}
+                  required
+                />
+              </label>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" className="px-3 py-1 border rounded" onClick={() => setInsumoAReponer(null)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="px-3 py-1 bg-green-700 text-white rounded">
+                  Confirmar compra
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         <InsumoWizard
           isOpen={showWizard}
           onClose={handleWizardClose}

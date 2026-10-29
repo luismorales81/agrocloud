@@ -20,6 +20,7 @@ export interface AvicolaPonedorasGalpon {
   establecimientoNombre?: string | null;
   nombre: string;
   raza?: string | null;
+  razaIds?: number[];
   fechaIngreso: string;
   cantidadInicial?: number | null;
   cantidadAves?: number | null;
@@ -53,7 +54,7 @@ export interface AmbienteDiarioCuerpo {
 export interface GalponCreacionCuerpo {
   establecimientoId: number;
   nombre: string;
-  raza?: string | null;
+  razaIds: number[];
   fechaIngreso: string;
   cantidadInicial: number;
   cantidadAves?: number | null;
@@ -66,7 +67,7 @@ export interface GalponCreacionCuerpo {
 export interface GalponEdicionCuerpo {
   establecimientoId?: number | null;
   nombre?: string | null;
-  raza?: string | null;
+  razaIds?: number[];
   fechaIngreso?: string | null;
   cantidadInicial?: number | null;
   cantidadAves?: number | null;

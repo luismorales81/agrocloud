@@ -4,6 +4,7 @@ import com.agrocloud.avicola.huevos.model.enums.AvicolaHuevoLoteEstado;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class AvicolaHuevoLoteRespuesta {
 
@@ -12,6 +13,7 @@ public class AvicolaHuevoLoteRespuesta {
     private Long establecimientoId;
     private String establecimientoNombre;
     private Long razaId;
+    private List<Long> razaIds;
     private String razaNombre;
     private String nombre;
     private LocalDate fechaInicio;
@@ -73,6 +75,14 @@ public class AvicolaHuevoLoteRespuesta {
 
     public void setRazaNombre(String razaNombre) {
         this.razaNombre = razaNombre;
+    }
+
+    public List<Long> getRazaIds() {
+        return razaIds;
+    }
+
+    public void setRazaIds(List<Long> razaIds) {
+        this.razaIds = razaIds;
     }
 
     public String getNombre() {

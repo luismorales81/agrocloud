@@ -9,6 +9,7 @@ import com.agrocloud.feedlot.model.enums.FeedlotTipoVenta;
 import com.agrocloud.feedlot.repository.*;
 import com.agrocloud.feedlot.service.ServicioFeedlotLotes;
 import com.agrocloud.feedlot.service.ServicioFeedlotOperaciones;
+import com.agrocloud.core.application.ServicioLibroEmpresa;
 import com.agrocloud.core.inventory.application.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ class ServicioFeedlotOperacionesTest {
     @Mock private FeedlotEventoSanitarioRepository eventoSanitarioRepository;
     @Mock private FeedlotMotivoMuerteRepository motivoMuerteRepository;
     @Mock private InventoryService inventoryService;
+    @Mock private ServicioLibroEmpresa libroEmpresa;
 
     @InjectMocks
     private ServicioFeedlotOperaciones servicio;

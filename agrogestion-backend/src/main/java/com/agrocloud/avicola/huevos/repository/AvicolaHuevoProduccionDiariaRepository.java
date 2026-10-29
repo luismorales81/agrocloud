@@ -26,6 +26,13 @@ public interface AvicolaHuevoProduccionDiariaRepository extends JpaRepository<Av
     @Query("SELECT COALESCE(SUM(p.totalHuevosDia), 0) FROM AvicolaHuevoProduccionDiaria p WHERE p.lote.id = :loteId AND p.empresaId = :empresaId")
     Long sumarCantidadHuevosPorLoteYEmpresa(@Param("loteId") Long loteId, @Param("empresaId") Long empresaId);
 
+    @Query("""
+            SELECT COALESCE(SUM(p.totalHuevosDia - p.huevosRotos), 0)
+            FROM AvicolaHuevoProduccionDiaria p
+            WHERE p.lote.id = :loteId AND p.empresaId = :empresaId
+            """)
+    Long sumarHuevosComercializables(@Param("loteId") Long loteId, @Param("empresaId") Long empresaId);
+
     @Query("SELECT COALESCE(SUM(p.totalHuevosDia), 0) FROM AvicolaHuevoProduccionDiaria p WHERE p.empresaId = :empresaId AND p.fecha BETWEEN :desde AND :hasta")
     Long sumarTotalHuevosEmpresaEnRango(
             @Param("empresaId") Long empresaId,

@@ -1,11 +1,13 @@
 package com.agrocloud.avicola.huevos.model.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class AvicolaHuevoLoteSolicitud {
 
     private Long establecimientoId;
     private Long razaId;
+    private List<Long> razaIds;
     private String nombre;
     private LocalDate fechaInicio;
     private Integer cantidadAvesInicial;
@@ -26,6 +28,14 @@ public class AvicolaHuevoLoteSolicitud {
 
     public void setRazaId(Long razaId) {
         this.razaId = razaId;
+    }
+
+    public List<Long> getRazaIds() {
+        return razaIds;
+    }
+
+    public void setRazaIds(List<Long> razaIds) {
+        this.razaIds = razaIds;
     }
 
     public String getNombre() {

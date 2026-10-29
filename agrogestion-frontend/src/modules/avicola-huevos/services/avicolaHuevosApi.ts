@@ -7,6 +7,7 @@ export interface AvicolaHuevoLoteRespuesta {
   establecimientoId?: number;
   establecimientoNombre?: string;
   razaId?: number;
+  razaIds?: number[];
   razaNombre?: string;
   nombre: string;
   fechaInicio: string;
@@ -41,7 +42,8 @@ export interface AvicolaHuevoRazaRespuesta {
 
 export interface AvicolaHuevoLoteCuerpo {
   establecimientoId: number;
-  razaId: number;
+  razaId?: number;
+  razaIds: number[];
   nombre: string;
   fechaInicio: string;
   cantidadAvesInicial: number;
@@ -52,6 +54,7 @@ export interface AvicolaHuevoLoteCuerpo {
 export interface AvicolaHuevoLoteEdicionCuerpo {
   establecimientoId?: number;
   razaId?: number;
+  razaIds?: number[];
   nombre?: string;
   cantidadAvesActual?: number;
   observaciones?: string | null;
@@ -198,6 +201,37 @@ export interface AvicolaHuevoEventoSanitarioRespuesta {
   insumoNombre?: string | null;
   dosis?: number | null;
   observaciones?: string | null;
+}
+
+export interface AvicolaHuevoVentaRespuesta {
+  id: number;
+  loteId?: number;
+  fecha: string;
+  cantidad: number;
+  precioUnitario?: number | null;
+  total?: number | null;
+  comprador?: string | null;
+  observaciones?: string | null;
+  ingresoId?: number | null;
+}
+
+export async function listarVentasHuevos(loteId: number): Promise<AvicolaHuevoVentaRespuesta[]> {
+  const { data } = await api.get<AvicolaHuevoVentaRespuesta[]>(`/avicola-huevos/lotes/${loteId}/ventas`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function registrarVentaHuevos(
+  loteId: number,
+  cuerpo: {
+    fecha: string;
+    cantidad: number;
+    precioUnitario?: number | null;
+    comprador?: string | null;
+    observaciones?: string | null;
+  }
+): Promise<AvicolaHuevoVentaRespuesta> {
+  const { data } = await api.post<AvicolaHuevoVentaRespuesta>(`/avicola-huevos/lotes/${loteId}/ventas`, cuerpo);
+  return data;
 }
 
 export async function listarProduccionHuevos(loteId: number): Promise<AvicolaHuevoProduccionDiariaRespuesta[]> {

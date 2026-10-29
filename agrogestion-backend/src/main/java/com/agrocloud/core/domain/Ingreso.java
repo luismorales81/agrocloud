@@ -72,6 +72,22 @@ public class Ingreso {
 
     @Column(name = "campana_id")
     private Long campanaId;
+
+    @Column(name = "empresa_id")
+    private Long empresaId;
+
+    @Column(name = "modulo_origen", length = 40)
+    private String moduloOrigen;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "imputacion", length = 20)
+    private ImputacionEconomica imputacion;
+
+    @Column(name = "tipo_referencia", length = 40)
+    private String tipoReferencia;
+
+    @Column(name = "referencia_hecho_id")
+    private Long referenciaHechoId;
     
     // Enum para tipos de ingreso
     public enum TipoIngreso {
@@ -79,7 +95,9 @@ public class Ingreso {
         VENTA_ANIMAL,
         SERVICIOS_AGRICOLAS,
         SUBSIDIOS,
-        OTROS_INGRESOS
+        OTROS_INGRESOS,
+        VENTA_LECHE,
+        VENTA_HUEVOS
     }
     
     // Enum para estados de ingreso
@@ -243,6 +261,46 @@ public class Ingreso {
 
     public void setCampanaId(Long campanaId) {
         this.campanaId = campanaId;
+    }
+
+    public Long getEmpresaId() {
+        return empresaId;
+    }
+
+    public void setEmpresaId(Long empresaId) {
+        this.empresaId = empresaId;
+    }
+
+    public String getModuloOrigen() {
+        return moduloOrigen;
+    }
+
+    public void setModuloOrigen(String moduloOrigen) {
+        this.moduloOrigen = moduloOrigen;
+    }
+
+    public ImputacionEconomica getImputacion() {
+        return imputacion;
+    }
+
+    public void setImputacion(ImputacionEconomica imputacion) {
+        this.imputacion = imputacion;
+    }
+
+    public String getTipoReferencia() {
+        return tipoReferencia;
+    }
+
+    public void setTipoReferencia(String tipoReferencia) {
+        this.tipoReferencia = tipoReferencia;
+    }
+
+    public Long getReferenciaHechoId() {
+        return referenciaHechoId;
+    }
+
+    public void setReferenciaHechoId(Long referenciaHechoId) {
+        this.referenciaHechoId = referenciaHechoId;
     }
     
     // Método para actualizar fecha de modificación

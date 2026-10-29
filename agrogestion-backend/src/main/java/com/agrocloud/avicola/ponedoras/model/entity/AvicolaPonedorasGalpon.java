@@ -9,6 +9,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Galpón o unidad productiva de ponedoras (equivalente a "lote" del módulo).
@@ -34,6 +36,14 @@ public class AvicolaPonedorasGalpon {
 
     @Column(name = "raza", nullable = false, length = 120)
     private String raza;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "avicola_ponedoras_galpon_raza",
+            joinColumns = @JoinColumn(name = "galpon_id"),
+            inverseJoinColumns = @JoinColumn(name = "raza_id"))
+    @OrderBy("nombre ASC")
+    private Set<AvicolaPonedorasRaza> razas = new LinkedHashSet<>();
 
     @Column(name = "fecha_ingreso", nullable = false)
     private LocalDate fechaIngreso;
@@ -103,6 +113,14 @@ public class AvicolaPonedorasGalpon {
 
     public void setRaza(String raza) {
         this.raza = raza;
+    }
+
+    public Set<AvicolaPonedorasRaza> getRazas() {
+        return razas;
+    }
+
+    public void setRazas(Set<AvicolaPonedorasRaza> razas) {
+        this.razas = razas;
     }
 
     public LocalDate getFechaIngreso() {

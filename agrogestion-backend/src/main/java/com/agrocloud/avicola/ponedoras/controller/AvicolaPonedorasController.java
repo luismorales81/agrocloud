@@ -4,6 +4,7 @@ import com.agrocloud.annotation.RequiresModule;
 import com.agrocloud.avicola.ponedoras.model.dto.*;
 import com.agrocloud.avicola.ponedoras.model.enums.AvicolaPonedorasGalponEstado;
 import com.agrocloud.avicola.ponedoras.service.ServicioAvicolaPonedorasAmbiente;
+import com.agrocloud.avicola.ponedoras.service.ServicioAvicolaPonedorasCatalogo;
 import com.agrocloud.avicola.ponedoras.service.ServicioAvicolaPonedorasGalpon;
 import com.agrocloud.avicola.ponedoras.service.ServicioAvicolaPonedorasOperaciones;
 import com.agrocloud.core.application.UserService;
@@ -35,16 +36,19 @@ import java.util.List;
 public class AvicolaPonedorasController {
 
     private final ServicioAvicolaPonedorasGalpon servicioGalpon;
+    private final ServicioAvicolaPonedorasCatalogo servicioCatalogo;
     private final ServicioAvicolaPonedorasOperaciones servicioOperaciones;
     private final ServicioAvicolaPonedorasAmbiente servicioAmbiente;
     private final UserService userService;
 
     public AvicolaPonedorasController(
             ServicioAvicolaPonedorasGalpon servicioGalpon,
+            ServicioAvicolaPonedorasCatalogo servicioCatalogo,
             ServicioAvicolaPonedorasOperaciones servicioOperaciones,
             ServicioAvicolaPonedorasAmbiente servicioAmbiente,
             UserService userService) {
         this.servicioGalpon = servicioGalpon;
+        this.servicioCatalogo = servicioCatalogo;
         this.servicioOperaciones = servicioOperaciones;
         this.servicioAmbiente = servicioAmbiente;
         this.userService = userService;
@@ -59,6 +63,32 @@ public class AvicolaPonedorasController {
             throw new IllegalArgumentException("Usuario no encontrado");
         }
         return u;
+    }
+
+    @GetMapping("/razas")
+    public ResponseEntity<List<AvicolaPonedorasRazaRespuesta>> listarRazas(
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioCatalogo.listarRazas());
+    }
+
+    @PostMapping("/razas")
+    @RequiresModule(value = "AVICOLA_PONEDORAS", permission = "write")
+    public ResponseEntity<AvicolaPonedorasRazaRespuesta> crearRaza(
+            @RequestBody AvicolaPonedorasRazaSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.status(HttpStatus.CREATED).body(servicioCatalogo.crearRaza(solicitud));
+    }
+
+    @PutMapping("/razas/{id}")
+    @RequiresModule(value = "AVICOLA_PONEDORAS", permission = "write")
+    public ResponseEntity<AvicolaPonedorasRazaRespuesta> actualizarRaza(
+            @PathVariable Long id,
+            @RequestBody AvicolaPonedorasRazaSolicitud solicitud,
+            @AuthenticationPrincipal UserDetails detalles) {
+        requerirUsuario(detalles);
+        return ResponseEntity.ok(servicioCatalogo.actualizarRaza(id, solicitud));
     }
 
     @GetMapping("/galpones")

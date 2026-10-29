@@ -24,12 +24,15 @@ import {
 } from '@mui/material';
 import { Pencil } from 'lucide-react';
 import { Icon } from '../../../components/icons';
+import SelectorRazasLote from '../../../components/SelectorRazasLote';
 import type { AvicolaPonedorasGalpon, GalponEstado } from '../types';
 import {
   actualizarGalpon,
   crearGalpon,
   listarGalpones,
+  listarRazasPonedoras,
   mensajeErrorPonedoras,
+  type AvicolaPonedorasRaza,
 } from '../services/avicolaPonedorasService';
 import {
   listarEstablecimientosCrianza,
@@ -47,6 +50,7 @@ const AvicolaPonedorasListado: React.FC = () => {
   const [errorDialogo, setErrorDialogo] = useState<string | null>(null);
   const [galpones, setGalpones] = useState<AvicolaPonedorasGalpon[]>([]);
   const [establecimientos, setEstablecimientos] = useState<AvicolaEstablecimientoRespuesta[]>([]);
+  const [razas, setRazas] = useState<AvicolaPonedorasRaza[]>([]);
   const [filtroEstado, setFiltroEstado] = useState<'ACTIVO' | 'CERRADO' | ''>('ACTIVO');
   const [filtroDelPeriodo, setFiltroDelPeriodo] = useState(false);
 
@@ -54,7 +58,7 @@ const AvicolaPonedorasListado: React.FC = () => {
   const [galponEditando, setGalponEditando] = useState<AvicolaPonedorasGalpon | null>(null);
   const [establecimientoId, setEstablecimientoId] = useState<number | ''>('');
   const [nombre, setNombre] = useState('');
-  const [raza, setRaza] = useState('');
+  const [razaIds, setRazaIds] = useState<number[]>([]);
   const [fechaIngreso, setFechaIngreso] = useState('');
   const [cantidadInicial, setCantidadInicial] = useState('');
   const [cantidadAves, setCantidadAves] = useState('');
@@ -75,15 +79,17 @@ const AvicolaPonedorasListado: React.FC = () => {
     setCargando(true);
     setError(null);
     try {
-      const [lista, est] = await Promise.all([
+      const [lista, est, catalogoRazas] = await Promise.all([
         listarGalpones({
           estado: filtroEstado || undefined,
           delPeriodoActivo: filtroDelPeriodo,
         }),
         listarEstablecimientosCrianza(),
+        listarRazasPonedoras(),
       ]);
       setGalpones(lista);
       setEstablecimientos(est);
+      setRazas(catalogoRazas);
     } catch (err: unknown) {
       setError(mensajeErrorPonedoras(err));
     } finally {
@@ -99,7 +105,7 @@ const AvicolaPonedorasListado: React.FC = () => {
     setGalponEditando(null);
     setEstablecimientoId('');
     setNombre('');
-    setRaza('');
+    setRazaIds([]);
     setFechaIngreso(new Date().toISOString().slice(0, 10));
     setCantidadInicial('');
     setCantidadAves('');
@@ -114,7 +120,7 @@ const AvicolaPonedorasListado: React.FC = () => {
     setGalponEditando(g);
     setEstablecimientoId(g.establecimientoId ?? '');
     setNombre(g.nombre);
-    setRaza(g.raza ?? '');
+    setRazaIds(g.razaIds ?? []);
     setFechaIngreso(g.fechaIngreso?.slice(0, 10) || '');
     setCantidadInicial(g.cantidadInicial != null ? String(g.cantidadInicial) : '');
     setCantidadAves(g.cantidadAves != null ? String(g.cantidadAves) : '');
@@ -139,6 +145,10 @@ const AvicolaPonedorasListado: React.FC = () => {
       setErrorDialogo('Seleccioná un establecimiento.');
       return;
     }
+    if (razaIds.length === 0) {
+      setErrorDialogo('Seleccioná al menos una raza.');
+      return;
+    }
     if (!fechaIngreso) {
       setErrorDialogo('La fecha de ingreso es obligatoria.');
       return;
@@ -157,7 +167,7 @@ const AvicolaPonedorasListado: React.FC = () => {
         await actualizarGalpon(galponEditando.id, {
           establecimientoId: Number(establecimientoId),
           nombre: nombre.trim(),
-          raza: raza.trim() || null,
+          razaIds,
           fechaIngreso,
           cantidadAves: aves ?? null,
           estado: estadoGalpon,
@@ -180,7 +190,7 @@ const AvicolaPonedorasListado: React.FC = () => {
         await crearGalpon({
           establecimientoId: Number(establecimientoId),
           nombre: nombre.trim(),
-          raza: raza.trim() || null,
+          razaIds,
           fechaIngreso,
           cantidadInicial: inicial,
           cantidadAves: aves,
@@ -261,7 +271,7 @@ const AvicolaPonedorasListado: React.FC = () => {
               <TableRow>
                 <TableCell>Nombre</TableCell>
                 <TableCell>Establecimiento</TableCell>
-                <TableCell>Raza</TableCell>
+                    <TableCell>Razas</TableCell>
                 <TableCell>Fecha ingreso</TableCell>
                 <TableCell align="right">Aves</TableCell>
                 <TableCell>Estado</TableCell>
@@ -347,13 +357,10 @@ const AvicolaPonedorasListado: React.FC = () => {
               fullWidth
               size="small"
             />
-            <TextField
-              label="Raza"
-              value={raza}
-              onChange={(e) => setRaza(e.target.value)}
-              fullWidth
-              size="small"
-            />
+            <SelectorRazasLote razas={razas} seleccionadas={razaIds} onChange={setRazaIds} />
+            {razas.filter((razaCatalogo) => razaCatalogo.activo !== false).length === 0 && razaIds.length === 0 && (
+              <Alert severity="warning">No hay razas activas. Cargalas en «Razas» antes de abrir un galpón.</Alert>
+            )}
             <TextField
               label="Fecha de ingreso"
               type="date"

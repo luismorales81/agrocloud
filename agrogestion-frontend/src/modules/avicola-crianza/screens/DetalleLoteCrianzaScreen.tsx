@@ -446,6 +446,9 @@ const DetalleLoteCrianzaScreen: React.FC = () => {
               </Alert>
               <Stack spacing={1}>
                 <Typography>
+                  <strong>Razas:</strong> {lote.razaNombre ?? '—'}
+                </Typography>
+                <Typography>
                   <strong>Aves registradas:</strong> {resumen.cantidadAnimalesRegistrada ?? '—'}
                 </Typography>
                 <Typography>

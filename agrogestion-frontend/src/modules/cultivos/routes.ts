@@ -9,7 +9,7 @@ const InsumosUnificados = lazy(() => import('../../components/InsumosUnificados'
 const MaquinariaManagement = lazy(() => import('../../components/MaquinariaManagement'));
 const LaboresManagement = lazy(() => import('../../components/LaboresManagement'));
 const ReportsManagement = lazy(() => import('../../components/ReportsManagement'));
-const FinanzasManagement = lazy(() => import('../../components/FinanzasManagement'));
+const FinanzasDelModulo = lazy(() => import('../../components/FinanzasDelModulo'));
 const InventarioGranosManagement = lazy(() => import('../../components/InventarioGranosManagement'));
 const AdminUsuarios = lazy(() => import('../../components/AdminUsuarios'));
 const AyudaSistema = lazy(() => import('../../components/AyudaSistema'));
@@ -37,7 +37,7 @@ export const cultivosRoutes: ModuleRoute[] = [
   ruta('/cultivos/maquinaria', 'Maquinaria', MaquinariaManagement, ['canViewMaquinaria']),
   ruta('/cultivos/labores', 'Labores', LaboresManagement, ['canViewLabores']),
   ruta('/cultivos/reportes', 'Reportes', ReportsManagement, ['canViewReports']),
-  ruta('/cultivos/finanzas', 'Finanzas', FinanzasManagement, ['canViewFinances']),
+  ruta('/cultivos/finanzas', 'Finanzas', FinanzasDelModulo, ['canViewFinances']),
   ruta('/cultivos/inventario', 'Inventario Granos', InventarioGranosManagement, ['canViewInventario']),
   ruta('/cultivos/configuracion', 'Configuración', ConfiguracionUnificadaScreen, ['canManageUsers']),
   ruta('/cultivos/configuracion/campanas', 'Períodos de gestión', RedireccionConfiguracionPeriodos, ['canManageUsers']),

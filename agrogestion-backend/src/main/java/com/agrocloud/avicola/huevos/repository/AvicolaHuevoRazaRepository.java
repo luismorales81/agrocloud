@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,4 +16,8 @@ public interface AvicolaHuevoRazaRepository extends JpaRepository<AvicolaHuevoRa
 
     @Query("SELECT r FROM AvicolaHuevoRaza r WHERE r.id = :id AND r.empresaId = :empresaId")
     Optional<AvicolaHuevoRaza> buscarPorIdYEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    @Query("SELECT r FROM AvicolaHuevoRaza r WHERE r.empresaId = :empresaId AND r.id IN :ids")
+    List<AvicolaHuevoRaza> buscarPorIdsYEmpresaId(
+            @Param("ids") Collection<Long> ids, @Param("empresaId") Long empresaId);
 }

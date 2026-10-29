@@ -5,8 +5,10 @@ import type { ModuleId, ModuleRoute } from '../../core/types/module.types';
 import CalendarioPonedorasScreen from './pages/CalendarioPonedorasScreen';
 import AvicolaPonedorasDashboard from './pages/AvicolaPonedorasDashboard';
 import AvicolaPonedorasListado from './pages/AvicolaPonedorasListado';
+import RazasPonedorasScreen from './pages/RazasPonedorasScreen';
 import AvicolaPonedorasDetalleGalponScreen from './pages/AvicolaPonedorasDetalleGalponScreen';
 import GestionPeriodosScreen from '../../components/GestionCampanasScreen';
+import FinanzasDelModulo from '../../components/FinanzasDelModulo';
 
 const ID_MODULO: ModuleId = 'avicola-ponedoras';
 
@@ -54,9 +56,19 @@ export const avicolaPonedorasRoutes: ModuleRoute[] = [
     component: envolverSiModuloPonedorasHabilitado(AvicolaPonedorasDetalleGalponScreen),
   },
   {
+    path: '/avicola-ponedoras/razas',
+    name: 'Razas',
+    component: envolverSiModuloPonedorasHabilitado(RazasPonedorasScreen),
+  },
+  {
     path: '/avicola-ponedoras/galpones',
     name: 'Galpones',
     component: envolverSiModuloPonedorasHabilitado(AvicolaPonedorasListado),
+  },
+  {
+    path: '/avicola-ponedoras/finanzas',
+    name: 'Finanzas',
+    component: envolverSiModuloPonedorasHabilitado(FinanzasDelModulo),
   },
   {
     path: '/avicola-ponedoras/configuracion/periodos',

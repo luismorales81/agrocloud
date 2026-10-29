@@ -1,6 +1,9 @@
 package com.agrocloud.porcinos.service;
 
+import com.agrocloud.core.application.ServicioLibroEmpresa;
+import com.agrocloud.core.domain.Ingreso;
 import com.agrocloud.core.inventory.application.InventoryService;
+import com.agrocloud.model.enums.ModuloSistema;
 import com.agrocloud.core.inventory.domain.InventoryOrigin;
 import com.agrocloud.core.inventory.domain.InventoryResult;
 import com.agrocloud.core.security.ServicioSeguridadContexto;
@@ -27,6 +30,7 @@ public class ServicioPorcinosOperaciones {
     private final PorcinosEventoSanitarioRepository eventoSanitarioRepository;
     private final PorcinosCausaMortalidadRepository causaMortalidadRepository;
     private final InventoryService inventoryService;
+    private final ServicioLibroEmpresa libroEmpresa;
 
     public ServicioPorcinosOperaciones(
             ServicioSeguridadContexto servicioSeguridadContexto,
@@ -37,7 +41,8 @@ public class ServicioPorcinosOperaciones {
             PorcinosVentaRepository ventaRepository,
             PorcinosEventoSanitarioRepository eventoSanitarioRepository,
             PorcinosCausaMortalidadRepository causaMortalidadRepository,
-            InventoryService inventoryService) {
+            InventoryService inventoryService,
+            ServicioLibroEmpresa libroEmpresa) {
         this.servicioSeguridadContexto = servicioSeguridadContexto;
         this.servicioLotes = servicioLotes;
         this.pesadaRepository = pesadaRepository;
@@ -47,6 +52,7 @@ public class ServicioPorcinosOperaciones {
         this.eventoSanitarioRepository = eventoSanitarioRepository;
         this.causaMortalidadRepository = causaMortalidadRepository;
         this.inventoryService = inventoryService;
+        this.libroEmpresa = libroEmpresa;
     }
 
     private PorcinosLote loteActivo(Long empresaId, Long loteId) {
@@ -242,6 +248,21 @@ public class ServicioPorcinosOperaciones {
         v.setComprador(solicitud.getComprador());
         v.setObservaciones(solicitud.getObservaciones());
         v = ventaRepository.save(v);
+        Long ingresoId = libroEmpresa.asegurarIngresoDeVenta(
+                v.getIngresoId(),
+                ModuloSistema.PORCINOS,
+                Ingreso.TipoIngreso.VENTA_ANIMAL,
+                v.getTotal(),
+                v.getFecha(),
+                "Venta porcinos lote " + lote.getNombre(),
+                v.getComprador(),
+                v.getCampanaId(),
+                ServicioLibroEmpresa.REF_VENTA_PORCINOS,
+                v.getId());
+        if (ingresoId != null && v.getIngresoId() == null) {
+            v.setIngresoId(ingresoId);
+            v = ventaRepository.save(v);
+        }
         return aVentaRespuesta(v);
     }
 

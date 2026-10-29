@@ -1,4 +1,6 @@
 package com.agrocloud.cultivos.application;
+import com.agrocloud.core.application.ServicioLibroEmpresa;
+import com.agrocloud.core.domain.ImputacionEconomica;
 import com.agrocloud.core.domain.Ingreso;
 import com.agrocloud.core.domain.User;
 import com.agrocloud.cultivos.domain.HistorialCosecha;
@@ -10,6 +12,7 @@ import com.agrocloud.core.inventory.domain.InventoryResult;
 import com.agrocloud.dto.InventarioGranoDTO;
 import com.agrocloud.dto.VentaGranoRequest;
 import com.agrocloud.core.infrastructure.IngresoRepository;
+import com.agrocloud.model.enums.ModuloSistema;
 import com.agrocloud.core.inventory.infrastructure.InventarioGranoRepository;
 import com.agrocloud.core.inventory.infrastructure.MovimientoInventarioGranoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,6 +150,11 @@ public class InventarioGranoService {
         ingreso.setLote(inventario.getLote());
         ingreso.setUsuario(usuario);
         ingreso.setCampanaId(inventario.getCampanaId());
+        ingreso.setEmpresaId(empresaId);
+        ingreso.setModuloOrigen(ModuloSistema.CULTIVOS.getCodigo());
+        ingreso.setImputacion(ImputacionEconomica.MODULO);
+        ingreso.setTipoReferencia(ServicioLibroEmpresa.REF_VENTA_GRANO);
+        ingreso.setReferenciaHechoId(movimiento.getId());
         
         Ingreso ingresoGuardado = ingresoRepository.save(ingreso);
         System.out.println("[INVENTARIO_SERVICE] Ingreso creado con ID: " + ingresoGuardado.getId());

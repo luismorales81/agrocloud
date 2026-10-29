@@ -6,6 +6,7 @@ import com.agrocloud.avicola.crianza.model.enums.AvicolaLoteEstado;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Salida de lote avícola.
@@ -17,6 +18,7 @@ public class AvicolaLoteRespuesta {
     private Long establecimientoId;
     private String establecimientoNombre;
     private Long razaId;
+    private List<Long> razaIds;
     private String razaNombre;
     private String nombre;
     private AvicolaEspecie especie;
@@ -80,6 +82,14 @@ public class AvicolaLoteRespuesta {
 
     public void setRazaNombre(String razaNombre) {
         this.razaNombre = razaNombre;
+    }
+
+    public List<Long> getRazaIds() {
+        return razaIds;
+    }
+
+    public void setRazaIds(List<Long> razaIds) {
+        this.razaIds = razaIds;
     }
 
     public String getNombre() {

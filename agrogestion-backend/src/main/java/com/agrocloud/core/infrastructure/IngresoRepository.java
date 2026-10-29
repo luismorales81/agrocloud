@@ -65,4 +65,35 @@ public interface IngresoRepository extends JpaRepository<Ingreso, Long> {
     List<Ingreso> findByActivoTrue();
 
     List<Ingreso> findByUserId(Long userId);
+
+    @Query("""
+            SELECT i FROM Ingreso i
+            WHERE i.empresaId = :empresaId
+            AND (:modulo IS NULL OR i.moduloOrigen = :modulo)
+            ORDER BY i.fecha DESC, i.id DESC
+            """)
+    List<Ingreso> listarPorEmpresa(@Param("empresaId") Long empresaId, @Param("modulo") String modulo);
+
+    @Query("""
+            SELECT COALESCE(SUM(i.monto), 0) FROM Ingreso i
+            WHERE i.empresaId = :empresaId
+            AND i.fecha BETWEEN :fechaInicio AND :fechaFin
+            AND (i.activo = true OR i.activo IS NULL)
+            AND i.estado <> com.agrocloud.core.domain.Ingreso.EstadoIngreso.CANCELADO
+            """)
+    BigDecimal sumarPorEmpresaYFecha(@Param("empresaId") Long empresaId,
+                                     @Param("fechaInicio") LocalDate fechaInicio,
+                                     @Param("fechaFin") LocalDate fechaFin);
+
+    @Query("""
+            SELECT i FROM Ingreso i
+            WHERE i.empresaId = :empresaId
+            AND i.tipoReferencia = :tipoReferencia
+            AND i.referenciaHechoId = :referenciaHechoId
+            AND (i.activo = true OR i.activo IS NULL)
+            AND i.estado <> com.agrocloud.core.domain.Ingreso.EstadoIngreso.CANCELADO
+            """)
+    java.util.Optional<Ingreso> buscarHechoActivo(@Param("empresaId") Long empresaId,
+                                                  @Param("tipoReferencia") String tipoReferencia,
+                                                  @Param("referenciaHechoId") Long referenciaHechoId);
 }

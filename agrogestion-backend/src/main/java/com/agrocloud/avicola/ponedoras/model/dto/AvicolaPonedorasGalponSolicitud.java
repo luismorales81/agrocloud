@@ -3,6 +3,7 @@ package com.agrocloud.avicola.ponedoras.model.dto;
 import com.agrocloud.avicola.ponedoras.model.enums.AvicolaPonedorasGalponEstado;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Alta o edición de galpón (empresa desde contexto de seguridad, no en body).
@@ -12,6 +13,7 @@ public class AvicolaPonedorasGalponSolicitud {
     private Long establecimientoId;
     private String nombre;
     private String raza;
+    private List<Long> razaIds;
     private LocalDate fechaIngreso;
     private Integer cantidadInicial;
     private Integer cantidadAves;
@@ -41,6 +43,14 @@ public class AvicolaPonedorasGalponSolicitud {
 
     public void setRaza(String raza) {
         this.raza = raza;
+    }
+
+    public List<Long> getRazaIds() {
+        return razaIds;
+    }
+
+    public void setRazaIds(List<Long> razaIds) {
+        this.razaIds = razaIds;
     }
 
     public LocalDate getFechaIngreso() {

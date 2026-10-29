@@ -15,6 +15,7 @@ public class LecheriaVentaLecheRespuesta {
     private BigDecimal total;
     private String comprador;
     private String observaciones;
+    private Long ingresoId;
     private LocalDateTime createdAt;
 
     public Long getId() {
@@ -87,6 +88,14 @@ public class LecheriaVentaLecheRespuesta {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public Long getIngresoId() {
+        return ingresoId;
+    }
+
+    public void setIngresoId(Long ingresoId) {
+        this.ingresoId = ingresoId;
     }
 
     public LocalDateTime getCreatedAt() {

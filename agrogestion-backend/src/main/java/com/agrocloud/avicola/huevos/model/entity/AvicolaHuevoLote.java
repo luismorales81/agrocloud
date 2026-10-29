@@ -8,6 +8,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "avicola_huevo_lote")
@@ -28,6 +30,14 @@ public class AvicolaHuevoLote {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "raza_id", nullable = false)
     private AvicolaHuevoRaza raza;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "avicola_huevo_lote_raza",
+            joinColumns = @JoinColumn(name = "lote_id"),
+            inverseJoinColumns = @JoinColumn(name = "raza_id"))
+    @OrderBy("nombre ASC")
+    private Set<AvicolaHuevoRaza> razas = new LinkedHashSet<>();
 
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
@@ -92,6 +102,14 @@ public class AvicolaHuevoLote {
 
     public void setRaza(AvicolaHuevoRaza raza) {
         this.raza = raza;
+    }
+
+    public Set<AvicolaHuevoRaza> getRazas() {
+        return razas;
+    }
+
+    public void setRazas(Set<AvicolaHuevoRaza> razas) {
+        this.razas = razas;
     }
 
     public String getNombre() {

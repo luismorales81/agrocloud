@@ -149,27 +149,8 @@ public class EgresoController {
                 egreso.setLote(lote.get());
             }
 
-            // Si es un egreso de insumos, actualizar el stock del insumo
-            if (egreso.getTipo() == Egreso.TipoEgreso.INSUMO && egreso.getReferenciaId() != null) {
-                Optional<Insumo> insumo = insumoRepository.findById(egreso.getReferenciaId());
-                if (insumo.isPresent()) {
-                    Insumo insumoActual = insumo.get();
-                    egreso.setReferenciaId(insumoActual.getId());
-                    
-                    // Actualizar la cantidad del insumo si se especifica
-                    if (egreso.getCantidad() != null && egreso.getCantidad().compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal nuevaCantidad = insumoActual.getStockActual().subtract(egreso.getCantidad());
-                        // No permitir stock negativo
-                        if (nuevaCantidad.compareTo(BigDecimal.ZERO) >= 0) {
-                            insumoActual.setStockActual(nuevaCantidad);
-                            insumoRepository.save(insumoActual);
-                        } else {
-                            // Si el stock sería negativo, establecer en 0
-                            insumoActual.setStockActual(BigDecimal.ZERO);
-                            insumoRepository.save(insumoActual);
-                        }
-                    }
-                }
+            if (egreso.getTipo() == Egreso.TipoEgreso.INSUMO || egreso.getTipo() == Egreso.TipoEgreso.INSUMOS) {
+                return ResponseEntity.badRequest().build();
             }
 
             Egreso egresoGuardado = egresoRepository.save(egreso);

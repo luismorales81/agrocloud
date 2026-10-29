@@ -10,6 +10,7 @@ import com.agrocloud.avicola.crianza.repository.AvicolaEventoSanitarioRepository
 import com.agrocloud.avicola.crianza.repository.AvicolaMuerteRepository;
 import com.agrocloud.avicola.crianza.repository.AvicolaPesadaRepository;
 import com.agrocloud.avicola.crianza.repository.AvicolaVentaRepository;
+import com.agrocloud.core.application.ServicioLibroEmpresa;
 import com.agrocloud.core.inventory.application.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,8 @@ class ServicioAvicolaCrianzaOperacionesTest {
     private AvicolaEventoSanitarioRepository eventoSanitarioRepository;
     @Mock
     private InventoryService inventoryService;
+    @Mock
+    private ServicioLibroEmpresa libroEmpresa;
 
     @InjectMocks
     private ServicioAvicolaCrianzaOperaciones servicio;

@@ -62,6 +62,13 @@ export const feedlotMenu: MenuItem[] = [
     ruta: '/feedlot/insumos',
   },
   {
+    id: 'finanzas',
+    nombre: 'Finanzas',
+    icono: 'DollarSign',
+    ruta: '/feedlot/finanzas',
+    permisos: ['canViewFinances'],
+  },
+  {
     id: 'periodos-gestion',
     nombre: 'Períodos de gestión',
     icono: 'CalendarDays',

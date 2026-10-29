@@ -270,7 +270,7 @@ const AvicolaPonedorasDashboard: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Nombre</TableCell>
-                  <TableCell>Raza</TableCell>
+                  <TableCell>Razas</TableCell>
                   <TableCell>Fecha ingreso</TableCell>
                   <TableCell align="right">Aves</TableCell>
                   <TableCell>Estado</TableCell>

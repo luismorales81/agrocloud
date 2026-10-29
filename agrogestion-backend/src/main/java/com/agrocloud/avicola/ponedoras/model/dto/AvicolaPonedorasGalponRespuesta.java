@@ -4,6 +4,7 @@ import com.agrocloud.avicola.ponedoras.model.enums.AvicolaPonedorasGalponEstado;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class AvicolaPonedorasGalponRespuesta {
 
@@ -12,6 +13,7 @@ public class AvicolaPonedorasGalponRespuesta {
     private Long establecimientoId;
     private String nombre;
     private String raza;
+    private List<Long> razaIds;
     private LocalDate fechaIngreso;
     private Integer cantidadInicial;
     private Integer cantidadAves;
@@ -62,6 +64,14 @@ public class AvicolaPonedorasGalponRespuesta {
 
     public void setRaza(String raza) {
         this.raza = raza;
+    }
+
+    public List<Long> getRazaIds() {
+        return razaIds;
+    }
+
+    public void setRazaIds(List<Long> razaIds) {
+        this.razaIds = razaIds;
     }
 
     public LocalDate getFechaIngreso() {

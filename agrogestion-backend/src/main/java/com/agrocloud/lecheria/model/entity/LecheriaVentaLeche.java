@@ -41,6 +41,9 @@ public class LecheriaVentaLeche {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
+    @Column(name = "ingreso_id")
+    private Long ingresoId;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -63,6 +66,8 @@ public class LecheriaVentaLeche {
     public void setComprador(String comprador) { this.comprador = comprador; }
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
+    public Long getIngresoId() { return ingresoId; }
+    public void setIngresoId(Long ingresoId) { this.ingresoId = ingresoId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

@@ -1,6 +1,9 @@
 package com.agrocloud.lecheria.service;
 
 import com.agrocloud.core.application.CampanaContextService;
+import com.agrocloud.core.application.ServicioLibroEmpresa;
+import com.agrocloud.core.domain.Ingreso;
+import com.agrocloud.model.enums.ModuloSistema;
 import com.agrocloud.core.inventory.application.InventoryService;
 import com.agrocloud.core.inventory.domain.InventoryOrigin;
 import com.agrocloud.core.inventory.domain.InventoryResult;
@@ -56,6 +59,7 @@ public class ServicioLecheriaOperaciones {
     private final LecheriaMotivoBajaRepository motivoBajaRepository;
     private final LecheriaLactanciaRepository lactanciaRepository;
     private final InventoryService inventoryService;
+    private final ServicioLibroEmpresa libroEmpresa;
 
     public ServicioLecheriaOperaciones(
             ServicioSeguridadContexto servicioSeguridadContexto,
@@ -69,7 +73,8 @@ public class ServicioLecheriaOperaciones {
             LecheriaBajaAnimalRepository bajaAnimalRepository,
             LecheriaMotivoBajaRepository motivoBajaRepository,
             LecheriaLactanciaRepository lactanciaRepository,
-            InventoryService inventoryService) {
+            InventoryService inventoryService,
+            ServicioLibroEmpresa libroEmpresa) {
         this.servicioSeguridadContexto = servicioSeguridadContexto;
         this.campanaContextService = campanaContextService;
         this.servicioAnimales = servicioAnimales;
@@ -82,6 +87,7 @@ public class ServicioLecheriaOperaciones {
         this.motivoBajaRepository = motivoBajaRepository;
         this.lactanciaRepository = lactanciaRepository;
         this.inventoryService = inventoryService;
+        this.libroEmpresa = libroEmpresa;
     }
 
     @Transactional(readOnly = true)
@@ -204,7 +210,23 @@ public class ServicioLecheriaOperaciones {
             v.setTotal(solicitud.getLitros().multiply(solicitud.getPrecioLitro())
                     .setScale(2, RoundingMode.HALF_UP));
         }
-        return aVentaRespuesta(ventaLecheRepository.save(v));
+        v = ventaLecheRepository.save(v);
+        Long ingresoId = libroEmpresa.asegurarIngresoDeVenta(
+                v.getIngresoId(),
+                ModuloSistema.LECHERIA,
+                Ingreso.TipoIngreso.VENTA_LECHE,
+                v.getTotal(),
+                v.getFecha(),
+                "Venta de leche",
+                v.getComprador(),
+                v.getCampanaId(),
+                ServicioLibroEmpresa.REF_VENTA_LECHE,
+                v.getId());
+        if (ingresoId != null && v.getIngresoId() == null) {
+            v.setIngresoId(ingresoId);
+            v = ventaLecheRepository.save(v);
+        }
+        return aVentaRespuesta(v);
     }
 
     @Transactional
@@ -296,6 +318,7 @@ public class ServicioLecheriaOperaciones {
         dto.setTotal(v.getTotal());
         dto.setComprador(v.getComprador());
         dto.setObservaciones(v.getObservaciones());
+        dto.setIngresoId(v.getIngresoId());
         dto.setCreatedAt(v.getCreatedAt());
         return dto;
     }

@@ -39,6 +39,13 @@ export const avicolaCrianzaMenu: MenuItem[] = [
     permisos: ['canViewInsumos'],
   },
   {
+    id: 'finanzas',
+    nombre: 'Finanzas',
+    icono: 'DollarSign',
+    ruta: '/avicola-crianza/finanzas',
+    permisos: ['canViewFinances'],
+  },
+  {
     id: 'reportes',
     nombre: 'Reportes',
     icono: 'BarChart2',

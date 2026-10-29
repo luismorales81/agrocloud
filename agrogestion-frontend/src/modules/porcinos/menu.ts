@@ -38,6 +38,13 @@ export const porcinosMenu: MenuItem[] = [
     ruta: '/porcinos/insumos',
   },
   {
+    id: 'finanzas',
+    nombre: 'Finanzas',
+    icono: 'DollarSign',
+    ruta: '/porcinos/finanzas',
+    permisos: ['canViewFinances'],
+  },
+  {
     id: 'ventas',
     nombre: 'Ventas',
     icono: 'DollarSign',
